@@ -9,40 +9,41 @@ import sys
 from typing import Optional
 
 
-def setup_logging(level: str = "INFO", log_file: Optional[str] = None) -> logging.Logger:
+def setup_logging(level: str = "INFO",
+                  log_file: Optional[str] = None) -> logging.Logger:
     """
     Setup logging configuration for the sprite editor.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_file: Optional file to write logs to (defaults to console only)
-        
+
     Returns:
         Configured logger instance
     """
     # Convert string level to logging constant
     numeric_level = getattr(logging, level.upper(), logging.INFO)
-    
+
     # Create logger
     logger = logging.getLogger('sprite_editor')
     logger.setLevel(numeric_level)
-    
+
     # Clear any existing handlers
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
-    
+
     # Create formatter
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%H:%M:%S'
     )
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(numeric_level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
+
     # Optional file handler
     if log_file:
         try:
@@ -52,20 +53,20 @@ def setup_logging(level: str = "INFO", log_file: Optional[str] = None) -> loggin
             logger.addHandler(file_handler)
         except (OSError, IOError) as e:
             logger.warning(f"Could not create log file {log_file}: {e}")
-    
+
     # Prevent propagation to root logger
     logger.propagate = False
-    
+
     return logger
 
 
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger instance for a specific module.
-    
+
     Args:
         name: Module name (e.g., 'sprite_editor.core')
-        
+
     Returns:
         Logger instance
     """

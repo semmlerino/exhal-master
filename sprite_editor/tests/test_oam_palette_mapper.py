@@ -4,9 +4,10 @@ Tests for oam_palette_mapper.py - OAM parsing with bounds checking
 
 import pytest
 
-from sprite_editor.oam_palette_mapper import OAMPaletteMapper, create_tile_palette_map
-from sprite_editor.security_utils import SecurityError
-from sprite_editor.constants import *
+from sprite_editor.constants import KIRBY_TILE_START, KIRBY_VRAM_BASE
+from sprite_editor.oam_palette_mapper import (OAMPaletteMapper,
+                                              create_tile_palette_map)
+
 
 class TestOAMParsing:
     """Test OAM file parsing with various edge cases"""
@@ -31,7 +32,8 @@ class TestOAMParsing:
     def test_small_oam_file(self, temp_dir):
         """Test handling of OAM file that's too small"""
         small_oam = temp_dir / "small_oam.dmp"
-        small_oam.write_bytes(b'\x00' * 3)  # Less than 4 bytes (minimum for one entry)
+        # Less than 4 bytes (minimum for one entry)
+        small_oam.write_bytes(b'\x00' * 3)
 
         mapper = OAMPaletteMapper()
         with pytest.raises(ValueError, match="OAM dump too small.*need at least 4"):
@@ -104,9 +106,10 @@ class TestOAMParsing:
             # Should have warning about partial data
             assert len(w) == 1
             assert "Partial OAM data" in str(w[0].message)
-        
+
         # Should have parsed all 128 entries (OAM always has 128 entries)
         assert len(mapper.oam_entries) == 128
+
 
 class TestPaletteMapping:
     """Test palette mapping functionality"""
@@ -168,6 +171,7 @@ class TestPaletteMapping:
         # Should have mapped some VRAM offsets
         assert len(mapper.vram_palette_ranges) > 0
 
+
 class TestBinarySearchOptimization:
     """Test the optimized binary search for palette lookup"""
 
@@ -220,6 +224,7 @@ class TestBinarySearchOptimization:
         # Binary search should find the rightmost matching range
         assert mapper.get_palette_for_vram_offset(0x1025) == 3
 
+
 class TestPaletteStatistics:
     """Test palette usage statistics"""
 
@@ -264,6 +269,7 @@ class TestPaletteStatistics:
         for sprite in sprites_in_region:
             assert 90 <= sprite['x'] <= 120
             assert 40 <= sprite['y'] <= 60
+
 
 class TestConvenienceFunctions:
     """Test convenience functions"""

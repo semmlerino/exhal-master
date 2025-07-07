@@ -3,9 +3,11 @@
 Sprite Disassembly Tool - Splits combined sprites back into SNES tiles
 """
 
-from PIL import Image
-import sys
 import os
+import sys
+
+from PIL import Image
+
 
 def split_sprite_to_tiles(sprite_image, arrangement, tile_size=8):
     """Split a sprite image back into individual tiles."""
@@ -20,6 +22,7 @@ def split_sprite_to_tiles(sprite_image, arrangement, tile_size=8):
             tiles.append(tile)
 
     return tiles
+
 
 def rebuild_tileset(original_tileset_path, edited_sprites, arrangements_file):
     """Rebuild the tileset with edited sprites."""
@@ -45,7 +48,8 @@ def rebuild_tileset(original_tileset_path, edited_sprites, arrangements_file):
 
     # Process each edited sprite
     for sprite_path in edited_sprites:
-        sprite_name = os.path.basename(sprite_path).replace('assembled_', '').replace('.png', '')
+        sprite_name = os.path.basename(sprite_path).replace(
+            'assembled_', '').replace('.png', '')
 
         if sprite_name in arrangements:
             (w, h), tile_indices = arrangements[sprite_name]
@@ -54,20 +58,25 @@ def rebuild_tileset(original_tileset_path, edited_sprites, arrangements_file):
             edited_sprite = Image.open(sprite_path)
 
             # Split into tiles
-            edited_tiles = split_sprite_to_tiles(edited_sprite, (w, h), tile_size)
+            edited_tiles = split_sprite_to_tiles(
+                edited_sprite, (w, h), tile_size)
 
             # Place tiles back in tileset
             for i, tile_idx in enumerate(tile_indices):
-                if i < len(edited_tiles) and tile_idx < (tiles_per_row * (height // tile_size)):
+                if i < len(edited_tiles) and tile_idx < (
+                        tiles_per_row * (height // tile_size)):
                     row = tile_idx // tiles_per_row
                     col = tile_idx % tiles_per_row
                     x = col * tile_size
                     y = row * tile_size
                     new_tileset.paste(edited_tiles[i], (x, y))
 
-            print(f"Processed {sprite_name}: replaced {len(edited_tiles)} tiles")
+            print(
+                f"Processed {sprite_name}: replaced {
+                    len(edited_tiles)} tiles")
 
     return new_tileset
+
 
 def process_edit_sheet(edit_sheet_path, arrangements_file, original_tileset):
     """Process an edit sheet with multiple sprites."""
@@ -101,14 +110,17 @@ def process_edit_sheet(edit_sheet_path, arrangements_file, original_tileset):
 
         if y_offset + sprite_height <= sheet.height:
             # Extract edited sprite (right side)
-            edited_sprite = sheet.crop((width, y_offset, width * 2, y_offset + sprite_height))
+            edited_sprite = sheet.crop(
+                (width, y_offset, width * 2, y_offset + sprite_height))
 
             # Split into tiles
-            edited_tiles = split_sprite_to_tiles(edited_sprite, (w, h), tile_size)
+            edited_tiles = split_sprite_to_tiles(
+                edited_sprite, (w, h), tile_size)
 
             # Place tiles back in tileset
             for i, tile_idx in enumerate(tile_indices):
-                if i < len(edited_tiles) and tile_idx < (tiles_per_row * (tileset_height // tile_size)):
+                if i < len(edited_tiles) and tile_idx < (
+                        tiles_per_row * (tileset_height // tile_size)):
                     row = tile_idx // tiles_per_row
                     col = tile_idx % tiles_per_row
                     x = col * tile_size
@@ -120,10 +132,13 @@ def process_edit_sheet(edit_sheet_path, arrangements_file, original_tileset):
 
     return new_tileset
 
+
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python sprite_disassembler.py <original_tileset> <edited_sprite(s)> [output_tileset]")
-        print("   or: python sprite_disassembler.py <original_tileset> <edit_sheet> --sheet [output_tileset]")
+        print(
+            "Usage: python sprite_disassembler.py <original_tileset> <edited_sprite(s)> [output_tileset]")
+        print(
+            "   or: python sprite_disassembler.py <original_tileset> <edit_sheet> --sheet [output_tileset]")
         sys.exit(1)
 
     original_tileset = sys.argv[1]
@@ -131,21 +146,27 @@ def main():
     if len(sys.argv) >= 4 and sys.argv[3] == "--sheet":
         # Process edit sheet
         edit_sheet = sys.argv[2]
-        output_tileset = sys.argv[4] if len(sys.argv) > 4 else "updated_tileset.png"
-        arrangements_file = edit_sheet.replace("_edit_sheet.png", "_arrangements.txt")
+        output_tileset = sys.argv[4] if len(
+            sys.argv) > 4 else "updated_tileset.png"
+        arrangements_file = edit_sheet.replace(
+            "_edit_sheet.png", "_arrangements.txt")
 
         print(f"Processing edit sheet: {edit_sheet}")
-        new_tileset = process_edit_sheet(edit_sheet, arrangements_file, original_tileset)
+        new_tileset = process_edit_sheet(
+            edit_sheet, arrangements_file, original_tileset)
 
     else:
         # Process individual sprites
         edited_sprites = sys.argv[2:-1] if len(sys.argv) > 3 else [sys.argv[2]]
-        output_tileset = sys.argv[-1] if len(sys.argv) > 3 else "updated_tileset.png"
+        output_tileset = sys.argv[-1] if len(
+            sys.argv) > 3 else "updated_tileset.png"
 
         # Find arrangements file
         arrangements_file = None
         for sprite in edited_sprites:
-            possible_file = sprite.replace(os.path.basename(sprite), "assembled_arrangements.txt")
+            possible_file = sprite.replace(
+                os.path.basename(sprite),
+                "assembled_arrangements.txt")
             if os.path.exists(possible_file):
                 arrangements_file = possible_file
                 break
@@ -155,7 +176,10 @@ def main():
             sys.exit(1)
 
         print(f"Using arrangements from: {arrangements_file}")
-        new_tileset = rebuild_tileset(original_tileset, edited_sprites, arrangements_file)
+        new_tileset = rebuild_tileset(
+            original_tileset,
+            edited_sprites,
+            arrangements_file)
 
     # Save updated tileset
     new_tileset.save(output_tileset)
@@ -163,12 +187,10 @@ def main():
 
     # Also save as raw binary if it's indexed
     if new_tileset.mode == 'P':
-        # Convert to raw 4bpp data
-        pixels = new_tileset.tobytes()
-        output_bin = output_tileset.replace('.png', '.bin')
-
         # This would need the png_to_snes conversion
-        print(f"Note: To convert to SNES format, use: python png_to_snes.py {output_tileset}")
+        print(
+            f"Note: To convert to SNES format, use: python png_to_snes.py {output_tileset}")
+
 
 if __name__ == "__main__":
     main()

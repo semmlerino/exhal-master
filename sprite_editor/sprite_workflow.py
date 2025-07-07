@@ -12,9 +12,10 @@ Commands:
     quick     - Quick inject with default settings
 """
 
-import sys
 import os
 import subprocess
+import sys
+
 
 def run_command(cmd):
     """Run a command and print output."""
@@ -26,10 +27,11 @@ def run_command(cmd):
         print(result.stderr)
     return result.returncode == 0
 
+
 def extract_sprites():
     """Extract sprites for editing."""
     print("EXTRACTING SPRITES FOR EDITING")
-    print("="*50)
+    print("=" * 50)
 
     # Extract with grayscale
     cmd = [
@@ -56,10 +58,11 @@ def extract_sprites():
     if run_command(cmd_color):
         print("✅ Color reference saved to: sprites_reference_colored.png")
 
+
 def inject_sprites(png_file):
     """Inject edited sprites back into VRAM."""
     print("INJECTING EDITED SPRITES")
-    print("="*50)
+    print("=" * 50)
 
     if not os.path.exists(png_file):
         print(f"Error: File '{png_file}' not found")
@@ -80,6 +83,7 @@ def inject_sprites(png_file):
         print(f"\n✅ SUCCESS! Modified VRAM saved to: {output_vram}")
         print(f"\nYou can now load '{output_vram}' in your emulator!")
 
+
 def quick_inject(png_file):
     """Quick injection with minimal output."""
     if not os.path.exists(png_file):
@@ -88,6 +92,7 @@ def quick_inject(png_file):
 
     cmd = ['python3', 'sprite_injector.py', png_file]
     subprocess.run(cmd)
+
 
 def show_help():
     """Show help message."""
@@ -127,6 +132,7 @@ IMPORTANT NOTES:
 """
     print(help_text)
 
+
 def main():
     if len(sys.argv) < 2:
         show_help()
@@ -152,6 +158,7 @@ def main():
     else:
         print(f"Unknown command: {command}")
         show_help()
+
 
 if __name__ == "__main__":
     main()

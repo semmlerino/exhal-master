@@ -9,20 +9,20 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 class ObservableProperty:
     """Property descriptor that emits signals on change"""
-    
+
     def __init__(self, initial_value=None):
         self.value = initial_value
         self.name = None
-    
+
     def __set_name__(self, owner, name):
         self.name = name
         self.private_name = f'_{name}'
-    
+
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
         return getattr(obj, self.private_name, self.value)
-    
+
     def __set__(self, obj, value):
         old_value = getattr(obj, self.private_name, self.value)
         if old_value != value:
@@ -39,22 +39,22 @@ class ObservableProperty:
 
 class BaseModel(QObject):
     """Base class for observable models"""
-    
+
     # General property change signal
     property_changed = pyqtSignal(str, object)  # property_name, new_value
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
-    
+
     def get_property(self, name):
         """Get a property value by name"""
         return getattr(self, name, None)
-    
+
     def set_property(self, name, value):
         """Set a property value by name"""
         if hasattr(self, name):
             setattr(self, name, value)
-    
+
     def to_dict(self):
         """Convert model to dictionary (for serialization)"""
         result = {}
@@ -63,7 +63,7 @@ class BaseModel(QObject):
             if isinstance(attr, ObservableProperty):
                 result[attr_name] = getattr(self, attr_name)
         return result
-    
+
     def from_dict(self, data):
         """Load model from dictionary"""
         for key, value in data.items():

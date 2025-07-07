@@ -5,20 +5,22 @@ Extracts sprite-to-palette assignments from OAM dumps
 """
 
 import os
+
 try:
-    from .security_utils import validate_file_path, SecurityError
-    from .constants import (
-        MAX_OAM_FILE_SIZE, OAM_SIZE, OAM_ENTRIES, BYTES_PER_OAM_ENTRY,
-        OAM_HIGH_TABLE_OFFSET, KIRBY_TILE_START, KIRBY_TILE_END, KIRBY_VRAM_BASE
-    )
+    from .constants import (BYTES_PER_OAM_ENTRY, KIRBY_TILE_END,
+                            KIRBY_TILE_START, KIRBY_VRAM_BASE,
+                            MAX_OAM_FILE_SIZE, OAM_ENTRIES,
+                            OAM_HIGH_TABLE_OFFSET, OAM_SIZE)
     from .logging_config import get_logger
+    from .security_utils import SecurityError, validate_file_path
 except ImportError:
-    from security_utils import validate_file_path, SecurityError
-    from constants import (
-        MAX_OAM_FILE_SIZE, OAM_SIZE, OAM_ENTRIES, BYTES_PER_OAM_ENTRY,
-        OAM_HIGH_TABLE_OFFSET, KIRBY_TILE_START, KIRBY_TILE_END, KIRBY_VRAM_BASE
-    )
+    from constants import (BYTES_PER_OAM_ENTRY, KIRBY_TILE_END,
+                           KIRBY_TILE_START, KIRBY_VRAM_BASE,
+                           MAX_OAM_FILE_SIZE, OAM_ENTRIES,
+                           OAM_HIGH_TABLE_OFFSET, OAM_SIZE)
     from logging_config import get_logger
+    from security_utils import SecurityError, validate_file_path
+
 
 class OAMPaletteMapper:
     """Parse OAM data to map sprites to their assigned palettes"""
@@ -28,7 +30,8 @@ class OAMPaletteMapper:
         self.tile_palette_map = {}  # tile_number -> palette_number
         self.vram_palette_map = {}  # vram_offset -> palette_number
         # Sorted list for efficient range queries
-        self.vram_palette_ranges = []  # List of (start_offset, end_offset, palette)
+        # List of (start_offset, end_offset, palette)
+        self.vram_palette_ranges = []
         self.logger = get_logger('oam_mapper')
 
     def parse_oam_dump(self, oam_file):
@@ -48,12 +51,16 @@ class OAMPaletteMapper:
 
         # Allow partial OAM data, but warn if too small for any entries
         if len(oam_data) < BYTES_PER_OAM_ENTRY:
-            raise ValueError(f"OAM dump too small: {len(oam_data)} bytes (need at least {BYTES_PER_OAM_ENTRY})")
-        
+            raise ValueError(
+                f"OAM dump too small: {
+                    len(oam_data)} bytes (need at least {BYTES_PER_OAM_ENTRY})")
+
         # Warn if less than full size
         if len(oam_data) < OAM_SIZE:
             import warnings
-            warnings.warn(f"Partial OAM data: {len(oam_data)} bytes (full size is {OAM_SIZE})")
+            warnings.warn(
+                f"Partial OAM data: {
+                    len(oam_data)} bytes (full size is {OAM_SIZE})")
 
         # Parse main OAM table
         for i in range(OAM_ENTRIES):
@@ -129,7 +136,9 @@ class OAMPaletteMapper:
 
         # Validate base offset to prevent overflow
         if base_vram_offset < 0 or base_vram_offset > 0x10000:
-            raise ValueError(f"Invalid base VRAM offset: {hex(base_vram_offset)}")
+            raise ValueError(
+                f"Invalid base VRAM offset: {
+                    hex(base_vram_offset)}")
 
         for tile_num, palette in self.tile_palette_map.items():
             # Calculate VRAM offset
@@ -153,7 +162,8 @@ class OAMPaletteMapper:
                     if vram_byte_offset < 0x20000:  # 128KB max VRAM size
                         self.vram_palette_map[vram_byte_offset] = palette
                         # Add to range list for efficient lookup
-                        self.vram_palette_ranges.append((vram_byte_offset, vram_byte_offset + 32, palette))
+                        self.vram_palette_ranges.append(
+                            (vram_byte_offset, vram_byte_offset + 32, palette))
                 except (OverflowError, ValueError):
                     # Skip this tile if calculation would overflow
                     continue
@@ -218,14 +228,14 @@ class OAMPaletteMapper:
         sprites = []
         for sprite in self.oam_entries:
             if (x_start <= sprite['x'] <= x_end and
-                y_start <= sprite['y'] <= y_end):
+                    y_start <= sprite['y'] <= y_end):
                 sprites.append(sprite)
         return sprites
 
     def debug_dump(self):
         """Log debug information about OAM entries"""
         self.logger.info("OAM Debug Dump")
-        self.logger.info("="*50)
+        self.logger.info("=" * 50)
         self.logger.info(f"Total sprites: {len(self.oam_entries)}")
 
         stats = self.get_palette_usage_stats()
@@ -240,17 +250,20 @@ class OAMPaletteMapper:
         visible = [s for s in self.oam_entries if s['y'] < 224]
         for sprite in visible[:10]:
             self.logger.info(f"  Sprite {sprite['index']:3d}: "
-                           f"Pos({sprite['x']:3d},{sprite['y']:3d}) "
-                           f"Tile {sprite['tile']:3d} "
-                           f"Pal {sprite['palette']} "
-                           f"Size: {sprite['size']}")
+                             f"Pos({sprite['x']:3d},{sprite['y']:3d}) "
+                             f"Tile {sprite['tile']:3d} "
+                             f"Pal {sprite['palette']} "
+                             f"Size: {sprite['size']}")
+
 
 def create_tile_palette_map(oam_file, vram_base=KIRBY_VRAM_BASE):
     """Convenience function to create palette mapping from OAM file"""
     mapper = OAMPaletteMapper()
     mapper.parse_oam_dump(oam_file)
-    mapper.build_vram_palette_map(vram_base // 2)  # Convert byte to word address
+    # Convert byte to word address
+    mapper.build_vram_palette_map(vram_base // 2)
     return mapper
+
 
 if __name__ == "__main__":
     # Test with OAM dump
@@ -259,7 +272,7 @@ if __name__ == "__main__":
         from .logging_config import setup_logging
     except ImportError:
         from logging_config import setup_logging
-    
+
     # Configure logging to output to stdout when run as script
     setup_logging(level="INFO")
 

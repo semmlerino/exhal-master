@@ -2,13 +2,17 @@
 Tests for sprite_editor_core.py - Core sprite editing functionality
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 from PIL import Image
 
+from sprite_editor.constants import (
+    BYTES_PER_TILE_4BPP, DEFAULT_TILES_PER_ROW, PIXELS_PER_TILE,
+    TILE_HEIGHT, TILE_WIDTH
+)
 from sprite_editor.sprite_editor_core import SpriteEditorCore
-from sprite_editor.security_utils import SecurityError
-from sprite_editor.constants import *
+
 
 class TestTileEncoding:
     """Test 4bpp tile encoding/decoding"""
@@ -70,6 +74,7 @@ class TestTileEncoding:
         for pixel in decoded:
             assert 0 <= pixel <= 15
 
+
 class TestPaletteHandling:
     """Test CGRAM palette reading"""
 
@@ -115,6 +120,7 @@ class TestPaletteHandling:
             assert r == g == b  # Grayscale
             assert r == (i * 255) // 15  # Correct intensity
 
+
 class TestSpriteExtraction:
     """Test sprite extraction from VRAM"""
 
@@ -137,7 +143,8 @@ class TestSpriteExtraction:
     def test_extract_sprites_custom_layout(self, vram_file):
         """Test extraction with custom tile layout"""
         core = SpriteEditorCore()
-        img, tile_count = core.extract_sprites(vram_file, 0, 512, tiles_per_row=8)
+        img, tile_count = core.extract_sprites(
+            vram_file, 0, 512, tiles_per_row=8)
 
         assert img.width == 8 * TILE_WIDTH  # 64 pixels
         assert tile_count == 16  # 512 bytes / 32 bytes per tile
@@ -149,6 +156,7 @@ class TestSpriteExtraction:
         img, tile_count = core.extract_sprites(vram_file, 0x1000, 256)
 
         assert tile_count == 8  # 256 bytes / 32 bytes per tile
+
 
 class TestPNGConversion:
     """Test PNG to SNES conversion"""
@@ -207,17 +215,20 @@ class TestPNGConversion:
         snes_data, tile_count = core.png_to_snes(str(png_path))
         assert tile_count == 4  # 2x2 tiles needed
 
+
 class TestVRAMInjection:
     """Test injecting tile data into VRAM"""
 
     @pytest.mark.unit
-    def test_inject_into_vram_basic(self, vram_file, temp_dir, sample_4bpp_tile):
+    def test_inject_into_vram_basic(
+            self, vram_file, temp_dir, sample_4bpp_tile):
         """Test basic VRAM injection"""
         core = SpriteEditorCore()
         output_path = str(temp_dir / "modified_vram.dmp")
 
         # Inject one tile at offset 0x1000
-        result = core.inject_into_vram(sample_4bpp_tile, vram_file, 0x1000, output_path)
+        result = core.inject_into_vram(
+            sample_4bpp_tile, vram_file, 0x1000, output_path)
 
         assert result == output_path
         assert Path(output_path).exists()
@@ -252,6 +263,7 @@ class TestVRAMInjection:
         huge_data = b'\x00' * (65 * 1024)
         with pytest.raises(ValueError, match="Tile data too large"):
             core.inject_into_vram(huge_data, vram_file, 0, None)
+
 
 class TestPNGValidation:
     """Test PNG validation for SNES compatibility"""
@@ -323,6 +335,7 @@ class TestPNGValidation:
         assert valid is False
         assert any("Too many colors" in issue for issue in issues)
 
+
 class TestVRAMInfo:
     """Test VRAM file information"""
 
@@ -348,6 +361,7 @@ class TestVRAMInfo:
 
         assert info['size'] == 32768
         assert "32KB" in info['size_text']
+
 
 class TestOAMIntegration:
     """Test OAM palette mapping integration"""

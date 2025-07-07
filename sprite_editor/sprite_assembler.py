@@ -3,9 +3,11 @@
 Sprite Assembly Tool - Combines SNES tiles into full character sprites
 """
 
-from PIL import Image
-import numpy as np
 import sys
+
+import numpy as np
+from PIL import Image
+
 
 def load_tiles_from_image(image_path, tile_size=8):
     """Load tiles from a tileset image."""
@@ -23,6 +25,7 @@ def load_tiles_from_image(image_path, tile_size=8):
             tiles.append(tile)
 
     return tiles, img.mode, img.palette
+
 
 def assemble_sprite(tiles, tile_indices, arrangement, tile_size=8):
     """
@@ -52,6 +55,7 @@ def assemble_sprite(tiles, tile_indices, arrangement, tile_size=8):
 
     return sprite
 
+
 def create_sprite_sheet(tiles, arrangements):
     """Create a sheet with multiple sprite arrangements."""
     tile_size = 8
@@ -79,9 +83,11 @@ def create_sprite_sheet(tiles, arrangements):
 
     return sheet, sprites
 
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python sprite_assembler.py <tileset_image> [output_prefix]")
+        print(
+            "Usage: python sprite_assembler.py <tileset_image> [output_prefix]")
         sys.exit(1)
 
     tileset_path = sys.argv[1]
@@ -124,15 +130,17 @@ def main():
         print(f"Found potential Kirby tiles: {kirby_tiles[:16]}")
         # Add automatic arrangements based on found tiles
         if len(kirby_tiles) >= 4:
-            arrangements.insert(0, ("auto_kirby_16x16", (2, 2), kirby_tiles[:4]))
+            arrangements.insert(
+                0, ("auto_kirby_16x16", (2, 2), kirby_tiles[:4]))
         if len(kirby_tiles) >= 6:
-            arrangements.insert(1, ("auto_kirby_16x24", (2, 3), kirby_tiles[:6]))
+            arrangements.insert(
+                1, ("auto_kirby_16x24", (2, 3), kirby_tiles[:6]))
 
     # Create individual sprite files
     for name, (w, h), indices in arrangements:
         sprite = assemble_sprite(tiles, indices, (w, h))
         sprite.save(f"{output_prefix}_{name}.png")
-        print(f"Saved {name}: {w*8}x{h*8} pixels")
+        print(f"Saved {name}: {w * 8}x{h * 8} pixels")
 
     # Create a combined edit sheet
     sheet, sprites = create_sprite_sheet(tiles, arrangements)
@@ -147,6 +155,7 @@ def main():
             f.write(f"{name}|{w},{h}|{','.join(map(str, indices))}\n")
 
     print(f"\nSaved arrangement data to {output_prefix}_arrangements.txt")
+
 
 if __name__ == "__main__":
     main()

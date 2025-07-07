@@ -9,14 +9,15 @@ Tests PNG to SNES 4bpp tile conversion functionality including:
 - File I/O operations
 """
 
-import unittest
-import tempfile
 import os
-import sys
 import subprocess
-from unittest.mock import patch, MagicMock
-from PIL import Image
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
 import png_to_snes
+from PIL import Image
 
 
 class TestPngToSnesFunction(unittest.TestCase):
@@ -37,9 +38,9 @@ class TestPngToSnesFunction(unittest.TestCase):
         """Create a test PNG image for conversion."""
         if colors is None:
             colors = list(range(16))  # Default 16-color palette
-        
+
         img = Image.new(mode, (width, height))
-        
+
         if mode == 'P':
             # Set up indexed palette
             palette = []
@@ -47,13 +48,13 @@ class TestPngToSnesFunction(unittest.TestCase):
                 if i < len(colors):
                     # Create distinct colors for each palette entry
                     r = (i * 17) % 256
-                    g = (i * 37) % 256  
+                    g = (i * 37) % 256
                     b = (i * 73) % 256
                 else:
                     r = g = b = 0
                 palette.extend([r, g, b])
             img.putpalette(palette)
-            
+
             # Fill with test pattern
             pixels = []
             for y in range(height):
@@ -61,26 +62,26 @@ class TestPngToSnesFunction(unittest.TestCase):
                     pixel_val = (x + y) % len(colors)
                     pixels.append(pixel_val)
             img.putdata(pixels)
-        
+
         return img
 
     def test_valid_png_conversion_16x16(self):
         """Test conversion of valid 16x16 indexed PNG."""
         input_path = os.path.join(self.temp_dir, 'test_16x16.png')
         output_path = os.path.join(self.temp_dir, 'test_output.bin')
-        
+
         # Create 16x16 test image (2x2 tiles)
         img = self.create_test_image(16, 16)
         img.save(input_path)
-        
+
         # Convert
         result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Verify output
         self.assertIsInstance(result, int)
         self.assertEqual(result, 128)  # 4 tiles * 32 bytes each
         self.assertTrue(os.path.exists(output_path))
-        
+
         # Check file size
         with open(output_path, 'rb') as f:
             data = f.read()
@@ -90,17 +91,17 @@ class TestPngToSnesFunction(unittest.TestCase):
         """Test conversion of valid 8x8 indexed PNG (single tile)."""
         input_path = os.path.join(self.temp_dir, 'test_8x8.png')
         output_path = os.path.join(self.temp_dir, 'test_output.bin')
-        
+
         # Create 8x8 test image (1 tile)
         img = self.create_test_image(8, 8)
         img.save(input_path)
-        
+
         # Convert
         result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Verify output
         self.assertEqual(result, 32)  # 1 tile * 32 bytes
-        
+
         # Check file contents are valid 4bpp data
         with open(output_path, 'rb') as f:
             data = f.read()
@@ -110,15 +111,15 @@ class TestPngToSnesFunction(unittest.TestCase):
         """Test that non-indexed PNGs are automatically converted."""
         input_path = os.path.join(self.temp_dir, 'test_rgb.png')
         output_path = os.path.join(self.temp_dir, 'test_output.bin')
-        
+
         # Create RGB image
         img = Image.new('RGB', (8, 8), (255, 0, 0))  # Red image
         img.save(input_path)
-        
+
         # Convert (should auto-convert to indexed)
         with patch('builtins.print'):  # Suppress conversion message
             result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Should succeed
         self.assertEqual(result, 32)
         self.assertTrue(os.path.exists(output_path))
@@ -127,14 +128,14 @@ class TestPngToSnesFunction(unittest.TestCase):
         """Test conversion of larger image with multiple tiles."""
         input_path = os.path.join(self.temp_dir, 'test_large.png')
         output_path = os.path.join(self.temp_dir, 'test_output.bin')
-        
+
         # Create 32x24 image (4x3 = 12 tiles)
         img = self.create_test_image(32, 24)
         img.save(input_path)
-        
+
         # Convert
         result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Verify output
         expected_bytes = 12 * 32  # 12 tiles * 32 bytes each
         self.assertEqual(result, expected_bytes)
@@ -143,14 +144,16 @@ class TestPngToSnesFunction(unittest.TestCase):
         """Test that pixel values are properly masked to 4-bit."""
         input_path = os.path.join(self.temp_dir, 'test_mask.png')
         output_path = os.path.join(self.temp_dir, 'test_output.bin')
-        
+
         # Create image with palette indices that need masking
-        img = self.create_test_image(8, 8, colors=list(range(32)))  # Use more than 16 colors
+        img = self.create_test_image(
+            8, 8, colors=list(
+                range(32)))  # Use more than 16 colors
         img.save(input_path)
-        
+
         # Convert
         result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Should succeed (values should be masked to 4-bit)
         self.assertEqual(result, 32)
 
@@ -172,7 +175,7 @@ class TestPngToSnesErrorHandling(unittest.TestCase):
         """Test handling of non-existent input file."""
         input_path = os.path.join(self.temp_dir, 'nonexistent.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         # Should handle file not found gracefully
         with self.assertRaises(FileNotFoundError):
             png_to_snes.png_to_snes(input_path, output_path)
@@ -181,11 +184,11 @@ class TestPngToSnesErrorHandling(unittest.TestCase):
         """Test handling of invalid image file."""
         input_path = os.path.join(self.temp_dir, 'invalid.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         # Create invalid file
         with open(input_path, 'w') as f:
             f.write("not an image")
-        
+
         # Should handle invalid image gracefully
         with self.assertRaises(Exception):
             png_to_snes.png_to_snes(input_path, output_path)
@@ -194,11 +197,11 @@ class TestPngToSnesErrorHandling(unittest.TestCase):
         """Test handling of non-writable output directory."""
         input_path = os.path.join(self.temp_dir, 'test.png')
         output_path = '/root/nonexistent/output.bin'  # Likely non-writable
-        
+
         # Create valid input
         img = Image.new('P', (8, 8))
         img.save(input_path)
-        
+
         # Should handle write failure gracefully
         with self.assertRaises(Exception):
             png_to_snes.png_to_snes(input_path, output_path)
@@ -208,14 +211,14 @@ class TestPngToSnesErrorHandling(unittest.TestCase):
         """Test handling of tile encoding failure."""
         input_path = os.path.join(self.temp_dir, 'test.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         # Create valid input
         img = Image.new('P', (8, 8))
         img.save(input_path)
-        
+
         # Mock encoding failure
         mock_encode.side_effect = Exception("Encoding failed")
-        
+
         # Should propagate encoding error
         with self.assertRaises(Exception):
             png_to_snes.png_to_snes(input_path, output_path)
@@ -238,16 +241,16 @@ class TestPngToSnesCommandLine(unittest.TestCase):
         """Test main() function with valid arguments."""
         input_path = os.path.join(self.temp_dir, 'test.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         # Create test image
         img = Image.new('P', (8, 8))
         img.save(input_path)
-        
+
         # Mock sys.argv
         with patch.object(sys, 'argv', ['png_to_snes.py', input_path, output_path]):
             # Should run without error
             png_to_snes.main()
-        
+
         # Check output was created
         self.assertTrue(os.path.exists(output_path))
 
@@ -258,19 +261,20 @@ class TestPngToSnesCommandLine(unittest.TestCase):
                 with patch.object(sys, 'exit') as mock_exit:
                     # Mock sys.exit to raise SystemExit so we can catch it
                     mock_exit.side_effect = SystemExit(1)
-                    
+
                     with self.assertRaises(SystemExit):
                         png_to_snes.main()
-                    
+
                     # Should print usage and exit
-                    mock_print.assert_called_with("Usage: python png_to_snes.py input.png output.bin")
+                    mock_print.assert_called_with(
+                        "Usage: python png_to_snes.py input.png output.bin")
                     mock_exit.assert_called_with(1)
 
     def test_main_with_missing_input(self):
         """Test main() function with missing input file."""
         input_path = os.path.join(self.temp_dir, 'nonexistent.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         with patch.object(sys, 'argv', ['png_to_snes.py', input_path, output_path]):
             # Should raise FileNotFoundError (main doesn't handle this)
             with self.assertRaises(FileNotFoundError):
@@ -294,54 +298,55 @@ class TestPngToSnesIntegration(unittest.TestCase):
         """Test that converted data can be decoded back properly."""
         input_path = os.path.join(self.temp_dir, 'test.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
-        # Create test image with known single tile pattern  
+
+        # Create test image with known single tile pattern
         img = Image.new('P', (8, 8))  # Single tile
-        
+
         # Set palette
         palette = []
         for i in range(256):
             r = (i * 17) % 256
-            g = (i * 37) % 256  
+            g = (i * 37) % 256
             b = (i * 73) % 256
             palette.extend([r, g, b])
         img.putpalette(palette)
-        
+
         # Create known pattern: simple gradient
         pixels = []
         for y in range(8):
             for x in range(8):
-                pixels.append(min(x, 15))  # Gradient from 0-7, clamped to 4-bit
-        
+                # Gradient from 0-7, clamped to 4-bit
+                pixels.append(min(x, 15))
+
         img.putdata(pixels)
         img.save(input_path)
-        
+
         # Convert
         result = png_to_snes.png_to_snes(input_path, output_path)
-        
+
         # Verify structure
         self.assertEqual(result, 32)  # 1 tile * 32 bytes
-        
+
         with open(output_path, 'rb') as f:
             data = f.read()
-        
+
         # Verify we have the expected data size
         self.assertEqual(len(data), 32)
-        
+
         # Test that the conversion can be decoded back
         from tile_utils import decode_4bpp_tile
-        
+
         # Decode the tile
         decoded = decode_4bpp_tile(data, 0)
-        
+
         # Verify we got 64 pixels back
         self.assertEqual(len(decoded), 64)
-        
+
         # Verify all pixels are in valid 4-bit range
         for pixel in decoded:
             self.assertGreaterEqual(pixel, 0)
             self.assertLessEqual(pixel, 15)
-        
+
         # Verify the pattern has some variation (not all the same)
         unique_values = set(decoded)
         self.assertGreater(len(unique_values), 1)
@@ -350,17 +355,17 @@ class TestPngToSnesIntegration(unittest.TestCase):
         """Test executing as subprocess."""
         input_path = os.path.join(self.temp_dir, 'test.png')
         output_path = os.path.join(self.temp_dir, 'output.bin')
-        
+
         # Create test image
         img = Image.new('P', (8, 8))
         img.save(input_path)
-        
+
         # Run as subprocess
         cmd = [sys.executable, 'png_to_snes.py', input_path, output_path]
-        result = subprocess.run(cmd, 
-                              cwd='/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor',
-                              capture_output=True, text=True)
-        
+        result = subprocess.run(cmd,
+                                cwd='/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor',
+                                capture_output=True, text=True)
+
         # Should succeed
         self.assertEqual(result.returncode, 0)
         self.assertTrue(os.path.exists(output_path))

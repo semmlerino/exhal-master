@@ -4,13 +4,13 @@ Multi-palette preview widget for SNES sprites
 Shows sprites with all 16 palettes and highlights OAM-assigned palettes
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QGridLayout, QLabel, QVBoxLayout,
-    QHBoxLayout, QScrollArea, QGroupBox, QCheckBox, QFrame
-)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QFont
 from PIL import Image
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import (QCheckBox, QFrame, QGridLayout, QGroupBox,
+                             QHBoxLayout, QLabel, QScrollArea, QVBoxLayout,
+                             QWidget)
+
 
 class PalettePreviewTile(QLabel):
     """Individual palette preview tile"""
@@ -75,15 +75,27 @@ class PalettePreviewTile(QLabel):
             # Convert PIL to QPixmap
             if image.mode == 'RGBA':
                 data = image.tobytes('raw', 'RGBA')
-                qimage = QImage(data, image.width, image.height, QImage.Format.Format_RGBA8888)
+                qimage = QImage(
+                    data,
+                    image.width,
+                    image.height,
+                    QImage.Format.Format_RGBA8888)
             elif image.mode == 'RGB':
                 data = image.tobytes('raw', 'RGB')
-                qimage = QImage(data, image.width, image.height, QImage.Format.Format_RGB888)
+                qimage = QImage(
+                    data,
+                    image.width,
+                    image.height,
+                    QImage.Format.Format_RGB888)
             else:
                 # Convert to RGB
                 image_rgb = image.convert('RGB')
                 data = image_rgb.tobytes('raw', 'RGB')
-                qimage = QImage(data, image.width, image.height, QImage.Format.Format_RGB888)
+                qimage = QImage(
+                    data,
+                    image.width,
+                    image.height,
+                    QImage.Format.Format_RGB888)
 
             pixmap = QPixmap.fromImage(qimage)
 
@@ -103,11 +115,12 @@ class PalettePreviewTile(QLabel):
             # Draw active indicator
             if self.is_active:
                 painter.setPen(QPen(QColor(0, 255, 0), 2))
-                painter.drawRect(1, 1, pixmap.width()-2, pixmap.height()-2)
+                painter.drawRect(1, 1, pixmap.width() - 2, pixmap.height() - 2)
 
             painter.end()
 
             self.setPixmap(pixmap)
+
 
 class MultiPaletteViewer(QWidget):
     """Widget showing sprites with all 16 palettes"""
@@ -301,7 +314,8 @@ class MultiPaletteViewer(QWidget):
             self.active_palettes = set(oam_stats.get('active_palettes', []))
 
             # Update all tiles with usage info
-            for i, (tile, usage_label, container) in enumerate(self.palette_tiles):
+            for i, (tile, usage_label, container) in enumerate(
+                    self.palette_tiles):
                 if 'palette_counts' in oam_stats and i in oam_stats['palette_counts']:
                     count = oam_stats['palette_counts'][i]
                     usage_label.setText(f"Used by {count} sprites")

@@ -15,19 +15,21 @@ Options:
     --palette <num>   Apply CGRAM palette (requires CGRAM.dmp)
 """
 
-import sys
-import os
-import struct
 import argparse
+import os
+import sys
+
 from PIL import Image
+
 try:
+    from palette_utils import read_cgram_palette
     from tile_utils import decode_4bpp_tile
-    from palette_utils import read_cgram_palette, get_grayscale_palette
 except ImportError:
+    from .palette_utils import read_cgram_palette
     from .tile_utils import decode_4bpp_tile
-    from .palette_utils import read_cgram_palette, get_grayscale_palette
 
 # Functions now imported from utility modules
+
 
 def extract_sprites(vram_file, offset, size, tiles_per_row=16):
     """Extract sprites from VRAM dump."""
@@ -77,7 +79,8 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
                     dst_x = tile_x * 8 + x
                     dst_y = tile_y * 8 + y
 
-                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
+                    if src_idx < len(
+                            pixels) and dst_y < height and dst_x < width:
                         img_pixels[dst_y * width + dst_x] = pixels[src_idx]
 
         img.putdata(img_pixels)
@@ -87,14 +90,28 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
         print(f"Error extracting sprites: {e}")
         return None
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Kirby Super Star Sprite Extractor')
+    parser = argparse.ArgumentParser(
+        description='Kirby Super Star Sprite Extractor')
     parser.add_argument('--vram', default='VRAM.dmp', help='VRAM dump file')
-    parser.add_argument('--offset', default='0xC000', help='VRAM offset in hex')
-    parser.add_argument('--size', default='0x4000', help='Size to extract in hex')
-    parser.add_argument('--output', default='sprites_to_edit.png', help='Output PNG file')
+    parser.add_argument(
+        '--offset',
+        default='0xC000',
+        help='VRAM offset in hex')
+    parser.add_argument(
+        '--size',
+        default='0x4000',
+        help='Size to extract in hex')
+    parser.add_argument(
+        '--output',
+        default='sprites_to_edit.png',
+        help='Output PNG file')
     parser.add_argument('--width', type=int, default=16, help='Tiles per row')
-    parser.add_argument('--palette', type=int, help='Apply CGRAM palette number')
+    parser.add_argument(
+        '--palette',
+        type=int,
+        help='Apply CGRAM palette number')
 
     args = parser.parse_args()
 
@@ -105,7 +122,7 @@ def main():
     print("Sprite Extractor - Kirby Super Star")
     print("===================================")
     print(f"VRAM file: {args.vram}")
-    print(f"Offset: {hex(offset)} (VRAM ${hex(offset//2)})")
+    print(f"Offset: {hex(offset)} (VRAM ${hex(offset // 2)})")
     print(f"Size: {hex(size)} ({size} bytes)")
     print(f"Output: {args.output}")
     print()
@@ -143,6 +160,7 @@ def main():
     print("- Use sprite_injector.py to reinsert your edits")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -3,9 +3,11 @@
 Extract all palettes from CGRAM dump and apply to sprites
 """
 
-import sys
 import struct
+import sys
+
 from PIL import Image
+
 
 def read_cgram_palettes(cgram_file):
     """Read all 16 palettes from CGRAM dump."""
@@ -32,6 +34,7 @@ def read_cgram_palettes(cgram_file):
 
     return palettes
 
+
 def apply_palette(img, palette_num, palettes):
     """Apply a specific palette to an image."""
     if palette_num >= len(palettes):
@@ -46,6 +49,7 @@ def apply_palette(img, palette_num, palettes):
 
     img.putpalette(full_palette)
     return img
+
 
 def main():
     if len(sys.argv) < 4:
@@ -78,8 +82,9 @@ def main():
         for i, pal in enumerate(palettes[:8]):
             colors = []
             for j in range(0, 24, 3):
-                colors.append(f"({pal[j]:3},{pal[j+1]:3},{pal[j+2]:3})")
+                colors.append(f"({pal[j]:3},{pal[j + 1]:3},{pal[j + 2]:3})")
             print(f"Palette {i}: {' '.join(colors[:4])}")
+
 
 if __name__ == "__main__":
     main()

@@ -5,7 +5,9 @@ Handles background extraction of sprites from VRAM dumps
 """
 
 import os
+
 from PyQt6.QtCore import QThread, pyqtSignal
+
 from ..sprite_editor_core import SpriteEditorCore
 
 
@@ -15,7 +17,8 @@ class ExtractWorker(QThread):
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
 
-    def __init__(self, vram_file, offset, size, tiles_per_row, palette_num=None, cgram_file=None):
+    def __init__(self, vram_file, offset, size, tiles_per_row,
+                 palette_num=None, cgram_file=None):
         super().__init__()
         self.vram_file = vram_file
         self.offset = offset
@@ -33,9 +36,11 @@ class ExtractWorker(QThread):
             )
 
             # Apply palette if requested
-            if self.palette_num is not None and self.cgram_file and os.path.exists(self.cgram_file):
+            if self.palette_num is not None and self.cgram_file and os.path.exists(
+                    self.cgram_file):
                 self.progress.emit(f"Applying palette {self.palette_num}...")
-                palette = self.core.read_cgram_palette(self.cgram_file, self.palette_num)
+                palette = self.core.read_cgram_palette(
+                    self.cgram_file, self.palette_num)
                 if palette:
                     image.putpalette(palette)
 

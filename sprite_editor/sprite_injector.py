@@ -13,18 +13,19 @@ Options:
     --preview         Generate preview images with palettes
 """
 
-import sys
-import os
 import argparse
+import os
+import sys
+
 from PIL import Image
+
 try:
-    from tile_utils import encode_4bpp_tile, decode_4bpp_tile
-    from palette_utils import read_cgram_palette
+    from tile_utils import decode_4bpp_tile, encode_4bpp_tile
 except ImportError:
-    from .tile_utils import encode_4bpp_tile, decode_4bpp_tile
-    from .palette_utils import read_cgram_palette
+    from .tile_utils import decode_4bpp_tile, encode_4bpp_tile
 
 # Functions now imported from utility modules
+
 
 def png_to_snes(png_file):
     """Convert PNG to SNES 4bpp tile data."""
@@ -33,7 +34,9 @@ def png_to_snes(png_file):
 
         # Ensure indexed color mode
         if img.mode != 'P':
-            print(f"Warning: Image is in {img.mode} mode, converting to indexed...")
+            print(
+                f"Warning: Image is in {
+                    img.mode} mode, converting to indexed...")
             img = img.convert('P', palette=Image.ADAPTIVE, colors=16)
 
         width, height = img.size
@@ -74,6 +77,7 @@ def png_to_snes(png_file):
         print(f"Error converting PNG: {e}")
         return None
 
+
 def inject_into_vram(tile_data, vram_file, offset, output_file):
     """Inject tile data into VRAM dump at specified offset."""
     try:
@@ -83,7 +87,10 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
 
         # Validate offset
         if offset + len(tile_data) > len(vram_data):
-            print(f"Error: Tile data ({len(tile_data)} bytes) would exceed VRAM size at offset {hex(offset)}")
+            print(
+                f"Error: Tile data ({
+                    len(tile_data)} bytes) would exceed VRAM size at offset {
+                    hex(offset)}")
             return False
 
         # Inject tile data
@@ -102,6 +109,7 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
         return False
 
 # decode_4bpp_tile is now imported from tile_utils
+
 
 def create_preview(vram_file, offset, size, output_png):
     """Create a preview PNG of the injected sprites."""
@@ -147,7 +155,8 @@ def create_preview(vram_file, offset, size, output_png):
                     dst_x = tile_x * 8 + x
                     dst_y = tile_y * 8 + y
 
-                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
+                    if src_idx < len(
+                            pixels) and dst_y < height and dst_x < width:
                         img_pixels[dst_y * width + dst_x] = pixels[src_idx]
 
         img.putdata(img_pixels)
@@ -157,13 +166,27 @@ def create_preview(vram_file, offset, size, output_png):
     except Exception as e:
         print(f"Error creating preview: {e}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Kirby Super Star Sprite Injector')
+    parser = argparse.ArgumentParser(
+        description='Kirby Super Star Sprite Injector')
     parser.add_argument('input_png', help='Edited PNG file to inject')
-    parser.add_argument('--vram', default='VRAM.dmp', help='VRAM dump file (default: VRAM.dmp)')
-    parser.add_argument('--offset', default='0xC000', help='VRAM offset in hex (default: 0xC000)')
-    parser.add_argument('--output', default='VRAM_edited.dmp', help='Output VRAM file')
-    parser.add_argument('--preview', action='store_true', help='Generate preview images')
+    parser.add_argument(
+        '--vram',
+        default='VRAM.dmp',
+        help='VRAM dump file (default: VRAM.dmp)')
+    parser.add_argument(
+        '--offset',
+        default='0xC000',
+        help='VRAM offset in hex (default: 0xC000)')
+    parser.add_argument(
+        '--output',
+        default='VRAM_edited.dmp',
+        help='Output VRAM file')
+    parser.add_argument(
+        '--preview',
+        action='store_true',
+        help='Generate preview images')
 
     args = parser.parse_args()
 
@@ -174,7 +197,7 @@ def main():
     print("=================================")
     print(f"Input PNG: {args.input_png}")
     print(f"VRAM file: {args.vram}")
-    print(f"Offset: {hex(offset)} (VRAM ${hex(offset//2)})")
+    print(f"Offset: {hex(offset)} (VRAM ${hex(offset // 2)})")
     print(f"Output: {args.output}")
     print()
 
@@ -193,7 +216,7 @@ def main():
     if not tile_data:
         return 1
 
-    print(f"Converted {len(tile_data)} bytes ({len(tile_data)//32} tiles)")
+    print(f"Converted {len(tile_data)} bytes ({len(tile_data) // 32} tiles)")
 
     # Inject into VRAM
     print("\nInjecting into VRAM...")
@@ -209,10 +232,11 @@ def main():
     print("\nSuccess! You can now load the modified VRAM in your emulator.")
     print("\nSprite data location:")
     print(f"  File offset: {hex(offset)}")
-    print(f"  VRAM address: ${hex(offset//2)}")
+    print(f"  VRAM address: ${hex(offset // 2)}")
     print(f"  Size: {len(tile_data)} bytes")
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -48,7 +48,7 @@ RGB888_MAX_VALUE = 255  # 8 bits per color component
 
 # BGR555 color masks
 BGR555_BLUE_MASK = 0x7C00   # Bits 14-10 for blue
-BGR555_GREEN_MASK = 0x03E0  # Bits 9-5 for green  
+BGR555_GREEN_MASK = 0x03E0  # Bits 9-5 for green
 BGR555_RED_MASK = 0x001F    # Bits 4-0 for red
 
 # Bit shifts for BGR555

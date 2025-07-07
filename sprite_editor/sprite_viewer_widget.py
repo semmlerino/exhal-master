@@ -3,10 +3,11 @@
 Custom PyQt widget for sprite viewing with zoom and grid overlay
 """
 
-from PyQt6.QtWidgets import QWidget, QScrollArea, QLabel
-from PyQt6.QtCore import Qt, QRect, pyqtSignal
-from PyQt6.QtGui import QPainter, QPen, QColor, QPixmap, QImage, QMouseEvent
 from PIL import Image
+from PyQt6.QtCore import QRect, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import QLabel, QScrollArea, QWidget
+
 
 class SpriteViewerWidget(QScrollArea):
     """Custom widget for viewing sprite images with zoom and grid support"""
@@ -67,10 +68,18 @@ class SpriteViewerWidget(QScrollArea):
                 # Handle indexed images
                 image_rgb = image.convert('RGBA')
                 data = image_rgb.tobytes('raw', 'RGBA')
-                qimage = QImage(data, image.width, image.height, QImage.Format.Format_RGBA8888)
+                qimage = QImage(
+                    data,
+                    image.width,
+                    image.height,
+                    QImage.Format.Format_RGBA8888)
             else:
                 data = image.tobytes('raw', 'RGB')
-                qimage = QImage(data, image.width, image.height, QImage.Format.Format_RGB888)
+                qimage = QImage(
+                    data,
+                    image.width,
+                    image.height,
+                    QImage.Format.Format_RGB888)
 
             self._pixmap = QPixmap.fromImage(qimage)
             self._image = image
@@ -128,16 +137,21 @@ class SpriteViewerWidget(QScrollArea):
         )
 
         # Draw overlays if enabled
-        if (self._show_grid and self._zoom_level >= 2) or self._show_palette_overlay:
+        if (self._show_grid and self._zoom_level >=
+                2) or self._show_palette_overlay:
             painter = QPainter(scaled_pixmap)
 
             # Draw palette overlay first (under grid)
             if self._show_palette_overlay:
-                self._draw_palette_overlay(painter, scaled_pixmap.width(), scaled_pixmap.height())
+                self._draw_palette_overlay(
+                    painter, scaled_pixmap.width(), scaled_pixmap.height())
 
             # Draw grid overlay on top
             if self._show_grid and self._zoom_level >= 2:
-                self._draw_grid(painter, scaled_pixmap.width(), scaled_pixmap.height())
+                self._draw_grid(
+                    painter,
+                    scaled_pixmap.width(),
+                    scaled_pixmap.height())
 
             painter.end()
 

@@ -2,15 +2,18 @@
 Shared pytest fixtures and configuration for sprite editor tests
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
 
 @pytest.fixture
 def temp_dir():
     """Create a temporary directory for test files"""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
+
 
 @pytest.fixture
 def sample_vram_data():
@@ -22,6 +25,7 @@ def sample_vram_data():
         for j in range(32):
             data[i + j] = (i // 32 + j) % 256
     return bytes(data)
+
 
 @pytest.fixture
 def sample_cgram_data():
@@ -40,6 +44,7 @@ def sample_cgram_data():
             data[offset] = bgr555 & 0xFF
             data[offset + 1] = (bgr555 >> 8) & 0xFF
     return bytes(data)
+
 
 @pytest.fixture
 def sample_oam_data():
@@ -60,6 +65,7 @@ def sample_oam_data():
 
     return bytes(data)
 
+
 @pytest.fixture
 def sample_4bpp_tile():
     """Create a sample 4bpp tile (32 bytes)"""
@@ -74,6 +80,7 @@ def sample_4bpp_tile():
         tile_data[16 + y * 2 + 1] = 0
     return bytes(tile_data)
 
+
 @pytest.fixture
 def vram_file(temp_dir, sample_vram_data):
     """Create a temporary VRAM dump file"""
@@ -81,12 +88,14 @@ def vram_file(temp_dir, sample_vram_data):
     vram_path.write_bytes(sample_vram_data)
     return str(vram_path)
 
+
 @pytest.fixture
 def cgram_file(temp_dir, sample_cgram_data):
     """Create a temporary CGRAM dump file"""
     cgram_path = temp_dir / "CGRAM.dmp"
     cgram_path.write_bytes(sample_cgram_data)
     return str(cgram_path)
+
 
 @pytest.fixture
 def oam_file(temp_dir, sample_oam_data):

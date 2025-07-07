@@ -4,24 +4,36 @@ Core functionality for Kirby Super Star sprite editing
 Refactored from sprite_injector.py and sprite_extractor.py
 """
 
-import struct
-from typing import Optional, List, Tuple, Dict, Union
-from PIL import Image
 import os
+from typing import Dict, List, Optional, Tuple, Union
+
+from PIL import Image
+
 try:
-    from .oam_palette_mapper import OAMPaletteMapper
-    from .security_utils import validate_file_path, validate_output_path, SecurityError
-    from .constants import *
-    from .tile_utils import decode_4bpp_tile, encode_4bpp_tile
-    from .palette_utils import read_cgram_palette, get_grayscale_palette
+    from .constants import (
+        BYTES_PER_TILE_4BPP, DEFAULT_TILES_PER_ROW, MAX_PNG_FILE_SIZE,
+        MAX_VRAM_FILE_SIZE, PIXELS_PER_TILE, PIXEL_4BPP_MASK,
+        TILE_DATA_MAX_SIZE, TILE_HEIGHT, TILE_WIDTH, VRAM_SIZE_ABSOLUTE_MAX
+    )
     from .logging_config import get_logger
+    from .oam_palette_mapper import OAMPaletteMapper
+    from .palette_utils import get_grayscale_palette, read_cgram_palette
+    from .security_utils import (SecurityError, validate_file_path,
+                                 validate_output_path)
+    from .tile_utils import decode_4bpp_tile, encode_4bpp_tile
 except ImportError:
-    from oam_palette_mapper import OAMPaletteMapper
-    from security_utils import validate_file_path, validate_output_path, SecurityError
-    from constants import *
-    from tile_utils import decode_4bpp_tile, encode_4bpp_tile
-    from palette_utils import read_cgram_palette, get_grayscale_palette
+    from constants import (
+        BYTES_PER_TILE_4BPP, DEFAULT_TILES_PER_ROW, MAX_PNG_FILE_SIZE,
+        MAX_VRAM_FILE_SIZE, PIXELS_PER_TILE, PIXEL_4BPP_MASK,
+        TILE_DATA_MAX_SIZE, TILE_HEIGHT, TILE_WIDTH, VRAM_SIZE_ABSOLUTE_MAX
+    )
     from logging_config import get_logger
+    from oam_palette_mapper import OAMPaletteMapper
+    from palette_utils import get_grayscale_palette, read_cgram_palette
+    from security_utils import (SecurityError, validate_file_path,
+                                validate_output_path)
+    from tile_utils import decode_4bpp_tile, encode_4bpp_tile
+
 
 class SpriteEditorCore:
     """Core sprite editing functionality"""
@@ -42,7 +54,8 @@ class SpriteEditorCore:
         return encode_4bpp_tile(tile_pixels)
 
     @staticmethod
-    def read_cgram_palette(cgram_file: str, palette_num: int) -> Optional[List[int]]:
+    def read_cgram_palette(cgram_file: str,
+                           palette_num: int) -> Optional[List[int]]:
         """Read a specific palette from CGRAM dump."""
         return read_cgram_palette(cgram_file, palette_num)
 
@@ -56,12 +69,14 @@ class SpriteEditorCore:
         pixels = []
         total_tiles = len(data) // BYTES_PER_TILE_4BPP
         for tile_idx in range(total_tiles):
-            if tile_idx * BYTES_PER_TILE_4BPP + BYTES_PER_TILE_4BPP <= len(data):
+            if tile_idx * BYTES_PER_TILE_4BPP + \
+                    BYTES_PER_TILE_4BPP <= len(data):
                 tile = decode_4bpp_tile(data, tile_idx * BYTES_PER_TILE_4BPP)
                 pixels.extend(tile)
         return pixels
 
-    def _arrange_tiles_in_indexed_image(self, pixels: List[int], total_tiles: int, tiles_x: int, tiles_y: int, width: int, height: int) -> List[int]:
+    def _arrange_tiles_in_indexed_image(
+            self, pixels: List[int], total_tiles: int, tiles_x: int, tiles_y: int, width: int, height: int) -> List[int]:
         """Arrange decoded tile pixels into final image layout."""
         img_pixels = [0] * (width * height)
         for tile_idx in range(min(total_tiles, tiles_x * tiles_y)):
@@ -74,15 +89,18 @@ class SpriteEditorCore:
                     dst_x = tile_x * TILE_WIDTH + x
                     dst_y = tile_y * TILE_HEIGHT + y
 
-                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
+                    if src_idx < len(
+                            pixels) and dst_y < height and dst_x < width:
                         img_pixels[dst_y * width + dst_x] = pixels[src_idx]
         return img_pixels
 
-    def extract_sprites(self, vram_file: str, offset: int, size: int, tiles_per_row: int = DEFAULT_TILES_PER_ROW) -> Tuple[Image.Image, int]:
+    def extract_sprites(self, vram_file: str, offset: int, size: int,
+                        tiles_per_row: int = DEFAULT_TILES_PER_ROW) -> Tuple[Image.Image, int]:
         """Extract sprites from VRAM dump."""
         try:
             # Validate file path
-            vram_file = validate_file_path(vram_file, max_size=MAX_VRAM_FILE_SIZE)
+            vram_file = validate_file_path(
+                vram_file, max_size=MAX_VRAM_FILE_SIZE)
 
             # Read VRAM data
             with open(vram_file, 'rb') as f:
@@ -90,7 +108,8 @@ class SpriteEditorCore:
                 data = f.read(size)
 
             # Calculate dimensions
-            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(len(data), tiles_per_row)
+            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(
+                len(data), tiles_per_row)
 
             # Create indexed color image
             img = Image.new('P', (width, height))
@@ -98,7 +117,8 @@ class SpriteEditorCore:
 
             # Decode all tiles and arrange in image
             pixels = self._decode_all_tiles(data)
-            img_pixels = self._arrange_tiles_in_indexed_image(pixels, total_tiles, tiles_x, tiles_y, width, height)
+            img_pixels = self._arrange_tiles_in_indexed_image(
+                pixels, total_tiles, tiles_x, tiles_y, width, height)
 
             img.putdata(img_pixels)
             return img, total_tiles
@@ -110,14 +130,16 @@ class SpriteEditorCore:
             # File operations, data access, and memory errors
             raise RuntimeError(f"Error extracting sprites: {e}") from e
 
-    def _calculate_tile_grid_dimensions(self, width: int, height: int) -> Tuple[int, int, int]:
+    def _calculate_tile_grid_dimensions(
+            self, width: int, height: int) -> Tuple[int, int, int]:
         """Calculate tile grid dimensions from image size."""
         tiles_x = (width + 7) // 8  # Round up to next tile
         tiles_y = (height + 7) // 8  # Round up to next tile
         total_tiles = tiles_x * tiles_y
         return tiles_x, tiles_y, total_tiles
 
-    def _extract_tile_from_image(self, pixels: List[int], tile_x: int, tile_y: int, img_width: int) -> List[int]:
+    def _extract_tile_from_image(
+            self, pixels: List[int], tile_x: int, tile_y: int, img_width: int) -> List[int]:
         """Extract an 8x8 tile from image pixel data."""
         tile_pixels = []
         for y in range(TILE_HEIGHT):
@@ -142,10 +164,12 @@ class SpriteEditorCore:
 
             # Ensure indexed color mode
             if img.mode != 'P':
-                raise ValueError(f"Image must be in indexed color mode (current: {img.mode})")
+                raise ValueError(
+                    f"Image must be in indexed color mode (current: {img.mode})")
 
             width, height = img.size
-            tiles_x, tiles_y, total_tiles = self._calculate_tile_grid_dimensions(width, height)
+            tiles_x, tiles_y, total_tiles = self._calculate_tile_grid_dimensions(
+                width, height)
 
             # Convert to raw pixel data
             pixels = list(img.getdata())
@@ -156,7 +180,8 @@ class SpriteEditorCore:
             for tile_y in range(tiles_y):
                 for tile_x in range(tiles_x):
                     # Extract and encode 8x8 tile
-                    tile_pixels = self._extract_tile_from_image(pixels, tile_x, tile_y, width)
+                    tile_pixels = self._extract_tile_from_image(
+                        pixels, tile_x, tile_y, width)
                     tile_data = encode_4bpp_tile(tile_pixels)
                     output_data.extend(tile_data)
 
@@ -169,11 +194,13 @@ class SpriteEditorCore:
             # File operations and PIL/Image errors
             raise RuntimeError(f"Error converting PNG: {e}") from e
 
-    def inject_into_vram(self, tile_data: bytes, vram_file: str, offset: int, output_file: Optional[str] = None) -> Union[str, bytes]:
+    def inject_into_vram(self, tile_data: bytes, vram_file: str, offset: int,
+                         output_file: Optional[str] = None) -> Union[str, bytes]:
         """Inject tile data into VRAM dump at specified offset."""
         try:
             # Validate file paths
-            vram_file = validate_file_path(vram_file, max_size=VRAM_SIZE_ABSOLUTE_MAX)
+            vram_file = validate_file_path(
+                vram_file, max_size=VRAM_SIZE_ABSOLUTE_MAX)
             if output_file:
                 output_file = validate_output_path(output_file)
 
@@ -187,17 +214,24 @@ class SpriteEditorCore:
 
             # Validate VRAM size (typical SNES VRAM is 64KB)
             if len(vram_data) > VRAM_SIZE_ABSOLUTE_MAX:
-                raise ValueError(f"VRAM file too large: {len(vram_data)} bytes")
+                raise ValueError(
+                    f"VRAM file too large: {
+                        len(vram_data)} bytes")
 
             # Validate offset and data size
             if offset > len(vram_data):
                 raise ValueError(f"Offset {hex(offset)} exceeds VRAM size")
 
             if len(tile_data) > TILE_DATA_MAX_SIZE:
-                raise ValueError(f"Tile data too large: {len(tile_data)} bytes")
+                raise ValueError(
+                    f"Tile data too large: {
+                        len(tile_data)} bytes")
 
             if offset + len(tile_data) > len(vram_data):
-                raise ValueError(f"Tile data ({len(tile_data)} bytes) would exceed VRAM size at offset {hex(offset)}")
+                raise ValueError(
+                    f"Tile data ({
+                        len(tile_data)} bytes) would exceed VRAM size at offset {
+                        hex(offset)}")
 
             # Inject tile data
             vram_data[offset:offset + len(tile_data)] = tile_data
@@ -229,7 +263,9 @@ class SpriteEditorCore:
 
             # Check color mode
             if img.mode != 'P':
-                issues.append(f"Image is in {img.mode} mode, must be indexed (P) mode")
+                issues.append(
+                    f"Image is in {
+                        img.mode} mode, must be indexed (P) mode")
 
             # Check dimensions
             width, height = img.size
@@ -244,7 +280,8 @@ class SpriteEditorCore:
                 if palette:
                     colors_used = len(set(img.getdata()))
                     if colors_used > 16:
-                        issues.append(f"Too many colors ({colors_used}), maximum is 16")
+                        issues.append(
+                            f"Too many colors ({colors_used}), maximum is 16")
 
             return len(issues) == 0, issues
 
@@ -255,11 +292,13 @@ class SpriteEditorCore:
             # File and PIL/Image errors
             return False, [str(e)]
 
-    def get_vram_info(self, vram_file: str) -> Optional[Dict[str, Union[str, int]]]:
+    def get_vram_info(
+            self, vram_file: str) -> Optional[Dict[str, Union[str, int]]]:
         """Get information about VRAM dump file."""
         try:
             # Validate file path
-            vram_file = validate_file_path(vram_file, max_size=VRAM_SIZE_ABSOLUTE_MAX)
+            vram_file = validate_file_path(
+                vram_file, max_size=VRAM_SIZE_ABSOLUTE_MAX)
 
             file_size = os.path.getsize(vram_file)
 
@@ -288,7 +327,8 @@ class SpriteEditorCore:
         """Load OAM data for palette mapping"""
         try:
             # Validate file path
-            oam_file = validate_file_path(oam_file, max_size=2048)  # 2KB max for OAM
+            oam_file = validate_file_path(
+                oam_file, max_size=2048)  # 2KB max for OAM
 
             self.oam_mapper = OAMPaletteMapper()
             self.oam_mapper.parse_oam_dump(oam_file)
@@ -302,11 +342,13 @@ class SpriteEditorCore:
             self.logger.error(f"Error loading OAM: {e}")
             return False
 
-    def extract_sprites_multi_palette(self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Dict[str, Image.Image], int]:
+    def extract_sprites_multi_palette(self, vram_file: str, offset: int, size: int,
+                                      cgram_file: str, tiles_per_row: int = 16) -> Tuple[Dict[str, Image.Image], int]:
         """Extract sprites with multiple palette previews based on OAM data"""
         try:
             # First extract the base sprite data
-            base_img, total_tiles = self.extract_sprites(vram_file, offset, size, tiles_per_row)
+            base_img, total_tiles = self.extract_sprites(
+                vram_file, offset, size, tiles_per_row)
 
             # If no OAM mapper, return single palette
             if not self.oam_mapper:
@@ -333,9 +375,11 @@ class SpriteEditorCore:
             return palette_images, total_tiles
 
         except (OSError, IOError, RuntimeError) as e:
-            raise RuntimeError(f"Error extracting multi-palette sprites: {e}") from e
+            raise RuntimeError(
+                f"Error extracting multi-palette sprites: {e}") from e
 
-    def _calculate_sprite_dimensions(self, data_size: int, tiles_per_row: int) -> Tuple[int, int, int, int]:
+    def _calculate_sprite_dimensions(
+            self, data_size: int, tiles_per_row: int) -> Tuple[int, int, int, int]:
         """Calculate sprite layout dimensions from data size."""
         total_tiles = data_size // BYTES_PER_TILE_4BPP
         tiles_x = tiles_per_row
@@ -368,8 +412,8 @@ class SpriteEditorCore:
                 return pal
         return 0  # Default palette
 
-    def _draw_tile_to_rgba_image(self, img: Image.Image, tile_data: List[int], palette: List[int], 
-                                tile_x: int, tile_y: int, width: int, height: int) -> None:
+    def _draw_tile_to_rgba_image(self, img: Image.Image, tile_data: List[int], palette: List[int],
+                                 tile_x: int, tile_y: int, width: int, height: int) -> None:
         """Draw a single tile to RGBA image using specified palette."""
         for y in range(TILE_HEIGHT):
             for x in range(TILE_WIDTH):
@@ -388,7 +432,8 @@ class SpriteEditorCore:
                         if px < width and py < height:
                             img.putpixel((px, py), (r, g, b, 255))
 
-    def extract_sprites_with_correct_palettes(self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
+    def extract_sprites_with_correct_palettes(
+            self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
         """Extract sprites with each tile using its OAM-assigned palette"""
         try:
             # Read VRAM data
@@ -397,7 +442,8 @@ class SpriteEditorCore:
                 data = f.read(size)
 
             # Calculate dimensions
-            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(len(data), tiles_per_row)
+            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(
+                len(data), tiles_per_row)
 
             # Create RGBA image for multi-palette rendering
             img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
@@ -407,39 +453,48 @@ class SpriteEditorCore:
 
             # Process each tile
             for tile_idx in range(total_tiles):
-                if tile_idx * BYTES_PER_TILE_4BPP + BYTES_PER_TILE_4BPP <= len(data):
+                if tile_idx * BYTES_PER_TILE_4BPP + \
+                        BYTES_PER_TILE_4BPP <= len(data):
                     # Decode tile
-                    tile_data = decode_4bpp_tile(data, tile_idx * BYTES_PER_TILE_4BPP)
+                    tile_data = decode_4bpp_tile(
+                        data, tile_idx * BYTES_PER_TILE_4BPP)
 
                     # Get palette for this tile
                     tile_offset = offset + (tile_idx * BYTES_PER_TILE_4BPP)
-                    assigned_palette = self._get_tile_palette_assignment(tile_offset)
+                    assigned_palette = self._get_tile_palette_assignment(
+                        tile_offset)
 
                     # Get the palette to use
-                    palette = palettes[assigned_palette] if assigned_palette < len(palettes) else palettes[0]
+                    palette = palettes[assigned_palette] if assigned_palette < len(
+                        palettes) else palettes[0]
 
                     # Calculate tile position
                     tile_x = tile_idx % tiles_x
                     tile_y = tile_idx // tiles_x
 
                     # Draw tile with correct palette
-                    self._draw_tile_to_rgba_image(img, tile_data, palette, tile_x, tile_y, width, height)
+                    self._draw_tile_to_rgba_image(
+                        img, tile_data, palette, tile_x, tile_y, width, height)
 
             return img, total_tiles
 
         except (OSError, IOError, IndexError) as e:
-            raise RuntimeError(f"Error extracting sprites with correct palettes: {e}") from e
+            raise RuntimeError(
+                f"Error extracting sprites with correct palettes: {e}") from e
 
-    def create_palette_grid_preview(self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
+    def create_palette_grid_preview(self, vram_file: str, offset: int, size: int,
+                                    cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
         """Create a grid showing sprites with all 16 palettes"""
         try:
             # Extract base sprite data
-            base_img, total_tiles = self.extract_sprites(vram_file, offset, size, tiles_per_row)
+            base_img, total_tiles = self.extract_sprites(
+                vram_file, offset, size, tiles_per_row)
 
             # Create grid image (4x4 grid of palettes)
             grid_width = base_img.width * 4
             grid_height = base_img.height * 4
-            grid_img = Image.new('RGB', (grid_width, grid_height), (32, 32, 32))
+            grid_img = Image.new(
+                'RGB', (grid_width, grid_height), (32, 32, 32))
 
             # Apply each palette and place in grid
             for pal_num in range(16):

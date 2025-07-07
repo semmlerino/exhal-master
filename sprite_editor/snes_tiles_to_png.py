@@ -5,13 +5,16 @@ SNES 4bpp format: Each 8x8 tile is 32 bytes, stored in a planar format.
 """
 
 import sys
+
 from PIL import Image
+
 try:
     from tile_utils import decode_4bpp_tile
 except ImportError:
     from .tile_utils import decode_4bpp_tile
 
 # Function now imported from tile_utils
+
 
 def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
     """Convert SNES tile data to PIL Image."""
@@ -54,9 +57,11 @@ def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
     img.putdata(pixels)
     return img
 
+
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python snes_tiles_to_png.py input.bin output.png [width_in_tiles]")
+        print(
+            "Usage: python snes_tiles_to_png.py input.bin output.png [width_in_tiles]")
         print("Default width is 16 tiles (128 pixels)")
         sys.exit(1)
 
@@ -72,8 +77,13 @@ def main():
     img = convert_tiles_to_image(data, width_in_tiles)
     img.save(output_file, 'PNG')
 
-    print(f"Converted {len(data)} bytes ({len(data)//32} tiles) to {output_file}")
+    print(
+        f"Converted {
+            len(data)} bytes ({
+            len(data) //
+            32} tiles) to {output_file}")
     print(f"Image size: {img.width}x{img.height} pixels")
+
 
 if __name__ == "__main__":
     main()

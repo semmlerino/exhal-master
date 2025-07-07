@@ -2,25 +2,28 @@
 Integration tests for sprite editor - testing complete workflows
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 from PIL import Image
 
-from sprite_editor.sprite_editor_core import SpriteEditorCore
+from sprite_editor.constants import BYTES_PER_TILE_4BPP, TILE_HEIGHT
 from sprite_editor.oam_palette_mapper import OAMPaletteMapper
-from sprite_editor.security_utils import SecurityError
-from sprite_editor.constants import *
+from sprite_editor.sprite_editor_core import SpriteEditorCore
+
 
 class TestFullExtractionWorkflow:
     """Test complete sprite extraction workflow"""
 
     @pytest.mark.integration
-    def test_extract_view_edit_inject_workflow(self, vram_file, cgram_file, temp_dir):
+    def test_extract_view_edit_inject_workflow(
+            self, vram_file, cgram_file, temp_dir):
         """Test full workflow: extract -> edit -> inject"""
         core = SpriteEditorCore()
 
         # Step 1: Extract sprites
-        extracted_img, tile_count = core.extract_sprites(vram_file, 0xC000, 512)
+        extracted_img, tile_count = core.extract_sprites(
+            vram_file, 0xC000, 512)
         assert extracted_img.mode == 'P'
         assert tile_count == 16
 
@@ -53,7 +56,8 @@ class TestFullExtractionWorkflow:
 
         # Step 7: Inject back into VRAM
         output_vram = temp_dir / "output_vram.dmp"
-        result = core.inject_into_vram(snes_data, vram_file, 0xC000, str(output_vram))
+        result = core.inject_into_vram(
+            snes_data, vram_file, 0xC000, str(output_vram))
         assert Path(result).exists()
 
         # Step 8: Verify injection by re-extracting
@@ -66,7 +70,8 @@ class TestFullExtractionWorkflow:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_multi_palette_workflow(self, vram_file, cgram_file, oam_file, temp_dir):
+    def test_multi_palette_workflow(
+            self, vram_file, cgram_file, oam_file, temp_dir):
         """Test workflow with OAM-based palette mapping"""
         core = SpriteEditorCore()
 
@@ -101,6 +106,7 @@ class TestFullExtractionWorkflow:
         first_img = list(palette_images.values())[0]
         assert grid_img.width > first_img.width
         assert grid_img.height > first_img.height
+
 
 class TestComplexDataIntegration:
     """Test integration with complex/realistic data"""
@@ -189,6 +195,7 @@ class TestComplexDataIntegration:
         img.save(str(output_path))
         assert output_path.exists()
 
+
 class TestErrorRecovery:
     """Test error handling and recovery in workflows"""
 
@@ -202,7 +209,8 @@ class TestErrorRecovery:
         for i in range(0, 65536, BYTES_PER_TILE_4BPP):
             if i % 256 == 0:  # Every 8th tile
                 # Corrupt tile - fill with 0xFF
-                vram_data[i:i+BYTES_PER_TILE_4BPP] = b'\xFF' * BYTES_PER_TILE_4BPP
+                vram_data[i:i + BYTES_PER_TILE_4BPP] = b'\xFF' * \
+                    BYTES_PER_TILE_4BPP
             else:
                 # Normal tile pattern
                 for j in range(BYTES_PER_TILE_4BPP):
@@ -238,6 +246,7 @@ class TestErrorRecovery:
             vram_file, 0, 512, str(fake_cgram)
         )
         assert img is not None
+
 
 class TestPerformanceIntegration:
     """Test performance aspects of integrated workflows"""
@@ -287,6 +296,7 @@ class TestPerformanceIntegration:
 
         assert lookup_time < 0.1  # 1000 lookups in under 100ms
 
+
 class TestRealWorldScenarios:
     """Test scenarios that mirror real usage"""
 
@@ -309,7 +319,8 @@ class TestRealWorldScenarios:
                 tile_offset = offset + (tile_idx * 32)
                 # Create unique pattern per character
                 for i in range(32):
-                    vram_data[tile_offset + i] = (char_idx * 64 + tile_idx * 4 + i) % 256
+                    vram_data[tile_offset +
+                              i] = (char_idx * 64 + tile_idx * 4 + i) % 256
 
         vram_path = temp_dir / "characters_vram.dmp"
         vram_path.write_bytes(vram_data)
@@ -346,8 +357,10 @@ class TestRealWorldScenarios:
         core = SpriteEditorCore()
         sheet_parts = []
 
-        for char_idx, (offset, pal) in enumerate([(0x6000, 0), (0x6200, 1), (0x6400, 2)]):
-            img, _ = core.extract_sprites(str(vram_path), offset, 512, tiles_per_row=4)
+        for char_idx, (offset, pal) in enumerate(
+                [(0x6000, 0), (0x6200, 1), (0x6400, 2)]):
+            img, _ = core.extract_sprites(
+                str(vram_path), offset, 512, tiles_per_row=4)
             palette = core.read_cgram_palette(str(cgram_path), pal)
             img.putpalette(palette)
             sheet_parts.append(img)

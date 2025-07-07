@@ -4,11 +4,14 @@ Convert edited PNG sprites back to SNES 4bpp tile format
 """
 
 import sys
+
 from PIL import Image
+
 try:
     from tile_utils import encode_4bpp_tile
 except ImportError:
     from .tile_utils import encode_4bpp_tile
+
 
 def png_to_snes(input_file, output_file):
     """Convert PNG to SNES 4bpp tile data."""
@@ -48,6 +51,7 @@ def png_to_snes(input_file, output_file):
     print(f"Wrote {len(output_data)} bytes to {output_file}")
     return len(output_data)
 
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python png_to_snes.py input.png output.bin")
@@ -57,6 +61,7 @@ def main():
     output_file = sys.argv[2]
 
     png_to_snes(input_file, output_file)
+
 
 if __name__ == "__main__":
     main()

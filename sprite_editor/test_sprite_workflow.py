@@ -5,20 +5,21 @@ Comprehensive test suite for sprite_workflow.py CLI utility
 Tests workflow automation functionality including:
 - Command parsing and routing
 - Extract command functionality
-- Inject command functionality  
+- Inject command functionality
 - Quick inject functionality
 - Help system
 - Error handling scenarios
 """
 
-import unittest
-import tempfile
 import os
-import sys
 import subprocess
-from unittest.mock import patch, MagicMock, call
-from PIL import Image
+import sys
+import tempfile
+import unittest
+from unittest.mock import MagicMock, patch
+
 import sprite_workflow
+from PIL import Image
 
 
 class TestSpriteWorkflowCommandParsing(unittest.TestCase):
@@ -43,7 +44,8 @@ class TestSpriteWorkflowCommandParsing(unittest.TestCase):
         with patch.object(sys, 'argv', ['sprite_workflow.py', 'inject']):
             with patch('builtins.print') as mock_print:
                 sprite_workflow.main()
-                mock_print.assert_any_call("Error: Please specify PNG file to inject")
+                mock_print.assert_any_call(
+                    "Error: Please specify PNG file to inject")
 
     def test_quick_command_with_file(self):
         """Test quick command routing with file argument."""
@@ -162,8 +164,9 @@ class TestSpriteWorkflowExtractSprites(unittest.TestCase):
             sprite_workflow.extract_sprites()
 
         # Should call extraction commands
-        self.assertEqual(mock_run.call_count, 2)  # Main extraction + colored reference
-        
+        # Main extraction + colored reference
+        self.assertEqual(mock_run.call_count, 2)
+
         # Check the extraction command
         first_call = mock_run.call_args_list[0][0][0]
         self.assertEqual(first_call[0], 'python3')
@@ -200,7 +203,7 @@ class TestSpriteWorkflowInjectSprites(unittest.TestCase):
     def test_inject_sprites_nonexistent_file(self):
         """Test injection with nonexistent file."""
         png_path = os.path.join(self.temp_dir, 'nonexistent.png')
-        
+
         with patch('builtins.print') as mock_print:
             result = sprite_workflow.inject_sprites(png_path)
 
@@ -212,11 +215,11 @@ class TestSpriteWorkflowInjectSprites(unittest.TestCase):
     def test_inject_sprites_success(self, mock_run):
         """Test successful sprite injection."""
         png_path = os.path.join(self.temp_dir, 'test.png')
-        
+
         # Create test file
         img = Image.new('P', (8, 8))
         img.save(png_path)
-        
+
         # Mock successful injection
         mock_run.return_value = True
 
@@ -225,7 +228,7 @@ class TestSpriteWorkflowInjectSprites(unittest.TestCase):
 
         # Should call injection command
         mock_run.assert_called_once()
-        
+
         # Check injection command
         call_args = mock_run.call_args[0][0]
         self.assertEqual(call_args[0], 'python3')
@@ -237,11 +240,11 @@ class TestSpriteWorkflowInjectSprites(unittest.TestCase):
     def test_inject_sprites_failure(self, mock_run):
         """Test sprite injection failure."""
         png_path = os.path.join(self.temp_dir, 'test.png')
-        
+
         # Create test file
         img = Image.new('P', (8, 8))
         img.save(png_path)
-        
+
         # Mock injection failure
         mock_run.return_value = False
 
@@ -253,11 +256,11 @@ class TestSpriteWorkflowInjectSprites(unittest.TestCase):
     def test_inject_sprites_output_filename_generation(self):
         """Test output filename generation."""
         png_path = os.path.join(self.temp_dir, 'my_sprites_edited.png')
-        
+
         # Create test file
         img = Image.new('P', (8, 8))
         img.save(png_path)
-        
+
         with patch('sprite_workflow.run_command') as mock_run:
             mock_run.return_value = True
             sprite_workflow.inject_sprites(png_path)
@@ -285,7 +288,7 @@ class TestSpriteWorkflowQuickInject(unittest.TestCase):
     def test_quick_inject_nonexistent_file(self):
         """Test quick injection with nonexistent file."""
         png_path = os.path.join(self.temp_dir, 'nonexistent.png')
-        
+
         with patch('builtins.print') as mock_print:
             sprite_workflow.quick_inject(png_path)
 
@@ -295,15 +298,16 @@ class TestSpriteWorkflowQuickInject(unittest.TestCase):
     def test_quick_inject_success(self, mock_run):
         """Test successful quick injection."""
         png_path = os.path.join(self.temp_dir, 'test.png')
-        
+
         # Create test file
         img = Image.new('P', (8, 8))
         img.save(png_path)
-        
+
         sprite_workflow.quick_inject(png_path)
 
         # Should call subprocess with minimal arguments
-        mock_run.assert_called_once_with(['python3', 'sprite_injector.py', png_path])
+        mock_run.assert_called_once_with(
+            ['python3', 'sprite_injector.py', png_path])
 
 
 class TestSpriteWorkflowHelp(unittest.TestCase):
@@ -316,9 +320,10 @@ class TestSpriteWorkflowHelp(unittest.TestCase):
 
         # Should print help text
         mock_print.assert_called()
-        
+
         # Check that key help content is included
-        printed_text = ' '.join([str(call.args[0]) for call in mock_print.call_args_list])
+        printed_text = ' '.join([str(call.args[0])
+                                for call in mock_print.call_args_list])
         self.assertIn('Kirby Sprite Editing Workflow', printed_text)
         self.assertIn('extract', printed_text)
         self.assertIn('inject', printed_text)
@@ -348,7 +353,7 @@ class TestSpriteWorkflowIntegration(unittest.TestCase):
 
         # Should call both extraction commands
         self.assertEqual(mock_run.call_count, 2)
-        
+
         # Check both calls are to sprite_extractor.py
         first_call = mock_run.call_args_list[0][0][0]
         second_call = mock_run.call_args_list[1][0][0]
@@ -359,11 +364,11 @@ class TestSpriteWorkflowIntegration(unittest.TestCase):
     def test_complete_inject_workflow(self, mock_run):
         """Test complete injection workflow."""
         png_path = os.path.join(self.temp_dir, 'edited.png')
-        
+
         # Create test file
         img = Image.new('P', (16, 8))
         img.save(png_path)
-        
+
         mock_run.return_value = True
 
         with patch.object(sys, 'argv', ['sprite_workflow.py', 'inject', png_path]):
@@ -379,10 +384,10 @@ class TestSpriteWorkflowIntegration(unittest.TestCase):
         """Test executing workflow as subprocess."""
         # Test help command as subprocess (safest option)
         cmd = [sys.executable, 'sprite_workflow.py', 'help']
-        result = subprocess.run(cmd, 
-                              cwd='/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor',
-                              capture_output=True, text=True)
-        
+        result = subprocess.run(cmd,
+                                cwd='/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor',
+                                capture_output=True, text=True)
+
         # Should succeed and show help
         self.assertEqual(result.returncode, 0)
         self.assertIn('Kirby Sprite Editing Workflow', result.stdout)
@@ -403,8 +408,9 @@ class TestSpriteWorkflowIntegration(unittest.TestCase):
 
         # Test that quick inject handles command failure gracefully
         sprite_workflow.quick_inject(png_path)
-        
-        # Should still call subprocess (failure is handled by the called command)
+
+        # Should still call subprocess (failure is handled by the called
+        # command)
         mock_subprocess.assert_called_once()
 
 
@@ -414,10 +420,14 @@ class TestSpriteWorkflowCaseSensitivity(unittest.TestCase):
     def test_command_case_insensitive(self):
         """Test that commands are case insensitive."""
         test_cases = [
-            (['sprite_workflow.py', 'EXTRACT'], 'sprite_workflow.extract_sprites'),
-            (['sprite_workflow.py', 'Extract'], 'sprite_workflow.extract_sprites'),
-            (['sprite_workflow.py', 'INJECT', 'test.png'], 'sprite_workflow.inject_sprites'),
-            (['sprite_workflow.py', 'Quick', 'test.png'], 'sprite_workflow.quick_inject'),
+            (['sprite_workflow.py', 'EXTRACT'],
+             'sprite_workflow.extract_sprites'),
+            (['sprite_workflow.py', 'Extract'],
+             'sprite_workflow.extract_sprites'),
+            (['sprite_workflow.py', 'INJECT', 'test.png'],
+             'sprite_workflow.inject_sprites'),
+            (['sprite_workflow.py', 'Quick', 'test.png'],
+             'sprite_workflow.quick_inject'),
             (['sprite_workflow.py', 'HELP'], 'sprite_workflow.show_help'),
         ]
 
@@ -431,7 +441,7 @@ class TestSpriteWorkflowCaseSensitivity(unittest.TestCase):
                         img = Image.new('P', (8, 8))
                         img.save(png_path)
                         argv[argv.index('test.png')] = png_path
-                        
+
                         try:
                             sprite_workflow.main()
                             mock_func.assert_called_once()
