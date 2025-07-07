@@ -6,27 +6,12 @@ SNES 4bpp format: Each 8x8 tile is 32 bytes, stored in a planar format.
 
 import sys
 from PIL import Image
+try:
+    from tile_utils import decode_4bpp_tile
+except ImportError:
+    from .tile_utils import decode_4bpp_tile
 
-def decode_4bpp_tile(data, offset):
-    """Decode a single 8x8 4bpp SNES tile."""
-    tile = []
-    for y in range(8):
-        row = []
-        # Read bitplanes
-        bp0 = data[offset + y * 2]
-        bp1 = data[offset + y * 2 + 1]
-        bp2 = data[offset + 16 + y * 2]
-        bp3 = data[offset + 16 + y * 2 + 1]
-
-        for x in range(8):
-            bit = 7 - x
-            pixel = ((bp0 >> bit) & 1) | \
-                    (((bp1 >> bit) & 1) << 1) | \
-                    (((bp2 >> bit) & 1) << 2) | \
-                    (((bp3 >> bit) & 1) << 3)
-            row.append(pixel)
-        tile.append(row)
-    return tile
+# Function now imported from tile_utils
 
 def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
     """Convert SNES tile data to PIL Image."""

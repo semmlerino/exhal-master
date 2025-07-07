@@ -20,65 +20,14 @@ import os
 import struct
 import argparse
 from PIL import Image
+try:
+    from tile_utils import decode_4bpp_tile
+    from palette_utils import read_cgram_palette, get_grayscale_palette
+except ImportError:
+    from .tile_utils import decode_4bpp_tile
+    from .palette_utils import read_cgram_palette, get_grayscale_palette
 
-def decode_4bpp_tile(data, offset):
-    """Decode a single 8x8 4bpp SNES tile."""
-    tile = []
-    for y in range(8):
-        row = []
-        bp0 = data[offset + y * 2]
-        bp1 = data[offset + y * 2 + 1]
-        bp2 = data[offset + 16 + y * 2]
-        bp3 = data[offset + 16 + y * 2 + 1]
-
-        for x in range(8):
-            bit = 7 - x
-            pixel = ((bp0 >> bit) & 1) | \
-                   (((bp1 >> bit) & 1) << 1) | \
-                   (((bp2 >> bit) & 1) << 2) | \
-                   (((bp3 >> bit) & 1) << 3)
-            row.append(pixel)
-        tile.extend(row)
-    return tile
-
-def read_cgram_palette(cgram_file, palette_num):
-    """Read a specific palette from CGRAM dump."""
-    try:
-        with open(cgram_file, 'rb') as f:
-            # Each palette is 32 bytes (16 colors * 2 bytes)
-            f.seek(palette_num * 32)
-            palette_data = f.read(32)
-
-        palette = []
-        for i in range(16):
-            # Read BGR555 color
-            color_bytes = palette_data[i*2:i*2+2]
-            if len(color_bytes) == 2:
-                bgr555 = struct.unpack('<H', color_bytes)[0]
-
-                # Extract components (5 bits each)
-                b = (bgr555 & 0x7C00) >> 10
-                g = (bgr555 & 0x03E0) >> 5
-                r = (bgr555 & 0x001F)
-
-                # Convert to 8-bit RGB
-                r = (r * 255) // 31
-                g = (g * 255) // 31
-                b = (b * 255) // 31
-
-                palette.extend([r, g, b])
-            else:
-                palette.extend([0, 0, 0])
-
-        # Fill rest with black
-        while len(palette) < 768:
-            palette.extend([0, 0, 0])
-
-        return palette
-
-    except Exception as e:
-        print(f"Warning: Could not read palette {palette_num}: {e}")
-        return None
+# Functions now imported from utility modules
 
 def extract_sprites(vram_file, offset, size, tiles_per_row=16):
     """Extract sprites from VRAM dump."""

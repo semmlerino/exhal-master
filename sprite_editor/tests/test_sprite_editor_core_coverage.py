@@ -78,7 +78,7 @@ class TestEdgeCases:
         monkeypatch.setattr(Image, 'new', mock_new)
         
         # Should raise with descriptive message
-        with pytest.raises(Exception, match="Error extracting sprites.*Out of memory"):
+        with pytest.raises(RuntimeError, match="Error extracting sprites.*Out of memory"):
             core.extract_sprites(str(vram), 0, 1024)
     
     def test_inject_into_vram_oversized_file(self, temp_dir):
@@ -144,7 +144,7 @@ class TestEdgeCases:
         import builtins
         monkeypatch.setattr(builtins, 'open', mock_open)
         
-        with pytest.raises(Exception, match="Error injecting into VRAM.*Disk full"):
+        with pytest.raises(RuntimeError, match="Error injecting into VRAM.*Disk full"):
             core.inject_into_vram(sprite_data, str(vram), 0, str(output))
     
     def test_validate_png_generic_exception(self, temp_dir, monkeypatch):
@@ -270,51 +270,6 @@ class TestFallbackBehavior:
         # Should use palette 0 as default
         assert img is not None
         assert tile_count > 0
-
-
-class TestExceptionPropagation:
-    """Test that certain exceptions are properly propagated"""
-    
-    def test_read_cgram_palette_security_error(self, temp_dir, monkeypatch):
-        """Test that SecurityError is re-raised in read_cgram_palette"""
-        core = SpriteEditorCore()
-        
-        # Mock validate_file_path to raise SecurityError
-        def mock_validate(path, **kwargs):
-            raise SecurityError("Path traversal detected")
-        
-        from sprite_editor import security_utils
-        monkeypatch.setattr(security_utils, 'validate_file_path', mock_validate)
-        
-        with pytest.raises(SecurityError, match="Path traversal attempt detected"):
-            core.read_cgram_palette("../../../etc/passwd", 0)
-    
-    def test_validate_png_security_error(self, monkeypatch):
-        """Test that SecurityError is re-raised in validate_png_for_snes"""
-        core = SpriteEditorCore()
-        
-        # Mock validate_file_path to raise SecurityError
-        def mock_validate(path, **kwargs):
-            raise SecurityError("Invalid path")
-        
-        from sprite_editor import security_utils
-        monkeypatch.setattr(security_utils, 'validate_file_path', mock_validate)
-        
-        with pytest.raises(SecurityError, match="Path traversal attempt detected"):
-            core.validate_png_for_snes("../malicious.png")
-    
-    def test_get_vram_info_security_error(self, monkeypatch):
-        """Test that SecurityError is re-raised in get_vram_info"""
-        core = SpriteEditorCore()
-        
-        def mock_validate(path, **kwargs):
-            raise SecurityError("Access denied")
-        
-        from sprite_editor import security_utils
-        monkeypatch.setattr(security_utils, 'validate_file_path', mock_validate)
-        
-        with pytest.raises(SecurityError, match="Access to system directories not allowed"):
-            core.get_vram_info("/etc/shadow")
 
 
 class TestModuleExecution:

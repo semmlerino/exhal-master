@@ -17,31 +17,14 @@ import sys
 import os
 import argparse
 from PIL import Image
+try:
+    from tile_utils import encode_4bpp_tile
+    from palette_utils import read_cgram_palette
+except ImportError:
+    from .tile_utils import encode_4bpp_tile
+    from .palette_utils import read_cgram_palette
 
-def encode_4bpp_tile(tile_pixels):
-    """Encode an 8x8 tile to SNES 4bpp format."""
-    output = bytearray(32)  # 32 bytes per tile
-
-    for y in range(8):
-        bp0 = 0
-        bp1 = 0
-        bp2 = 0
-        bp3 = 0
-
-        for x in range(8):
-            pixel = tile_pixels[y * 8 + x]
-            bp0 |= ((pixel & 1) >> 0) << (7 - x)
-            bp1 |= ((pixel & 2) >> 1) << (7 - x)
-            bp2 |= ((pixel & 4) >> 2) << (7 - x)
-            bp3 |= ((pixel & 8) >> 3) << (7 - x)
-
-        # Store bitplanes in SNES format
-        output[y * 2] = bp0
-        output[y * 2 + 1] = bp1
-        output[16 + y * 2] = bp2
-        output[16 + y * 2 + 1] = bp3
-
-    return output
+# Functions now imported from utility modules
 
 def png_to_snes(png_file):
     """Convert PNG to SNES 4bpp tile data."""
