@@ -346,21 +346,41 @@ class SpriteEditorCore:
                                       cgram_file: str, tiles_per_row: int = 16) -> Tuple[Dict[str, Image.Image], int]:
         """Extract sprites with multiple palette previews based on OAM data"""
         try:
+            # Validate file paths
+            vram_file = validate_file_path(vram_file, max_size=MAX_VRAM_FILE_SIZE)
+            if cgram_file:
+                cgram_file = validate_file_path(cgram_file)
+            
             # First extract the base sprite data
             base_img, total_tiles = self.extract_sprites(
                 vram_file, offset, size, tiles_per_row)
 
-            # If no OAM mapper, return single palette
-            if not self.oam_mapper:
-                return {'palette_0': base_img}, total_tiles
+            palette_images = {}
+            
+            # If we have OAM data, create OAM-correct version first
+            if self.oam_mapper and cgram_file and os.path.exists(cgram_file):
+                try:
+                    oam_correct_img, _ = self.extract_sprites_with_correct_palettes(
+                        vram_file, offset, size, cgram_file, tiles_per_row)
+                    palette_images['oam_correct'] = oam_correct_img
+                except Exception as e:
+                    self.logger.warning(f"Could not create OAM-correct image: {e}")
 
             # Get active palettes from OAM
-            active_palettes = self.oam_mapper.get_active_palettes()
+            if self.oam_mapper:
+                active_palettes = self.oam_mapper.get_active_palettes()
+                if not active_palettes:
+                    # If no active palettes found, show first 8
+                    active_palettes = list(range(8))
+            else:
+                # No OAM data, return single palette
+                return {'palette_0': base_img}, total_tiles
 
             # Create images for each active palette
-            palette_images = {}
-
             for pal_num in active_palettes:
+                # Validate palette index
+                pal_num = self._validate_palette_index(pal_num)
+                
                 # Create a copy of the base image
                 img = base_img.copy()
 
@@ -369,17 +389,20 @@ class SpriteEditorCore:
                     palette = read_cgram_palette(cgram_file, pal_num)
                     if palette:
                         img.putpalette(palette)
+                else:
+                    # Use grayscale if no CGRAM
+                    img.putpalette(get_grayscale_palette())
 
                 palette_images[f'palette_{pal_num}'] = img
 
             return palette_images, total_tiles
 
-        except (OSError, IOError, RuntimeError) as e:
+        except (OSError, IOError, RuntimeError, SecurityError) as e:
             raise RuntimeError(
                 f"Error extracting multi-palette sprites: {e}") from e
 
     def _calculate_sprite_dimensions(
-            self, data_size: int, tiles_per_row: int) -> Tuple[int, int, int, int]:
+            self, data_size: int, tiles_per_row: int) -> Tuple[int, int, int, int, int]:
         """Calculate sprite layout dimensions from data size."""
         total_tiles = data_size // BYTES_PER_TILE_4BPP
         tiles_x = tiles_per_row
@@ -391,17 +414,36 @@ class SpriteEditorCore:
     def _load_palettes_from_cgram(self, cgram_file: str) -> List[List[int]]:
         """Load all 16 palettes from CGRAM file or use grayscale fallback."""
         palettes = []
-        if cgram_file and os.path.exists(cgram_file):
+        
+        # Validate CGRAM file if provided
+        if cgram_file:
+            try:
+                cgram_file = validate_file_path(cgram_file)
+                if not os.path.exists(cgram_file):
+                    self.logger.warning(f"CGRAM file not found: {cgram_file}, using grayscale palettes")
+                    cgram_file = None
+            except SecurityError:
+                self.logger.error(f"Security error accessing CGRAM file: {cgram_file}")
+                cgram_file = None
+        
+        # Load palettes
+        if cgram_file:
             for i in range(16):
-                pal = read_cgram_palette(cgram_file, i)
-                if pal:
-                    palettes.append(pal)
-                else:
+                try:
+                    pal = read_cgram_palette(cgram_file, i)
+                    if pal and len(pal) >= 48:  # Ensure palette has at least 16 colors (16*3 RGB values)
+                        palettes.append(pal)
+                    else:
+                        self.logger.warning(f"Invalid palette {i} in CGRAM, using grayscale")
+                        palettes.append(get_grayscale_palette())
+                except Exception as e:
+                    self.logger.warning(f"Error reading palette {i}: {e}, using grayscale")
                     palettes.append(get_grayscale_palette())
         else:
             # Use grayscale if no CGRAM
             for i in range(16):
-                palettes.append(self.get_grayscale_palette())
+                palettes.append(get_grayscale_palette())
+        
         return palettes
 
     def _get_tile_palette_assignment(self, tile_offset: int) -> int:
@@ -421,10 +463,20 @@ class SpriteEditorCore:
                 if pixel_idx < len(tile_data):
                     color_idx = tile_data[pixel_idx]
                     if color_idx > 0:  # Skip transparent pixels
-                        # Get RGB from palette
-                        r = palette[color_idx * 3]
-                        g = palette[color_idx * 3 + 1]
-                        b = palette[color_idx * 3 + 2]
+                        # Validate color index
+                        color_idx = min(color_idx, 15)  # Clamp to valid range
+                        
+                        # Ensure palette has enough data
+                        palette_idx = color_idx * 3
+                        if palette_idx + 2 < len(palette):
+                            # Get RGB from palette
+                            r = palette[palette_idx]
+                            g = palette[palette_idx + 1]
+                            b = palette[palette_idx + 2]
+                        else:
+                            # Fallback to gray if palette is incomplete
+                            gray = (color_idx * 255) // 15
+                            r = g = b = gray
 
                         # Set pixel
                         px = tile_x * TILE_WIDTH + x
@@ -436,6 +488,11 @@ class SpriteEditorCore:
             self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
         """Extract sprites with each tile using its OAM-assigned palette"""
         try:
+            # Validate file paths
+            vram_file = validate_file_path(vram_file, max_size=MAX_VRAM_FILE_SIZE)
+            if cgram_file:
+                cgram_file = validate_file_path(cgram_file)
+            
             # Read VRAM data
             with open(vram_file, 'rb') as f:
                 f.seek(offset)
@@ -484,17 +541,36 @@ class SpriteEditorCore:
 
     def create_palette_grid_preview(self, vram_file: str, offset: int, size: int,
                                     cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
-        """Create a grid showing sprites with all 16 palettes"""
+        """Create a grid showing sprites with all 16 palettes, highlighting active ones"""
         try:
+            # Validate file paths
+            vram_file = validate_file_path(vram_file, max_size=MAX_VRAM_FILE_SIZE)
+            if cgram_file:
+                cgram_file = validate_file_path(cgram_file)
+            
             # Extract base sprite data
             base_img, total_tiles = self.extract_sprites(
                 vram_file, offset, size, tiles_per_row)
 
-            # Create grid image (4x4 grid of palettes)
-            grid_width = base_img.width * 4
-            grid_height = base_img.height * 4
+            # Get active palette information from OAM
+            active_palettes = set()
+            palette_usage = {}
+            if self.oam_mapper:
+                active_palettes = set(self.oam_mapper.get_active_palettes())
+                palette_usage = self._get_active_palette_info()
+
+            # Create grid image (4x4 grid of palettes) with borders
+            border_size = 4
+            cell_width = base_img.width + border_size * 2
+            cell_height = base_img.height + border_size * 2
+            grid_width = cell_width * 4
+            grid_height = cell_height * 4
             grid_img = Image.new(
                 'RGB', (grid_width, grid_height), (32, 32, 32))
+
+            # Import PIL.ImageDraw for labels and borders
+            from PIL import ImageDraw
+            draw = ImageDraw.Draw(grid_img)
 
             # Apply each palette and place in grid
             for pal_num in range(16):
@@ -505,21 +581,76 @@ class SpriteEditorCore:
                     palette = read_cgram_palette(cgram_file, pal_num)
                     if palette:
                         img.putpalette(palette)
+                else:
+                    img.putpalette(get_grayscale_palette())
 
                 # Convert to RGB
                 img_rgb = img.convert('RGB')
 
                 # Calculate position in grid
-                grid_x = (pal_num % 4) * base_img.width
-                grid_y = (pal_num // 4) * base_img.height
+                grid_col = pal_num % 4
+                grid_row = pal_num // 4
+                cell_x = grid_col * cell_width
+                cell_y = grid_row * cell_height
+                img_x = cell_x + border_size
+                img_y = cell_y + border_size
 
-                # Paste into grid
-                grid_img.paste(img_rgb, (grid_x, grid_y))
+                # Draw border based on whether palette is active
+                border_color = (0, 255, 0) if pal_num in active_palettes else (64, 64, 64)
+                border_width = 3 if pal_num in active_palettes else 1
+                
+                # Draw border rectangle
+                for i in range(border_width):
+                    draw.rectangle(
+                        [(cell_x + i, cell_y + i), 
+                         (cell_x + cell_width - 1 - i, cell_y + cell_height - 1 - i)],
+                        outline=border_color
+                    )
 
-                # Add palette number label (optional)
-                # This would require PIL.ImageDraw
+                # Paste image
+                grid_img.paste(img_rgb, (img_x, img_y))
+
+                # Add palette number label
+                label = f"P{pal_num}"
+                if pal_num in palette_usage:
+                    label += f" ({palette_usage[pal_num]})"
+                    
+                # Draw text background for readability
+                text_bbox = draw.textbbox((0, 0), label)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+                
+                draw.rectangle(
+                    [(img_x + 2, img_y + 2), 
+                     (img_x + text_width + 6, img_y + text_height + 6)],
+                    fill=(0, 0, 0, 180)
+                )
+                
+                # Draw label text
+                text_color = (0, 255, 0) if pal_num in active_palettes else (255, 255, 255)
+                draw.text((img_x + 4, img_y + 4), label, fill=text_color)
 
             return grid_img, total_tiles
 
-        except (OSError, IOError, RuntimeError, AttributeError) as e:
+        except (OSError, IOError, RuntimeError, AttributeError, SecurityError) as e:
             raise RuntimeError(f"Error creating palette grid: {e}") from e
+    
+    def _validate_palette_index(self, palette_num: int) -> int:
+        """Validate and clamp palette index to valid range (0-15)."""
+        if not isinstance(palette_num, int):
+            raise ValueError(f"Palette number must be an integer, got {type(palette_num)}")
+        if palette_num < 0:
+            self.logger.warning(f"Palette number {palette_num} is negative, clamping to 0")
+            return 0
+        if palette_num > 15:
+            self.logger.warning(f"Palette number {palette_num} exceeds maximum (15), clamping to 15")
+            return 15
+        return palette_num
+    
+    def _get_active_palette_info(self) -> Dict[int, int]:
+        """Get information about which palettes are actively used based on OAM data."""
+        if not self.oam_mapper:
+            return {}
+        
+        stats = self.oam_mapper.get_palette_usage_stats()
+        return stats.get('palette_counts', {})
