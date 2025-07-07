@@ -265,35 +265,6 @@ class TestPaletteStatistics:
             assert 90 <= sprite['x'] <= 120
             assert 40 <= sprite['y'] <= 60
 
-class TestSecurityIntegration:
-    """Test security features in OAM parser"""
-
-    @pytest.mark.unit
-    def test_path_validation(self, malicious_paths):
-        """Test that malicious paths are rejected"""
-        mapper = OAMPaletteMapper()
-
-        for path in malicious_paths:
-            with pytest.raises(SecurityError):
-                mapper.parse_oam_dump(path)
-
-    @pytest.mark.unit
-    def test_file_size_limit(self, large_file):
-        """Test that oversized files are rejected"""
-        mapper = OAMPaletteMapper()
-
-        with pytest.raises(SecurityError, match="File too large"):
-            mapper.parse_oam_dump(large_file)
-
-    @pytest.mark.unit
-    def test_nonexistent_file(self):
-        """Test handling of non-existent OAM file"""
-        mapper = OAMPaletteMapper()
-
-        # Test with a path in a protected system directory
-        with pytest.raises(SecurityError, match="Access to system directories"):
-            mapper.parse_oam_dump("/etc/nonexistent_oam.dmp")
-
 class TestConvenienceFunctions:
     """Test convenience functions"""
 

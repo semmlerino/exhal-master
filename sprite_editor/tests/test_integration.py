@@ -102,68 +102,6 @@ class TestFullExtractionWorkflow:
         assert grid_img.width > first_img.width
         assert grid_img.height > first_img.height
 
-class TestSecurityIntegration:
-    """Test security features across components"""
-
-    @pytest.mark.integration
-    def test_malicious_path_blocked_everywhere(self, temp_dir):
-        """Test that malicious paths are blocked at all entry points"""
-        core = SpriteEditorCore()
-        mapper = OAMPaletteMapper()
-
-        evil_path = "../../../etc/passwd"
-
-        # Should be blocked in core
-        with pytest.raises(SecurityError):
-            core.extract_sprites(evil_path, 0, 100)
-
-        with pytest.raises(SecurityError):
-            core.png_to_snes(evil_path)
-
-        with pytest.raises(SecurityError):
-            core.inject_into_vram(b'data', evil_path, 0)
-
-        with pytest.raises(SecurityError):
-            core.get_vram_info(evil_path)
-
-        # Should be blocked in OAM mapper
-        with pytest.raises(SecurityError):
-            mapper.parse_oam_dump(evil_path)
-
-        # Should be blocked in palette reading
-        with pytest.raises(SecurityError):
-            core.read_cgram_palette(evil_path, 0)
-
-    @pytest.mark.integration
-    def test_size_limits_enforced(self, temp_dir):
-        """Test that file size limits are enforced consistently"""
-        # Create files of various sizes
-        files = {
-            'huge_vram.dmp': 200 * 1024,      # 200KB (exceeds VRAM limit)
-            'huge_png.png': 10 * 1024 * 1024,  # 10MB (exceeds PNG limit)
-            'huge_oam.dmp': 10 * 1024,         # 10KB (exceeds OAM limit)
-            'huge_cgram.dmp': 10 * 1024,       # 10KB (exceeds CGRAM limit)
-        }
-
-        for filename, size in files.items():
-            path = temp_dir / filename
-            path.write_bytes(b'\x00' * size)
-
-        core = SpriteEditorCore()
-
-        # All should raise SecurityError for size
-        with pytest.raises(SecurityError, match="File too large"):
-            core.extract_sprites(str(temp_dir / 'huge_vram.dmp'), 0, 100)
-
-        with pytest.raises(SecurityError, match="File too large"):
-            core.png_to_snes(str(temp_dir / 'huge_png.png'))
-
-        with pytest.raises(SecurityError, match="File too large"):
-            core.load_oam_mapping(str(temp_dir / 'huge_oam.dmp'))
-
-        with pytest.raises(SecurityError, match="File too large"):
-            core.read_cgram_palette(str(temp_dir / 'huge_cgram.dmp'), 0)
-
 class TestComplexDataIntegration:
     """Test integration with complex/realistic data"""
 

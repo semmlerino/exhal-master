@@ -11,12 +11,14 @@ try:
         MAX_OAM_FILE_SIZE, OAM_SIZE, OAM_ENTRIES, BYTES_PER_OAM_ENTRY,
         OAM_HIGH_TABLE_OFFSET, KIRBY_TILE_START, KIRBY_TILE_END, KIRBY_VRAM_BASE
     )
+    from .logging_config import get_logger
 except ImportError:
     from security_utils import validate_file_path, SecurityError
     from constants import (
         MAX_OAM_FILE_SIZE, OAM_SIZE, OAM_ENTRIES, BYTES_PER_OAM_ENTRY,
         OAM_HIGH_TABLE_OFFSET, KIRBY_TILE_START, KIRBY_TILE_END, KIRBY_VRAM_BASE
     )
+    from logging_config import get_logger
 
 class OAMPaletteMapper:
     """Parse OAM data to map sprites to their assigned palettes"""
@@ -27,6 +29,7 @@ class OAMPaletteMapper:
         self.vram_palette_map = {}  # vram_offset -> palette_number
         # Sorted list for efficient range queries
         self.vram_palette_ranges = []  # List of (start_offset, end_offset, palette)
+        self.logger = get_logger('oam_mapper')
 
     def parse_oam_dump(self, oam_file):
         """Parse OAM dump file and extract sprite entries"""
@@ -220,27 +223,27 @@ class OAMPaletteMapper:
         return sprites
 
     def debug_dump(self):
-        """Print debug information about OAM entries"""
-        print("OAM Debug Dump")
-        print("="*50)
-        print(f"Total sprites: {len(self.oam_entries)}")
+        """Log debug information about OAM entries"""
+        self.logger.info("OAM Debug Dump")
+        self.logger.info("="*50)
+        self.logger.info(f"Total sprites: {len(self.oam_entries)}")
 
         stats = self.get_palette_usage_stats()
-        print(f"Active palettes: {stats['active_palettes']}")
-        print(f"Visible sprites: {stats['visible_sprites']}")
+        self.logger.info(f"Active palettes: {stats['active_palettes']}")
+        self.logger.info(f"Visible sprites: {stats['visible_sprites']}")
 
-        print("\nPalette usage:")
+        self.logger.info("Palette usage:")
         for pal, count in sorted(stats['palette_counts'].items()):
-            print(f"  Palette {pal}: {count} sprites")
+            self.logger.info(f"  Palette {pal}: {count} sprites")
 
-        print("\nFirst 10 visible sprites:")
+        self.logger.info("First 10 visible sprites:")
         visible = [s for s in self.oam_entries if s['y'] < 224]
         for sprite in visible[:10]:
-            print(f"  Sprite {sprite['index']:3d}: "
-                  f"Pos({sprite['x']:3d},{sprite['y']:3d}) "
-                  f"Tile {sprite['tile']:3d} "
-                  f"Pal {sprite['palette']} "
-                  f"Size: {sprite['size']}")
+            self.logger.info(f"  Sprite {sprite['index']:3d}: "
+                           f"Pos({sprite['x']:3d},{sprite['y']:3d}) "
+                           f"Tile {sprite['tile']:3d} "
+                           f"Pal {sprite['palette']} "
+                           f"Size: {sprite['size']}")
 
 def create_tile_palette_map(oam_file, vram_base=KIRBY_VRAM_BASE):
     """Convenience function to create palette mapping from OAM file"""
@@ -252,6 +255,13 @@ def create_tile_palette_map(oam_file, vram_base=KIRBY_VRAM_BASE):
 if __name__ == "__main__":
     # Test with OAM dump
     import sys
+    try:
+        from .logging_config import setup_logging
+    except ImportError:
+        from logging_config import setup_logging
+    
+    # Configure logging to output to stdout when run as script
+    setup_logging(level="INFO")
 
     if len(sys.argv) > 1:
         oam_file = sys.argv[1]
@@ -264,4 +274,5 @@ if __name__ == "__main__":
         mapper.build_vram_palette_map()
         mapper.debug_dump()
     else:
-        print(f"OAM file not found: {oam_file}")
+        logger = get_logger('oam_mapper.main')
+        logger.error(f"OAM file not found: {oam_file}")

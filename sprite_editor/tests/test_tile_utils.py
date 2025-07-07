@@ -170,19 +170,24 @@ class TestBatchOperations:
 
     def test_decode_tiles_with_offset(self):
         """Test decoding tiles with start offset"""
-        # Create data with padding + 2 tiles
+        # Create data with padding + 2 tiles with distinct patterns
         padding = b'\xFF' * 64  # 64 bytes of padding
-        tile1 = b'\x01' + b'\x00' * 31
-        tile2 = b'\x02' + b'\x00' * 31
         
-        combined_data = padding + tile1 + tile2
+        # Create distinct tile patterns
+        tile1 = bytearray(32)
+        tile1[0] = 0x80  # Set a bit in first byte to create pattern
+        
+        tile2 = bytearray(32)
+        tile2[0] = 0x40  # Set different bit in first byte
+        
+        combined_data = padding + bytes(tile1) + bytes(tile2)
         
         # Decode starting after padding
         tiles = decode_tiles(combined_data, 2, start_offset=64)
         
         assert len(tiles) == 2
-        # Verify we got the tiles after the padding
-        assert tiles[0][0] != tiles[1][0]  # Different patterns
+        # Verify we got the tiles after the padding with different patterns
+        assert tiles[0][0] != tiles[1][0]  # Should be 1 vs 0 due to different bit patterns
 
     def test_decode_tiles_insufficient_data(self):
         """Test decode_tiles when there's insufficient data"""

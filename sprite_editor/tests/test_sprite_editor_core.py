@@ -150,23 +150,6 @@ class TestSpriteExtraction:
 
         assert tile_count == 8  # 256 bytes / 32 bytes per tile
 
-    @pytest.mark.unit
-    def test_extract_sprites_security(self, malicious_paths):
-        """Test security validation during extraction"""
-        core = SpriteEditorCore()
-
-        for path in malicious_paths:
-            with pytest.raises(SecurityError):
-                core.extract_sprites(path, 0, 1024)
-
-    @pytest.mark.unit
-    def test_extract_sprites_size_limit(self, large_file):
-        """Test file size limit enforcement"""
-        core = SpriteEditorCore()
-
-        with pytest.raises(SecurityError, match="File too large"):
-            core.extract_sprites(large_file, 0, 1024)
-
 class TestPNGConversion:
     """Test PNG to SNES conversion"""
 

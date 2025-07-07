@@ -18,10 +18,10 @@ import os
 import argparse
 from PIL import Image
 try:
-    from tile_utils import encode_4bpp_tile
+    from tile_utils import encode_4bpp_tile, decode_4bpp_tile
     from palette_utils import read_cgram_palette
 except ImportError:
-    from .tile_utils import encode_4bpp_tile
+    from .tile_utils import encode_4bpp_tile, decode_4bpp_tile
     from .palette_utils import read_cgram_palette
 
 # Functions now imported from utility modules
@@ -101,25 +101,7 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
         print(f"Error injecting into VRAM: {e}")
         return False
 
-def decode_4bpp_tile(data, offset):
-    """Decode a single 8x8 4bpp SNES tile for preview."""
-    tile = []
-    for y in range(8):
-        row = []
-        bp0 = data[offset + y * 2]
-        bp1 = data[offset + y * 2 + 1]
-        bp2 = data[offset + 16 + y * 2]
-        bp3 = data[offset + 16 + y * 2 + 1]
-
-        for x in range(8):
-            bit = 7 - x
-            pixel = ((bp0 >> bit) & 1) | \
-                   (((bp1 >> bit) & 1) << 1) | \
-                   (((bp2 >> bit) & 1) << 2) | \
-                   (((bp3 >> bit) & 1) << 3)
-            row.append(pixel)
-        tile.extend(row)
-    return tile
+# decode_4bpp_tile is now imported from tile_utils
 
 def create_preview(vram_file, offset, size, output_png):
     """Create a preview PNG of the injected sprites."""

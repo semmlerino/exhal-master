@@ -184,26 +184,35 @@ class TestAdditionalOAMCoverage:
         try:
             mapper.parse_oam_dump(temp_file)
             
-            # Capture output
+            # Capture logging output
+            import logging
             import io
-            import sys
-            captured_output = io.StringIO()
-            sys.stdout = captured_output
+            log_stream = io.StringIO()
+            handler = logging.StreamHandler(log_stream)
+            handler.setFormatter(logging.Formatter('%(message)s'))
             
-            mapper.debug_dump()
+            # Get the mapper's logger and add our handler
+            logger = mapper.logger
+            original_level = logger.level
+            logger.setLevel(logging.INFO)
+            logger.addHandler(handler)
             
-            sys.stdout = sys.__stdout__
-            output = captured_output.getvalue()
-            
-            # Verify debug output contains expected information
-            assert "OAM Debug Dump" in output
-            assert "Total sprites: 128" in output
-            # All sprites with y=0 are visible, only first 5 have custom y values
-            # Actually need to count how many have y < 224
-            visible_count = sum(1 for s in mapper.oam_entries if s['y'] < 224)
-            assert f"Visible sprites: {visible_count}" in output
-            assert "Palette usage:" in output
-            assert "First 10 visible sprites:" in output
+            try:
+                mapper.debug_dump()
+                output = log_stream.getvalue()
+                
+                # Verify debug output contains expected information
+                assert "OAM Debug Dump" in output
+                assert "Total sprites: 128" in output
+                # All sprites with y=0 are visible, only first 5 have custom y values
+                # Actually need to count how many have y < 224
+                visible_count = sum(1 for s in mapper.oam_entries if s['y'] < 224)
+                assert f"Visible sprites: {visible_count}" in output
+                assert "Palette usage:" in output
+                assert "First 10 visible sprites:" in output
+            finally:
+                logger.removeHandler(handler)
+                logger.setLevel(original_level)
         finally:
             Path(temp_file).unlink()
 

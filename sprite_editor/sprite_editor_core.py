@@ -14,18 +14,21 @@ try:
     from .constants import *
     from .tile_utils import decode_4bpp_tile, encode_4bpp_tile
     from .palette_utils import read_cgram_palette, get_grayscale_palette
+    from .logging_config import get_logger
 except ImportError:
     from oam_palette_mapper import OAMPaletteMapper
     from security_utils import validate_file_path, validate_output_path, SecurityError
     from constants import *
     from tile_utils import decode_4bpp_tile, encode_4bpp_tile
     from palette_utils import read_cgram_palette, get_grayscale_palette
+    from logging_config import get_logger
 
 class SpriteEditorCore:
     """Core sprite editing functionality"""
 
     def __init__(self) -> None:
         self.oam_mapper: Optional[OAMPaletteMapper] = None
+        self.logger = get_logger('core')
 
     # Delegate methods for backward compatibility
     @staticmethod
@@ -48,6 +51,33 @@ class SpriteEditorCore:
         """Get default grayscale palette for preview."""
         return get_grayscale_palette()
 
+    def _decode_all_tiles(self, data: bytes) -> List[int]:
+        """Decode all tiles from VRAM data into a flat pixel array."""
+        pixels = []
+        total_tiles = len(data) // BYTES_PER_TILE_4BPP
+        for tile_idx in range(total_tiles):
+            if tile_idx * BYTES_PER_TILE_4BPP + BYTES_PER_TILE_4BPP <= len(data):
+                tile = decode_4bpp_tile(data, tile_idx * BYTES_PER_TILE_4BPP)
+                pixels.extend(tile)
+        return pixels
+
+    def _arrange_tiles_in_indexed_image(self, pixels: List[int], total_tiles: int, tiles_x: int, tiles_y: int, width: int, height: int) -> List[int]:
+        """Arrange decoded tile pixels into final image layout."""
+        img_pixels = [0] * (width * height)
+        for tile_idx in range(min(total_tiles, tiles_x * tiles_y)):
+            tile_x = tile_idx % tiles_x
+            tile_y = tile_idx // tiles_x
+
+            for y in range(TILE_HEIGHT):
+                for x in range(TILE_WIDTH):
+                    src_idx = tile_idx * PIXELS_PER_TILE + y * TILE_WIDTH + x
+                    dst_x = tile_x * TILE_WIDTH + x
+                    dst_y = tile_y * TILE_HEIGHT + y
+
+                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
+                        img_pixels[dst_y * width + dst_x] = pixels[src_idx]
+        return img_pixels
+
     def extract_sprites(self, vram_file: str, offset: int, size: int, tiles_per_row: int = DEFAULT_TILES_PER_ROW) -> Tuple[Image.Image, int]:
         """Extract sprites from VRAM dump."""
         try:
@@ -60,38 +90,15 @@ class SpriteEditorCore:
                 data = f.read(size)
 
             # Calculate dimensions
-            total_tiles = len(data) // BYTES_PER_TILE_4BPP
-            tiles_x = tiles_per_row
-            tiles_y = (total_tiles + tiles_x - 1) // tiles_x
-
-            width = tiles_x * TILE_WIDTH
-            height = tiles_y * TILE_HEIGHT
+            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(len(data), tiles_per_row)
 
             # Create indexed color image
             img = Image.new('P', (width, height))
             img.putpalette(get_grayscale_palette())
 
-            # Decode all tiles
-            pixels = []
-            for tile_idx in range(total_tiles):
-                if tile_idx * BYTES_PER_TILE_4BPP + BYTES_PER_TILE_4BPP <= len(data):
-                    tile = decode_4bpp_tile(data, tile_idx * BYTES_PER_TILE_4BPP)
-                    pixels.extend(tile)
-
-            # Arrange tiles in image
-            img_pixels = [0] * (width * height)
-            for tile_idx in range(min(total_tiles, tiles_x * tiles_y)):
-                tile_x = tile_idx % tiles_x
-                tile_y = tile_idx // tiles_x
-
-                for y in range(TILE_HEIGHT):
-                    for x in range(TILE_WIDTH):
-                        src_idx = tile_idx * PIXELS_PER_TILE + y * TILE_WIDTH + x
-                        dst_x = tile_x * 8 + x
-                        dst_y = tile_y * 8 + y
-
-                        if src_idx < len(pixels) and dst_y < height and dst_x < width:
-                            img_pixels[dst_y * width + dst_x] = pixels[src_idx]
+            # Decode all tiles and arrange in image
+            pixels = self._decode_all_tiles(data)
+            img_pixels = self._arrange_tiles_in_indexed_image(pixels, total_tiles, tiles_x, tiles_y, width, height)
 
             img.putdata(img_pixels)
             return img, total_tiles
@@ -102,6 +109,28 @@ class SpriteEditorCore:
         except (OSError, IOError, IndexError, MemoryError) as e:
             # File operations, data access, and memory errors
             raise RuntimeError(f"Error extracting sprites: {e}") from e
+
+    def _calculate_tile_grid_dimensions(self, width: int, height: int) -> Tuple[int, int, int]:
+        """Calculate tile grid dimensions from image size."""
+        tiles_x = (width + 7) // 8  # Round up to next tile
+        tiles_y = (height + 7) // 8  # Round up to next tile
+        total_tiles = tiles_x * tiles_y
+        return tiles_x, tiles_y, total_tiles
+
+    def _extract_tile_from_image(self, pixels: List[int], tile_x: int, tile_y: int, img_width: int) -> List[int]:
+        """Extract an 8x8 tile from image pixel data."""
+        tile_pixels = []
+        for y in range(TILE_HEIGHT):
+            for x in range(TILE_WIDTH):
+                pixel_x = tile_x * TILE_WIDTH + x
+                pixel_y = tile_y * TILE_HEIGHT + y
+                pixel_index = pixel_y * img_width + pixel_x
+
+                if pixel_index < len(pixels):
+                    tile_pixels.append(pixels[pixel_index] & PIXEL_4BPP_MASK)
+                else:
+                    tile_pixels.append(0)
+        return tile_pixels
 
     def png_to_snes(self, png_file: str) -> Tuple[bytes, int]:
         """Convert PNG to SNES 4bpp tile data."""
@@ -116,9 +145,7 @@ class SpriteEditorCore:
                 raise ValueError(f"Image must be in indexed color mode (current: {img.mode})")
 
             width, height = img.size
-            tiles_x = (width + 7) // 8  # Round up to next tile
-            tiles_y = (height + 7) // 8  # Round up to next tile
-            total_tiles = tiles_x * tiles_y
+            tiles_x, tiles_y, total_tiles = self._calculate_tile_grid_dimensions(width, height)
 
             # Convert to raw pixel data
             pixels = list(img.getdata())
@@ -128,20 +155,8 @@ class SpriteEditorCore:
 
             for tile_y in range(tiles_y):
                 for tile_x in range(tiles_x):
-                    # Extract 8x8 tile
-                    tile_pixels = []
-                    for y in range(8):
-                        for x in range(8):
-                            pixel_x = tile_x * 8 + x
-                            pixel_y = tile_y * 8 + y
-                            pixel_index = pixel_y * width + pixel_x
-
-                            if pixel_index < len(pixels):
-                                tile_pixels.append(pixels[pixel_index] & PIXEL_4BPP_MASK)
-                            else:
-                                tile_pixels.append(0)
-
-                    # Encode tile
+                    # Extract and encode 8x8 tile
+                    tile_pixels = self._extract_tile_from_image(pixels, tile_x, tile_y, width)
                     tile_data = encode_4bpp_tile(tile_pixels)
                     output_data.extend(tile_data)
 
@@ -284,8 +299,7 @@ class SpriteEditorCore:
             raise
         except (OSError, IOError, AttributeError, RuntimeError) as e:
             # File operations and OAMPaletteMapper errors
-            # TODO: Replace with proper logging
-            print(f"Error loading OAM: {e}")
+            self.logger.error(f"Error loading OAM: {e}")
             return False
 
     def extract_sprites_multi_palette(self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Dict[str, Image.Image], int]:
@@ -321,6 +335,59 @@ class SpriteEditorCore:
         except (OSError, IOError, RuntimeError) as e:
             raise RuntimeError(f"Error extracting multi-palette sprites: {e}") from e
 
+    def _calculate_sprite_dimensions(self, data_size: int, tiles_per_row: int) -> Tuple[int, int, int, int]:
+        """Calculate sprite layout dimensions from data size."""
+        total_tiles = data_size // BYTES_PER_TILE_4BPP
+        tiles_x = tiles_per_row
+        tiles_y = (total_tiles + tiles_x - 1) // tiles_x
+        width = tiles_x * TILE_WIDTH
+        height = tiles_y * TILE_HEIGHT
+        return total_tiles, tiles_x, tiles_y, width, height
+
+    def _load_palettes_from_cgram(self, cgram_file: str) -> List[List[int]]:
+        """Load all 16 palettes from CGRAM file or use grayscale fallback."""
+        palettes = []
+        if cgram_file and os.path.exists(cgram_file):
+            for i in range(16):
+                pal = read_cgram_palette(cgram_file, i)
+                if pal:
+                    palettes.append(pal)
+                else:
+                    palettes.append(get_grayscale_palette())
+        else:
+            # Use grayscale if no CGRAM
+            for i in range(16):
+                palettes.append(self.get_grayscale_palette())
+        return palettes
+
+    def _get_tile_palette_assignment(self, tile_offset: int) -> int:
+        """Get palette assignment for a tile at given VRAM offset."""
+        if self.oam_mapper:
+            pal = self.oam_mapper.get_palette_for_vram_offset(tile_offset)
+            if pal is not None:
+                return pal
+        return 0  # Default palette
+
+    def _draw_tile_to_rgba_image(self, img: Image.Image, tile_data: List[int], palette: List[int], 
+                                tile_x: int, tile_y: int, width: int, height: int) -> None:
+        """Draw a single tile to RGBA image using specified palette."""
+        for y in range(TILE_HEIGHT):
+            for x in range(TILE_WIDTH):
+                pixel_idx = y * TILE_WIDTH + x
+                if pixel_idx < len(tile_data):
+                    color_idx = tile_data[pixel_idx]
+                    if color_idx > 0:  # Skip transparent pixels
+                        # Get RGB from palette
+                        r = palette[color_idx * 3]
+                        g = palette[color_idx * 3 + 1]
+                        b = palette[color_idx * 3 + 2]
+
+                        # Set pixel
+                        px = tile_x * TILE_WIDTH + x
+                        py = tile_y * TILE_HEIGHT + y
+                        if px < width and py < height:
+                            img.putpixel((px, py), (r, g, b, 255))
+
     def extract_sprites_with_correct_palettes(self, vram_file: str, offset: int, size: int, cgram_file: str, tiles_per_row: int = 16) -> Tuple[Image.Image, int]:
         """Extract sprites with each tile using its OAM-assigned palette"""
         try:
@@ -330,44 +397,23 @@ class SpriteEditorCore:
                 data = f.read(size)
 
             # Calculate dimensions
-            total_tiles = len(data) // BYTES_PER_TILE_4BPP
-            tiles_x = tiles_per_row
-            tiles_y = (total_tiles + tiles_x - 1) // tiles_x
-
-            width = tiles_x * TILE_WIDTH
-            height = tiles_y * TILE_HEIGHT
+            total_tiles, tiles_x, tiles_y, width, height = self._calculate_sprite_dimensions(len(data), tiles_per_row)
 
             # Create RGBA image for multi-palette rendering
             img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
 
             # Load all palettes from CGRAM
-            palettes = []
-            if cgram_file and os.path.exists(cgram_file):
-                for i in range(16):
-                    pal = read_cgram_palette(cgram_file, i)
-                    if pal:
-                        palettes.append(pal)
-                    else:
-                        palettes.append(get_grayscale_palette())
-            else:
-                # Use grayscale if no CGRAM
-                for i in range(16):
-                    palettes.append(self.get_grayscale_palette())
+            palettes = self._load_palettes_from_cgram(cgram_file)
 
             # Process each tile
             for tile_idx in range(total_tiles):
-                if tile_idx * 32 + 32 <= len(data):
+                if tile_idx * BYTES_PER_TILE_4BPP + BYTES_PER_TILE_4BPP <= len(data):
                     # Decode tile
-                    tile_data = decode_4bpp_tile(data, tile_idx * 32)
+                    tile_data = decode_4bpp_tile(data, tile_idx * BYTES_PER_TILE_4BPP)
 
                     # Get palette for this tile
-                    tile_offset = offset + (tile_idx * 32)
-                    assigned_palette = 0  # Default
-
-                    if self.oam_mapper:
-                        pal = self.oam_mapper.get_palette_for_vram_offset(tile_offset)
-                        if pal is not None:
-                            assigned_palette = pal
+                    tile_offset = offset + (tile_idx * BYTES_PER_TILE_4BPP)
+                    assigned_palette = self._get_tile_palette_assignment(tile_offset)
 
                     # Get the palette to use
                     palette = palettes[assigned_palette] if assigned_palette < len(palettes) else palettes[0]
@@ -377,22 +423,7 @@ class SpriteEditorCore:
                     tile_y = tile_idx // tiles_x
 
                     # Draw tile with correct palette
-                    for y in range(8):
-                        for x in range(8):
-                            pixel_idx = y * 8 + x
-                            if pixel_idx < len(tile_data):
-                                color_idx = tile_data[pixel_idx]
-                                if color_idx > 0:  # Skip transparent pixels
-                                    # Get RGB from palette
-                                    r = palette[color_idx * 3]
-                                    g = palette[color_idx * 3 + 1]
-                                    b = palette[color_idx * 3 + 2]
-
-                                    # Set pixel
-                                    px = tile_x * 8 + x
-                                    py = tile_y * 8 + y
-                                    if px < width and py < height:
-                                        img.putpixel((px, py), (r, g, b, 255))
+                    self._draw_tile_to_rgba_image(img, tile_data, palette, tile_x, tile_y, width, height)
 
             return img, total_tiles
 

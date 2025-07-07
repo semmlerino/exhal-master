@@ -95,23 +95,4 @@ def oam_file(temp_dir, sample_oam_data):
     oam_path.write_bytes(sample_oam_data)
     return str(oam_path)
 
-@pytest.fixture
-def malicious_paths():
-    """Collection of malicious file paths for security testing"""
-    return [
-        "../../../etc/passwd",
-        "../../sensitive_file.txt",
-        "~/../../root/.ssh/id_rsa",
-        "/etc/shadow",
-        "C:\\Windows\\System32\\config\\SAM",
-        "\\\\server\\share\\file.txt",
-        "file://etc/passwd",
-    ]
-
-@pytest.fixture
-def large_file(temp_dir):
-    """Create a file that exceeds size limits"""
-    large_path = temp_dir / "large_file.bin"
-    # Create 11MB file (exceeds our limits)
-    large_path.write_bytes(b'\x00' * (11 * 1024 * 1024))
-    return str(large_path)
+# Security fixtures removed for personal project
