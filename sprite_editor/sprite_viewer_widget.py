@@ -50,7 +50,8 @@ class SpriteViewerWidget(QScrollArea):
         self._display_label.mouseMoveEvent = self._on_mouse_move
 
         self.setWidget(self._display_label)
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QScrollArea {
                 background-color: #2b2b2b;
                 border: 1px solid #555;
@@ -58,28 +59,25 @@ class SpriteViewerWidget(QScrollArea):
             QLabel {
                 background-color: #2b2b2b;
             }
-        """)
+        """
+        )
 
     def set_image(self, image):
         """Set the image to display (PIL Image or QPixmap)"""
         if isinstance(image, Image.Image):
             # Convert PIL to QPixmap
-            if image.mode == 'P':
+            if image.mode == "P":
                 # Handle indexed images
-                image_rgb = image.convert('RGBA')
-                data = image_rgb.tobytes('raw', 'RGBA')
+                image_rgb = image.convert("RGBA")
+                data = image_rgb.tobytes("raw", "RGBA")
                 qimage = QImage(
-                    data,
-                    image.width,
-                    image.height,
-                    QImage.Format.Format_RGBA8888)
+                    data, image.width, image.height, QImage.Format.Format_RGBA8888
+                )
             else:
-                data = image.tobytes('raw', 'RGB')
+                data = image.tobytes("raw", "RGB")
                 qimage = QImage(
-                    data,
-                    image.width,
-                    image.height,
-                    QImage.Format.Format_RGB888)
+                    data, image.width, image.height, QImage.Format.Format_RGB888
+                )
 
             self._pixmap = QPixmap.fromImage(qimage)
             self._image = image
@@ -133,25 +131,22 @@ class SpriteViewerWidget(QScrollArea):
             self._pixmap.width() * self._zoom_level,
             self._pixmap.height() * self._zoom_level,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.FastTransformation
+            Qt.TransformationMode.FastTransformation,
         )
 
         # Draw overlays if enabled
-        if (self._show_grid and self._zoom_level >=
-                2) or self._show_palette_overlay:
+        if (self._show_grid and self._zoom_level >= 2) or self._show_palette_overlay:
             painter = QPainter(scaled_pixmap)
 
             # Draw palette overlay first (under grid)
             if self._show_palette_overlay:
                 self._draw_palette_overlay(
-                    painter, scaled_pixmap.width(), scaled_pixmap.height())
+                    painter, scaled_pixmap.width(), scaled_pixmap.height()
+                )
 
             # Draw grid overlay on top
             if self._show_grid and self._zoom_level >= 2:
-                self._draw_grid(
-                    painter,
-                    scaled_pixmap.width(),
-                    scaled_pixmap.height())
+                self._draw_grid(painter, scaled_pixmap.width(), scaled_pixmap.height())
 
             painter.end()
 
@@ -177,10 +172,7 @@ class SpriteViewerWidget(QScrollArea):
         if self._hover_tile:
             tile_x, tile_y = self._hover_tile
             rect = QRect(
-                tile_x * tile_width,
-                tile_y * tile_width,
-                tile_width,
-                tile_width
+                tile_x * tile_width, tile_y * tile_width, tile_width, tile_width
             )
 
             highlight_pen = QPen(QColor(255, 255, 0, 100))
@@ -214,7 +206,7 @@ class SpriteViewerWidget(QScrollArea):
             self.tile_hovered.emit(tile_x, tile_y)
 
         # Get pixel color if we have the original indexed image
-        if self._image and self._image.mode == 'P':
+        if self._image and self._image.mode == "P":
             try:
                 pixel_value = self._image.getpixel((int(x), int(y)))
                 self.pixel_hovered.emit(int(x), int(y), pixel_value)
@@ -231,17 +223,18 @@ class SpriteViewerWidget(QScrollArea):
             return None
 
         info = {
-            'width': self._pixmap.width(),
-            'height': self._pixmap.height(),
-            'tiles_x': self._pixmap.width() // self._tile_size,
-            'tiles_y': self._pixmap.height() // self._tile_size,
-            'total_tiles': (self._pixmap.width() // self._tile_size) * (self._pixmap.height() // self._tile_size)
+            "width": self._pixmap.width(),
+            "height": self._pixmap.height(),
+            "tiles_x": self._pixmap.width() // self._tile_size,
+            "tiles_y": self._pixmap.height() // self._tile_size,
+            "total_tiles": (self._pixmap.width() // self._tile_size)
+            * (self._pixmap.height() // self._tile_size),
         }
 
         if self._image:
-            info['mode'] = self._image.mode
-            if self._image.mode == 'P':
-                info['colors'] = len(set(self._image.getdata()))
+            info["mode"] = self._image.mode
+            if self._image.mode == "P":
+                info["colors"] = len(set(self._image.getdata()))
 
         return info
 
@@ -261,7 +254,7 @@ class SpriteViewerWidget(QScrollArea):
             self._current_palette = palette_num
 
             # Apply new palette to image if it's indexed
-            if self._image and self._image.mode == 'P':
+            if self._image and self._image.mode == "P":
                 self._image.putpalette(self._available_palettes[palette_num])
                 self.set_image(self._image)  # Refresh display
 
@@ -296,24 +289,21 @@ class SpriteViewerWidget(QScrollArea):
 
         # Define colors for each palette
         palette_colors = [
-            QColor(255, 0, 0, 60),      # Palette 0 - Red
-            QColor(0, 255, 0, 60),      # Palette 1 - Green
-            QColor(0, 0, 255, 60),      # Palette 2 - Blue
-            QColor(255, 255, 0, 60),    # Palette 3 - Yellow
-            QColor(255, 0, 255, 60),    # Palette 4 - Magenta
-            QColor(0, 255, 255, 60),    # Palette 5 - Cyan
-            QColor(255, 128, 0, 60),    # Palette 6 - Orange
-            QColor(128, 0, 255, 60),    # Palette 7 - Purple
+            QColor(255, 0, 0, 60),  # Palette 0 - Red
+            QColor(0, 255, 0, 60),  # Palette 1 - Green
+            QColor(0, 0, 255, 60),  # Palette 2 - Blue
+            QColor(255, 255, 0, 60),  # Palette 3 - Yellow
+            QColor(255, 0, 255, 60),  # Palette 4 - Magenta
+            QColor(0, 255, 255, 60),  # Palette 5 - Cyan
+            QColor(255, 128, 0, 60),  # Palette 6 - Orange
+            QColor(128, 0, 255, 60),  # Palette 7 - Purple
         ]
 
         # Draw colored overlay for each tile
         for (tile_x, tile_y), palette_num in self._tile_palette_map.items():
             if palette_num < len(palette_colors):
                 rect = QRect(
-                    tile_x * tile_width,
-                    tile_y * tile_width,
-                    tile_width,
-                    tile_width
+                    tile_x * tile_width, tile_y * tile_width, tile_width, tile_width
                 )
 
                 painter.fillRect(rect, palette_colors[palette_num])

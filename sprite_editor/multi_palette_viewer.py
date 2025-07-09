@@ -7,13 +7,22 @@ Shows sprites with all 16 palettes and highlights OAM-assigned palettes
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import (QCheckBox, QFrame, QGridLayout, QGroupBox,
-                             QHBoxLayout, QLabel, QScrollArea, QVBoxLayout,
-                             QWidget)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class PalettePreviewTile(QLabel):
     """Individual palette preview tile"""
+
     clicked = pyqtSignal(int)  # palette number
 
     def __init__(self, palette_num, parent=None):
@@ -26,7 +35,7 @@ class PalettePreviewTile(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setScaledContents(True)
         self.setMinimumSize(256, 256)  # Larger preview
-        self.setMaximumSize(512, 512)   # Allow growth
+        self.setMaximumSize(512, 512)  # Allow growth
 
         self.update_style()
 
@@ -43,26 +52,32 @@ class PalettePreviewTile(QLabel):
     def update_style(self):
         """Update visual style based on state"""
         if self.is_selected:
-            self.setStyleSheet("""
+            self.setStyleSheet(
+                """
                 QLabel {
                     border: 3px solid #FFD700;
                     background-color: #4a4a4a;
                 }
-            """)
+            """
+            )
         elif self.is_active:
-            self.setStyleSheet("""
+            self.setStyleSheet(
+                """
                 QLabel {
                     border: 2px solid #00FF00;
                     background-color: #3a3a3a;
                 }
-            """)
+            """
+            )
         else:
-            self.setStyleSheet("""
+            self.setStyleSheet(
+                """
                 QLabel {
                     border: 1px solid #666;
                     background-color: #2a2a2a;
                 }
-            """)
+            """
+            )
 
     def mousePressEvent(self, event):
         """Handle click events"""
@@ -73,29 +88,23 @@ class PalettePreviewTile(QLabel):
         """Set the preview image (PIL Image)"""
         if isinstance(image, Image.Image):
             # Convert PIL to QPixmap
-            if image.mode == 'RGBA':
-                data = image.tobytes('raw', 'RGBA')
+            if image.mode == "RGBA":
+                data = image.tobytes("raw", "RGBA")
                 qimage = QImage(
-                    data,
-                    image.width,
-                    image.height,
-                    QImage.Format.Format_RGBA8888)
-            elif image.mode == 'RGB':
-                data = image.tobytes('raw', 'RGB')
+                    data, image.width, image.height, QImage.Format.Format_RGBA8888
+                )
+            elif image.mode == "RGB":
+                data = image.tobytes("raw", "RGB")
                 qimage = QImage(
-                    data,
-                    image.width,
-                    image.height,
-                    QImage.Format.Format_RGB888)
+                    data, image.width, image.height, QImage.Format.Format_RGB888
+                )
             else:
                 # Convert to RGB
-                image_rgb = image.convert('RGB')
-                data = image_rgb.tobytes('raw', 'RGB')
+                image_rgb = image.convert("RGB")
+                data = image_rgb.tobytes("raw", "RGB")
                 qimage = QImage(
-                    data,
-                    image.width,
-                    image.height,
-                    QImage.Format.Format_RGB888)
+                    data, image.width, image.height, QImage.Format.Format_RGB888
+                )
 
             pixmap = QPixmap.fromImage(qimage)
 
@@ -221,16 +230,16 @@ class MultiPaletteViewer(QWidget):
             oam_stats: optional OAM statistics dict with palette usage
         """
         # Update active palettes from OAM stats
-        if oam_stats and 'active_palettes' in oam_stats:
-            self.active_palettes = set(oam_stats['active_palettes'])
+        if oam_stats and "active_palettes" in oam_stats:
+            self.active_palettes = set(oam_stats["active_palettes"])
 
         # Set images for each palette
         for i in range(16):
             tile, usage_label, container = self.palette_tiles[i]
 
             # Check if we have an image for this palette
-            if f'palette_{i}' in palette_images_dict:
-                img = palette_images_dict[f'palette_{i}']
+            if f"palette_{i}" in palette_images_dict:
+                img = palette_images_dict[f"palette_{i}"]
                 tile.set_image(img)
             elif i in palette_images_dict:
                 img = palette_images_dict[i]
@@ -241,9 +250,9 @@ class MultiPaletteViewer(QWidget):
             tile.set_active(is_active)
 
             # Update usage label
-            if oam_stats and 'palette_counts' in oam_stats:
-                if i in oam_stats['palette_counts']:
-                    count = oam_stats['palette_counts'][i]
+            if oam_stats and "palette_counts" in oam_stats:
+                if i in oam_stats["palette_counts"]:
+                    count = oam_stats["palette_counts"][i]
                     usage_label.setText(f"Used by {count} sprites")
                     usage_label.setStyleSheet("color: #0F0;")
                 else:
@@ -298,7 +307,7 @@ class MultiPaletteViewer(QWidget):
         """Update visibility of unused palettes"""
         show_unused = self.show_unused_check.isChecked()
 
-        for i, (tile, usage_label, container) in enumerate(self.palette_tiles):
+        for i, (_tile, _usage_label, container) in enumerate(self.palette_tiles):
             if i in self.active_palettes or show_unused:
                 container.setVisible(True)
             else:
@@ -311,13 +320,12 @@ class MultiPaletteViewer(QWidget):
     def set_oam_statistics(self, oam_stats):
         """Update display with OAM statistics"""
         if oam_stats:
-            self.active_palettes = set(oam_stats.get('active_palettes', []))
+            self.active_palettes = set(oam_stats.get("active_palettes", []))
 
             # Update all tiles with usage info
-            for i, (tile, usage_label, container) in enumerate(
-                    self.palette_tiles):
-                if 'palette_counts' in oam_stats and i in oam_stats['palette_counts']:
-                    count = oam_stats['palette_counts'][i]
+            for i, (tile, usage_label, _container) in enumerate(self.palette_tiles):
+                if "palette_counts" in oam_stats and i in oam_stats["palette_counts"]:
+                    count = oam_stats["palette_counts"][i]
                     usage_label.setText(f"Used by {count} sprites")
                     usage_label.setStyleSheet("color: #0F0;")
                     tile.set_active(True)

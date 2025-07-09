@@ -38,8 +38,8 @@ def assemble_sprite(tiles, tile_indices, arrangement, tile_size=8):
     sprite_height = arrangement[1] * tile_size
 
     # Create sprite image
-    if tiles[0].mode == 'P':
-        sprite = Image.new('P', (sprite_width, sprite_height))
+    if tiles[0].mode == "P":
+        sprite = Image.new("P", (sprite_width, sprite_height))
         sprite.putpalette(tiles[0].palette)
     else:
         sprite = Image.new(tiles[0].mode, (sprite_width, sprite_height))
@@ -67,11 +67,15 @@ def create_sprite_sheet(tiles, arrangements):
         sprites.append((name, sprite))
 
     # Calculate sheet size
-    max_width = max(s[1].width for s in sprites)
-    total_height = sum(s[1].height + 20 for s in sprites)  # 20px for labels
+    if sprites:
+        max_width = max(s[1].width for s in sprites)
+        total_height = sum(s[1].height + 20 for s in sprites)  # 20px for labels
+    else:
+        max_width = 64  # Minimum width for empty sheet
+        total_height = 32  # Minimum height for empty sheet
 
     # Create sheet
-    sheet = Image.new('RGBA', (max_width * 2, total_height), (0, 0, 0, 0))
+    sheet = Image.new("RGBA", (max_width * 2, total_height), (0, 0, 0, 0))
 
     y_offset = 0
     for name, sprite in sprites:
@@ -86,8 +90,7 @@ def create_sprite_sheet(tiles, arrangements):
 
 def main():
     if len(sys.argv) < 2:
-        print(
-            "Usage: python sprite_assembler.py <tileset_image> [output_prefix]")
+        print("Usage: python sprite_assembler.py <tileset_image> [output_prefix]")
         sys.exit(1)
 
     tileset_path = sys.argv[1]
@@ -105,13 +108,10 @@ def main():
         ("kirby_16x16_2", (2, 2), [4, 5, 6, 7]),
         ("kirby_16x16_3", (2, 2), [8, 9, 10, 11]),
         ("kirby_16x16_4", (2, 2), [12, 13, 14, 15]),
-
         # 24x24 sprites (3x3 tiles) - for larger Kirby poses
         ("kirby_24x24_1", (3, 3), [0, 1, 2, 8, 9, 10, 16, 17, 18]),
-
         # 16x24 sprites (2x3 tiles) - for tall Kirby poses
         ("kirby_16x24_1", (2, 3), [0, 1, 8, 9, 16, 17]),
-
         # 32x32 sprites (4x4 tiles) - for big Kirby
         ("kirby_32x32_1", (4, 4), list(range(16))),
     ]
@@ -121,7 +121,7 @@ def main():
     kirby_tiles = []
     for i, tile in enumerate(tiles[:64]):  # Check first 64 tiles
         pixels = np.array(tile)
-        if tile.mode == 'P':
+        if tile.mode == "P":
             # Check if tile has non-zero pixels
             if np.any(pixels > 0):
                 kirby_tiles.append(i)
@@ -130,11 +130,9 @@ def main():
         print(f"Found potential Kirby tiles: {kirby_tiles[:16]}")
         # Add automatic arrangements based on found tiles
         if len(kirby_tiles) >= 4:
-            arrangements.insert(
-                0, ("auto_kirby_16x16", (2, 2), kirby_tiles[:4]))
+            arrangements.insert(0, ("auto_kirby_16x16", (2, 2), kirby_tiles[:4]))
         if len(kirby_tiles) >= 6:
-            arrangements.insert(
-                1, ("auto_kirby_16x24", (2, 3), kirby_tiles[:6]))
+            arrangements.insert(1, ("auto_kirby_16x24", (2, 3), kirby_tiles[:6]))
 
     # Create individual sprite files
     for name, (w, h), indices in arrangements:

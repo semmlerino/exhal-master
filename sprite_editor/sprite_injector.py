@@ -33,11 +33,12 @@ def png_to_snes(png_file):
         img = Image.open(png_file)
 
         # Ensure indexed color mode
-        if img.mode != 'P':
+        if img.mode != "P":
             print(
                 f"Warning: Image is in {
-                    img.mode} mode, converting to indexed...")
-            img = img.convert('P', palette=Image.ADAPTIVE, colors=16)
+                    img.mode} mode, converting to indexed..."
+            )
+            img = img.convert("P", palette=Image.ADAPTIVE, colors=16)
 
         width, height = img.size
         tiles_x = width // 8
@@ -82,7 +83,7 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
     """Inject tile data into VRAM dump at specified offset."""
     try:
         # Read original VRAM
-        with open(vram_file, 'rb') as f:
+        with open(vram_file, "rb") as f:
             vram_data = bytearray(f.read())
 
         # Validate offset
@@ -90,14 +91,15 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
             print(
                 f"Error: Tile data ({
                     len(tile_data)} bytes) would exceed VRAM size at offset {
-                    hex(offset)}")
+                    hex(offset)}"
+            )
             return False
 
         # Inject tile data
-        vram_data[offset:offset + len(tile_data)] = tile_data
+        vram_data[offset : offset + len(tile_data)] = tile_data
 
         # Write modified VRAM
-        with open(output_file, 'wb') as f:
+        with open(output_file, "wb") as f:
             f.write(vram_data)
 
         print(f"Injected {len(tile_data)} bytes at offset {hex(offset)}")
@@ -108,13 +110,14 @@ def inject_into_vram(tile_data, vram_file, offset, output_file):
         print(f"Error injecting into VRAM: {e}")
         return False
 
+
 # decode_4bpp_tile is now imported from tile_utils
 
 
 def create_preview(vram_file, offset, size, output_png):
     """Create a preview PNG of the injected sprites."""
     try:
-        with open(vram_file, 'rb') as f:
+        with open(vram_file, "rb") as f:
             f.seek(offset)
             data = f.read(size)
 
@@ -127,7 +130,7 @@ def create_preview(vram_file, offset, size, output_png):
         height = tiles_y * 8
 
         # Create image
-        img = Image.new('P', (width, height))
+        img = Image.new("P", (width, height))
 
         # Set grayscale palette
         palette = []
@@ -155,8 +158,7 @@ def create_preview(vram_file, offset, size, output_png):
                     dst_x = tile_x * 8 + x
                     dst_y = tile_y * 8 + y
 
-                    if src_idx < len(
-                            pixels) and dst_y < height and dst_x < width:
+                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
                         img_pixels[dst_y * width + dst_x] = pixels[src_idx]
 
         img.putdata(img_pixels)
@@ -168,25 +170,18 @@ def create_preview(vram_file, offset, size, output_png):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Kirby Super Star Sprite Injector')
-    parser.add_argument('input_png', help='Edited PNG file to inject')
+    parser = argparse.ArgumentParser(description="Kirby Super Star Sprite Injector")
+    parser.add_argument("input_png", help="Edited PNG file to inject")
     parser.add_argument(
-        '--vram',
-        default='VRAM.dmp',
-        help='VRAM dump file (default: VRAM.dmp)')
+        "--vram", default="VRAM.dmp", help="VRAM dump file (default: VRAM.dmp)"
+    )
     parser.add_argument(
-        '--offset',
-        default='0xC000',
-        help='VRAM offset in hex (default: 0xC000)')
+        "--offset", default="0xC000", help="VRAM offset in hex (default: 0xC000)"
+    )
+    parser.add_argument("--output", default="VRAM_edited.dmp", help="Output VRAM file")
     parser.add_argument(
-        '--output',
-        default='VRAM_edited.dmp',
-        help='Output VRAM file')
-    parser.add_argument(
-        '--preview',
-        action='store_true',
-        help='Generate preview images')
+        "--preview", action="store_true", help="Generate preview images"
+    )
 
     args = parser.parse_args()
 
@@ -226,7 +221,9 @@ def main():
     # Create preview if requested
     if args.preview:
         print("\nCreating preview...")
-        preview_name = args.output.replace('.dmp', '_preview.png')
+        # Handle any file extension
+        base_name = os.path.splitext(args.output)[0]
+        preview_name = base_name + "_preview.png"
         create_preview(args.output, offset, len(tile_data), preview_name)
 
     print("\nSuccess! You can now load the modified VRAM in your emulator.")

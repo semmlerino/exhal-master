@@ -35,7 +35,7 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
     """Extract sprites from VRAM dump."""
     try:
         # Read VRAM data
-        with open(vram_file, 'rb') as f:
+        with open(vram_file, "rb") as f:
             f.seek(offset)
             data = f.read(size)
 
@@ -51,7 +51,7 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
         print(f"Image size: {width}x{height} pixels")
 
         # Create indexed color image
-        img = Image.new('P', (width, height))
+        img = Image.new("P", (width, height))
 
         # Set grayscale palette by default
         palette = []
@@ -79,8 +79,7 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
                     dst_x = tile_x * 8 + x
                     dst_y = tile_y * 8 + y
 
-                    if src_idx < len(
-                            pixels) and dst_y < height and dst_x < width:
+                    if src_idx < len(pixels) and dst_y < height and dst_x < width:
                         img_pixels[dst_y * width + dst_x] = pixels[src_idx]
 
         img.putdata(img_pixels)
@@ -92,26 +91,15 @@ def extract_sprites(vram_file, offset, size, tiles_per_row=16):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Kirby Super Star Sprite Extractor')
-    parser.add_argument('--vram', default='VRAM.dmp', help='VRAM dump file')
+    parser = argparse.ArgumentParser(description="Kirby Super Star Sprite Extractor")
+    parser.add_argument("--vram", default="VRAM.dmp", help="VRAM dump file")
+    parser.add_argument("--offset", default="0xC000", help="VRAM offset in hex")
+    parser.add_argument("--size", default="0x4000", help="Size to extract in hex")
     parser.add_argument(
-        '--offset',
-        default='0xC000',
-        help='VRAM offset in hex')
-    parser.add_argument(
-        '--size',
-        default='0x4000',
-        help='Size to extract in hex')
-    parser.add_argument(
-        '--output',
-        default='sprites_to_edit.png',
-        help='Output PNG file')
-    parser.add_argument('--width', type=int, default=16, help='Tiles per row')
-    parser.add_argument(
-        '--palette',
-        type=int,
-        help='Apply CGRAM palette number')
+        "--output", default="sprites_to_edit.png", help="Output PNG file"
+    )
+    parser.add_argument("--width", type=int, default=16, help="Tiles per row")
+    parser.add_argument("--palette", type=int, help="Apply CGRAM palette number")
 
     args = parser.parse_args()
 
@@ -140,7 +128,7 @@ def main():
 
     # Apply palette if requested
     if args.palette is not None:
-        cgram_file = 'CGRAM.dmp'
+        cgram_file = "CGRAM.dmp"
         if os.path.exists(cgram_file):
             print(f"Applying palette {args.palette}...")
             palette = read_cgram_palette(cgram_file, args.palette)

@@ -10,9 +10,9 @@ from .sprite_viewer_widget import PaletteViewerWidget, SpriteViewerWidget
 
 __version__ = "1.0.0"
 __all__ = [
-    'SpriteEditorCore',
-    'SpriteViewerWidget',
-    'PaletteViewerWidget',
-    'MultiPaletteViewer',
-    'OAMPaletteMapper'
+    "MultiPaletteViewer",
+    "OAMPaletteMapper",
+    "PaletteViewerWidget",
+    "SpriteEditorCore",
+    "SpriteViewerWidget",
 ]

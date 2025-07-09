@@ -18,9 +18,9 @@ def png_to_snes(input_file, output_file):
     img = Image.open(input_file)
 
     # Ensure it's in indexed color mode
-    if img.mode != 'P':
+    if img.mode != "P":
         print("Converting to indexed color mode...")
-        img = img.convert('P', palette=Image.ADAPTIVE, colors=16)
+        img = img.convert("P", palette=Image.ADAPTIVE, colors=16)
 
     width, height = img.size
     tiles_x = width // 8
@@ -45,7 +45,7 @@ def png_to_snes(input_file, output_file):
             output_data.extend(tile_data)
 
     # Write output
-    with open(output_file, 'wb') as f:
+    with open(output_file, "wb") as f:
         f.write(output_data)
 
     print(f"Wrote {len(output_data)} bytes to {output_file}")

@@ -5,8 +5,8 @@ Run this from the main exhal-master directory
 Uses the refactored MVC architecture
 """
 
-import sys
 import os
+import sys
 
 # Add sprite_editor to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

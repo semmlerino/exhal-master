@@ -4,17 +4,26 @@ SNES tile encoding/decoding utilities
 Consolidated from various sprite editor modules
 """
 
-from typing import List
 
 try:
-    from .constants import (BYTES_PER_TILE_4BPP, PIXELS_PER_TILE,
-                            TILE_BITPLANE_OFFSET, TILE_HEIGHT, TILE_WIDTH)
+    from .constants import (
+        BYTES_PER_TILE_4BPP,
+        PIXELS_PER_TILE,
+        TILE_BITPLANE_OFFSET,
+        TILE_HEIGHT,
+        TILE_WIDTH,
+    )
 except ImportError:
-    from constants import (BYTES_PER_TILE_4BPP, PIXELS_PER_TILE,
-                           TILE_BITPLANE_OFFSET, TILE_HEIGHT, TILE_WIDTH)
+    from constants import (
+        BYTES_PER_TILE_4BPP,
+        PIXELS_PER_TILE,
+        TILE_BITPLANE_OFFSET,
+        TILE_HEIGHT,
+        TILE_WIDTH,
+    )
 
 
-def decode_4bpp_tile(data: bytes, offset: int) -> List[int]:
+def decode_4bpp_tile(data: bytes, offset: int) -> list[int]:
     """
     Decode a single 8x8 4bpp SNES tile.
 
@@ -43,17 +52,19 @@ def decode_4bpp_tile(data: bytes, offset: int) -> List[int]:
         # Decode each pixel in the row
         for x in range(TILE_WIDTH):
             bit = 7 - x
-            pixel = ((bp0 >> bit) & 1) | \
-                (((bp1 >> bit) & 1) << 1) | \
-                (((bp2 >> bit) & 1) << 2) | \
-                (((bp3 >> bit) & 1) << 3)
+            pixel = (
+                ((bp0 >> bit) & 1)
+                | (((bp1 >> bit) & 1) << 1)
+                | (((bp2 >> bit) & 1) << 2)
+                | (((bp3 >> bit) & 1) << 3)
+            )
             row.append(pixel)
         tile.extend(row)
 
     return tile
 
 
-def encode_4bpp_tile(tile_pixels: List[int]) -> bytes:
+def encode_4bpp_tile(tile_pixels: list[int]) -> bytes:
     """
     Encode an 8x8 tile to SNES 4bpp format.
 
@@ -69,7 +80,8 @@ def encode_4bpp_tile(tile_pixels: List[int]) -> bytes:
     if len(tile_pixels) != PIXELS_PER_TILE:
         raise ValueError(
             f"Expected {PIXELS_PER_TILE} pixels, got {
-                len(tile_pixels)}")
+                len(tile_pixels)}"
+        )
 
     output = bytearray(BYTES_PER_TILE_4BPP)
 
@@ -81,8 +93,7 @@ def encode_4bpp_tile(tile_pixels: List[int]) -> bytes:
 
         # Encode each pixel in the row
         for x in range(TILE_WIDTH):
-            pixel = tile_pixels[y * TILE_WIDTH +
-                                x] & 0x0F  # Ensure 4-bit value
+            pixel = tile_pixels[y * TILE_WIDTH + x] & 0x0F  # Ensure 4-bit value
             bp0 |= ((pixel & 1) >> 0) << (7 - x)
             bp1 |= ((pixel & 2) >> 1) << (7 - x)
             bp2 |= ((pixel & 4) >> 2) << (7 - x)
@@ -97,8 +108,7 @@ def encode_4bpp_tile(tile_pixels: List[int]) -> bytes:
     return bytes(output)
 
 
-def decode_tiles(data: bytes, num_tiles: int,
-                 start_offset: int = 0) -> List[List[int]]:
+def decode_tiles(data: bytes, num_tiles: int, start_offset: int = 0) -> list[list[int]]:
     """
     Decode multiple 4bpp tiles from data.
 
@@ -122,7 +132,7 @@ def decode_tiles(data: bytes, num_tiles: int,
     return tiles
 
 
-def encode_tiles(tiles: List[List[int]]) -> bytes:
+def encode_tiles(tiles: list[list[int]]) -> bytes:
     """
     Encode multiple tiles to SNES 4bpp format.
 

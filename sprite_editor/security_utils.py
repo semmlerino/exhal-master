@@ -8,7 +8,6 @@ import pathlib
 
 class SecurityError(Exception):
     """Security-related errors"""
-    pass
 
 
 def validate_file_path(file_path, base_dir=None, max_size=10 * 1024 * 1024):
@@ -29,7 +28,7 @@ def validate_file_path(file_path, base_dir=None, max_size=10 * 1024 * 1024):
     file_path_str = str(file_path)
 
     # Check for null bytes
-    if '\0' in file_path_str:
+    if "\0" in file_path_str:
         raise SecurityError("Null bytes in path")
 
     # Convert to Path object
@@ -54,8 +53,7 @@ def validate_file_path(file_path, base_dir=None, max_size=10 * 1024 * 1024):
         # Check file size
         file_size = path.stat().st_size
         if file_size > max_size:
-            raise SecurityError(
-                f"File too large: {file_size} bytes (max {max_size})")
+            raise SecurityError(f"File too large: {file_size} bytes (max {max_size})")
 
     return str(path)
 
@@ -77,7 +75,7 @@ def validate_output_path(file_path, base_dir=None):
     file_path_str = str(file_path)
 
     # Check for null bytes
-    if '\0' in file_path_str:
+    if "\0" in file_path_str:
         raise SecurityError("Null bytes in path")
 
     # Convert to Path object

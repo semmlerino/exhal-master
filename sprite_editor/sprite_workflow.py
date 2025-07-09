@@ -20,7 +20,7 @@ import sys
 def run_command(cmd):
     """Run a command and print output."""
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True)
     if result.stdout:
         print(result.stdout)
     if result.stderr:
@@ -35,10 +35,14 @@ def extract_sprites():
 
     # Extract with grayscale
     cmd = [
-        'python3', 'sprite_extractor.py',
-        '--offset', '0xC000',
-        '--size', '0x4000',
-        '--output', 'sprites_to_edit.png'
+        "python3",
+        "sprite_extractor.py",
+        "--offset",
+        "0xC000",
+        "--size",
+        "0x4000",
+        "--output",
+        "sprites_to_edit.png",
     ]
 
     if run_command(cmd):
@@ -53,8 +57,8 @@ def extract_sprites():
     # Also extract with color for reference
     print("\nExtracting colored reference...")
     cmd_color = cmd[:]
-    cmd_color[-1] = 'sprites_reference_colored.png'
-    cmd_color.extend(['--palette', '8'])
+    cmd_color[-1] = "sprites_reference_colored.png"
+    cmd_color.extend(["--palette", "8"])
     if run_command(cmd_color):
         print("✅ Color reference saved to: sprites_reference_colored.png")
 
@@ -73,15 +77,18 @@ def inject_sprites(png_file):
     output_vram = f"VRAM_{base_name}.dmp"
 
     cmd = [
-        'python3', 'sprite_injector.py',
+        "python3",
+        "sprite_injector.py",
         png_file,
-        '--output', output_vram,
-        '--preview'
+        "--output",
+        output_vram,
+        "--preview",
     ]
 
     if run_command(cmd):
         print(f"\n✅ SUCCESS! Modified VRAM saved to: {output_vram}")
         print(f"\nYou can now load '{output_vram}' in your emulator!")
+    return None
 
 
 def quick_inject(png_file):
@@ -90,8 +97,8 @@ def quick_inject(png_file):
         print(f"Error: File '{png_file}' not found")
         return
 
-    cmd = ['python3', 'sprite_injector.py', png_file]
-    subprocess.run(cmd)
+    cmd = ["python3", "sprite_injector.py", png_file]
+    subprocess.run(cmd, check=False)
 
 
 def show_help():
@@ -140,20 +147,20 @@ def main():
 
     command = sys.argv[1].lower()
 
-    if command == 'extract':
+    if command == "extract":
         extract_sprites()
-    elif command == 'inject':
+    elif command == "inject":
         if len(sys.argv) < 3:
             print("Error: Please specify PNG file to inject")
             print("Usage: python sprite_workflow.py inject <file.png>")
         else:
             inject_sprites(sys.argv[2])
-    elif command == 'quick':
+    elif command == "quick":
         if len(sys.argv) < 3:
             print("Error: Please specify PNG file")
         else:
             quick_inject(sys.argv[2])
-    elif command in ['help', '-h', '--help']:
+    elif command in ["help", "-h", "--help"]:
         show_help()
     else:
         print(f"Unknown command: {command}")

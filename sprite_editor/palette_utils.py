@@ -5,29 +5,49 @@ Consolidated palette operations for CGRAM handling
 """
 
 import struct
-from typing import List, Optional, Tuple
+from typing import Optional
 
 try:
-    from .constants import (BGR555_BLUE_MASK, BGR555_BLUE_SHIFT,
-                            BGR555_GREEN_MASK, BGR555_GREEN_SHIFT,
-                            BGR555_MAX_VALUE, BGR555_RED_MASK,
-                            BGR555_RED_SHIFT, BYTES_PER_COLOR,
-                            BYTES_PER_PALETTE, COLORS_PER_PALETTE,
-                            MAX_CGRAM_FILE_SIZE, MAX_PALETTES, PALETTE_ENTRIES,
-                            PALETTE_SIZE_BYTES, RGB888_MAX_VALUE)
+    from .constants import (
+        BGR555_BLUE_MASK,
+        BGR555_BLUE_SHIFT,
+        BGR555_GREEN_MASK,
+        BGR555_GREEN_SHIFT,
+        BGR555_MAX_VALUE,
+        BGR555_RED_MASK,
+        BGR555_RED_SHIFT,
+        BYTES_PER_COLOR,
+        BYTES_PER_PALETTE,
+        COLORS_PER_PALETTE,
+        MAX_CGRAM_FILE_SIZE,
+        MAX_PALETTES,
+        PALETTE_ENTRIES,
+        PALETTE_SIZE_BYTES,
+        RGB888_MAX_VALUE,
+    )
     from .security_utils import SecurityError, validate_file_path
 except ImportError:
-    from constants import (BGR555_BLUE_MASK, BGR555_BLUE_SHIFT,
-                           BGR555_GREEN_MASK, BGR555_GREEN_SHIFT,
-                           BGR555_MAX_VALUE, BGR555_RED_MASK, BGR555_RED_SHIFT,
-                           BYTES_PER_COLOR, BYTES_PER_PALETTE,
-                           COLORS_PER_PALETTE, MAX_CGRAM_FILE_SIZE,
-                           MAX_PALETTES, PALETTE_ENTRIES, PALETTE_SIZE_BYTES,
-                           RGB888_MAX_VALUE)
+    from constants import (
+        BGR555_BLUE_MASK,
+        BGR555_BLUE_SHIFT,
+        BGR555_GREEN_MASK,
+        BGR555_GREEN_SHIFT,
+        BGR555_MAX_VALUE,
+        BGR555_RED_MASK,
+        BGR555_RED_SHIFT,
+        BYTES_PER_COLOR,
+        BYTES_PER_PALETTE,
+        COLORS_PER_PALETTE,
+        MAX_CGRAM_FILE_SIZE,
+        MAX_PALETTES,
+        PALETTE_ENTRIES,
+        PALETTE_SIZE_BYTES,
+        RGB888_MAX_VALUE,
+    )
     from security_utils import SecurityError, validate_file_path
 
 
-def bgr555_to_rgb888(bgr555: int) -> Tuple[int, int, int]:
+def bgr555_to_rgb888(bgr555: int) -> tuple[int, int, int]:
     """
     Convert BGR555 color to RGB888.
 
@@ -68,16 +88,14 @@ def rgb888_to_bgr555(r: int, g: int, b: int) -> int:
     b5 = (b * BGR555_MAX_VALUE) // RGB888_MAX_VALUE
 
     # Pack into BGR555
-    bgr555 = (
-        b5 << BGR555_BLUE_SHIFT) | (
-        g5 << BGR555_GREEN_SHIFT) | (
-            r5 << BGR555_RED_SHIFT)
+    return (
+        (b5 << BGR555_BLUE_SHIFT)
+        | (g5 << BGR555_GREEN_SHIFT)
+        | (r5 << BGR555_RED_SHIFT)
+    )
 
-    return bgr555
 
-
-def read_cgram_palette(cgram_file: str,
-                       palette_num: int) -> Optional[List[int]]:
+def read_cgram_palette(cgram_file: str, palette_num: int) -> Optional[list[int]]:
     """
     Read a specific palette from CGRAM dump.
 
@@ -95,10 +113,9 @@ def read_cgram_palette(cgram_file: str,
             return None
 
         # Validate file path
-        cgram_file = validate_file_path(
-            cgram_file, max_size=MAX_CGRAM_FILE_SIZE)
+        cgram_file = validate_file_path(cgram_file, max_size=MAX_CGRAM_FILE_SIZE)
 
-        with open(cgram_file, 'rb') as f:
+        with open(cgram_file, "rb") as f:
             # Each palette is BYTES_PER_PALETTE
             offset = palette_num * BYTES_PER_PALETTE
             # Check if offset is within file
@@ -113,12 +130,11 @@ def read_cgram_palette(cgram_file: str,
         palette = []
         for i in range(COLORS_PER_PALETTE):
             # Read BGR555 color
-            color_bytes = palette_data[i *
-                                       BYTES_PER_COLOR:i *
-                                       BYTES_PER_COLOR +
-                                       BYTES_PER_COLOR]
+            color_bytes = palette_data[
+                i * BYTES_PER_COLOR : i * BYTES_PER_COLOR + BYTES_PER_COLOR
+            ]
             if len(color_bytes) == BYTES_PER_COLOR:
-                bgr555 = struct.unpack('<H', color_bytes)[0]
+                bgr555 = struct.unpack("<H", color_bytes)[0]
                 r, g, b = bgr555_to_rgb888(bgr555)
                 palette.extend([r, g, b])
             else:
@@ -133,12 +149,12 @@ def read_cgram_palette(cgram_file: str,
     except SecurityError:
         # Re-raise security errors
         raise
-    except (OSError, IOError, struct.error, ValueError, IndexError):
+    except (OSError, struct.error, ValueError, IndexError):
         # Expected errors from file operations and data parsing
         return None
 
 
-def get_grayscale_palette() -> List[int]:
+def get_grayscale_palette() -> list[int]:
     """
     Get default grayscale palette for preview.
 
@@ -153,7 +169,7 @@ def get_grayscale_palette() -> List[int]:
     return palette
 
 
-def read_all_palettes(cgram_file: str) -> List[Optional[List[int]]]:
+def read_all_palettes(cgram_file: str) -> list[Optional[list[int]]]:
     """
     Read all 16 palettes from CGRAM dump.
 
@@ -170,7 +186,28 @@ def read_all_palettes(cgram_file: str) -> List[Optional[List[int]]]:
     return palettes
 
 
-def write_cgram_palette(palette: List[int], palette_num: int) -> bytes:
+def apply_palette_with_transparency(palette: list[int]) -> list[int]:
+    """
+    Apply a palette but handle index 0 as transparent.
+
+    Args:
+        palette: Original palette (768 RGB values)
+
+    Returns:
+        Modified palette with index 0 set to a neutral color for transparency
+    """
+    modified_palette = palette.copy()
+
+    # Option 1: Set index 0 to a neutral gray for better visualization
+    # This helps distinguish transparent areas from actual sprite pixels
+    modified_palette[0] = 240  # R
+    modified_palette[1] = 240  # G
+    modified_palette[2] = 240  # B
+
+    return modified_palette
+
+
+def write_cgram_palette(palette: list[int], palette_num: int) -> bytes:
     """
     Convert RGB palette to CGRAM format for a specific palette slot.
 
@@ -188,7 +225,8 @@ def write_cgram_palette(palette: List[int], palette_num: int) -> bytes:
         raise ValueError(
             f"Palette must have at least {
                 COLORS_PER_PALETTE *
-                3} values")
+                3} values"
+        )
 
     cgram_data = bytearray()
 
@@ -198,6 +236,6 @@ def write_cgram_palette(palette: List[int], palette_num: int) -> bytes:
         b = palette[i * 3 + 2]
 
         bgr555 = rgb888_to_bgr555(r, g, b)
-        cgram_data.extend(struct.pack('<H', bgr555))
+        cgram_data.extend(struct.pack("<H", bgr555))
 
     return bytes(cgram_data)

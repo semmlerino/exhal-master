@@ -11,7 +11,7 @@ from PIL import Image
 
 def read_cgram_palettes(cgram_file):
     """Read all 16 palettes from CGRAM dump."""
-    with open(cgram_file, 'rb') as f:
+    with open(cgram_file, "rb") as f:
         cgram_data = f.read()
 
     palettes = []
@@ -22,7 +22,7 @@ def read_cgram_palettes(cgram_file):
             offset = (pal_num * 16 + color_num) * 2
             if offset < len(cgram_data):
                 # Read BGR555 color
-                color_word = struct.unpack_from('<H', cgram_data, offset)[0]
+                color_word = struct.unpack_from("<H", cgram_data, offset)[0]
                 # Convert BGR555 to RGB888
                 b = ((color_word >> 10) & 0x1F) << 3
                 g = ((color_word >> 5) & 0x1F) << 3
@@ -44,7 +44,7 @@ def apply_palette(img, palette_num, palettes):
     # Use the selected palette
     full_palette.extend(palettes[palette_num])
     # Fill rest with black
-    for i in range(16, 256):
+    for _i in range(16, 256):
         full_palette.extend([0, 0, 0])
 
     img.putpalette(full_palette)
@@ -71,7 +71,7 @@ def main():
     img = apply_palette(img, palette_num, palettes)
 
     # Save with palette number in filename
-    output_file = input_file.replace('.png', f'_pal{palette_num}.png')
+    output_file = input_file.replace(".png", f"_pal{palette_num}.png")
     img.save(output_file)
 
     print(f"Applied palette {palette_num} to {output_file}")

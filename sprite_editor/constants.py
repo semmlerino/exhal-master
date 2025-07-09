@@ -39,17 +39,17 @@ DEFAULT_TILES_PER_ROW = 16
 DEFAULT_VRAM_OFFSET = 0xC000  # Common offset for sprite data
 
 # Sprite size modes
-SPRITE_SIZE_SMALL = '8x8'
-SPRITE_SIZE_LARGE = '16x16'  # Can also be 32x32 or 64x64 depending on register
+SPRITE_SIZE_SMALL = "8x8"
+SPRITE_SIZE_LARGE = "16x16"  # Can also be 32x32 or 64x64 depending on register
 
 # Color conversion
 BGR555_MAX_VALUE = 31  # 5 bits per color component
 RGB888_MAX_VALUE = 255  # 8 bits per color component
 
 # BGR555 color masks
-BGR555_BLUE_MASK = 0x7C00   # Bits 14-10 for blue
+BGR555_BLUE_MASK = 0x7C00  # Bits 14-10 for blue
 BGR555_GREEN_MASK = 0x03E0  # Bits 9-5 for green
-BGR555_RED_MASK = 0x001F    # Bits 4-0 for red
+BGR555_RED_MASK = 0x001F  # Bits 4-0 for red
 
 # Bit shifts for BGR555
 BGR555_BLUE_SHIFT = 10
@@ -61,16 +61,16 @@ PIXEL_4BPP_MASK = 0x0F  # Mask for 4-bit pixel values
 
 # Additional memory limits
 VRAM_SIZE_ABSOLUTE_MAX = 0x20000  # 128KB absolute maximum
-TILE_DATA_MAX_SIZE = 0x10000      # 64KB max for tile data
+TILE_DATA_MAX_SIZE = 0x10000  # 64KB max for tile data
 
 # Palette sizes
 PALETTE_SIZE_BYTES = 768  # 256 colors * 3 bytes (RGB)
-PALETTE_ENTRIES = 256     # Total palette entries
+PALETTE_ENTRIES = 256  # Total palette entries
 
 # Tile encoding offsets
 TILE_BITPLANE_OFFSET = 16  # Offset between bitplane pairs in 4bpp tiles
 
 # Tile ranges for Kirby sprites
 KIRBY_TILE_START = 0x180  # Tile 384
-KIRBY_TILE_END = 0x200    # Tile 512
+KIRBY_TILE_END = 0x200  # Tile 512
 KIRBY_VRAM_BASE = 0x6000  # VRAM word address

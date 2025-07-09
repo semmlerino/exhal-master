@@ -27,7 +27,7 @@ def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
     # Create image
     img_width = width_in_tiles * 8
     img_height = height_in_tiles * 8
-    img = Image.new('P', (img_width, img_height))
+    img = Image.new("P", (img_width, img_height))
 
     # Default palette (grayscale)
     palette = []
@@ -49,7 +49,9 @@ def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
                 if tile_idx < num_tiles:
                     tile_offset = tile_idx * bytes_per_tile
                     tile = decode_4bpp_tile(data, tile_offset)
-                    row_pixels.extend(tile[row])
+                    # tile is 1D array of 64 pixels, extract row
+                    tile_row = tile[row * 8 : (row + 1) * 8]
+                    row_pixels.extend(tile_row)
                 else:
                     row_pixels.extend([0] * 8)
             pixels.extend(row_pixels)
@@ -61,7 +63,8 @@ def convert_tiles_to_image(data, width_in_tiles=16, height_in_tiles=None):
 def main():
     if len(sys.argv) < 3:
         print(
-            "Usage: python snes_tiles_to_png.py input.bin output.png [width_in_tiles]")
+            "Usage: python snes_tiles_to_png.py input.bin output.png [width_in_tiles]"
+        )
         print("Default width is 16 tiles (128 pixels)")
         sys.exit(1)
 
@@ -70,18 +73,19 @@ def main():
     width_in_tiles = int(sys.argv[3]) if len(sys.argv) > 3 else 16
 
     # Read input file
-    with open(input_file, 'rb') as f:
+    with open(input_file, "rb") as f:
         data = f.read()
 
     # Convert and save
     img = convert_tiles_to_image(data, width_in_tiles)
-    img.save(output_file, 'PNG')
+    img.save(output_file, "PNG")
 
     print(
         f"Converted {
             len(data)} bytes ({
             len(data) //
-            32} tiles) to {output_file}")
+            32} tiles) to {output_file}"
+    )
     print(f"Image size: {img.width}x{img.height} pixels")
 
 
