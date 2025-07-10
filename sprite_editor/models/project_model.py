@@ -8,7 +8,8 @@ import os
 
 from PyQt6.QtCore import pyqtSignal
 
-from ..settings_manager import SettingsManager
+from sprite_editor.settings_manager import SettingsManager
+
 from .base_model import BaseModel, ObservableProperty
 
 
@@ -45,33 +46,36 @@ class ProjectModel(BaseModel):
     def _load_settings(self):
         """Load settings from persistent storage"""
         # Load preferences
-        self.auto_load_files = self.settings.get(
-            'preferences.auto_load_files', True)
+        self.auto_load_files = self.settings.get("preferences.auto_load_files", True)
         self.remember_window_position = self.settings.get(
-            'preferences.remember_window_position', True)
+            "preferences.remember_window_position", True
+        )
 
         # Load recent files
-        recent = self.settings.get('recent_files', {})
-        self.recent_vram_files = recent.get('vram', [])
-        self.recent_cgram_files = recent.get('cgram', [])
-        self.recent_oam_files = recent.get('oam', [])
-        self.recent_png_files = recent.get('png', [])
+        recent = self.settings.get("recent_files", {})
+        self.recent_vram_files = recent.get("vram", [])
+        self.recent_cgram_files = recent.get("cgram", [])
+        self.recent_oam_files = recent.get("oam", [])
+        self.recent_png_files = recent.get("png", [])
 
     def save_settings(self):
         """Save settings to persistent storage"""
         # Save preferences
-        self.settings.set('preferences.auto_load_files', self.auto_load_files)
+        self.settings.set("preferences.auto_load_files", self.auto_load_files)
         self.settings.set(
-            'preferences.remember_window_position',
-            self.remember_window_position)
+            "preferences.remember_window_position", self.remember_window_position
+        )
 
         # Save recent files
-        self.settings.set('recent_files', {
-            'vram': self.recent_vram_files,
-            'cgram': self.recent_cgram_files,
-            'oam': self.recent_oam_files,
-            'png': self.recent_png_files
-        })
+        self.settings.set(
+            "recent_files",
+            {
+                "vram": self.recent_vram_files,
+                "cgram": self.recent_cgram_files,
+                "oam": self.recent_oam_files,
+                "png": self.recent_png_files,
+            },
+        )
 
         self.settings.save_settings()
 
@@ -81,13 +85,13 @@ class ProjectModel(BaseModel):
             return
 
         # Get the appropriate list
-        if file_type == 'vram':
+        if file_type == "vram":
             recent_list = self.recent_vram_files
-        elif file_type == 'cgram':
+        elif file_type == "cgram":
             recent_list = self.recent_cgram_files
-        elif file_type == 'oam':
+        elif file_type == "oam":
             recent_list = self.recent_oam_files
-        elif file_type == 'png':
+        elif file_type == "png":
             recent_list = self.recent_png_files
         else:
             return
@@ -101,16 +105,16 @@ class ProjectModel(BaseModel):
 
         # Limit size
         if len(recent_list) > self.max_recent_files:
-            recent_list = recent_list[:self.max_recent_files]
+            recent_list = recent_list[: self.max_recent_files]
 
         # Update the property
-        if file_type == 'vram':
+        if file_type == "vram":
             self.recent_vram_files = recent_list
-        elif file_type == 'cgram':
+        elif file_type == "cgram":
             self.recent_cgram_files = recent_list
-        elif file_type == 'oam':
+        elif file_type == "oam":
             self.recent_oam_files = recent_list
-        elif file_type == 'png':
+        elif file_type == "png":
             self.recent_png_files = recent_list
 
         self.recent_files_changed.emit()
@@ -119,13 +123,13 @@ class ProjectModel(BaseModel):
     def clear_recent_files(self, file_type=None):
         """Clear recent files list"""
         if file_type:
-            if file_type == 'vram':
+            if file_type == "vram":
                 self.recent_vram_files = []
-            elif file_type == 'cgram':
+            elif file_type == "cgram":
                 self.recent_cgram_files = []
-            elif file_type == 'oam':
+            elif file_type == "oam":
                 self.recent_oam_files = []
-            elif file_type == 'png':
+            elif file_type == "png":
                 self.recent_png_files = []
         else:
             # Clear all
@@ -140,10 +144,10 @@ class ProjectModel(BaseModel):
     def get_last_used_files(self):
         """Get the most recently used file of each type"""
         return {
-            'vram': self.recent_vram_files[0] if self.recent_vram_files else "",
-            'cgram': self.recent_cgram_files[0] if self.recent_cgram_files else "",
-            'oam': self.recent_oam_files[0] if self.recent_oam_files else "",
-            'png': self.recent_png_files[0] if self.recent_png_files else ""
+            "vram": self.recent_vram_files[0] if self.recent_vram_files else "",
+            "cgram": self.recent_cgram_files[0] if self.recent_cgram_files else "",
+            "oam": self.recent_oam_files[0] if self.recent_oam_files else "",
+            "png": self.recent_png_files[0] if self.recent_png_files else "",
         }
 
     def mark_modified(self):

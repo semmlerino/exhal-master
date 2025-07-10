@@ -10,12 +10,15 @@ Focuses on new functionality from consolidation:
 - Command-line arguments
 """
 
+# Standard library imports
+import contextlib
 import json
 import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+# Third-party imports
 import numpy as np
 import pytest
 
@@ -27,6 +30,7 @@ from PyQt6.QtGui import QKeyEvent
 # PyQt6 testing setup
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
 
+# Local imports
 # Import modules to test
 from indexed_pixel_editor import (
     IndexedPixelEditor,
@@ -80,9 +84,9 @@ def sample_metadata():
             "12": "test_palette_12.pal.json",
             "13": "test_palette_13.pal.json",
             "14": "test_palette_14.pal.json",
-            "15": "test_palette_15.pal.json"
+            "15": "test_palette_15.pal.json",
         },
-        "default_palette": 8
+        "default_palette": 8,
     }
 
 
@@ -96,11 +100,7 @@ def sample_palette_data():
         g = (i * 32) % 256
         b = (i * 48) % 256
         colors.append([r, g, b])
-    return {
-        "colors": colors,
-        "name": "Test Palette",
-        "source": "Test Suite"
-    }
+    return {"colors": colors, "name": "Test Palette", "source": "Test Suite"}
 
 
 @pytest.fixture
@@ -129,7 +129,8 @@ def sample_image_file(temp_dir):
 def multi_palette_setup(temp_dir, sample_metadata, sample_palette_data):
     """Set up a complete multi-palette test environment"""
     # Create test image
-    img_data = np.random.randint(0, 16, size=(16, 16), dtype=np.uint8)
+    rng = np.random.default_rng()
+    img_data = rng.integers(0, 16, size=(16, 16), dtype=np.uint8)
     img = Image.fromarray(img_data, mode="P")
 
     # Set up grayscale palette
@@ -179,7 +180,7 @@ def multi_palette_setup(temp_dir, sample_metadata, sample_palette_data):
     return {
         "image_path": str(img_path),
         "metadata_path": str(metadata_path),
-        "temp_dir": temp_dir
+        "temp_dir": temp_dir,
     }
 
 
@@ -188,7 +189,9 @@ class TestDebugLogging:
 
     def test_debug_log_levels(self, capsys):
         """Test debug logging with different levels"""
+        # Local imports
         import indexed_pixel_editor
+
         # Ensure debug mode is on
         original_debug = indexed_pixel_editor.DEBUG_MODE
         indexed_pixel_editor.DEBUG_MODE = True
@@ -226,7 +229,9 @@ class TestDebugLogging:
 
     def test_debug_exception(self, capsys):
         """Test exception debug logging"""
+        # Local imports
         import indexed_pixel_editor
+
         original_debug = indexed_pixel_editor.DEBUG_MODE
         indexed_pixel_editor.DEBUG_MODE = True
 
@@ -243,7 +248,9 @@ class TestDebugLogging:
 
     def test_debug_mode_off(self, capsys):
         """Test that logging is disabled when DEBUG_MODE is False"""
+        # Local imports
         import indexed_pixel_editor
+
         original_debug = indexed_pixel_editor.DEBUG_MODE
         indexed_pixel_editor.DEBUG_MODE = False
 
@@ -318,34 +325,43 @@ class TestMetadataHandling:
 
     def test_load_metadata_file(self, qapp, multi_palette_setup):
         """Test loading metadata file"""
-        with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
-                editor = IndexedPixelEditor()
+        with patch.object(IndexedPixelEditor, "handle_startup"), \
+             patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
+            editor = IndexedPixelEditor()
 
-                # Load image with metadata
-                success = editor.load_file_by_path(multi_palette_setup["image_path"])
+            # Load image with metadata
+            success = editor.load_file_by_path(multi_palette_setup["image_path"])
 
-                assert success
-                assert editor.metadata is not None
-                assert editor.current_palette_index == 8  # Default palette
+            assert success
+            assert editor.metadata is not None
+            assert editor.current_palette_index == 8  # Default palette
 
     def test_auto_detect_metadata(self, qapp, multi_palette_setup):
         """Test automatic metadata file detection"""
-        with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
-                editor = IndexedPixelEditor()
+        with patch.object(IndexedPixelEditor, "handle_startup"), \
+             patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
+            editor = IndexedPixelEditor()
 
-                # The load_file_by_path should auto-detect metadata
-                editor.load_file_by_path(multi_palette_setup["image_path"])
+            # The load_file_by_path should auto-detect metadata
+            editor.load_file_by_path(multi_palette_setup["image_path"])
 
-                assert editor.metadata is not None
-                assert "palettes" in editor.metadata
-                assert len(editor.metadata["palettes"]) == 8
+            assert editor.metadata is not None
+            assert "palettes" in editor.metadata
+            assert len(editor.metadata["palettes"]) == 8
 
     def test_switch_palette_from_metadata(self, qapp, multi_palette_setup):
         """Test switching palettes using metadata"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
                 editor.load_file_by_path(multi_palette_setup["image_path"])
 
@@ -353,7 +369,11 @@ class TestMetadataHandling:
             with patch.object(PaletteSwitcherDialog, "exec", return_value=True):
                 # Use metadata from the loaded editor
                 palette_colors = editor.metadata["palette_colors"]["12"]
-                with patch.object(PaletteSwitcherDialog, "get_selected_palette", return_value=(12, palette_colors)):
+                with patch.object(
+                    PaletteSwitcherDialog,
+                    "get_selected_palette",
+                    return_value=(12, palette_colors),
+                ):
                     editor.show_palette_switcher()
 
                     assert editor.current_palette_index == 12
@@ -363,7 +383,10 @@ class TestMetadataHandling:
     def test_missing_palette_file_handling(self, qapp, multi_palette_setup):
         """Test handling of missing palette files"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
 
                 # Delete one palette file
@@ -385,14 +408,19 @@ class TestKeyboardShortcuts:
     def test_p_key_opens_palette_switcher(self, qapp, multi_palette_setup):
         """Test P key opens palette switcher when metadata exists"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
                 editor.load_file_by_path(multi_palette_setup["image_path"])
 
             # Mock the show_palette_switcher method
             with patch.object(editor, "show_palette_switcher") as mock_switch:
                 # Create P key press event
-                event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier)
+                event = QKeyEvent(
+                    QEvent.Type.KeyPress, Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier
+                )
                 editor.keyPressEvent(event)
 
                 mock_switch.assert_called_once()
@@ -407,7 +435,9 @@ class TestKeyboardShortcuts:
             original_mode = editor.canvas.greyscale_mode
 
             # Press C key
-            event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_C, Qt.KeyboardModifier.NoModifier)
+            event = QKeyEvent(
+                QEvent.Type.KeyPress, Qt.Key.Key_C, Qt.KeyboardModifier.NoModifier
+            )
             editor.keyPressEvent(event)
 
             # Mode should toggle
@@ -429,7 +459,9 @@ class TestKeyboardShortcuts:
             assert editor.metadata is None
 
             with patch.object(editor, "show_palette_switcher") as mock_switch:
-                event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier)
+                event = QKeyEvent(
+                    QEvent.Type.KeyPress, Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier
+                )
                 editor.keyPressEvent(event)
 
                 # Should not call show_palette_switcher
@@ -461,7 +493,10 @@ class TestViewMenuActions:
     def test_switch_palette_action_enabled_state(self, qapp, multi_palette_setup):
         """Test that Switch Palette action is enabled/disabled correctly"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
 
                 # Initially disabled (no metadata)
@@ -511,32 +546,35 @@ class TestCommandLineArguments:
 
     def test_load_file_from_args(self, qapp, sample_image_file):
         """Test loading file from command-line arguments"""
-        with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
-                editor = IndexedPixelEditor()
+        with patch.object(IndexedPixelEditor, "handle_startup"), \
+             patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
+            editor = IndexedPixelEditor()
 
-                # Simulate command-line file loading as done in main()
-                editor.show()
-                success = editor.load_file_by_path(sample_image_file)
+            # Simulate command-line file loading as done in main()
+            editor.show()
+            success = editor.load_file_by_path(sample_image_file)
 
-                # The file should be loaded
-                assert success
-                assert editor.current_file == sample_image_file
-                assert editor.canvas.image_data is not None
+            # The file should be loaded
+            assert success
+            assert editor.current_file == sample_image_file
+            assert editor.canvas.image_data is not None
 
     def test_invalid_file_arg_handling(self, qapp):
         """Test handling of invalid file argument"""
-        with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_error:
-                editor = IndexedPixelEditor()
+        with patch.object(IndexedPixelEditor, "handle_startup"), \
+             patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_error:
+            editor = IndexedPixelEditor()
 
-                # Simulate trying to load a non-existent file
-                success = editor.load_file_by_path("nonexistent.png")
+            # Simulate trying to load a non-existent file
+            success = editor.load_file_by_path("nonexistent.png")
 
-                # Should show error but not crash
-                assert not success
-                mock_error.assert_called_once()
-                assert editor is not None
+            # Should show error but not crash
+            assert not success
+            mock_error.assert_called_once()
+            assert editor is not None
 
     def test_no_args_shows_startup(self, qapp):
         """Test that no arguments triggers startup handling"""
@@ -602,7 +640,10 @@ class TestGreyscaleColorModeTransitions:
     def test_external_palette_overrides_mode(self, qapp, multi_palette_setup):
         """Test that external palette loading overrides color mode"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
                 editor.load_file_by_path(multi_palette_setup["image_path"])
 
@@ -624,7 +665,8 @@ class TestPerformance:
     def test_large_sprite_sheet_loading(self, qapp, temp_dir):
         """Test loading and editing large sprite sheets"""
         # Create a 256x256 sprite sheet
-        large_data = np.random.randint(0, 16, size=(256, 256), dtype=np.uint8)
+        rng = np.random.default_rng()
+        large_data = rng.integers(0, 16, size=(256, 256), dtype=np.uint8)
         large_img = Image.fromarray(large_data, mode="P")
 
         # Set palette
@@ -643,7 +685,9 @@ class TestPerformance:
             editor = IndexedPixelEditor()
 
             # Measure load time
+            # Standard library imports
             import time
+
             start_time = time.time()
             success = editor.load_file_by_path(str(large_file))
             load_time = time.time() - start_time
@@ -671,7 +715,9 @@ class TestPerformance:
             editor.canvas.new_image(128, 128)
 
             # Test rapid zoom changes
+            # Standard library imports
             import time
+
             start_time = time.time()
 
             zoom_levels = [1, 2, 4, 8, 16, 32, 16, 8, 4, 2, 1]
@@ -690,7 +736,10 @@ class TestIntegrationWorkflows:
     def test_complete_multi_palette_workflow(self, qapp, multi_palette_setup):
         """Test a complete multi-palette editing workflow"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
 
                 # 1. Load sprite with metadata
@@ -736,7 +785,10 @@ class TestIntegrationWorkflows:
     def test_palette_switching_preserves_edits(self, qapp, multi_palette_setup):
         """Test that edits are preserved when switching palettes"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
                 editor.load_file_by_path(multi_palette_setup["image_path"])
 
@@ -759,7 +811,10 @@ class TestIntegrationWorkflows:
     def test_error_recovery_workflow(self, qapp, multi_palette_setup):
         """Test error recovery in various scenarios"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
-            with patch("PyQt6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.No):
+            with patch(
+                "PyQt6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ):
                 editor = IndexedPixelEditor()
 
                 # Load file
@@ -771,12 +826,8 @@ class TestIntegrationWorkflows:
                 del editor.metadata["palette_colors"]["11"]
 
             # Try to apply the missing palette - should handle gracefully
-            try:
+            with contextlib.suppress(Exception):
                 editor.apply_palette(11, [])
-                # If it doesn't raise, that's fine too
-            except Exception:
-                # Should handle the error gracefully
-                pass
 
             # Editor should still be functional
             assert editor.canvas.image_data is not None
@@ -789,11 +840,13 @@ class TestIntegrationWorkflows:
 
 if __name__ == "__main__":
     # Run tests with coverage
-    pytest.main([
-        __file__,
-        "-v",
-        "--tb=short",
-        "--cov=indexed_pixel_editor",
-        "--cov=pixel_editor_widgets",
-        "--cov-report=term-missing"
-    ])
+    pytest.main(
+        [
+            __file__,
+            "-v",
+            "--tb=short",
+            "--cov=indexed_pixel_editor",
+            "--cov=pixel_editor_widgets",
+            "--cov-report=term-missing",
+        ]
+    )

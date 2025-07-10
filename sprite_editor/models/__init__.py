@@ -9,9 +9,9 @@ from .project_model import ProjectModel
 from .sprite_model import SpriteModel
 
 __all__ = [
-    'BaseModel',
-    'ObservableProperty',
-    'SpriteModel',
-    'ProjectModel',
-    'PaletteModel'
+    "BaseModel",
+    "ObservableProperty",
+    "PaletteModel",
+    "ProjectModel",
+    "SpriteModel",
 ]

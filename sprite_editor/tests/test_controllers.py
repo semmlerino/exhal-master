@@ -66,8 +66,7 @@ class TestPaletteControllerWithRealModels:
         view.set_oam_file = Mock()
 
         # This would have raised AttributeError before the fix
-        controller = PaletteController(
-            sprite_model, palette_model, project_model, view)
+        controller = PaletteController(sprite_model, palette_model, project_model, view)
 
         assert controller.model == palette_model
         assert controller.sprite_model == sprite_model
@@ -110,36 +109,36 @@ class TestMainControllerWithRealModels:
         """Test MainController can be initialized with real models"""
         # Create real models
         models = {
-            'sprite': SpriteModel(),
-            'palette': PaletteModel(),
-            'project': ProjectModel()
+            "sprite": SpriteModel(),
+            "palette": PaletteModel(),
+            "project": ProjectModel(),
         }
 
         # Create minimal mock views
         views = {
-            'main_window': Mock(),
-            'extract_tab': self._create_mock_extract_tab(),
-            'inject_tab': self._create_mock_inject_tab(),
-            'viewer_tab': self._create_mock_viewer_tab(),
-            'multi_palette_tab': self._create_mock_palette_tab()
+            "main_window": Mock(),
+            "extract_tab": self._create_mock_extract_tab(),
+            "inject_tab": self._create_mock_inject_tab(),
+            "viewer_tab": self._create_mock_viewer_tab(),
+            "multi_palette_tab": self._create_mock_palette_tab(),
         }
 
         # Create controller - this tests the full initialization
         controller = MainController(models, views)
 
         # Verify all sub-controllers were created
-        assert hasattr(controller, 'extract_controller')
-        assert hasattr(controller, 'inject_controller')
-        assert hasattr(controller, 'viewer_controller')
-        assert hasattr(controller, 'palette_controller')
+        assert hasattr(controller, "extract_controller")
+        assert hasattr(controller, "inject_controller")
+        assert hasattr(controller, "viewer_controller")
+        assert hasattr(controller, "palette_controller")
 
         # Verify viewer controller has palette_model (the bug we fixed)
-        assert controller.viewer_controller.palette_model == models['palette']
+        assert controller.viewer_controller.palette_model == models["palette"]
 
         # Verify models are correctly assigned
-        assert controller.sprite_model == models['sprite']
-        assert controller.palette_model == models['palette']
-        assert controller.project_model == models['project']
+        assert controller.sprite_model == models["sprite"]
+        assert controller.palette_model == models["palette"]
+        assert controller.project_model == models["project"]
 
     def _create_mock_extract_tab(self):
         """Create a mock extract tab with required signals"""
@@ -204,8 +203,7 @@ class TestControllerInteractionsWithRealModels:
         extract_view.set_cgram_file = Mock()
 
         # Create controller
-        controller = ExtractController(
-            sprite_model, project_model, extract_view)
+        ExtractController(sprite_model, project_model, extract_view)
 
         # Test file path updates
         sprite_model.vram_file = "/test/vram.bin"
@@ -231,11 +229,11 @@ class TestControllerInteractionsWithRealModels:
         viewer_view.set_image = Mock()
 
         # Create controller
-        controller = ViewerController(sprite_model, palette_model, viewer_view)
+        ViewerController(sprite_model, palette_model, viewer_view)
 
         # Mock image
         mock_image = Mock()
-        mock_image.mode = 'P'
+        mock_image.mode = "P"
         mock_image.getpalette = Mock(return_value=None)
 
         # Set image
@@ -252,18 +250,17 @@ class TestInitializationOrderBugSpecific:
         call_order = []
 
         class TrackedViewerController(ViewerController):
-            def __init__(self, sprite_model, palette_model,
-                         viewer_view, parent=None):
-                call_order.append('start_init')
+            def __init__(self, sprite_model, palette_model, viewer_view, parent=None):
+                call_order.append("start_init")
                 super().__init__(sprite_model, palette_model, viewer_view, parent)
-                call_order.append('end_init')
+                call_order.append("end_init")
 
             def connect_signals(self):
-                call_order.append('connect_signals')
-                if hasattr(self, 'palette_model'):
-                    call_order.append('has_palette_model')
+                call_order.append("connect_signals")
+                if hasattr(self, "palette_model"):
+                    call_order.append("has_palette_model")
                 else:
-                    call_order.append('NO_palette_model')
+                    call_order.append("NO_palette_model")
                 super().connect_signals()
 
         # Create real models
@@ -280,18 +277,16 @@ class TestInitializationOrderBugSpecific:
         view.open_editor_requested = Mock()
 
         # Create controller
-        controller = TrackedViewerController(sprite_model, palette_model, view)
+        TrackedViewerController(sprite_model, palette_model, view)
 
         # Verify order
-        assert 'has_palette_model' in call_order
-        assert 'NO_palette_model' not in call_order
+        assert "has_palette_model" in call_order
+        assert "NO_palette_model" not in call_order
 
         # The order should be:
         # start_init -> connect_signals -> has_palette_model -> end_init
-        assert call_order.index(
-            'connect_signals') < call_order.index('end_init')
-        assert call_order.index(
-            'has_palette_model') < call_order.index('end_init')
+        assert call_order.index("connect_signals") < call_order.index("end_init")
+        assert call_order.index("has_palette_model") < call_order.index("end_init")
 
 
 if __name__ == "__main__":

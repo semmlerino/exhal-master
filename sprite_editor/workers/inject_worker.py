@@ -6,11 +6,12 @@ Handles background injection of sprites into VRAM dumps
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from ..sprite_editor_core import SpriteEditorCore
+from sprite_editor.sprite_editor_core import SpriteEditorCore
 
 
 class InjectWorker(QThread):
     """Worker thread for sprite injection"""
+
     finished = pyqtSignal(str)  # output file
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
@@ -39,7 +40,8 @@ class InjectWorker(QThread):
             # Inject into VRAM
             self.progress.emit(f"Injecting {tile_count} tiles into VRAM...")
             output = self.core.inject_into_vram(
-                tile_data, self.vram_file, self.offset, self.output_file)
+                tile_data, self.vram_file, self.offset, self.output_file
+            )
 
             self.finished.emit(output)
         except Exception as e:

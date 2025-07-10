@@ -5,8 +5,7 @@ Tests for oam_palette_mapper.py - OAM parsing with bounds checking
 import pytest
 
 from sprite_editor.constants import KIRBY_TILE_START, KIRBY_VRAM_BASE
-from sprite_editor.oam_palette_mapper import (OAMPaletteMapper,
-                                              create_tile_palette_map)
+from sprite_editor.oam_palette_mapper import OAMPaletteMapper, create_tile_palette_map
 
 
 class TestOAMParsing:
@@ -23,17 +22,17 @@ class TestOAMParsing:
 
         # Check first sprite
         first_sprite = mapper.oam_entries[0]
-        assert first_sprite['x'] == 100
-        assert first_sprite['y'] == 50
-        assert first_sprite['tile'] == 0x80
-        assert first_sprite['palette'] == 0
+        assert first_sprite["x"] == 100
+        assert first_sprite["y"] == 50
+        assert first_sprite["tile"] == 0x80
+        assert first_sprite["palette"] == 0
 
     @pytest.mark.unit
     def test_small_oam_file(self, temp_dir):
         """Test handling of OAM file that's too small"""
         small_oam = temp_dir / "small_oam.dmp"
         # Less than 4 bytes (minimum for one entry)
-        small_oam.write_bytes(b'\x00' * 3)
+        small_oam.write_bytes(b"\x00" * 3)
 
         mapper = OAMPaletteMapper()
         with pytest.raises(ValueError, match="OAM dump too small.*need at least 4"):
@@ -101,6 +100,7 @@ class TestOAMParsing:
         mapper = OAMPaletteMapper()
         # This should now work with a warning
         import warnings
+
         with warnings.catch_warnings(record=True) as w:
             mapper.parse_oam_dump(str(partial_oam))
             # Should have warning about partial data
@@ -236,14 +236,14 @@ class TestPaletteStatistics:
 
         stats = mapper.get_palette_usage_stats()
 
-        assert 'palette_counts' in stats
-        assert 'active_palettes' in stats
-        assert 'total_sprites' in stats
-        assert 'visible_sprites' in stats
+        assert "palette_counts" in stats
+        assert "active_palettes" in stats
+        assert "total_sprites" in stats
+        assert "visible_sprites" in stats
 
         # Our test data has 10 sprites with palettes 0-7 (wrapping)
-        assert stats['total_sprites'] >= 10
-        assert len(stats['active_palettes']) >= 2
+        assert stats["total_sprites"] >= 10
+        assert len(stats["active_palettes"]) >= 2
 
     @pytest.mark.unit
     def test_find_sprites_by_palette(self, oam_file):
@@ -254,7 +254,7 @@ class TestPaletteStatistics:
         # Find sprites using palette 0
         palette_0_sprites = mapper.find_sprites_using_palette(0)
         assert len(palette_0_sprites) >= 1
-        assert palette_0_sprites[0]['palette'] == 0
+        assert palette_0_sprites[0]["palette"] == 0
 
     @pytest.mark.unit
     def test_find_sprites_in_region(self, oam_file):
@@ -267,8 +267,8 @@ class TestPaletteStatistics:
         assert len(sprites_in_region) >= 1
 
         for sprite in sprites_in_region:
-            assert 90 <= sprite['x'] <= 120
-            assert 40 <= sprite['y'] <= 60
+            assert 90 <= sprite["x"] <= 120
+            assert 40 <= sprite["y"] <= 60
 
 
 class TestConvenienceFunctions:

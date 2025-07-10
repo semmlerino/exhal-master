@@ -5,6 +5,7 @@ Manages interaction between viewer tab and sprite/palette models
 """
 
 import os
+import subprocess
 import sys
 import tempfile
 
@@ -41,7 +42,7 @@ class ViewerController(BaseController):
             self.update_image_info()
 
             # Update palette viewer if image has palette
-            if hasattr(image, 'getpalette') and image.getpalette():
+            if hasattr(image, "getpalette") and image.getpalette():
                 self.view.set_palette(image.getpalette())
 
     def zoom_in(self):
@@ -80,15 +81,12 @@ class ViewerController(BaseController):
             return
 
         file_name, _ = QFileDialog.getSaveFileName(
-            self.view, "Save Image",
-            "sprites.png",
-            "PNG Files (*.png);;All Files (*.*)"
+            self.view, "Save Image", "sprites.png", "PNG Files (*.png);;All Files (*.*)"
         )
 
         if file_name:
             self.model.current_image.save(file_name)
-            QMessageBox.information(
-                self.view, "Success", f"Image saved to {file_name}")
+            QMessageBox.information(self.view, "Success", f"Image saved to {file_name}")
 
     def open_in_editor(self):
         """Open current image in external editor"""
@@ -104,9 +102,9 @@ class ViewerController(BaseController):
             if sys.platform == "win32":
                 os.startfile(tmp.name)
             elif sys.platform == "darwin":
-                os.system(f"open '{tmp.name}'")
+                subprocess.run(["open", tmp.name], check=False)
             else:
-                os.system(f"xdg-open '{tmp.name}'")
+                subprocess.run(["xdg-open", tmp.name], check=False)
 
     def _on_palette_applied(self, palette_index):
         """Handle palette application"""

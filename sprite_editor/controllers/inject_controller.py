@@ -8,7 +8,8 @@ import os
 
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from ..workers.inject_worker import InjectWorker
+from sprite_editor.workers.inject_worker import InjectWorker
+
 from .base_controller import BaseController
 
 
@@ -33,14 +34,12 @@ class InjectController(BaseController):
     def browse_png_file(self):
         """Browse for PNG file to inject"""
         file_name, _ = QFileDialog.getOpenFileName(
-            self.view, "Select PNG File",
-            "",
-            "PNG Files (*.png);;All Files (*.*)"
+            self.view, "Select PNG File", "", "PNG Files (*.png);;All Files (*.*)"
         )
 
         if file_name:
             self.view.set_png_file(file_name)
-            self.project_model.add_recent_file(file_name, 'png')
+            self.project_model.add_recent_file(file_name, "png")
 
             # Validate PNG
             self.validate_png(file_name)
@@ -50,19 +49,21 @@ class InjectController(BaseController):
         # Get initial directory from last file
         initial_dir = ""
         if self.model.vram_file and os.path.exists(
-                os.path.dirname(self.model.vram_file)):
+            os.path.dirname(self.model.vram_file)
+        ):
             initial_dir = os.path.dirname(self.model.vram_file)
 
         file_name, _ = QFileDialog.getOpenFileName(
-            self.view, "Select Target VRAM",
+            self.view,
+            "Select Target VRAM",
             initial_dir,
-            "Dump Files (*.dmp);;All Files (*.*)"
+            "Dump Files (*.dmp);;All Files (*.*)",
         )
 
         if file_name:
             self.view.set_vram_file(file_name)
             self.model.vram_file = file_name
-            self.project_model.add_recent_file(file_name, 'vram')
+            self.project_model.add_recent_file(file_name, "vram")
 
     def validate_png(self, png_file):
         """Validate PNG file for SNES compatibility"""
@@ -72,11 +73,11 @@ class InjectController(BaseController):
         valid, issues = self.model.validate_png(png_file)
 
         if valid:
-            self.view.set_validation_text(
-                "✓ PNG is valid for SNES conversion", True)
+            self.view.set_validation_text("✓ PNG is valid for SNES conversion", True)
         else:
             self.view.set_validation_text(
-                "✗ Issues found:\n" + "\n".join(issues), False)
+                "✗ Issues found:\n" + "\n".join(issues), False
+            )
 
     def inject_sprites(self):
         """Inject sprites into VRAM"""
@@ -84,31 +85,24 @@ class InjectController(BaseController):
         params = self.view.get_injection_params()
 
         # Validate inputs
-        if not params['png_file'] or not os.path.exists(params['png_file']):
-            QMessageBox.warning(
-                self.view,
-                "Error",
-                "Please select a valid PNG file")
+        if not params["png_file"] or not os.path.exists(params["png_file"]):
+            QMessageBox.warning(self.view, "Error", "Please select a valid PNG file")
             return
 
-        if not params['vram_file'] or not os.path.exists(params['vram_file']):
-            QMessageBox.warning(
-                self.view,
-                "Error",
-                "Please select a valid VRAM file")
+        if not params["vram_file"] or not os.path.exists(params["vram_file"]):
+            QMessageBox.warning(self.view, "Error", "Please select a valid VRAM file")
             return
 
         # Prepare output file
-        output_file = params['output_file']
+        output_file = params["output_file"]
         if not output_file:
             output_file = "VRAM_edited.dmp"
 
         # Make full path
         if not os.path.isabs(output_file):
             output_file = os.path.join(
-                os.path.dirname(
-                    params['vram_file']),
-                output_file)
+                os.path.dirname(params["vram_file"]), output_file
+            )
 
         # Clear output
         self.view.clear_output()
@@ -116,10 +110,7 @@ class InjectController(BaseController):
 
         # Create worker thread
         self.inject_worker = InjectWorker(
-            params['png_file'],
-            params['vram_file'],
-            params['offset'],
-            output_file
+            params["png_file"], params["vram_file"], params["offset"], output_file
         )
 
         self.inject_worker.progress.connect(self.on_inject_progress)
@@ -143,8 +134,11 @@ class InjectController(BaseController):
         self.view.append_output(f"\nSuccess! Created: {output_file}")
         self.view.append_output("You can now load this file in your emulator")
 
-        QMessageBox.information(self.view, "Success",
-                                f"Sprites injected successfully!\n\nOutput: {output_file}")
+        QMessageBox.information(
+            self.view,
+            "Success",
+            f"Sprites injected successfully!\n\nOutput: {output_file}",
+        )
 
         # Mark project as modified
         self.project_model.mark_modified()

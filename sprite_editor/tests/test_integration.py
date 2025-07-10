@@ -16,15 +16,13 @@ class TestFullExtractionWorkflow:
     """Test complete sprite extraction workflow"""
 
     @pytest.mark.integration
-    def test_extract_view_edit_inject_workflow(
-            self, vram_file, cgram_file, temp_dir):
+    def test_extract_view_edit_inject_workflow(self, vram_file, cgram_file, temp_dir):
         """Test full workflow: extract -> edit -> inject"""
         core = SpriteEditorCore()
 
         # Step 1: Extract sprites
-        extracted_img, tile_count = core.extract_sprites(
-            vram_file, 0xC000, 512)
-        assert extracted_img.mode == 'P'
+        extracted_img, tile_count = core.extract_sprites(vram_file, 0xC000, 512)
+        assert extracted_img.mode == "P"
         assert tile_count == 16
 
         # Step 2: Apply palette
@@ -56,8 +54,7 @@ class TestFullExtractionWorkflow:
 
         # Step 7: Inject back into VRAM
         output_vram = temp_dir / "output_vram.dmp"
-        result = core.inject_into_vram(
-            snes_data, vram_file, 0xC000, str(output_vram))
+        result = core.inject_into_vram(snes_data, vram_file, 0xC000, str(output_vram))
         assert Path(result).exists()
 
         # Step 8: Verify injection by re-extracting
@@ -70,8 +67,7 @@ class TestFullExtractionWorkflow:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_multi_palette_workflow(
-            self, vram_file, cgram_file, oam_file, temp_dir):
+    def test_multi_palette_workflow(self, vram_file, cgram_file, oam_file, temp_dir):
         """Test workflow with OAM-based palette mapping"""
         core = SpriteEditorCore()
 
@@ -94,16 +90,14 @@ class TestFullExtractionWorkflow:
             assert save_path.exists()
 
         # Step 4: Create palette grid
-        grid_img, _ = core.create_palette_grid_preview(
-            vram_file, 0, 1024, cgram_file
-        )
+        grid_img, _ = core.create_palette_grid_preview(vram_file, 0, 1024, cgram_file)
 
         grid_path = temp_dir / "palette_grid.png"
         grid_img.save(str(grid_path))
         assert grid_path.exists()
 
         # Grid should be larger than individual images
-        first_img = list(palette_images.values())[0]
+        first_img = next(iter(palette_images.values()))
         assert grid_img.width > first_img.width
         assert grid_img.height > first_img.height
 
@@ -139,14 +133,14 @@ class TestComplexDataIntegration:
         cgram_data = bytearray(512)
         # Palette 8 - Kirby's colors
         kirby_colors = [
-            (0, 0, 0),        # Transparent
+            (0, 0, 0),  # Transparent
             (255, 192, 203),  # Pink
-            (255, 20, 147),   # Deep pink
-            (139, 0, 139),    # Dark magenta
+            (255, 20, 147),  # Deep pink
+            (139, 0, 139),  # Dark magenta
             (255, 255, 255),  # White
-            (0, 0, 0),        # Black
-            (255, 0, 0),      # Red
-            (128, 0, 0),      # Dark red
+            (0, 0, 0),  # Black
+            (255, 0, 0),  # Red
+            (128, 0, 0),  # Dark red
         ]
 
         for i, (r, g, b) in enumerate(kirby_colors[:16]):
@@ -164,10 +158,10 @@ class TestComplexDataIntegration:
         oam_data = bytearray(544)
         for i in range(4):  # 4 Kirby sprites
             offset = i * 4
-            oam_data[offset] = 100 + i * 16      # X
-            oam_data[offset + 1] = 100           # Y
+            oam_data[offset] = 100 + i * 16  # X
+            oam_data[offset + 1] = 100  # Y
             oam_data[offset + 2] = 0x80 + i * 4  # Tile (in Kirby range)
-            oam_data[offset + 3] = 0x08 | 0x80    # Palette 8, table 1
+            oam_data[offset + 3] = 0x08 | 0x80  # Palette 8, table 1
 
         # Save test files
         vram_path = temp_dir / "kirby_vram.dmp"
@@ -187,7 +181,7 @@ class TestComplexDataIntegration:
             str(vram_path), kirby_offset, 512, str(cgram_path)
         )
 
-        assert img.mode == 'RGBA'
+        assert img.mode == "RGBA"
         assert tile_count == 16
 
         # Save result
@@ -209,8 +203,7 @@ class TestErrorRecovery:
         for i in range(0, 65536, BYTES_PER_TILE_4BPP):
             if i % 256 == 0:  # Every 8th tile
                 # Corrupt tile - fill with 0xFF
-                vram_data[i:i + BYTES_PER_TILE_4BPP] = b'\xFF' * \
-                    BYTES_PER_TILE_4BPP
+                vram_data[i : i + BYTES_PER_TILE_4BPP] = b"\xff" * BYTES_PER_TILE_4BPP
             else:
                 # Normal tile pattern
                 for j in range(BYTES_PER_TILE_4BPP):
@@ -233,7 +226,7 @@ class TestErrorRecovery:
 
         # Extract without CGRAM - should use grayscale
         img, _ = core.extract_sprites(vram_file, 0, 512)
-        assert img.mode == 'P'
+        assert img.mode == "P"
 
         # Try to load non-existent OAM - should return False
         fake_oam = temp_dir / "fake_oam.dmp"
@@ -269,6 +262,7 @@ class TestPerformanceIntegration:
 
         # Extract entire VRAM
         import time
+
         start_time = time.time()
         img, tile_count = core.extract_sprites(str(vram_path), 0, 65536)
         extraction_time = time.time() - start_time
@@ -291,7 +285,7 @@ class TestPerformanceIntegration:
         for i in range(1000):
             # Random lookups
             offset = (i * 137) % 65536
-            palette = mapper.get_palette_for_vram_offset(offset)
+            mapper.get_palette_for_vram_offset(offset)
         lookup_time = time.time() - start_time
 
         assert lookup_time < 0.1  # 1000 lookups in under 100ms
@@ -319,8 +313,9 @@ class TestRealWorldScenarios:
                 tile_offset = offset + (tile_idx * 32)
                 # Create unique pattern per character
                 for i in range(32):
-                    vram_data[tile_offset +
-                              i] = (char_idx * 64 + tile_idx * 4 + i) % 256
+                    vram_data[tile_offset + i] = (
+                        char_idx * 64 + tile_idx * 4 + i
+                    ) % 256
 
         vram_path = temp_dir / "characters_vram.dmp"
         vram_path.write_bytes(vram_data)
@@ -333,9 +328,9 @@ class TestRealWorldScenarios:
         # Palette 2 - Character 3 (green tones)
 
         base_colors = [
-            [(255, 0, 0), (200, 0, 0), (150, 0, 0)],    # Red
-            [(0, 0, 255), (0, 0, 200), (0, 0, 150)],    # Blue
-            [(0, 255, 0), (0, 200, 0), (0, 150, 0)],    # Green
+            [(255, 0, 0), (200, 0, 0), (150, 0, 0)],  # Red
+            [(0, 0, 255), (0, 0, 200), (0, 0, 150)],  # Blue
+            [(0, 255, 0), (0, 200, 0), (0, 150, 0)],  # Green
         ]
 
         for pal_idx, colors in enumerate(base_colors):
@@ -358,15 +353,15 @@ class TestRealWorldScenarios:
         sheet_parts = []
 
         for char_idx, (offset, pal) in enumerate(
-                [(0x6000, 0), (0x6200, 1), (0x6400, 2)]):
-            img, _ = core.extract_sprites(
-                str(vram_path), offset, 512, tiles_per_row=4)
+            [(0x6000, 0), (0x6200, 1), (0x6400, 2)]
+        ):
+            img, _ = core.extract_sprites(str(vram_path), offset, 512, tiles_per_row=4)
             palette = core.read_cgram_palette(str(cgram_path), pal)
             img.putpalette(palette)
             sheet_parts.append(img)
 
         # Combine into single sheet
-        sheet = Image.new('P', (sheet_width, sheet_height))
+        sheet = Image.new("P", (sheet_width, sheet_height))
         sheet.putpalette(palette)  # Use last palette for now
 
         y_offset = 0

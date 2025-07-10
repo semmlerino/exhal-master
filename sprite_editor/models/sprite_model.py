@@ -6,7 +6,8 @@ Manages sprite data and provides business logic for sprite operations
 
 from PyQt6.QtCore import pyqtSignal
 
-from ..sprite_editor_core import SpriteEditorCore
+from sprite_editor.sprite_editor_core import SpriteEditorCore
+
 from .base_model import BaseModel, ObservableProperty
 
 
@@ -56,13 +57,14 @@ class SpriteModel(BaseModel):
                 self.vram_file,
                 self.extraction_offset,
                 self.extraction_size,
-                self.tiles_per_row
+                self.tiles_per_row,
             )
 
             # Apply palette if requested
             if apply_palette and self.cgram_file:
                 palette = self.core.read_cgram_palette(
-                    self.cgram_file, self.current_palette)
+                    self.cgram_file, self.current_palette
+                )
                 if palette:
                     image.putpalette(palette)
 
@@ -83,7 +85,8 @@ class SpriteModel(BaseModel):
             valid, issues = self.core.validate_png_for_snes(png_file)
             if not valid:
                 self.injection_error.emit(
-                    "PNG validation failed:\n" + "\n".join(issues))
+                    "PNG validation failed:\n" + "\n".join(issues)
+                )
                 return
 
             # Convert to SNES format
@@ -91,10 +94,7 @@ class SpriteModel(BaseModel):
 
             # Inject into VRAM
             output = self.core.inject_into_vram(
-                tile_data,
-                self.vram_file,
-                self.extraction_offset,
-                output_file
+                tile_data, self.vram_file, self.extraction_offset, output_file
             )
 
             self.injection_completed.emit(output)
@@ -123,10 +123,9 @@ class SpriteModel(BaseModel):
 
     def apply_palette(self, palette_num):
         """Apply a specific palette to the current image"""
-        if self.current_image and self.current_image.mode == 'P':
+        if self.current_image and self.current_image.mode == "P":
             if self.cgram_file:
-                palette = self.core.read_cgram_palette(
-                    self.cgram_file, palette_num)
+                palette = self.core.read_cgram_palette(self.cgram_file, palette_num)
                 if palette:
                     self.current_image.putpalette(palette)
                     self.current_palette = palette_num

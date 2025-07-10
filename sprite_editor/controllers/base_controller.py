@@ -32,7 +32,6 @@ class BaseController(QObject):
 
     def connect_signals(self):
         """Connect signals between model and view (to be overridden)"""
-        pass
 
     @property
     def model(self):

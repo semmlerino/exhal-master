@@ -8,11 +8,19 @@ from unittest import mock
 
 import pytest
 
-from sprite_editor.constants import (BYTES_PER_TILE_4BPP, PIXELS_PER_TILE,
-                                     TILE_BITPLANE_OFFSET, TILE_HEIGHT,
-                                     TILE_WIDTH)
-from sprite_editor.tile_utils import (decode_4bpp_tile, decode_tiles,
-                                      encode_4bpp_tile, encode_tiles)
+from sprite_editor.constants import (
+    BYTES_PER_TILE_4BPP,
+    PIXELS_PER_TILE,
+    TILE_BITPLANE_OFFSET,
+    TILE_HEIGHT,
+    TILE_WIDTH,
+)
+from sprite_editor.tile_utils import (
+    decode_4bpp_tile,
+    decode_tiles,
+    encode_4bpp_tile,
+    encode_tiles,
+)
 
 
 class TestTileDecoding:
@@ -38,8 +46,8 @@ class TestTileDecoding:
     def test_decode_4bpp_tile_offset(self):
         """Test decoding with non-zero offset"""
         # Create data with multiple tiles
-        tile1_data = b'\x01' + b'\x00' * 31  # Simple pattern
-        tile2_data = b'\x02' + b'\x00' * 31  # Different pattern
+        tile1_data = b"\x01" + b"\x00" * 31  # Simple pattern
+        tile2_data = b"\x02" + b"\x00" * 31  # Different pattern
         combined_data = tile1_data + tile2_data
 
         # Decode second tile
@@ -50,13 +58,13 @@ class TestTileDecoding:
 
     def test_decode_4bpp_tile_bounds_error(self):
         """Test error when offset exceeds data bounds"""
-        small_data = b'\x00' * 16  # Only 16 bytes, need 32
+        small_data = b"\x00" * 16  # Only 16 bytes, need 32
 
         with pytest.raises(IndexError, match="Tile data out of bounds at offset 0"):
             decode_4bpp_tile(small_data, 0)
 
         # Test with offset that would exceed bounds
-        data_31_bytes = b'\x00' * 31
+        data_31_bytes = b"\x00" * 31
         with pytest.raises(IndexError, match="Tile data out of bounds at offset 0"):
             decode_4bpp_tile(data_31_bytes, 0)
 
@@ -137,8 +145,8 @@ class TestTileEncoding:
         decoded = decode_4bpp_tile(encoded, 0)
 
         # Values should be masked to 4 bits
-        assert decoded[0] == 0   # 16 & 0x0F = 0
-        assert decoded[1] == 1   # 17 & 0x0F = 1
+        assert decoded[0] == 0  # 16 & 0x0F = 0
+        assert decoded[1] == 1  # 17 & 0x0F = 1
         assert decoded[2] == 15  # 255 & 0x0F = 15
         assert decoded[3] == 15  # 31 & 0x0F = 15
 
@@ -174,7 +182,7 @@ class TestBatchOperations:
     def test_decode_tiles_with_offset(self):
         """Test decoding tiles with start offset"""
         # Create data with padding + 2 tiles with distinct patterns
-        padding = b'\xFF' * 64  # 64 bytes of padding
+        padding = b"\xff" * 64  # 64 bytes of padding
 
         # Create distinct tile patterns
         tile1 = bytearray(32)
@@ -196,7 +204,7 @@ class TestBatchOperations:
     def test_decode_tiles_insufficient_data(self):
         """Test decode_tiles when there's insufficient data"""
         # Create data for only 1.5 tiles
-        partial_data = b'\x00' * 48  # 32 + 16 bytes
+        partial_data = b"\x00" * 48  # 32 + 16 bytes
 
         # Request 2 tiles, should only get 1
         tiles = decode_tiles(partial_data, 2)
@@ -207,7 +215,7 @@ class TestBatchOperations:
     def test_decode_tiles_exact_boundary(self):
         """Test decode_tiles at exact data boundary"""
         # Create data for exactly 2 tiles
-        data = b'\x00' * (BYTES_PER_TILE_4BPP * 2)
+        data = b"\x00" * (BYTES_PER_TILE_4BPP * 2)
 
         tiles = decode_tiles(data, 2)
         assert len(tiles) == 2
@@ -233,7 +241,7 @@ class TestBatchOperations:
         """Test encoding empty tile list"""
         encoded = encode_tiles([])
 
-        assert encoded == b''
+        assert encoded == b""
         assert isinstance(encoded, bytes)
 
     def test_encode_decode_tiles_roundtrip(self):
@@ -258,7 +266,7 @@ class TestErrorConditions:
 
     def test_decode_with_zero_offset(self):
         """Test decoding at zero offset"""
-        data = b'\x00' * BYTES_PER_TILE_4BPP
+        data = b"\x00" * BYTES_PER_TILE_4BPP
         pixels = decode_4bpp_tile(data, 0)
 
         assert len(pixels) == PIXELS_PER_TILE
@@ -266,7 +274,7 @@ class TestErrorConditions:
 
     def test_decode_tiles_zero_count(self):
         """Test decode_tiles with zero tile count"""
-        data = b'\x00' * BYTES_PER_TILE_4BPP
+        data = b"\x00" * BYTES_PER_TILE_4BPP
         tiles = decode_tiles(data, 0)
 
         assert tiles == []
@@ -293,7 +301,7 @@ class TestImportHandling:
         assert PIXELS_PER_TILE == 64
         assert TILE_BITPLANE_OFFSET == 16
 
-    @mock.patch('sprite_editor.tile_utils.TILE_WIDTH', 8)
+    @mock.patch("sprite_editor.tile_utils.TILE_WIDTH", 8)
     def test_constants_available_after_import(self):
         """Test that constants are properly imported and usable"""
         # Create a simple test to verify constants work
@@ -332,14 +340,14 @@ class TestBoundaryConditions:
     def test_large_offset_decode_tiles(self):
         """Test decode_tiles with large start offset"""
         # Create large data buffer
-        large_data = b'\x00' * 1000
+        large_data = b"\x00" * 1000
         tiles = decode_tiles(large_data, 1, start_offset=500)
 
         assert len(tiles) == 1
 
     def test_decode_tiles_negative_offset_implicit(self):
         """Test that decode_tiles handles offsets properly"""
-        data = b'\x00' * BYTES_PER_TILE_4BPP
+        data = b"\x00" * BYTES_PER_TILE_4BPP
 
         # Should work with valid offset
         tiles = decode_tiles(data, 1, start_offset=0)

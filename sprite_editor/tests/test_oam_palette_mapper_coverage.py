@@ -8,8 +8,7 @@ from pathlib import Path
 import pytest
 
 from sprite_editor.constants import KIRBY_TILE_END, KIRBY_TILE_START
-from sprite_editor.oam_palette_mapper import (OAMPaletteMapper,
-                                              create_tile_palette_map)
+from sprite_editor.oam_palette_mapper import OAMPaletteMapper, create_tile_palette_map
 
 
 class TestAdditionalOAMCoverage:
@@ -32,7 +31,7 @@ class TestAdditionalOAMCoverage:
                 oam_data[offset + 2] = i  # tile
                 oam_data[offset + 3] = i % 8  # palette in lower 3 bits
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 
@@ -65,7 +64,7 @@ class TestAdditionalOAMCoverage:
         for i in range(10):
             oam_data[512 + i] = 0x00
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 
@@ -76,8 +75,8 @@ class TestAdditionalOAMCoverage:
             # Check a sprite that's beyond the high table coverage
             sprite_100 = mapper.oam_entries[100]
             # default size when high_bits = 0
-            assert sprite_100['size'] == 'small'
-            assert sprite_100['x'] == 50  # no MSB from high table
+            assert sprite_100["size"] == "small"
+            assert sprite_100["x"] == 50  # no MSB from high table
         finally:
             Path(temp_file).unlink()
 
@@ -98,7 +97,7 @@ class TestAdditionalOAMCoverage:
         # Sprite 0 is in byte 512, bits 0-1
         oam_data[512] = 0x01  # size bit = 1, x_msb = 0
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 
@@ -181,7 +180,7 @@ class TestAdditionalOAMCoverage:
             oam_data[i * 4 + 2] = i  # tile
             oam_data[i * 4 + 3] = i % 3  # palette
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 
@@ -191,9 +190,10 @@ class TestAdditionalOAMCoverage:
             # Capture logging output
             import io
             import logging
+
             log_stream = io.StringIO()
             handler = logging.StreamHandler(log_stream)
-            handler.setFormatter(logging.Formatter('%(message)s'))
+            handler.setFormatter(logging.Formatter("%(message)s"))
 
             # Get the mapper's logger and add our handler
             logger = mapper.logger
@@ -210,8 +210,7 @@ class TestAdditionalOAMCoverage:
                 assert "Total sprites: 128" in output
                 # All sprites with y=0 are visible, only first 5 have custom y values
                 # Actually need to count how many have y < 224
-                visible_count = sum(
-                    1 for s in mapper.oam_entries if s['y'] < 224)
+                visible_count = sum(1 for s in mapper.oam_entries if s["y"] < 224)
                 assert f"Visible sprites: {visible_count}" in output
                 assert "Palette usage:" in output
                 assert "First 10 visible sprites:" in output
@@ -238,18 +237,19 @@ class TestModuleMain:
             oam_data[i * 4 + 2] = i
             oam_data[i * 4 + 3] = 1
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 
         try:
             # Run the module directly
             result = subprocess.run(
-                [sys.executable, '-m', 'sprite_editor.oam_palette_mapper', temp_file],
+                [sys.executable, "-m", "sprite_editor.oam_palette_mapper", temp_file],
+                check=False,
                 capture_output=True,
                 text=True,
                 # exhal-master directory
-                cwd=Path(__file__).parent.parent.parent
+                cwd=Path(__file__).parent.parent.parent,
             )
 
             # Should run successfully and output debug info
@@ -265,15 +265,16 @@ class TestModuleMain:
         import sys
 
         # Run the script directly
-        script_path = Path(__file__).parent.parent / 'oam_palette_mapper.py'
+        script_path = Path(__file__).parent.parent / "oam_palette_mapper.py"
 
         # Change to a temp directory where OAM.dmp doesn't exist
         with tempfile.TemporaryDirectory() as temp_dir:
             result = subprocess.run(
                 [sys.executable, str(script_path)],
+                check=False,
                 capture_output=True,
                 text=True,
-                cwd=temp_dir
+                cwd=temp_dir,
             )
 
             # Should output file not found message
@@ -296,7 +297,7 @@ class TestConvenienceFunction:
         oam_data[2] = 128  # tile 128 (will become 384 with table select)
         oam_data[3] = 0x85  # palette 5 + table select bit (bit 7) set
 
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             temp_file = f.name
 

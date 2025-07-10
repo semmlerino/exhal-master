@@ -8,7 +8,8 @@ import os
 
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from ..workers.extract_worker import ExtractWorker
+from sprite_editor.workers.extract_worker import ExtractWorker
+
 from .base_controller import BaseController
 
 
@@ -36,36 +37,40 @@ class ExtractController(BaseController):
         # Get initial directory from last file
         initial_dir = ""
         if self.model.vram_file and os.path.exists(
-                os.path.dirname(self.model.vram_file)):
+            os.path.dirname(self.model.vram_file)
+        ):
             initial_dir = os.path.dirname(self.model.vram_file)
 
         file_name, _ = QFileDialog.getOpenFileName(
-            self.view, "Select VRAM Dump",
+            self.view,
+            "Select VRAM Dump",
             initial_dir,
-            "Dump Files (*.dmp);;All Files (*.*)"
+            "Dump Files (*.dmp);;All Files (*.*)",
         )
 
         if file_name:
             self.model.vram_file = file_name
-            self.project_model.add_recent_file(file_name, 'vram')
+            self.project_model.add_recent_file(file_name, "vram")
 
     def browse_cgram_file(self):
         """Browse for CGRAM dump file"""
         # Get initial directory from last file
         initial_dir = ""
         if self.model.cgram_file and os.path.exists(
-                os.path.dirname(self.model.cgram_file)):
+            os.path.dirname(self.model.cgram_file)
+        ):
             initial_dir = os.path.dirname(self.model.cgram_file)
 
         file_name, _ = QFileDialog.getOpenFileName(
-            self.view, "Select CGRAM Dump",
+            self.view,
+            "Select CGRAM Dump",
             initial_dir,
-            "Dump Files (*.dmp);;All Files (*.*)"
+            "Dump Files (*.dmp);;All Files (*.*)",
         )
 
         if file_name:
             self.model.cgram_file = file_name
-            self.project_model.add_recent_file(file_name, 'cgram')
+            self.project_model.add_recent_file(file_name, "cgram")
 
     def extract_sprites(self):
         """Extract sprites from VRAM"""
@@ -73,18 +78,15 @@ class ExtractController(BaseController):
         params = self.view.get_extraction_params()
 
         # Validate inputs
-        if not params['vram_file'] or not os.path.exists(params['vram_file']):
-            QMessageBox.warning(
-                self.view,
-                "Error",
-                "Please select a valid VRAM file")
+        if not params["vram_file"] or not os.path.exists(params["vram_file"]):
+            QMessageBox.warning(self.view, "Error", "Please select a valid VRAM file")
             return
 
         # Update model with parameters
-        self.model.vram_file = params['vram_file']
-        self.model.extraction_offset = params['offset']
-        self.model.extraction_size = params['size']
-        self.model.tiles_per_row = params['tiles_per_row']
+        self.model.vram_file = params["vram_file"]
+        self.model.extraction_offset = params["offset"]
+        self.model.extraction_size = params["size"]
+        self.model.tiles_per_row = params["tiles_per_row"]
 
         # Clear output
         self.view.clear_output()
@@ -92,12 +94,12 @@ class ExtractController(BaseController):
 
         # Create worker thread
         self.extract_worker = ExtractWorker(
-            params['vram_file'],
-            params['offset'],
-            params['size'],
-            params['tiles_per_row'],
-            params['palette_num'] if params['use_palette'] else None,
-            params['cgram_file'] if params['use_palette'] else None
+            params["vram_file"],
+            params["offset"],
+            params["size"],
+            params["tiles_per_row"],
+            params["palette_num"] if params["use_palette"] else None,
+            params["cgram_file"] if params["use_palette"] else None,
         )
 
         self.extract_worker.progress.connect(self.on_extract_progress)
@@ -126,7 +128,8 @@ class ExtractController(BaseController):
         self.view.append_output(
             f"Image size: {
                 image.width}x{
-                image.height} pixels")
+                image.height} pixels"
+        )
 
         # Mark project as modified
         self.project_model.mark_modified()
@@ -141,10 +144,10 @@ class ExtractController(BaseController):
         """Load a recent VRAM file"""
         if os.path.exists(file_path):
             self.model.vram_file = file_path
-            self.project_model.add_recent_file(file_path, 'vram')
+            self.project_model.add_recent_file(file_path, "vram")
 
     def load_recent_cgram(self, file_path):
         """Load a recent CGRAM file"""
         if os.path.exists(file_path):
             self.model.cgram_file = file_path
-            self.project_model.add_recent_file(file_path, 'cgram')
+            self.project_model.add_recent_file(file_path, "cgram")

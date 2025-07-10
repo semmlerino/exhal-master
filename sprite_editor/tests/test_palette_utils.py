@@ -8,15 +8,25 @@ import struct
 
 import pytest
 
-from sprite_editor.constants import (BGR555_MAX_VALUE, BYTES_PER_COLOR,
-                                     BYTES_PER_PALETTE, COLORS_PER_PALETTE,
-                                     MAX_CGRAM_FILE_SIZE, MAX_PALETTES,
-                                     PALETTE_ENTRIES, PALETTE_SIZE_BYTES,
-                                     RGB888_MAX_VALUE)
-from sprite_editor.palette_utils import (bgr555_to_rgb888,
-                                         get_grayscale_palette,
-                                         read_all_palettes, read_cgram_palette,
-                                         rgb888_to_bgr555, write_cgram_palette)
+from sprite_editor.constants import (
+    BGR555_MAX_VALUE,
+    BYTES_PER_COLOR,
+    BYTES_PER_PALETTE,
+    COLORS_PER_PALETTE,
+    MAX_CGRAM_FILE_SIZE,
+    MAX_PALETTES,
+    PALETTE_ENTRIES,
+    PALETTE_SIZE_BYTES,
+    RGB888_MAX_VALUE,
+)
+from sprite_editor.palette_utils import (
+    bgr555_to_rgb888,
+    get_grayscale_palette,
+    read_all_palettes,
+    read_cgram_palette,
+    rgb888_to_bgr555,
+    write_cgram_palette,
+)
 from sprite_editor.security_utils import SecurityError
 
 
@@ -115,7 +125,9 @@ class TestColorConversion:
             # Each 5-bit component can have at most 1 bit of error
             diff = abs(converted_bgr555 - original_bgr555)
             # Allow for small precision differences
-            assert diff <= 0x0842, f"Too much precision loss: {
+            assert (
+                diff <= 0x0842
+            ), f"Too much precision loss: {
                 original_bgr555:04X} -> {
                 converted_bgr555:04X}"
 
@@ -270,7 +282,7 @@ class TestCgramPaletteReading:
         def mock_unpack(*args, **kwargs):
             raise struct.error("Invalid format")
 
-        monkeypatch.setattr(struct, 'unpack', mock_unpack)
+        monkeypatch.setattr(struct, "unpack", mock_unpack)
 
         # Should return None on struct error
         palette = read_cgram_palette(str(cgram), 0)
@@ -356,9 +368,15 @@ class TestPaletteWriting:
         """Test writing primary colors"""
         # Create palette with red, green, blue
         palette = [
-            255, 0, 0,    # Red
-            0, 255, 0,    # Green
-            0, 0, 255,    # Blue
+            255,
+            0,
+            0,  # Red
+            0,
+            255,
+            0,  # Green
+            0,
+            0,
+            255,  # Blue
         ]
         # Fill rest with black
         palette.extend([0, 0, 0] * (COLORS_PER_PALETTE - 3))
@@ -369,15 +387,15 @@ class TestPaletteWriting:
         assert len(cgram_data) == BYTES_PER_PALETTE
 
         # Red should be 0x001F
-        red_bgr555 = struct.unpack('<H', cgram_data[0:2])[0]
+        red_bgr555 = struct.unpack("<H", cgram_data[0:2])[0]
         assert red_bgr555 == 0x001F
 
         # Green should be 0x03E0
-        green_bgr555 = struct.unpack('<H', cgram_data[2:4])[0]
+        green_bgr555 = struct.unpack("<H", cgram_data[2:4])[0]
         assert green_bgr555 == 0x03E0
 
         # Blue should be 0x7C00
-        blue_bgr555 = struct.unpack('<H', cgram_data[4:6])[0]
+        blue_bgr555 = struct.unpack("<H", cgram_data[4:6])[0]
         assert blue_bgr555 == 0x7C00
 
     def test_write_cgram_palette_insufficient_colors(self):
@@ -417,7 +435,9 @@ class TestPaletteWriting:
         for i in range(48):
             # Allow small rounding differences due to 5-bit precision
             diff = abs(original_palette[i] - read_palette[i])
-            assert diff <= 8, f"Color component {i}: {
+            assert (
+                diff <= 8
+            ), f"Color component {i}: {
                 original_palette[i]} vs {
                 read_palette[i]}"
 
@@ -445,13 +465,14 @@ class TestErrorConditions:
         # Mock open to raise PermissionError
         original_open = open
 
-        def mock_open(filename, mode='r', *args, **kwargs):
-            if 'readonly.cgram' in str(filename):
+        def mock_open(filename, mode="r", *args, **kwargs):
+            if "readonly.cgram" in str(filename):
                 raise PermissionError("Permission denied")
             return original_open(filename, mode, *args, **kwargs)
 
         import builtins
-        monkeypatch.setattr(builtins, 'open', mock_open)
+
+        monkeypatch.setattr(builtins, "open", mock_open)
 
         palette = read_cgram_palette(str(cgram), 0)
         assert palette is None
@@ -510,4 +531,5 @@ class TestImportHandling:
         """Test that security utilities are available"""
         # This tests the import fallback mechanism
         from sprite_editor.palette_utils import SecurityError
+
         assert SecurityError is not None

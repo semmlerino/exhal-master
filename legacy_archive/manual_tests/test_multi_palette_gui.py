@@ -4,8 +4,10 @@ Quick test of the multi-palette GUI with better visibility
 """
 
 import os
-from sprite_editor_core import SpriteEditorCore
+
 from PIL import Image
+from sprite_editor_core import SpriteEditorCore
+
 
 def test_focused_extraction():
     """Test extracting just Kirby sprites for better visibility"""

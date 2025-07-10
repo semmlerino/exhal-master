@@ -5,11 +5,19 @@ Handles sprite viewing and editing functionality
 """
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (QCheckBox, QGridLayout, QGroupBox, QHBoxLayout,
-                             QLabel, QPushButton, QSplitter, QVBoxLayout,
-                             QWidget)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ...sprite_viewer_widget import PaletteViewerWidget, SpriteViewerWidget
+from sprite_editor.sprite_viewer_widget import PaletteViewerWidget, SpriteViewerWidget
 
 
 class ViewerTab(QWidget):
@@ -90,7 +98,7 @@ class ViewerTab(QWidget):
             ("Dimensions:", "dimensions"),
             ("Tiles:", "tiles"),
             ("Mode:", "mode"),
-            ("Colors:", "colors")
+            ("Colors:", "colors"),
         ]
 
         for i, (label, key) in enumerate(info_items):
@@ -168,10 +176,10 @@ class ViewerTab(QWidget):
     def update_image_info(self, info):
         """Update image information display"""
         if info:
-            self.info_labels["dimensions"].setText(
-                f"{info['width']}x{info['height']}")
+            self.info_labels["dimensions"].setText(f"{info['width']}x{info['height']}")
             self.info_labels["tiles"].setText(
-                f"{info['tiles_x']}x{info['tiles_y']} ({info['total_tiles']})")
+                f"{info['tiles_x']}x{info['tiles_y']} ({info['total_tiles']})"
+            )
             self.info_labels["mode"].setText(info.get("mode", "-"))
             self.info_labels["colors"].setText(str(info.get("colors", "-")))
 

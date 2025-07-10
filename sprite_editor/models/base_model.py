@@ -16,7 +16,7 @@ class ObservableProperty:
 
     def __set_name__(self, owner, name):
         self.name = name
-        self.private_name = f'_{name}'
+        self.private_name = f"_{name}"
 
     def __get__(self, obj, objtype=None):
         if obj is None:
@@ -28,12 +28,12 @@ class ObservableProperty:
         if old_value != value:
             setattr(obj, self.private_name, value)
             # Emit the property_changed signal
-            signal_name = f'{self.name}_changed'
+            signal_name = f"{self.name}_changed"
             if hasattr(obj, signal_name):
                 signal = getattr(obj, signal_name)
                 signal.emit(value)
             # Also emit general changed signal
-            if hasattr(obj, 'property_changed'):
+            if hasattr(obj, "property_changed"):
                 obj.property_changed.emit(self.name, value)
 
 

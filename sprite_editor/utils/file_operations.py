@@ -5,7 +5,7 @@ Provides reusable file handling functions
 """
 
 import os
-from typing import Optional, Tuple
+from typing import Optional
 
 from PyQt6.QtWidgets import QFileDialog
 
@@ -14,8 +14,9 @@ class FileOperations:
     """Utility class for common file operations"""
 
     @staticmethod
-    def browse_file(parent, title: str, file_filter: str,
-                    initial_dir: str = "") -> Optional[str]:
+    def browse_file(
+        parent, title: str, file_filter: str, initial_dir: str = ""
+    ) -> Optional[str]:
         """
         Browse for a file using a file dialog
 
@@ -34,8 +35,9 @@ class FileOperations:
         return file_name if file_name else None
 
     @staticmethod
-    def save_file(parent, title: str, default_name: str,
-                  file_filter: str) -> Optional[str]:
+    def save_file(
+        parent, title: str, default_name: str, file_filter: str
+    ) -> Optional[str]:
         """
         Get a file path for saving using a file dialog
 
@@ -70,7 +72,7 @@ class FileOperations:
         return fallback
 
     @staticmethod
-    def ensure_absolute_path(file_path: str, base_dir: str = None) -> str:
+    def ensure_absolute_path(file_path: str, base_dir: Optional[str] = None) -> str:
         """
         Ensure a file path is absolute
 
@@ -90,7 +92,7 @@ class FileOperations:
         return os.path.abspath(file_path)
 
     @staticmethod
-    def validate_file_exists(file_path: str) -> Tuple[bool, str]:
+    def validate_file_exists(file_path: str) -> tuple[bool, str]:
         """
         Validate that a file exists
 
@@ -127,7 +129,7 @@ class FileOperations:
 
         size = os.path.getsize(file_path)
 
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if size < 1024.0:
                 return f"{size:.1f} {unit}"
             size /= 1024.0
@@ -159,6 +161,7 @@ class FileOperations:
 
         try:
             import shutil
+
             shutil.copy2(file_path, backup_path)
             return backup_path
         except Exception:
@@ -178,12 +181,12 @@ class FileFilters:
     def get_filter(file_type: str) -> str:
         """Get file filter for a specific file type"""
         filters = {
-            'dump': FileFilters.DUMP_FILES,
-            'vram': FileFilters.DUMP_FILES,
-            'cgram': FileFilters.DUMP_FILES,
-            'oam': FileFilters.DUMP_FILES,
-            'png': FileFilters.PNG_FILES,
-            'rom': FileFilters.ROM_FILES,
-            'palette': FileFilters.PALETTE_FILES
+            "dump": FileFilters.DUMP_FILES,
+            "vram": FileFilters.DUMP_FILES,
+            "cgram": FileFilters.DUMP_FILES,
+            "oam": FileFilters.DUMP_FILES,
+            "png": FileFilters.PNG_FILES,
+            "rom": FileFilters.ROM_FILES,
+            "palette": FileFilters.PALETTE_FILES,
         }
         return filters.get(file_type.lower(), FileFilters.ALL_FILES)

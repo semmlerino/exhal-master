@@ -12,7 +12,7 @@ class BaseWorker(QThread):
 
     # Common signals
     progress = pyqtSignal(str)  # Progress message
-    error = pyqtSignal(str)     # Error message
+    error = pyqtSignal(str)  # Error message
 
     def __init__(self, parent=None):
         super().__init__(parent)

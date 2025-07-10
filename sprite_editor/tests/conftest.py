@@ -2,10 +2,20 @@
 Shared pytest fixtures and configuration for sprite editor tests
 """
 
+import os
 import tempfile
 from pathlib import Path
 
 import pytest
+
+# Qt imports - conditional to avoid issues when Qt is not needed
+try:
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QApplication
+
+    QT_AVAILABLE = True
+except ImportError:
+    QT_AVAILABLE = False
 
 
 @pytest.fixture
@@ -104,4 +114,58 @@ def oam_file(temp_dir, sample_oam_data):
     oam_path.write_bytes(sample_oam_data)
     return str(oam_path)
 
+
 # Security fixtures removed for personal project
+
+# Qt-specific fixtures
+if QT_AVAILABLE:
+
+    @pytest.fixture(scope="session")
+    def qapp_args():
+        """Arguments for QApplication to prevent crashes in headless environments"""
+        return [
+            [],  # No command line args
+            {
+                "applicationName": "SpriteEditorTests",
+                "organizationName": "TestOrg",
+                "organizationDomain": "test.org",
+            },
+        ]
+
+    @pytest.fixture(scope="session", autouse=True)
+    def qt_config():
+        """Configure Qt for testing in headless environments"""
+        # Set Qt to use offscreen platform for headless testing
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+        # Disable GPU acceleration which can cause issues in testing
+        os.environ["QT_QUICK_BACKEND"] = "software"
+        # Ensure proper cleanup
+        os.environ["QT_LOGGING_RULES"] = "*.debug=false"
+
+    @pytest.fixture
+    def qtbot_wait():
+        """Helper fixture for common wait times in Qt tests"""
+        return {
+            "short": 100,  # 100ms for quick operations
+            "medium": 500,  # 500ms for animations/transitions
+            "long": 1000,  # 1s for file operations
+        }
+
+    @pytest.fixture(autouse=True)
+    def cleanup_qt_widgets(request):
+        """Ensure all Qt widgets are properly cleaned up after each test"""
+        # Only run for tests that use qtbot
+        if "qtbot" not in request.fixturenames:
+            yield
+            return
+
+        yield
+
+        # Force garbage collection of Qt objects
+        if QApplication.instance():
+            QApplication.processEvents()
+            # Close all windows
+            for widget in QApplication.topLevelWidgets():
+                widget.close()
+                widget.deleteLater()
+            QApplication.processEvents()

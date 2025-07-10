@@ -8,12 +8,7 @@ import os
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import (
-    QMainWindow,
-    QStatusBar,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget)
+from PyQt6.QtWidgets import QMainWindow, QStatusBar, QTabWidget, QVBoxLayout, QWidget
 
 from .tabs.extract_tab import ExtractTab
 from .tabs.inject_tab import InjectTab
@@ -135,7 +130,8 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self):
         """Apply dark theme"""
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QMainWindow {
                 background-color: #2b2b2b;
             }
@@ -184,50 +180,48 @@ class MainWindow(QMainWindow):
                 left: 10px;
                 padding: 0 5px 0 5px;
             }
-        """)
+        """
+        )
 
     def update_recent_files_menu(self, recent_files):
         """Update recent files menu"""
         self.recent_menu.clear()
 
         # Add recent VRAM files
-        if recent_files.get('vram'):
+        if recent_files.get("vram"):
             self.recent_menu.addAction("VRAM Files:").setEnabled(False)
-            for path in recent_files['vram'][:5]:
+            for path in recent_files["vram"][:5]:
                 if os.path.exists(path):
                     action = QAction(os.path.basename(path), self)
                     action.setToolTip(path)
                     action.triggered.connect(
-                        lambda checked, p=path: self.recent_vram_selected.emit(
-                            p)
+                        lambda checked, p=path: self.recent_vram_selected.emit(p)
                     )
                     self.recent_menu.addAction(action)
             self.recent_menu.addSeparator()
 
         # Add recent CGRAM files
-        if recent_files.get('cgram'):
+        if recent_files.get("cgram"):
             self.recent_menu.addAction("CGRAM Files:").setEnabled(False)
-            for path in recent_files['cgram'][:5]:
+            for path in recent_files["cgram"][:5]:
                 if os.path.exists(path):
                     action = QAction(os.path.basename(path), self)
                     action.setToolTip(path)
                     action.triggered.connect(
-                        lambda checked, p=path: self.recent_cgram_selected.emit(
-                            p)
+                        lambda checked, p=path: self.recent_cgram_selected.emit(p)
                     )
                     self.recent_menu.addAction(action)
             self.recent_menu.addSeparator()
 
         # Add recent OAM files
-        if recent_files.get('oam'):
+        if recent_files.get("oam"):
             self.recent_menu.addAction("OAM Files:").setEnabled(False)
-            for path in recent_files['oam'][:5]:
+            for path in recent_files["oam"][:5]:
                 if os.path.exists(path):
                     action = QAction(os.path.basename(path), self)
                     action.setToolTip(path)
                     action.triggered.connect(
-                        lambda checked, p=path: self.recent_oam_selected.emit(
-                            p)
+                        lambda checked, p=path: self.recent_oam_selected.emit(p)
                     )
                     self.recent_menu.addAction(action)
 
@@ -254,8 +248,8 @@ class MainWindow(QMainWindow):
     def get_tabs(self):
         """Get all tab widgets"""
         return {
-            'extract': self.extract_tab,
-            'inject': self.inject_tab,
-            'viewer': self.viewer_tab,
-            'multi_palette': self.multi_palette_tab
+            "extract": self.extract_tab,
+            "inject": self.inject_tab,
+            "viewer": self.viewer_tab,
+            "multi_palette": self.multi_palette_tab,
         }

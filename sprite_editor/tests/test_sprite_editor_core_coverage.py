@@ -3,7 +3,6 @@ Additional tests to improve coverage for sprite_editor_core.py
 Focus on error conditions, edge cases, and fallback scenarios
 """
 
-
 import pytest
 from PIL import Image
 
@@ -54,7 +53,8 @@ class TestEdgeCases:
             raise RuntimeError("Unexpected error")
 
         import struct
-        monkeypatch.setattr(struct, 'unpack_from', mock_unpack)
+
+        monkeypatch.setattr(struct, "unpack_from", mock_unpack)
 
         # When struct.unpack_from fails, it fills with zeros
         palette = core.read_cgram_palette(str(cgram), 0)
@@ -73,10 +73,12 @@ class TestEdgeCases:
         def mock_new(*args, **kwargs):
             raise MemoryError("Out of memory")
 
-        monkeypatch.setattr(Image, 'new', mock_new)
+        monkeypatch.setattr(Image, "new", mock_new)
 
         # Should raise with descriptive message
-        with pytest.raises(RuntimeError, match="Error extracting sprites.*Out of memory"):
+        with pytest.raises(
+            RuntimeError, match="Error extracting sprites.*Out of memory"
+        ):
             core.extract_sprites(str(vram), 0, 1024)
 
     def test_inject_into_vram_oversized_file(self, temp_dir):
@@ -134,13 +136,14 @@ class TestEdgeCases:
         # Mock the builtin open to raise an exception when writing
         original_open = open
 
-        def mock_open(filename, mode='r', *args, **kwargs):
-            if 'output.vram' in str(filename) and 'w' in mode:
-                raise IOError("Disk full")
+        def mock_open(filename, mode="r", *args, **kwargs):
+            if "output.vram" in str(filename) and "w" in mode:
+                raise OSError("Disk full")
             return original_open(filename, mode, *args, **kwargs)
 
         import builtins
-        monkeypatch.setattr(builtins, 'open', mock_open)
+
+        monkeypatch.setattr(builtins, "open", mock_open)
 
         with pytest.raises(RuntimeError, match="Error injecting into VRAM.*Disk full"):
             core.inject_into_vram(sprite_data, str(vram), 0, str(output))
@@ -150,7 +153,7 @@ class TestEdgeCases:
         core = SpriteEditorCore()
 
         # Create a valid PNG
-        img = Image.new('P', (128, 128))
+        img = Image.new("P", (128, 128))
         png_path = temp_dir / "test.png"
         img.save(str(png_path))
 
@@ -158,7 +161,7 @@ class TestEdgeCases:
         def mock_open(path):
             raise RuntimeError("Unexpected error")
 
-        monkeypatch.setattr(Image, 'open', mock_open)
+        monkeypatch.setattr(Image, "open", mock_open)
 
         # Should return validation failure with error
         valid, issues = core.validate_png_for_snes(str(png_path))
@@ -175,8 +178,8 @@ class TestEdgeCases:
 
         info = core.get_vram_info(str(vram))
         assert info is not None
-        assert info['size'] == 0xC000
-        assert info['size_text'] == '49152 bytes'  # Raw byte count
+        assert info["size"] == 0xC000
+        assert info["size_text"] == "49152 bytes"  # Raw byte count
 
     def test_get_vram_info_generic_exception(self, temp_dir, monkeypatch):
         """Test generic exception handling in get_vram_info"""
@@ -191,7 +194,7 @@ class TestEdgeCases:
         def mock_getsize(path):
             raise OSError("Permission denied")
 
-        monkeypatch.setattr(os.path, 'getsize', mock_getsize)
+        monkeypatch.setattr(os.path, "getsize", mock_getsize)
 
         # Should return None on error
         info = core.get_vram_info(str(vram))
@@ -209,7 +212,8 @@ class TestEdgeCases:
             raise RuntimeError("Parser error")
 
         from sprite_editor.oam_palette_mapper import OAMPaletteMapper
-        monkeypatch.setattr(OAMPaletteMapper, 'parse_oam_dump', mock_parse)
+
+        monkeypatch.setattr(OAMPaletteMapper, "parse_oam_dump", mock_parse)
 
         # Should return False and print error
         result = core.load_oam_mapping(str(oam))
@@ -229,12 +233,13 @@ class TestFallbackBehavior:
         )
 
         # Should return single image with default palette
-        assert 'palette_0' in palette_images
+        assert "palette_0" in palette_images
         assert len(palette_images) == 1
         assert tile_count == 16
 
     def test_extract_sprites_with_correct_palettes_no_cgram(
-            self, vram_file, oam_file, temp_dir):
+        self, vram_file, oam_file, temp_dir
+    ):
         """Test extraction when CGRAM file doesn't exist"""
         core = SpriteEditorCore()
         core.load_oam_mapping(oam_file)
@@ -248,11 +253,12 @@ class TestFallbackBehavior:
 
         # Should work with grayscale palettes
         assert img is not None
-        assert img.mode == 'RGBA'
+        assert img.mode == "RGBA"
         assert tile_count > 0
 
     def test_extract_sprites_with_correct_palettes_no_oam_data(
-            self, vram_file, cgram_file):
+        self, vram_file, cgram_file
+    ):
         """Test when OAM mapper returns None for palette"""
         core = SpriteEditorCore()
         # Create a mock OAM mapper that returns None
@@ -282,4 +288,5 @@ class TestModuleExecution:
         # We can't easily test this in isolation, but we can verify
         # the module loads correctly
         import sprite_editor.sprite_editor_core
-        assert hasattr(sprite_editor.sprite_editor_core, 'SpriteEditorCore')
+
+        assert hasattr(sprite_editor.sprite_editor_core, "SpriteEditorCore")

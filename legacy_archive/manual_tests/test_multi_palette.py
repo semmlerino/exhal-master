@@ -3,9 +3,11 @@
 Test script for multi-palette preview functionality
 """
 
-import sys
 import os
+import sys
+
 from sprite_editor_core import SpriteEditorCore
+
 
 def test_multi_palette_extraction():
     """Test the multi-palette extraction functionality"""

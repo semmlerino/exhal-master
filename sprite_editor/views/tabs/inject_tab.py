@@ -5,11 +5,19 @@ Handles sprite injection into VRAM dumps
 """
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-                             QLineEdit, QPushButton, QTextEdit, QVBoxLayout,
-                             QWidget)
+from PyQt6.QtWidgets import (
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ..widgets.hex_line_edit import HexLineEdit
+from sprite_editor.views.widgets.hex_line_edit import HexLineEdit
 
 
 class InjectTab(QWidget):
@@ -105,10 +113,10 @@ class InjectTab(QWidget):
     def get_injection_params(self):
         """Get the current injection parameters"""
         return {
-            'png_file': self.png_file_edit.text(),
-            'vram_file': self.inject_vram_edit.text(),
-            'offset': self.inject_offset_edit.value(),
-            'output_file': self.output_file_edit.text()
+            "png_file": self.png_file_edit.text(),
+            "vram_file": self.inject_vram_edit.text(),
+            "offset": self.inject_offset_edit.value(),
+            "output_file": self.output_file_edit.text(),
         }
 
     def set_png_file(self, file_path):

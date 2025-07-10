@@ -2,7 +2,6 @@
 Integration tests for OAM palette mapping with sprite extraction
 """
 
-
 from PIL import Image
 
 from sprite_editor.oam_palette_mapper import OAMPaletteMapper
@@ -12,8 +11,7 @@ from sprite_editor.sprite_editor_core import SpriteEditorCore
 class TestOAMSpriteIntegration:
     """Test OAM integration with sprite extraction workflows"""
 
-    def test_oam_guided_sprite_extraction(
-            self, vram_file, cgram_file, oam_file):
+    def test_oam_guided_sprite_extraction(self, vram_file, cgram_file, oam_file):
         """Test extracting sprites using OAM data for palette assignment"""
         core = SpriteEditorCore()
         mapper = OAMPaletteMapper()
@@ -33,7 +31,7 @@ class TestOAMSpriteIntegration:
             sprites = mapper.find_sprites_using_palette(pal_num)
             if sprites:
                 # Get the tile range for this palette
-                tile_nums = [s['tile'] for s in sprites]
+                tile_nums = [s["tile"] for s in sprites]
                 min_tile = min(tile_nums)
                 max_tile = max(tile_nums)
 
@@ -44,7 +42,8 @@ class TestOAMSpriteIntegration:
 
                 if vram_offset < 0x20000 and tile_count > 0:
                     img, count = core.extract_sprites(
-                        vram_file, vram_offset, tile_count * 32)
+                        vram_file, vram_offset, tile_count * 32
+                    )
 
                     # Apply the palette
                     palette = core.read_cgram_palette(cgram_file, pal_num)
@@ -57,12 +56,11 @@ class TestOAMSpriteIntegration:
 
         # Verify the images are valid
         for pal_num, img in extracted_sprites.items():
-            assert img.mode == 'P'
+            assert img.mode == "P"
             assert img.width > 0
             assert img.height > 0
 
-    def test_oam_sprite_sheet_creation(
-            self, vram_file, cgram_file, oam_file, temp_dir):
+    def test_oam_sprite_sheet_creation(self, vram_file, cgram_file, oam_file, temp_dir):
         """Test creating a sprite sheet with OAM-based palette mapping"""
         core = SpriteEditorCore()
 
@@ -71,8 +69,6 @@ class TestOAMSpriteIntegration:
         assert success is True
 
         # Create a composite sprite sheet with all palettes
-        all_sprites = []
-        labels = []
 
         # Extract sprites for each palette
         palette_images, tile_count = core.extract_sprites_multi_palette(
@@ -82,20 +78,20 @@ class TestOAMSpriteIntegration:
         # Create a sprite sheet showing all palette variations
         if palette_images:
             # Calculate dimensions
-            first_img = list(palette_images.values())[0]
+            first_img = next(iter(palette_images.values()))
             sheet_width = first_img.width
             sheet_height = first_img.height * len(palette_images)
 
             # Create composite sheet
-            sheet = Image.new('RGBA', (sheet_width, sheet_height))
+            sheet = Image.new("RGBA", (sheet_width, sheet_height))
 
             y_offset = 0
-            for pal_name, img in sorted(palette_images.items()):
-                sheet.paste(img.convert('RGBA'), (0, y_offset))
+            for _pal_name, img in sorted(palette_images.items()):
+                sheet.paste(img.convert("RGBA"), (0, y_offset))
                 y_offset += img.height
 
             # Save the sheet
-            sheet_path = temp_dir / 'oam_sprite_sheet.png'
+            sheet_path = temp_dir / "oam_sprite_sheet.png"
             sheet.save(str(sheet_path))
 
             # Verify the sheet
@@ -104,11 +100,10 @@ class TestOAMSpriteIntegration:
             assert loaded_sheet.width == sheet_width
             assert loaded_sheet.height == sheet_height
 
-    def test_oam_sprite_region_extraction(
-            self, vram_file, cgram_file, oam_file):
+    def test_oam_sprite_region_extraction(self, vram_file, cgram_file, oam_file):
         """Test extracting sprites from specific screen regions"""
         mapper = OAMPaletteMapper()
-        core = SpriteEditorCore()
+        SpriteEditorCore()
 
         # Parse OAM
         mapper.parse_oam_dump(oam_file)
@@ -122,16 +117,16 @@ class TestOAMSpriteIntegration:
         # Extract tiles for sprites in each region
         if upper_left_sprites:
             # Get unique tiles from upper left region
-            ul_tiles = set(s['tile'] for s in upper_left_sprites)
-            ul_palettes = set(s['palette'] for s in upper_left_sprites)
+            ul_tiles = {s["tile"] for s in upper_left_sprites}
+            ul_palettes = {s["palette"] for s in upper_left_sprites}
 
             # Verify we found region-specific data
             assert len(ul_tiles) > 0
             assert len(ul_palettes) > 0
 
         if center_sprites:
-            center_tiles = set(s['tile'] for s in center_sprites)
-            center_palettes = set(s['palette'] for s in center_sprites)
+            center_tiles = {s["tile"] for s in center_sprites}
+            center_palettes = {s["palette"] for s in center_sprites}
 
             # These might overlap but should have some data
             assert len(center_tiles) >= 0
@@ -147,16 +142,14 @@ class TestOAMSpriteIntegration:
         stats = mapper.get_palette_usage_stats()
 
         # Verify statistics
-        assert 'palette_counts' in stats
-        assert 'active_palettes' in stats
-        assert 'total_sprites' in stats
-        assert 'visible_sprites' in stats
+        assert "palette_counts" in stats
+        assert "active_palettes" in stats
+        assert "total_sprites" in stats
+        assert "visible_sprites" in stats
 
         # Find the most used palette
-        if stats['palette_counts']:
-            most_used_pal = max(
-                stats['palette_counts'].items(),
-                key=lambda x: x[1])
+        if stats["palette_counts"]:
+            most_used_pal = max(stats["palette_counts"].items(), key=lambda x: x[1])
             pal_num, count = most_used_pal
 
             # Read this palette from CGRAM
@@ -188,11 +181,12 @@ class TestOAMSpriteIntegration:
             partial_oam[offset + 3] = i % 8  # palette
 
         # Save partial OAM
-        oam_path = temp_dir / 'partial.oam'
+        oam_path = temp_dir / "partial.oam"
         oam_path.write_bytes(partial_oam)
 
         # Parse with warning
         import warnings
+
         with warnings.catch_warnings(record=True) as w:
             mapper.parse_oam_dump(str(oam_path))
             # Should have a warning about partial data
@@ -209,8 +203,8 @@ class TestOAMSpriteIntegration:
         # Try to extract sprites based on this partial data
         if mapper.oam_entries:
             first_sprite = mapper.oam_entries[0]
-            tile_num = first_sprite['tile']
-            pal_num = first_sprite['palette']
+            tile_num = first_sprite["tile"]
+            pal_num = first_sprite["palette"]
 
             # Extract the tile
             vram_offset = 0xC000 + (tile_num * 32)
@@ -244,7 +238,7 @@ class TestOAMErrorHandling:
             corrupted_oam[offset + 3] = 0xFF  # attributes with all bits set
 
         # Save corrupted OAM
-        oam_path = temp_dir / 'corrupted.oam'
+        oam_path = temp_dir / "corrupted.oam"
         oam_path.write_bytes(corrupted_oam)
 
         # Should parse without crashing
@@ -253,10 +247,10 @@ class TestOAMErrorHandling:
         # Should have parsed entries but most are off-screen
         assert len(mapper.oam_entries) == 128
         stats = mapper.get_palette_usage_stats()
-        assert stats['visible_sprites'] == 0  # All have y=255 which is > 224
+        assert stats["visible_sprites"] == 0  # All have y=255 which is > 224
 
         # Palette 7 should be used (lower 3 bits of 0xFF)
-        assert 7 in stats['palette_counts']
+        assert 7 in stats["palette_counts"]
 
     def test_oam_vram_mismatch_handling(self, temp_dir):
         """Test handling when OAM references tiles not in VRAM"""
@@ -273,12 +267,12 @@ class TestOAMErrorHandling:
             oam_data[offset + 2] = 240 + (i % 16)
             oam_data[offset + 3] = 1  # palette 1
 
-        oam_path = temp_dir / 'high_tiles.oam'
+        oam_path = temp_dir / "high_tiles.oam"
         oam_path.write_bytes(oam_data)
 
         # Create small VRAM that doesn't contain these tiles
         small_vram = bytearray(0x8000)  # Only 32KB
-        vram_path = temp_dir / 'small.vram'
+        vram_path = temp_dir / "small.vram"
         vram_path.write_bytes(small_vram)
 
         # Parse OAM
@@ -286,18 +280,16 @@ class TestOAMErrorHandling:
 
         # Try to extract - should handle missing tiles gracefully
         for sprite in mapper.oam_entries[:10]:
-            tile_num = sprite['tile']
+            tile_num = sprite["tile"]
             vram_offset = 0xC000 + (tile_num * 32)
 
             # This offset will be beyond our small VRAM
             if vram_offset + 32 > len(small_vram):
                 # Should fail gracefully with a descriptive error
                 try:
-                    result = core.extract_sprites(
-                        str(vram_path), vram_offset, 32)
+                    core.extract_sprites(str(vram_path), vram_offset, 32)
                     # If it doesn't raise, it might return empty/partial data
-                    assert False, "Expected exception for out-of-bounds offset"
+                    raise AssertionError("Expected exception for out-of-bounds offset")
                 except Exception as e:
                     # Verify we get a meaningful error
-                    assert "offset" in str(
-                        e).lower() or "size" in str(e).lower()
+                    assert "offset" in str(e).lower() or "size" in str(e).lower()

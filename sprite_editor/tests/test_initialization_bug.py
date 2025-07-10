@@ -56,14 +56,15 @@ class TestInitializationOrderBug:
         Test that connect_signals() actually uses palette_model
         This ensures our fix is necessary
         """
+
         # Create a custom controller that verifies palette_model usage
         class TestViewerController(ViewerController):
             def connect_signals(self):
                 # Verify palette_model is available
-                assert hasattr(self, 'palette_model'), \
-                    "palette_model must be set before connect_signals is called"
-                assert self.palette_model is not None, \
-                    "palette_model must not be None"
+                assert hasattr(
+                    self, "palette_model"
+                ), "palette_model must be set before connect_signals is called"
+                assert self.palette_model is not None, "palette_model must not be None"
 
                 # Track that we accessed palette_model
                 self.palette_model_accessed = True
@@ -91,7 +92,7 @@ class TestInitializationOrderBug:
         controller = TestViewerController(sprite_model, palette_model, view)
 
         # Verify palette_model was accessed during initialization
-        assert hasattr(controller, 'palette_model_accessed')
+        assert hasattr(controller, "palette_model_accessed")
         assert controller.palette_model_accessed is True
 
     def test_initialization_order_with_base_controller(self):
@@ -107,30 +108,24 @@ class TestInitializationOrderBug:
         original_connect_signals = ViewerController.connect_signals
 
         def tracked_base_init(self, model, view, parent):
-            initialization_log.append('BaseController.__init__ started')
+            initialization_log.append("BaseController.__init__ started")
             original_base_init(self, model, view, parent)
-            initialization_log.append('BaseController.__init__ finished')
+            initialization_log.append("BaseController.__init__ finished")
 
         def tracked_viewer_init(
-                self, sprite_model, palette_model, viewer_view, parent=None):
-            initialization_log.append('ViewerController.__init__ started')
-            initialization_log.append(
-                f'Setting palette_model = {palette_model}')
-            original_viewer_init(
-                self,
-                sprite_model,
-                palette_model,
-                viewer_view,
-                parent)
-            initialization_log.append('ViewerController.__init__ finished')
+            self, sprite_model, palette_model, viewer_view, parent=None
+        ):
+            initialization_log.append("ViewerController.__init__ started")
+            initialization_log.append(f"Setting palette_model = {palette_model}")
+            original_viewer_init(self, sprite_model, palette_model, viewer_view, parent)
+            initialization_log.append("ViewerController.__init__ finished")
 
         def tracked_connect_signals(self):
-            initialization_log.append('connect_signals called')
-            if hasattr(self, 'palette_model'):
-                initialization_log.append('palette_model is available')
+            initialization_log.append("connect_signals called")
+            if hasattr(self, "palette_model"):
+                initialization_log.append("palette_model is available")
             else:
-                initialization_log.append(
-                    'ERROR: palette_model NOT available!')
+                initialization_log.append("ERROR: palette_model NOT available!")
             original_connect_signals(self)
 
         # Temporarily replace methods
@@ -155,23 +150,14 @@ class TestInitializationOrderBug:
             sprite_model.current_image_changed = Mock()
 
             # Create controller
-            controller = ViewerController(sprite_model, palette_model, view)
+            ViewerController(sprite_model, palette_model, view)
 
             # Verify the initialization order
-            expected_order = [
-                'ViewerController.__init__ started',
-                f'Setting palette_model = {palette_model}',
-                'BaseController.__init__ started',
-                'connect_signals called',
-                'palette_model is available',  # This is key - it must be available
-                'BaseController.__init__ finished',
-                'ViewerController.__init__ finished'
-            ]
 
             # The actual order should show palette_model is set before
             # connect_signals
-            assert 'palette_model is available' in initialization_log
-            assert 'ERROR: palette_model NOT available!' not in initialization_log
+            assert "palette_model is available" in initialization_log
+            assert "ERROR: palette_model NOT available!" not in initialization_log
 
         finally:
             # Restore original methods

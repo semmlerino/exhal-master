@@ -8,8 +8,11 @@ import pytest
 from PIL import Image
 
 from sprite_editor.constants import (
-    BYTES_PER_TILE_4BPP, DEFAULT_TILES_PER_ROW, PIXELS_PER_TILE,
-    TILE_HEIGHT, TILE_WIDTH
+    BYTES_PER_TILE_4BPP,
+    DEFAULT_TILES_PER_ROW,
+    PIXELS_PER_TILE,
+    TILE_HEIGHT,
+    TILE_WIDTH,
 )
 from sprite_editor.sprite_editor_core import SpriteEditorCore
 
@@ -132,7 +135,7 @@ class TestSpriteExtraction:
 
         # Check return values
         assert isinstance(img, Image.Image)
-        assert img.mode == 'P'  # Indexed color
+        assert img.mode == "P"  # Indexed color
         assert tile_count == 32  # 1024 bytes / 32 bytes per tile
 
         # Check dimensions
@@ -143,8 +146,7 @@ class TestSpriteExtraction:
     def test_extract_sprites_custom_layout(self, vram_file):
         """Test extraction with custom tile layout"""
         core = SpriteEditorCore()
-        img, tile_count = core.extract_sprites(
-            vram_file, 0, 512, tiles_per_row=8)
+        img, tile_count = core.extract_sprites(vram_file, 0, 512, tiles_per_row=8)
 
         assert img.width == 8 * TILE_WIDTH  # 64 pixels
         assert tile_count == 16  # 512 bytes / 32 bytes per tile
@@ -165,7 +167,7 @@ class TestPNGConversion:
     def test_png_to_snes_valid(self, temp_dir):
         """Test converting valid indexed PNG to SNES format"""
         # Create a test indexed PNG
-        img = Image.new('P', (16, 16))  # 2x2 tiles
+        img = Image.new("P", (16, 16))  # 2x2 tiles
         pixels = []
         for y in range(16):
             for x in range(16):
@@ -194,7 +196,7 @@ class TestPNGConversion:
     def test_png_to_snes_wrong_mode(self, temp_dir):
         """Test error when PNG is not indexed mode"""
         # Create RGB PNG
-        img = Image.new('RGB', (16, 16))
+        img = Image.new("RGB", (16, 16))
         png_path = temp_dir / "rgb.png"
         img.save(str(png_path))
 
@@ -206,7 +208,7 @@ class TestPNGConversion:
     def test_png_to_snes_wrong_dimensions(self, temp_dir):
         """Test handling of non-tile-aligned dimensions"""
         # Create 15x15 image (not multiple of 8)
-        img = Image.new('P', (15, 15))
+        img = Image.new("P", (15, 15))
         png_path = temp_dir / "wrong_size.png"
         img.save(str(png_path))
 
@@ -220,21 +222,19 @@ class TestVRAMInjection:
     """Test injecting tile data into VRAM"""
 
     @pytest.mark.unit
-    def test_inject_into_vram_basic(
-            self, vram_file, temp_dir, sample_4bpp_tile):
+    def test_inject_into_vram_basic(self, vram_file, temp_dir, sample_4bpp_tile):
         """Test basic VRAM injection"""
         core = SpriteEditorCore()
         output_path = str(temp_dir / "modified_vram.dmp")
 
         # Inject one tile at offset 0x1000
-        result = core.inject_into_vram(
-            sample_4bpp_tile, vram_file, 0x1000, output_path)
+        result = core.inject_into_vram(sample_4bpp_tile, vram_file, 0x1000, output_path)
 
         assert result == output_path
         assert Path(output_path).exists()
 
         # Verify the data was injected
-        with open(output_path, 'rb') as f:
+        with open(output_path, "rb") as f:
             f.seek(0x1000)
             injected_data = f.read(32)
 
@@ -246,13 +246,13 @@ class TestVRAMInjection:
         core = SpriteEditorCore()
 
         # Try to inject past end of VRAM
-        huge_data = b'\x00' * 10000
+        huge_data = b"\x00" * 10000
         with pytest.raises(ValueError, match="would exceed VRAM size"):
             core.inject_into_vram(huge_data, vram_file, 60000, None)
 
         # Try negative offset
         with pytest.raises(ValueError, match="Invalid negative offset"):
-            core.inject_into_vram(b'\x00' * 32, vram_file, -1, None)
+            core.inject_into_vram(b"\x00" * 32, vram_file, -1, None)
 
     @pytest.mark.unit
     def test_inject_oversized_data(self, vram_file):
@@ -260,7 +260,7 @@ class TestVRAMInjection:
         core = SpriteEditorCore()
 
         # Try to inject more than 64KB of data
-        huge_data = b'\x00' * (65 * 1024)
+        huge_data = b"\x00" * (65 * 1024)
         with pytest.raises(ValueError, match="Tile data too large"):
             core.inject_into_vram(huge_data, vram_file, 0, None)
 
@@ -272,7 +272,7 @@ class TestPNGValidation:
     def test_validate_png_valid(self, temp_dir):
         """Test validation of valid PNG"""
         # Create valid indexed PNG
-        img = Image.new('P', (16, 16))
+        img = Image.new("P", (16, 16))
         img.putdata([i % 16 for i in range(256)])
         png_path = temp_dir / "valid.png"
         img.save(str(png_path))
@@ -286,7 +286,7 @@ class TestPNGValidation:
     @pytest.mark.unit
     def test_validate_png_wrong_mode(self, temp_dir):
         """Test validation catches wrong color mode"""
-        img = Image.new('RGBA', (16, 16))
+        img = Image.new("RGBA", (16, 16))
         png_path = temp_dir / "rgba.png"
         img.save(str(png_path))
 
@@ -299,7 +299,7 @@ class TestPNGValidation:
     @pytest.mark.unit
     def test_validate_png_wrong_dimensions(self, temp_dir):
         """Test validation catches wrong dimensions"""
-        img = Image.new('P', (15, 17))  # Not multiples of 8
+        img = Image.new("P", (15, 17))  # Not multiples of 8
         png_path = temp_dir / "wrong_dims.png"
         img.save(str(png_path))
 
@@ -313,7 +313,7 @@ class TestPNGValidation:
     @pytest.mark.unit
     def test_validate_png_too_many_colors(self, temp_dir):
         """Test validation catches too many colors"""
-        img = Image.new('P', (16, 16))
+        img = Image.new("P", (16, 16))
         # Create a pattern that uses exactly 20 different palette indices
         pixels = []
         for i in range(256):
@@ -346,21 +346,21 @@ class TestVRAMInfo:
         info = core.get_vram_info(vram_file)
 
         assert info is not None
-        assert info['size'] == 65536
-        assert "64KB" in info['size_text']
-        assert info['max_offset'] == 65535
+        assert info["size"] == 65536
+        assert "64KB" in info["size_text"]
+        assert info["max_offset"] == 65535
 
     @pytest.mark.unit
     def test_get_vram_info_nonstandard(self, temp_dir):
         """Test getting info for non-standard size"""
         small_vram = temp_dir / "small_vram.dmp"
-        small_vram.write_bytes(b'\x00' * 32768)
+        small_vram.write_bytes(b"\x00" * 32768)
 
         core = SpriteEditorCore()
         info = core.get_vram_info(str(small_vram))
 
-        assert info['size'] == 32768
-        assert "32KB" in info['size_text']
+        assert info["size"] == 32768
+        assert "32KB" in info["size_text"]
 
 
 class TestOAMIntegration:
@@ -387,7 +387,7 @@ class TestOAMIntegration:
         )
 
         assert isinstance(img, Image.Image)
-        assert img.mode == 'RGBA'  # Should be RGBA for multi-palette
+        assert img.mode == "RGBA"  # Should be RGBA for multi-palette
 
     @pytest.mark.unit
     def test_multi_palette_extraction(self, vram_file, cgram_file, oam_file):
@@ -413,6 +413,6 @@ class TestOAMIntegration:
         )
 
         assert isinstance(grid_img, Image.Image)
-        assert grid_img.mode == 'RGB'
+        assert grid_img.mode == "RGB"
         # Grid should be 4x base image size (4x4 grid)
         assert grid_img.width >= 512  # At least 4 * 128

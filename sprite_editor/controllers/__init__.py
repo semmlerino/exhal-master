@@ -11,10 +11,10 @@ from .palette_controller import PaletteController
 from .viewer_controller import ViewerController
 
 __all__ = [
-    'BaseController',
-    'ExtractController',
-    'InjectController',
-    'ViewerController',
-    'PaletteController',
-    'MainController'
+    "BaseController",
+    "ExtractController",
+    "InjectController",
+    "MainController",
+    "PaletteController",
+    "ViewerController",
 ]

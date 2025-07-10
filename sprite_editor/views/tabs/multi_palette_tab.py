@@ -5,10 +5,18 @@ Handles multi-palette preview functionality
 """
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-                             QPushButton, QSpinBox, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ...multi_palette_viewer import MultiPaletteViewer
+from sprite_editor.multi_palette_viewer import MultiPaletteViewer
 
 
 class MultiPaletteTab(QWidget):
@@ -51,8 +59,7 @@ class MultiPaletteTab(QWidget):
 
         # Generate preview button
         self.generate_multi_btn = QPushButton("Generate Multi-Palette Preview")
-        self.generate_multi_btn.clicked.connect(
-            self.generate_preview_requested.emit)
+        self.generate_multi_btn.clicked.connect(self.generate_preview_requested.emit)
         controls_layout.addWidget(self.generate_multi_btn)
 
         controls_layout.addStretch()
@@ -61,8 +68,7 @@ class MultiPaletteTab(QWidget):
 
         # Create multi-palette viewer
         self.multi_palette_viewer = MultiPaletteViewer()
-        self.multi_palette_viewer.palette_selected.connect(
-            self._on_palette_selected)
+        self.multi_palette_viewer.palette_selected.connect(self._on_palette_selected)
         layout.addWidget(self.multi_palette_viewer)
 
     def _on_palette_selected(self, palette_num):
@@ -79,8 +85,7 @@ class MultiPaletteTab(QWidget):
 
     def set_single_image_all_palettes(self, base_img, palettes):
         """Set single image with all palettes"""
-        self.multi_palette_viewer.set_single_image_all_palettes(
-            base_img, palettes)
+        self.multi_palette_viewer.set_single_image_all_palettes(base_img, palettes)
 
     def set_oam_statistics(self, stats):
         """Set OAM statistics"""

@@ -4,6 +4,8 @@ Launch script for the indexed pixel editor
 Handles different environments and provides helpful error messages
 """
 
+# Standard library imports
+import importlib.util
 import os
 import subprocess
 import sys
@@ -13,28 +15,27 @@ def check_dependencies():
     """Check if all required dependencies are available"""
     print("Checking dependencies...")
 
-    try:
-        from PIL import Image
+    if importlib.util.find_spec("PIL") is not None:
         print("✓ PIL (Pillow) available")
-    except ImportError:
+    else:
         print("✗ PIL (Pillow) not available. Install with: pip install Pillow")
         return False
 
-    try:
-        import numpy as np
+    if importlib.util.find_spec("numpy") is not None:
         print("✓ NumPy available")
-    except ImportError:
+    else:
         print("✗ NumPy not available. Install with: pip install numpy")
         return False
 
-    try:
-        from PyQt6.QtWidgets import QApplication
+    if importlib.util.find_spec("PyQt6") is not None:
         print("✓ PyQt6 available")
         return True
-    except ImportError:
-        print("✗ PyQt6 not available. Install with: pip install PyQt6")
-        print("  Note: PyQt6 may not work in headless environments (like WSL without X11)")
-        return False
+    print("✗ PyQt6 not available. Install with: pip install PyQt6")
+    print(
+        "  Note: PyQt6 may not work in headless environments (like WSL without X11)"
+    )
+    return False
+
 
 def check_display():
     """Check if display is available for GUI applications"""
@@ -48,20 +49,26 @@ def check_display():
     # Check for Wayland
     return "WAYLAND_DISPLAY" in os.environ
 
+
 def run_headless_test():
     """Run headless tests of the pixel editor"""
     print("Running headless pixel editor tests...")
 
     # Test basic functionality
     if os.path.exists("test_pixel_editor_core.py"):
-        result = subprocess.run([sys.executable, "test_pixel_editor_core.py"],
-                              capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            [sys.executable, "test_pixel_editor_core.py"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         print(result.stdout)
         if result.stderr:
             print("Errors:", result.stderr)
         return result.returncode == 0
     print("✗ test_pixel_editor_core.py not found")
     return False
+
 
 def launch_gui():
     """Launch the GUI version of the pixel editor"""
@@ -74,8 +81,10 @@ def launch_gui():
         return False
 
     try:
+        # Third-party imports
         from PyQt6.QtWidgets import QApplication
 
+        # Local imports
         from indexed_pixel_editor import IndexedPixelEditor
 
         app = QApplication(sys.argv)
@@ -86,9 +95,11 @@ def launch_gui():
         print(f"✗ Failed to launch GUI: {e}")
         return False
 
+
 def show_usage():
     """Show usage information"""
-    print("""
+    print(
+        """
 Indexed Pixel Editor for SNES Sprites
 
 Usage:
@@ -118,7 +129,9 @@ Features:
   ✓ Zoom and grid view
   ✓ Undo/redo functionality
   ✓ PNG import/export
-""")
+"""
+    )
+
 
 def main():
     """Main function"""
@@ -161,6 +174,7 @@ def main():
         return 0 if success else 1
 
     return launch_gui()
+
 
 if __name__ == "__main__":
     sys.exit(main())

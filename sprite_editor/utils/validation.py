@@ -4,20 +4,20 @@ Input validation utilities
 Provides common validation functions for user input
 """
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 
 class ValidationError(Exception):
     """Custom exception for validation errors"""
-    pass
 
 
 class Validators:
     """Common validation functions"""
 
     @staticmethod
-    def validate_hex_value(value_str: str, min_val: int = 0,
-                           max_val: Optional[int] = None) -> Tuple[bool, int, str]:
+    def validate_hex_value(
+        value_str: str, min_val: int = 0, max_val: Optional[int] = None
+    ) -> tuple[bool, int, str]:
         """
         Validate a hexadecimal string value
 
@@ -34,7 +34,7 @@ class Validators:
             value_str = value_str.strip()
 
             # Parse hex value
-            if value_str.startswith('0x') or value_str.startswith('0X'):
+            if value_str.startswith(("0x", "0X")):
                 value = int(value_str, 16)
             else:
                 # Try to parse as hex even without prefix
@@ -53,7 +53,7 @@ class Validators:
             return False, 0, "Invalid hexadecimal value"
 
     @staticmethod
-    def validate_offset(offset: int, file_size: int) -> Tuple[bool, str]:
+    def validate_offset(offset: int, file_size: int) -> tuple[bool, str]:
         """
         Validate an offset within a file
 
@@ -73,7 +73,7 @@ class Validators:
         return True, ""
 
     @staticmethod
-    def validate_size(size: int, available: int) -> Tuple[bool, str]:
+    def validate_size(size: int, available: int) -> tuple[bool, str]:
         """
         Validate a size value
 
@@ -93,8 +93,7 @@ class Validators:
         return True, ""
 
     @staticmethod
-    def validate_tile_count(
-            count: int, max_tiles: int = 65536) -> Tuple[bool, str]:
+    def validate_tile_count(count: int, max_tiles: int = 65536) -> tuple[bool, str]:
         """
         Validate tile count
 
@@ -114,8 +113,7 @@ class Validators:
         return True, ""
 
     @staticmethod
-    def validate_extraction_params(offset: int, size: int,
-                                   file_size: int) -> List[str]:
+    def validate_extraction_params(offset: int, size: int, file_size: int) -> list[str]:
         """
         Validate extraction parameters
 
@@ -147,7 +145,7 @@ class Validators:
         return errors
 
     @staticmethod
-    def validate_png_dimensions(width: int, height: int) -> List[str]:
+    def validate_png_dimensions(width: int, height: int) -> list[str]:
         """
         Validate PNG dimensions for SNES compatibility
 
@@ -172,13 +170,12 @@ class Validators:
 
         # Check reasonable limits
         if width > 1024 or height > 1024:
-            errors.append(
-                "Image dimensions exceed reasonable limits (1024x1024)")
+            errors.append("Image dimensions exceed reasonable limits (1024x1024)")
 
         return errors
 
     @staticmethod
-    def validate_palette_index(index: int) -> Tuple[bool, str]:
+    def validate_palette_index(index: int) -> tuple[bool, str]:
         """
         Validate a palette index
 
@@ -216,15 +213,15 @@ class InputSanitizer:
             return default
 
         # Remove path separators
-        filename = filename.replace('/', '_').replace('\\', '_')
+        filename = filename.replace("/", "_").replace("\\", "_")
 
         # Remove other problematic characters
         invalid_chars = '<>:"|?*'
         for char in invalid_chars:
-            filename = filename.replace(char, '_')
+            filename = filename.replace(char, "_")
 
         # Remove leading/trailing dots and spaces
-        filename = filename.strip('. ')
+        filename = filename.strip(". ")
 
         # Ensure not empty
         if not filename:
@@ -247,12 +244,12 @@ class InputSanitizer:
         hex_str = hex_str.strip()
 
         # Remove common separators
-        hex_str = hex_str.replace(' ', '').replace('-', '').replace(':', '')
+        hex_str = hex_str.replace(" ", "").replace("-", "").replace(":", "")
 
         # Ensure 0x prefix if hex chars present
-        if hex_str and not hex_str.startswith('0x'):
+        if hex_str and not hex_str.startswith("0x"):
             # Check if it contains hex chars
-            if any(c in hex_str.upper() for c in 'ABCDEF'):
-                hex_str = '0x' + hex_str
+            if any(c in hex_str.upper() for c in "ABCDEF"):
+                hex_str = "0x" + hex_str
 
         return hex_str

@@ -35,11 +35,10 @@ class HexLineEdit(QLineEdit):
         """
         try:
             text = self.text().strip()
-            if text.startswith("0x") or text.startswith("0X"):
+            if text.startswith(("0x", "0X")):
                 return int(text, 16)
-            else:
-                # Assume hex even without 0x prefix
-                return int(text, 16)
+            # Assume hex even without 0x prefix
+            return int(text, 16)
         except ValueError:
             return 0
 

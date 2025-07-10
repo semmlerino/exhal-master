@@ -5,11 +5,22 @@ Handles sprite extraction from VRAM dumps
 """
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QGroupBox,
-                             QHBoxLayout, QLabel, QLineEdit, QPushButton,
-                             QSpinBox, QTextEdit, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from ..widgets.hex_line_edit import HexLineEdit
+from sprite_editor.views.widgets.hex_line_edit import HexLineEdit
 
 
 class ExtractTab(QWidget):
@@ -117,13 +128,13 @@ class ExtractTab(QWidget):
     def get_extraction_params(self):
         """Get the current extraction parameters"""
         return {
-            'vram_file': self.vram_file_edit.text(),
-            'offset': self.extract_offset_edit.value(),
-            'size': self.extract_size_edit.value(),
-            'tiles_per_row': self.tiles_per_row_spin.value(),
-            'use_palette': self.use_palette_check.isChecked(),
-            'cgram_file': self.cgram_file_edit.text(),
-            'palette_num': self.palette_combo.currentIndex()
+            "vram_file": self.vram_file_edit.text(),
+            "offset": self.extract_offset_edit.value(),
+            "size": self.extract_size_edit.value(),
+            "tiles_per_row": self.tiles_per_row_spin.value(),
+            "use_palette": self.use_palette_check.isChecked(),
+            "cgram_file": self.cgram_file_edit.text(),
+            "palette_num": self.palette_combo.currentIndex(),
         }
 
     def set_vram_file(self, file_path):

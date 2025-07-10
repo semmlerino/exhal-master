@@ -5,6 +5,7 @@ Demonstrate the complete sprite editing workflow
 
 from PIL import Image, ImageDraw
 
+
 def add_edit_guides(sprite_path, output_path):
     """Add guide marks to help with editing."""
     sprite = Image.open(sprite_path)
@@ -57,7 +58,7 @@ def create_workflow_example():
         pixels = edited.load()
 
         # Add a simple mark (if indexed mode)
-        if edited.mode == 'P':
+        if edited.mode == "P":
             # Find a non-background color
             used_colors = set()
             for y in range(edited.height):
@@ -82,9 +83,9 @@ def create_workflow_example():
         edited_scaled = edited.resize((edited.width * 8, edited.height * 8), Image.NEAREST)
 
         # Create comparison image
-        comparison = Image.new('RGBA', (original_scaled.width * 2 + 10, original_scaled.height), (64, 64, 64, 255))
-        comparison.paste(original_scaled.convert('RGBA'), (0, 0))
-        comparison.paste(edited_scaled.convert('RGBA'), (original_scaled.width + 10, 0))
+        comparison = Image.new("RGBA", (original_scaled.width * 2 + 10, original_scaled.height), (64, 64, 64, 255))
+        comparison.paste(original_scaled.convert("RGBA"), (0, 0))
+        comparison.paste(edited_scaled.convert("RGBA"), (original_scaled.width + 10, 0))
         comparison.save("kirby_edit_comparison.png")
         print("Created comparison image: kirby_edit_comparison.png")
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
 
     # Create edit templates for all extracted sprites
     import os
-    for f in os.listdir('.'):
-        if f.startswith('kirby_kirby_') and f.endswith('.png'):
-            output = f.replace('.png', '_edit_template.png')
+    for f in os.listdir("."):
+        if f.startswith("kirby_kirby_") and f.endswith(".png"):
+            output = f.replace(".png", "_edit_template.png")
             add_edit_guides(f, output)

@@ -19,6 +19,7 @@ class TestObservableProperty:
 
     def test_observable_property_get_set(self):
         """Test basic get/set functionality"""
+
         class TestModel(BaseModel):
             test_prop = ObservableProperty("initial")
             test_prop_changed = Mock()  # Add the signal manually for testing
@@ -34,6 +35,7 @@ class TestObservableProperty:
 
     def test_observable_property_signal_emission(self):
         """Test that property changes emit signals"""
+
         class TestModel(BaseModel):
             test_prop = ObservableProperty(0)
             test_prop_changed = Mock()  # Mock the signal
@@ -48,6 +50,7 @@ class TestObservableProperty:
 
     def test_observable_property_no_signal_on_same_value(self):
         """Test that setting same value doesn't emit signal"""
+
         class TestModel(BaseModel):
             test_prop = ObservableProperty("value")
             test_prop_changed = Mock()
@@ -62,6 +65,7 @@ class TestObservableProperty:
 
     def test_multiple_observable_properties(self):
         """Test model with multiple observable properties"""
+
         class TestModel(BaseModel):
             prop1 = ObservableProperty(1)
             prop2 = ObservableProperty("text")
@@ -97,7 +101,7 @@ class TestSpriteModel:
         assert model.current_palette == 0
 
         # Check internal state
-        assert hasattr(model, 'core')
+        assert hasattr(model, "core")
         assert model._tile_count == 0
 
     def test_sprite_model_signals(self):
@@ -106,25 +110,24 @@ class TestSpriteModel:
 
         # Verify actual signals from implementation
         signals = [
-            'current_image_changed',
-            'vram_file_changed',
-            'cgram_file_changed',
-            'oam_file_changed',
-            'extraction_offset_changed',
-            'extraction_size_changed',
-            'tiles_per_row_changed',
-            'current_palette_changed',
-            'extraction_started',
-            'extraction_completed',
-            'extraction_error',
-            'injection_started',
-            'injection_completed',
-            'injection_error'
+            "current_image_changed",
+            "vram_file_changed",
+            "cgram_file_changed",
+            "oam_file_changed",
+            "extraction_offset_changed",
+            "extraction_size_changed",
+            "tiles_per_row_changed",
+            "current_palette_changed",
+            "extraction_started",
+            "extraction_completed",
+            "extraction_error",
+            "injection_started",
+            "injection_completed",
+            "injection_error",
         ]
 
         for signal_name in signals:
-            assert hasattr(
-                model, signal_name), f"Missing signal: {signal_name}"
+            assert hasattr(model, signal_name), f"Missing signal: {signal_name}"
 
     def test_sprite_model_property_changes(self):
         """Test property changes emit correct signals"""
@@ -166,12 +169,12 @@ class TestSpriteModel:
 
         # Test apply_palette (needs mock image)
         mock_image = Mock()
-        mock_image.mode = 'P'
+        mock_image.mode = "P"
         mock_image.putpalette = Mock()
         model.current_image = mock_image
         model.cgram_file = "test.cgram"
 
-        with patch.object(model.core, 'read_cgram_palette', return_value=[0] * 768):
+        with patch.object(model.core, "read_cgram_palette", return_value=[0] * 768):
             result = model.apply_palette(2)
             assert result is True
             assert model.current_palette == 2
@@ -190,7 +193,7 @@ class TestPaletteModel:
         assert model.active_palettes == []
 
         # Check internal state
-        assert hasattr(model, 'core')
+        assert hasattr(model, "core")
         assert model._palettes == []
         assert model._palette_names == {}
         assert model._oam_statistics is None
@@ -200,15 +203,14 @@ class TestPaletteModel:
         model = PaletteModel()
 
         signals = [
-            'current_palette_index_changed',
-            'palettes_loaded_changed',
-            'active_palettes_changed',
-            'palette_applied'
+            "current_palette_index_changed",
+            "palettes_loaded_changed",
+            "active_palettes_changed",
+            "palette_applied",
         ]
 
         for signal_name in signals:
-            assert hasattr(
-                model, signal_name), f"Missing signal: {signal_name}"
+            assert hasattr(model, signal_name), f"Missing signal: {signal_name}"
 
     def test_palette_methods(self):
         """Test palette model methods"""
@@ -230,17 +232,26 @@ class TestPaletteModel:
         assert model.get_palette_usage_count(1) == 0
 
     def test_apply_palette_to_image(self):
-        """Test applying palette to image"""
+        """Test applying palette to image with transparency handling"""
         model = PaletteModel()
 
         # Set up test palette
-        test_palette = [i for i in range(768)]
+        test_palette = list(range(768))
         model._palettes = [test_palette]
+
+        # Create expected palette with transparency handling
+        # The apply_palette_with_transparency function sets index 0 to light gray (240, 240, 240)
+        # This provides a visual cue for transparent areas in SNES sprites
+        expected_palette = test_palette.copy()
+        expected_palette[0] = 240  # R - light gray for transparency
+        expected_palette[1] = 240  # G - light gray for transparency
+        expected_palette[2] = 240  # B - light gray for transparency
 
         # Create mock image - need to mock isinstance check
         from PIL import Image
+
         mock_image = Mock(spec=Image.Image)
-        mock_image.mode = 'P'
+        mock_image.mode = "P"
         mock_image.putpalette = Mock()
 
         # Connect signal handler
@@ -251,7 +262,7 @@ class TestPaletteModel:
         result = model.apply_palette_to_image(mock_image, 0)
 
         assert result is True
-        mock_image.putpalette.assert_called_once_with(test_palette)
+        mock_image.putpalette.assert_called_once_with(expected_palette)
         handler.assert_called_once_with(0)
         assert model.current_palette_index == 0
 
@@ -269,30 +280,29 @@ class TestProjectModel:
         assert model.is_modified is False
 
         # Check for recent files tracking
-        assert hasattr(model, 'recent_vram_files')
-        assert hasattr(model, 'recent_cgram_files')
-        assert hasattr(model, 'recent_oam_files')
+        assert hasattr(model, "recent_vram_files")
+        assert hasattr(model, "recent_cgram_files")
+        assert hasattr(model, "recent_oam_files")
 
     def test_project_model_signals(self):
         """Test project model signals"""
         model = ProjectModel()
 
         signals = [
-            'project_name_changed',
-            'project_path_changed',
-            'is_modified_changed'
+            "project_name_changed",
+            "project_path_changed",
+            "is_modified_changed",
         ]
 
         for signal_name in signals:
-            assert hasattr(
-                model, signal_name), f"Missing signal: {signal_name}"
+            assert hasattr(model, signal_name), f"Missing signal: {signal_name}"
 
     def test_add_recent_file(self):
         """Test adding files to recent list"""
         model = ProjectModel()
 
         # Mock file existence check
-        with patch('os.path.exists', return_value=True):
+        with patch("os.path.exists", return_value=True):
             # Add a VRAM file
             model.add_recent_file("/path/to/file1.vram", "vram")
             assert "/path/to/file1.vram" in model.recent_vram_files
@@ -306,7 +316,7 @@ class TestProjectModel:
         model = ProjectModel()
 
         # Mock file existence check
-        with patch('os.path.exists', return_value=True):
+        with patch("os.path.exists", return_value=True):
             # Add many VRAM files
             for i in range(15):
                 model.add_recent_file(f"/path/to/file{i}.vram", "vram")
@@ -337,7 +347,7 @@ class TestModelInteractions:
     def test_sprite_and_palette_coordination(self):
         """Test sprite and palette models work together"""
         sprite_model = SpriteModel()
-        palette_model = PaletteModel()
+        PaletteModel()
 
         # Simulate loading related files
         sprite_model.vram_file = "/path/to/sprites.vram"
