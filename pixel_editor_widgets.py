@@ -1128,13 +1128,16 @@ class ProgressDialog(QDialog):
         self.cancel_button.setText("Cancelling...")
         self.status_label.setText("Cancelling operation...")
         
-    def update_progress(self, value: int):
-        """Update progress bar value.
+    def update_progress(self, value: int, message: str = ""):
+        """Update progress bar value and optionally update message.
         
         Args:
             value: Progress percentage (0-100)
+            message: Optional message to display (updates main message label)
         """
         self.progress_bar.setValue(value)
+        if message:
+            self.message_label.setText(message)
         
     def update_message(self, message: str):
         """Update the main message.
