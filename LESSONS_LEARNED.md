@@ -1,164 +1,94 @@
-# Lessons Learned - Kirby Super Star Sprite Editing Project
+# Lessons Learned from the ProgressDialog Bug
 
-## Overview
-We successfully extracted, edited, and re-inserted sprites from Kirby Super Star (SNES) using memory dumps and custom tools. This document captures key learnings and gotchas.
+## The Bug That Taught Us Everything
 
-## What Worked
-
-### 1. Extracting Sprites from VRAM
-- **Best approach**: Dump VRAM from emulator when sprites are visible
-- **Key location**: Kirby sprites at VRAM $6000 (byte offset 0xC000)
-- **Tools**: Mesen-S Debug → Memory Tools → Export VRAM
-- **Result**: Clean, decompressed sprites ready for editing
-
-### 2. Identifying Sprites and Palettes
-- Used sprite viewer to identify sprite index (Kirby = index 9)
-- CGRAM dump provided all 16 palettes
-- Different palettes for different Kirby abilities (yellow = Beam/Spark)
-
-### 3. Creating Editing Tools
-- `snes_tiles_to_png.py` - Convert SNES tiles to PNG
-- `png_to_snes.py` - Convert PNG back to SNES format
-- `extract_all_palettes.py` - Apply CGRAM palettes to sprites
-
-## What Didn't Work
-
-### 1. ROM Insertion Complexity
-- **Problem**: VRAM contains sprites from multiple compressed sources in ROM
-- **Why it failed**: Sprites are assembled at runtime from various locations
-- **Lesson**: Can't simply put 16KB back into one ROM location
-
-### 2. Sprite Pointer Confusion
-- **Problem**: Sprite index pointers didn't lead to expected graphics
-- **Reality**: The pointer table points to metadata, not always direct graphics
-- **Lesson**: VRAM extraction is simpler than ROM modification
-
-### 3. Image Format Issues
-- **Problem**: Edited sprites showed artifacts/corruption
-- **Cause**: Image saved as RGBA instead of indexed color
-- **Fix**: Must save as indexed PNG with ≤16 colors
-
-## Critical Technical Details
-
-### SNES Sprite Format
-- **4bpp**: 4 bits per pixel = 16 colors max
-- **Tile size**: 8x8 pixels = 32 bytes
-- **Planar format**: Bitplanes stored separately (not linear)
-
-### Color Modes Matter
+After implementing Phase 1 improvements and committing 1000+ files, we discovered a simple bug:
 ```
-❌ WRONG: RGBA mode (millions of colors)
-✅ RIGHT: Indexed mode (16 colors max)
+Failed to load palette: ProgressDialog.update_progress() takes 2 positional
+arguments but 3 were given
 ```
 
-### VRAM vs ROM
-- **VRAM**: Runtime memory, sprites decompressed and ready
-- **ROM**: Compressed data, complex organization
-- **Best practice**: Edit via VRAM for testing, ROM for permanent
+## Why This Matters
 
-## Successful Workflow
+This wasn't just a bug - it was a **perfect teaching moment** about software development:
 
-### 1. Extract
-```bash
-# From emulator: Export VRAM.dmp
-# Extract sprite region
-dd if=VRAM.dmp of=sprites.bin bs=1 skip=$((0x6000 * 2)) count=16384
+### 1. **Theory ≠ Practice**
+- We reviewed code thoroughly
+- We created design documents  
+- We wrote test suites
+- But we never actually **ran** the integrated code
+
+### 2. **Integration Points Are Bug Magnets**
+The bug lived exactly where two components met:
+- `ProgressDialog` (the widget)
+- `indexed_pixel_editor.py` (the user)
+
+Each worked fine alone, but failed together.
+
+### 3. **Patterns Reveal Intent**
+When you see the same "mistake" repeated 12 times:
+```python
+dialog.update_progress(30, "Reading file...")
+dialog.update_progress(50, "Processing...")
+dialog.update_progress(80, "Almost done...")
 ```
 
-### 2. Convert to PNG
-```bash
-python3 snes_tiles_to_png.py sprites.bin sprites.png 16
-python3 extract_all_palettes.py CGRAM.dmp sprites.png [palette_num]
+Maybe it's not a mistake - maybe it's the intended API!
+
+### 4. **Framework Quirks Hide Bugs**
+PyQt signals masked the issue:
+```python
+# This worked (passed 1 arg):
+worker.progress.connect(dialog.update_progress)
+
+# This failed (passed 2 args):
+dialog.update_progress(50, "Loading...")
 ```
 
-### 3. Edit
-- Use any image editor
-- **CRITICAL**: Save as indexed color PNG (not RGB!)
-- Keep to 16 colors or less
-- Maintain exact dimensions
-
-### 4. Convert Back
-```bash
-# Fix color mode if needed
-python3 png_to_snes.py edited.png edited.bin
-
-# Inject into VRAM
-dd if=edited.bin of=VRAM_modded.dmp bs=1 seek=$((0x6000 * 2)) conv=notrunc
+### 5. **Simple Fixes Can Have Big Impact**
+The fix was trivial:
+```python
+def update_progress(self, value: int, message: str = ""):
 ```
 
-### 5. Test
-- Import VRAM_modded.dmp in emulator
-- See changes immediately!
+But it restored functionality to the entire palette loading system.
 
-## Key Discoveries
+## Better Development Practices
 
-### 1. Kirby's Multiple Forms
-- Pink Kirby = Normal (not in our CGRAM dump)
-- Yellow Kirby = Beam/Spark ability (palette 8)
-- Different abilities = Different palettes
+### Before Writing Code:
+1. **Design the API first** - Write how you want to use it
+2. **Create integration tests early** - Not just unit tests
+3. **Run early, run often** - Don't wait for "complete" implementation
 
-### 2. Sprite Organization
-- Kirby animations: First ~64 tiles
-- Enemies: Following sections
-- Effects/UI: Mixed throughout
+### During Development:
+1. **Test at boundaries** - Where components connect
+2. **Verify assumptions** - Don't trust that it "should work"
+3. **Listen to patterns** - Repeated code might be right
 
-### 3. Compression
-- HAL's custom LZ compression (exhal/inhal tools)
-- Compression ratio typically 1.5:1 to 3:1
-- 64KB size limit per compressed block
+### After Implementation:
+1. **Actually run it** - No amount of review replaces execution
+2. **Test common workflows** - Not just individual functions
+3. **Document gotchas** - Help future developers (including yourself)
 
-## Common Pitfalls
+## The Silver Lining
 
-### 1. Save Format
-- **Always** save as indexed PNG
-- Check image mode before converting
-- Use Image → Mode → Indexed in most editors
+This bug was a gift because:
+- It was caught quickly by an attentive user
+- The fix was simple and backward compatible
+- It taught valuable lessons about integration testing
+- It prompted better documentation and testing practices
 
-### 2. Palette Confusion
-- CGRAM state depends on current game screen
-- Different areas load different palettes
-- May need multiple dumps for all palettes
+## Moving Forward
 
-### 3. Size Mismatches
-- VRAM sprites often combine multiple ROM sources
-- Can't always trace back to single ROM location
-- Editing via VRAM is more reliable
+Every bug is a teacher. This one taught us:
+- **Run the code** before declaring victory
+- **Test where components meet**
+- **Patterns in "wrong" code might indicate a different problem**
+- **Simple oversights can break major features**
 
-## Tools Created
+The best code isn't just well-designed - it's well-tested in real usage.
 
-1. **snes_tiles_to_png.py** - SNES tile data → PNG
-2. **png_to_snes.py** - PNG → SNES tile data  
-3. **extract_all_palettes.py** - Apply CGRAM palettes
-4. **view_sprites_zoomed.py** - Create zoomed versions
-5. **create_character_sheet.py** - Organize sprites by type
+---
 
-## Future Improvements
-
-1. **Automatic format checking** - Warn if PNG isn't indexed
-2. **Palette management** - Better tools for managing multiple palettes
-3. **ROM patching** - Find proper way to insert into ROM permanently
-4. **Sprite mapping** - Document which ROM locations map to which VRAM addresses
-
-## Summary
-
-The project succeeded in editing Kirby sprites through VRAM manipulation. Key insight: Working with runtime memory (VRAM) is much simpler than dealing with compressed ROM data. Always verify image format before conversion!
-
-## Quick Reference
-
-```bash
-# Extract from VRAM
-dd if=VRAM.dmp of=sprites.bin bs=1 skip=$((0x6000 * 2)) count=16384
-
-# Convert to editable format
-python3 snes_tiles_to_png.py sprites.bin sprites.png 16
-
-# After editing (MUST be indexed PNG!)
-python3 png_to_snes.py edited.png edited.bin
-
-# Inject back
-dd if=edited.bin of=VRAM_modded.dmp bs=1 seek=$((0x6000 * 2)) conv=notrunc
-
-# Load VRAM_modded.dmp in emulator
-```
-
-Remember: INDEXED COLOR MODE IS CRITICAL!
+*"In theory, theory and practice are the same. In practice, they are not."*  
+*- Probably not Yogi Berra, but still true*
