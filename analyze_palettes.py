@@ -28,7 +28,7 @@ def analyze_palettes(cgram_file):
         has_white = False
         has_red = False
 
-        for i, (r, g, b) in enumerate(palette[:16]):
+        for _i, (r, g, b) in enumerate(palette[:16]):
             # Check for pink (high red, lower green, high blue)
             if r > 200 and 100 < g < 230 and b > 150:
                 pink_count += 1
