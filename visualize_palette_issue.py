@@ -30,7 +30,7 @@ def create_palette_comparison():
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
         small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
-    except (OSError, IOError):
+    except OSError:
         font = ImageFont.load_default()
         small_font = font
 

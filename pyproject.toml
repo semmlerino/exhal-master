@@ -77,6 +77,8 @@ ignore = [
 "tests/*.py" = ["S101", "ARG", "PLR2004"]
 "*pixel*editor*.py" = ["N802", "N815"]  # PyQt naming conventions
 "pixel_editor_widgets.py" = ["N802", "N815"]  # PyQt naming conventions
+"PYQT6_BEST_PRACTICES_EXAMPLES.py" = ["N802", "F821"]  # PyQt naming and example code
+"sprite_editor/**/*.py" = ["N802", "N815"]  # PyQt naming conventions
 
 [tool.isort]
 profile = "black"

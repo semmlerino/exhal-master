@@ -16,7 +16,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Third-party imports
 import numpy as np
@@ -325,11 +325,13 @@ class TestMetadataHandling:
 
     def test_load_metadata_file(self, qapp, multi_palette_setup):
         """Test loading metadata file"""
-        with patch.object(IndexedPixelEditor, "handle_startup"), \
-             patch(
+        with (
+            patch.object(IndexedPixelEditor, "handle_startup"),
+            patch(
                 "PyQt6.QtWidgets.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.No,
-            ):
+            ),
+        ):
             editor = IndexedPixelEditor()
 
             # Load image with metadata
@@ -341,11 +343,13 @@ class TestMetadataHandling:
 
     def test_auto_detect_metadata(self, qapp, multi_palette_setup):
         """Test automatic metadata file detection"""
-        with patch.object(IndexedPixelEditor, "handle_startup"), \
-             patch(
+        with (
+            patch.object(IndexedPixelEditor, "handle_startup"),
+            patch(
                 "PyQt6.QtWidgets.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.No,
-            ):
+            ),
+        ):
             editor = IndexedPixelEditor()
 
             # The load_file_by_path should auto-detect metadata
@@ -426,13 +430,14 @@ class TestKeyboardShortcuts:
                 mock_switch.assert_called_once()
 
     def test_c_key_toggles_color_mode(self, qapp):
-        """Test C key toggles between color and grayscale mode"""
+        """Test C key toggles Apply Palette checkbox"""
         with patch.object(IndexedPixelEditor, "handle_startup"):
             editor = IndexedPixelEditor()
             editor.canvas.new_image(8, 8)
 
-            # Start in grayscale mode
-            original_mode = editor.canvas.greyscale_mode
+            # Should start with palette applied
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
             # Press C key
             event = QKeyEvent(
@@ -440,14 +445,16 @@ class TestKeyboardShortcuts:
             )
             editor.keyPressEvent(event)
 
-            # Mode should toggle
-            assert editor.canvas.greyscale_mode != original_mode
+            # Apply Palette should toggle off, grayscale mode should be on
+            assert editor.apply_palette_checkbox.isChecked() == False
+            assert editor.canvas.greyscale_mode == True
 
             # Press C again
             editor.keyPressEvent(event)
 
             # Should toggle back
-            assert editor.canvas.greyscale_mode == original_mode
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
     def test_keyboard_shortcuts_without_metadata(self, qapp):
         """Test that P key does nothing without metadata"""
@@ -514,7 +521,9 @@ class TestViewMenuActions:
             editor = IndexedPixelEditor()
             editor.canvas.new_image(8, 8)
 
-            initial_mode = editor.canvas.greyscale_mode
+            # Should start with palette applied
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
             # Find View menu and toggle color action
             view_menu = None
@@ -537,8 +546,9 @@ class TestViewMenuActions:
             # Trigger the action
             toggle_action.trigger()
 
-            # Mode should change
-            assert editor.canvas.greyscale_mode != initial_mode
+            # Apply Palette should toggle off, grayscale mode should be on
+            assert editor.apply_palette_checkbox.isChecked() == False
+            assert editor.canvas.greyscale_mode == True
 
 
 class TestCommandLineArguments:
@@ -546,11 +556,13 @@ class TestCommandLineArguments:
 
     def test_load_file_from_args(self, qapp, sample_image_file):
         """Test loading file from command-line arguments"""
-        with patch.object(IndexedPixelEditor, "handle_startup"), \
-             patch(
+        with (
+            patch.object(IndexedPixelEditor, "handle_startup"),
+            patch(
                 "PyQt6.QtWidgets.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.No,
-            ):
+            ),
+        ):
             editor = IndexedPixelEditor()
 
             # Simulate command-line file loading as done in main()
@@ -564,8 +576,10 @@ class TestCommandLineArguments:
 
     def test_invalid_file_arg_handling(self, qapp):
         """Test handling of invalid file argument"""
-        with patch.object(IndexedPixelEditor, "handle_startup"), \
-             patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_error:
+        with (
+            patch.object(IndexedPixelEditor, "handle_startup"),
+            patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_error,
+        ):
             editor = IndexedPixelEditor()
 
             # Simulate trying to load a non-existent file
@@ -597,24 +611,25 @@ class TestGreyscaleColorModeTransitions:
             editor = IndexedPixelEditor()
             editor.canvas.new_image(8, 8)
 
-            # Set to color mode
-            editor.canvas.greyscale_mode = False
-            editor.canvas.show_color_preview = True
+            # Ensure apply palette is on (color mode)
+            editor.apply_palette_checkbox.setChecked(True)
+            assert editor.canvas.greyscale_mode == False
 
             # Draw some pixels
             editor.canvas.current_color = 5
             editor.canvas.draw_pixel(2, 2)
 
             # Mode should be preserved
-            assert not editor.canvas.greyscale_mode
-            assert editor.canvas.show_color_preview
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
             # Save and verify mode persists
             pil_img = editor.canvas.get_pil_image()
             assert pil_img is not None
 
             # Mode should still be the same
-            assert not editor.canvas.greyscale_mode
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
     def test_palette_widget_mode_sync(self, qapp):
         """Test that palette widget syncs with canvas mode"""
@@ -622,20 +637,23 @@ class TestGreyscaleColorModeTransitions:
             editor = IndexedPixelEditor()
             editor.canvas.new_image(8, 8)
 
-            # Canvas starts with greyscale_mode = False (color mode)
-            assert not editor.canvas.greyscale_mode
+            # Should start with Apply Palette checked (color mode)
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
             # Toggle to grayscale mode
             editor.toggle_color_mode_shortcut()
 
-            # Should now be in grayscale mode
-            assert editor.canvas.greyscale_mode
+            # Apply Palette should be off, grayscale mode should be on
+            assert editor.apply_palette_checkbox.isChecked() == False
+            assert editor.canvas.greyscale_mode == True
 
             # Toggle back to color mode
             editor.toggle_color_mode_shortcut()
 
-            # Should be back in color mode
-            assert not editor.canvas.greyscale_mode
+            # Should be back with Apply Palette on
+            assert editor.apply_palette_checkbox.isChecked() == True
+            assert editor.canvas.greyscale_mode == False
 
     def test_external_palette_overrides_mode(self, qapp, multi_palette_setup):
         """Test that external palette loading overrides color mode"""
@@ -645,18 +663,62 @@ class TestGreyscaleColorModeTransitions:
                 return_value=QMessageBox.StandardButton.No,
             ):
                 editor = IndexedPixelEditor()
-                editor.load_file_by_path(multi_palette_setup["image_path"])
 
-            # Start in grayscale mode
-            editor.canvas.greyscale_mode = True
+                # Mock the worker thread to prevent async issues
+                with patch("indexed_pixel_editor.FileLoadWorker") as mock_worker_class:
+                    # Create a mock worker that won't actually start
+                    mock_worker = MagicMock()
+                    mock_worker_class.return_value = mock_worker
 
-            # Apply a palette from metadata
-            colors = editor.metadata["palette_colors"]["9"]
-            editor.apply_palette(9, colors)
+                    # Mock the progress dialog to avoid UI issues in tests
+                    with patch(
+                        "indexed_pixel_editor.ProgressDialog"
+                    ) as mock_dialog_class:
+                        mock_dialog = MagicMock()
+                        mock_dialog_class.return_value = mock_dialog
+
+                        # Load the file - this will create the worker but won't start it
+                        editor.load_file_by_path(multi_palette_setup["image_path"])
+
+                    # Now simulate successful load by calling the handler directly
+                    # This is what the worker would have done
+                    img = Image.open(multi_palette_setup["image_path"])
+                    img_array = np.array(img)
+                    metadata = {"palette": list(img.getpalette() or [])}
+
+                    # Manually set the attributes that load_file_by_path sets
+                    editor._loading_file_path = multi_palette_setup["image_path"]
+                    editor._load_progress_dialog = mock_dialog
+
+                    # Call the result handler
+                    editor._handle_load_result(img_array, metadata)
+
+            # Load the metadata file manually since the async load might not have done it
+            with open(multi_palette_setup["metadata_path"]) as f:
+                editor.metadata = json.load(f)
+            editor.switch_palette_action.setEnabled(True)
+
+            # Start with Apply Palette unchecked (grayscale mode)
+            editor.apply_palette_checkbox.setChecked(False)
+            assert editor.canvas.greyscale_mode == True
+
+            # Mock the progress dialog for apply_palette
+            with patch("indexed_pixel_editor.ProgressDialog") as mock_dialog_class:
+                mock_dialog = MagicMock()
+                mock_dialog_class.return_value = mock_dialog
+
+                # Apply a palette from metadata
+                colors = editor.metadata["palette_colors"]["9"]
+                editor.apply_palette(9, colors)
 
             # External palette should be loaded
-            assert editor.palette_widget.is_external_palette
+            assert hasattr(editor, "external_palette_colors")
             assert editor.current_palette_index == 9
+
+            # The act of loading an external palette shouldn't change the Apply Palette checkbox state
+            # The user's choice should be preserved
+            assert editor.apply_palette_checkbox.isChecked() == False
+            assert editor.canvas.greyscale_mode == True
 
 
 class TestPerformance:

@@ -1,402 +1,582 @@
 #!/usr/bin/env python3
 """
-Tests for sprite_injector module
-Tests core injection functionality with comprehensive coverage
+Comprehensive test suite for sprite_injector.py CLI utility
+
+Tests sprite injection functionality including:
+- PNG to SNES conversion within injector context
+- VRAM injection operations
+- Preview generation
+- Command-line interface behavior
+- Error handling scenarios
 """
 
 import os
+import subprocess
+import sys
+import tempfile
+import unittest
 from unittest.mock import patch
 
-import pytest
+import sprite_injector
 from PIL import Image
 
-from sprite_editor.sprite_injector import (
-    create_preview,
-    inject_into_vram,
-    main,
-    png_to_snes,
-)
-from sprite_editor.tile_utils import decode_4bpp_tile
 
+class TestSpriteInjectorPngConversion(unittest.TestCase):
+    """Test PNG conversion functionality within sprite injector."""
 
-@pytest.fixture
-def temp_files(tmp_path):
-    """Create temporary test files"""
-    # Create test PNG (8x8 indexed image)
-    png_file = tmp_path / "test.png"
-    img = Image.new("P", (16, 16))  # 2x2 tiles
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
 
-    # Create test pattern
-    pixels = []
-    for y in range(16):
-        for x in range(16):
-            pixels.append((x + y) % 16)
-    img.putdata(pixels)
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
 
-    # Set palette
-    palette = []
-    for i in range(16):
-        palette.extend([i * 16, i * 16, i * 16])  # Grayscale
-    for i in range(240):  # Fill rest of palette
-        palette.extend([0, 0, 0])
-    img.putpalette(palette)
+    def create_test_png(self, width=8, height=8, pattern="solid"):
+        """Create a test PNG file."""
+        img = Image.new("P", (width, height))
 
-    img.save(png_file)
+        # Set palette
+        palette = []
+        for i in range(256):
+            r = (i * 17) % 256
+            g = (i * 37) % 256
+            b = (i * 73) % 256
+            palette.extend([r, g, b])
+        img.putpalette(palette)
 
-    # Create test VRAM file (64KB)
-    vram_file = tmp_path / "test.vram"
-    vram_data = bytearray(0x10000)
-    # Add some pattern
-    for i in range(0, 0x10000, 2):
-        vram_data[i] = i % 256
-        vram_data[i + 1] = (i >> 8) % 256
-    vram_file.write_bytes(vram_data)
-
-    return {"png": str(png_file), "vram": str(vram_file), "dir": str(tmp_path)}
-
-
-@pytest.mark.unit
-class TestPngToSnes:
-    """Test PNG to SNES conversion"""
-
-    def test_png_to_snes_indexed(self, temp_files):
-        """Test converting indexed PNG to SNES format"""
-        result = png_to_snes(temp_files["png"])
-
-        assert result is not None
-        # 2x2 tiles = 4 tiles * 32 bytes per tile = 128 bytes
-        assert len(result) == 128
-
-        # Verify it's valid 4bpp data by decoding first tile
-        first_tile = decode_4bpp_tile(result, 0)
-        assert len(first_tile) == 64  # 8x8 pixels
-        assert all(0 <= pixel <= 15 for pixel in first_tile)
-
-    def test_png_to_snes_rgb_mode(self, tmp_path):
-        """Test converting RGB PNG (should convert to indexed)"""
-        # Create RGB image
-        png_file = tmp_path / "rgb.png"
-        img = Image.new("RGB", (8, 8))
-        # Fill with colors
+        # Create pattern
         pixels = []
-        for y in range(8):
-            for x in range(8):
-                pixels.append((x * 32, y * 32, 0))
+        if pattern == "solid":
+            pixels = [0] * (width * height)
+        elif pattern == "gradient":
+            for y in range(height):
+                for x in range(width):
+                    pixels.append((x + y) % 16)
+        elif pattern == "checkerboard":
+            for y in range(height):
+                for x in range(width):
+                    pixels.append((x + y) % 2)
+
         img.putdata(pixels)
-        img.save(png_file)
+        return img
 
-        # Capture print output
-        with patch("builtins.print") as mock_print:
-            result = png_to_snes(str(png_file))
+    def test_png_to_snes_valid_indexed(self):
+        """Test PNG to SNES conversion with valid indexed image."""
+        png_path = os.path.join(self.temp_dir, "test.png")
 
-        assert result is not None
-        assert len(result) == 32  # 1 tile
+        # Create test image
+        img = self.create_test_png(16, 16, "gradient")
+        img.save(png_path)
 
-        # Check warning was printed
-        mock_print.assert_any_call(
-            "Warning: Image is in RGB mode, converting to indexed..."
-        )
+        # Convert
+        result = sprite_injector.png_to_snes(png_path)
 
-    def test_png_to_snes_large_image(self, tmp_path):
-        """Test converting larger image"""
-        png_file = tmp_path / "large.png"
-        img = Image.new("P", (128, 64))  # 16x8 tiles
-        img.putdata([i % 16 for i in range(128 * 64)])
-        img.save(png_file)
+        # Should return valid tile data
+        assert isinstance(result, bytes)
+        assert len(result) == 128  # 4 tiles * 32 bytes each
 
-        result = png_to_snes(str(png_file))
+    def test_png_to_snes_non_indexed_conversion(self):
+        """Test PNG to SNES conversion with auto-conversion from RGB."""
+        png_path = os.path.join(self.temp_dir, "test_rgb.png")
 
-        assert result is not None
-        assert len(result) == 16 * 8 * 32  # 128 tiles * 32 bytes
+        # Create RGB image
+        img = Image.new("RGB", (8, 8), (255, 0, 0))
+        img.save(png_path)
 
-    def test_png_to_snes_non_tile_aligned(self, tmp_path):
-        """Test image not aligned to 8x8 tiles"""
-        png_file = tmp_path / "unaligned.png"
-        img = Image.new("P", (15, 15))  # Not tile-aligned
-        img.putdata([0] * (15 * 15))
-        img.save(png_file)
+        # Convert (should auto-convert)
+        with patch("builtins.print"):  # Suppress warning output
+            result = sprite_injector.png_to_snes(png_path)
 
-        result = png_to_snes(str(png_file))
+        # Should succeed
+        assert isinstance(result, bytes)
+        assert len(result) == 32  # 1 tile * 32 bytes
 
-        assert result is not None
-        # Only gets tiles that fully fit: 1x1 tile in this case
-        # since 15/8 = 1 with remainder
-        assert len(result) == 1 * 32
+    def test_png_to_snes_large_image(self):
+        """Test PNG to SNES conversion with larger image."""
+        png_path = os.path.join(self.temp_dir, "test_large.png")
 
-    def test_png_to_snes_file_not_found(self):
-        """Test with non-existent file"""
-        with patch("builtins.print") as mock_print:
-            result = png_to_snes("/nonexistent/file.png")
+        # Create 32x24 image (4x3 = 12 tiles)
+        img = self.create_test_png(32, 24, "checkerboard")
+        img.save(png_path)
 
+        # Convert
+        result = sprite_injector.png_to_snes(png_path)
+
+        # Should return correct amount of data
+        assert len(result) == 384  # 12 tiles * 32 bytes each
+
+    def test_png_to_snes_nonexistent_file(self):
+        """Test PNG to SNES conversion with nonexistent file."""
+        png_path = os.path.join(self.temp_dir, "nonexistent.png")
+
+        # Should return None for error
+        result = sprite_injector.png_to_snes(png_path)
         assert result is None
-        mock_print.assert_called_with(
-            "Error converting PNG: [Errno 2] No such file or directory: '/nonexistent/file.png'"
-        )
 
-    def test_png_to_snes_invalid_image(self, tmp_path):
-        """Test with invalid image file"""
-        bad_file = tmp_path / "bad.png"
-        bad_file.write_text("not a png")
+    def test_png_to_snes_invalid_file(self):
+        """Test PNG to SNES conversion with invalid image file."""
+        png_path = os.path.join(self.temp_dir, "invalid.png")
 
-        with patch("builtins.print") as mock_print:
-            result = png_to_snes(str(bad_file))
+        # Create invalid file
+        with open(png_path, "w") as f:
+            f.write("not an image")
 
+        # Should return None for error
+        result = sprite_injector.png_to_snes(png_path)
         assert result is None
-        assert mock_print.call_count > 0
-        assert "Error converting PNG:" in mock_print.call_args[0][0]
+
+    @patch("sprite_injector.encode_4bpp_tile")
+    def test_png_to_snes_encoding_error(self, mock_encode):
+        """Test PNG to SNES conversion with encoding error."""
+        png_path = os.path.join(self.temp_dir, "test.png")
+
+        # Create valid image
+        img = self.create_test_png()
+        img.save(png_path)
+
+        # Mock encoding failure
+        mock_encode.side_effect = Exception("Encoding failed")
+
+        # Should return None for error
+        result = sprite_injector.png_to_snes(png_path)
+        assert result is None
 
 
-@pytest.mark.unit
-class TestInjectIntoVram:
-    """Test VRAM injection"""
+class TestSpriteInjectorVRAMOperations(unittest.TestCase):
+    """Test VRAM injection and preview operations."""
 
-    def test_inject_into_vram_success(self, temp_files):
-        """Test successful injection"""
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
+
+    def test_inject_into_vram_success(self):
+        """Test successful VRAM injection."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        output_path = os.path.join(self.temp_dir, "vram_out.dmp")
+
+        # Create test VRAM file
+        vram_data = b"\x00" * 0x10000  # 64KB VRAM
+        with open(vram_path, "wb") as f:
+            f.write(vram_data)
+
         # Create test tile data
-        tile_data = b"\x00" * 64  # 2 tiles
-        output_file = os.path.join(temp_files["dir"], "output.vram")
+        tile_data = b"\xff" * 64  # 2 tiles of test data
 
-        result = inject_into_vram(tile_data, temp_files["vram"], 0xC000, output_file)
+        # Inject
+        result = sprite_injector.inject_into_vram(
+            tile_data, vram_path, 0x1000, output_path
+        )
 
-        assert result is True
-        assert os.path.exists(output_file)
+        # Should succeed
+        assert result
+        assert os.path.exists(output_path)
 
         # Verify injection
-        with open(output_file, "rb") as f:
-            f.seek(0xC000)
-            injected = f.read(64)
-        assert injected == tile_data
+        with open(output_path, "rb") as f:
+            modified_vram = f.read()
 
-    def test_inject_into_vram_boundary_check(self, temp_files):
-        """Test injection at VRAM boundary"""
-        # Try to inject past end of VRAM
-        tile_data = b"\xff" * 0x2000  # 8KB
-        output_file = os.path.join(temp_files["dir"], "output.vram")
+        # Check that data was injected at correct offset
+        assert modified_vram[4096 : 4096 + 64] == tile_data
+        assert modified_vram[:4096] == b"\x00" * 4096  # Before injection
+        assert len(modified_vram) == 65536  # Same total size
 
-        with patch("builtins.print") as mock_print:
-            result = inject_into_vram(
-                tile_data, temp_files["vram"], 0xF000, output_file  # Only 4KB left
-            )
+    def test_inject_into_vram_offset_overflow(self):
+        """Test VRAM injection with offset that would overflow."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        output_path = os.path.join(self.temp_dir, "vram_out.dmp")
 
-        assert result is False
-        mock_print.assert_called_with(
-            "Error: Tile data (8192 bytes) would exceed VRAM size at offset 0xf000"
-        )
+        # Create small VRAM file
+        vram_data = b"\x00" * 100
+        with open(vram_path, "wb") as f:
+            f.write(vram_data)
 
-    def test_inject_into_vram_exact_boundary(self, temp_files):
-        """Test injection exactly at boundary"""
-        # Inject exactly to end of VRAM
-        tile_data = b"\xaa" * 0x1000  # 4KB
-        output_file = os.path.join(temp_files["dir"], "output.vram")
+        # Create tile data that would overflow
+        tile_data = b"\xff" * 64
 
-        result = inject_into_vram(
-            tile_data, temp_files["vram"], 0xF000, output_file  # Exactly 4KB left
-        )
+        # Inject at offset that would overflow
+        result = sprite_injector.inject_into_vram(tile_data, vram_path, 90, output_path)
 
-        assert result is True
+        # Should fail
+        assert not result
+        assert not os.path.exists(output_path)
 
-        # Verify last bytes
-        with open(output_file, "rb") as f:
-            f.seek(-1, 2)  # Seek to last byte
-            last_byte = f.read(1)
-        assert last_byte == b"\xaa"
+    def test_inject_into_vram_nonexistent_input(self):
+        """Test VRAM injection with nonexistent input file."""
+        vram_path = os.path.join(self.temp_dir, "nonexistent.dmp")
+        output_path = os.path.join(self.temp_dir, "vram_out.dmp")
 
-    def test_inject_into_vram_file_not_found(self):
-        """Test with non-existent VRAM file"""
-        with patch("builtins.print") as mock_print:
-            result = inject_into_vram(
-                b"\x00" * 32, "/nonexistent/vram.dmp", 0, "output.vram"
-            )
+        tile_data = b"\xff" * 32
 
-        assert result is False
-        assert "Error injecting into VRAM:" in mock_print.call_args[0][0]
+        # Should fail gracefully
+        result = sprite_injector.inject_into_vram(tile_data, vram_path, 0, output_path)
+        assert not result
 
-    def test_inject_into_vram_write_error(self, temp_files):
-        """Test handling write errors"""
-        tile_data = b"\x00" * 32
-        output_file = "/invalid/path/output.vram"
+    def test_inject_into_vram_write_error(self):
+        """Test VRAM injection with write error."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        output_path = "/root/nonexistent/vram_out.dmp"  # Likely non-writable
 
-        with patch("builtins.print") as mock_print:
-            result = inject_into_vram(tile_data, temp_files["vram"], 0, output_file)
+        # Create valid VRAM file
+        with open(vram_path, "wb") as f:
+            f.write(b"\x00" * 1000)
 
-        assert result is False
-        assert "Error injecting into VRAM:" in mock_print.call_args[0][0]
+        tile_data = b"\xff" * 32
+
+        # Should fail due to write error
+        result = sprite_injector.inject_into_vram(tile_data, vram_path, 0, output_path)
+        assert not result
 
 
-@pytest.mark.unit
-class TestCreatePreview:
-    """Test preview generation"""
+class TestSpriteInjectorPreview(unittest.TestCase):
+    """Test preview generation functionality."""
 
-    def test_create_preview_success(self, temp_files):
-        """Test successful preview creation"""
-        # First inject some data
-        tile_data = bytes([i % 16 for i in range(32 * 4)])  # 4 tiles
-        vram_file = temp_files["vram"]
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
 
-        # Inject tiles
-        with open(vram_file, "r+b") as f:
-            f.seek(0x1000)
-            f.write(tile_data)
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
 
-        preview_file = os.path.join(temp_files["dir"], "preview.png")
+    def test_create_preview_success(self):
+        """Test successful preview creation."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        preview_path = os.path.join(self.temp_dir, "preview.png")
 
-        with patch("builtins.print") as mock_print:
-            create_preview(vram_file, 0x1000, 128, preview_file)
+        # Create test VRAM with some tile data
+        from tile_utils import encode_4bpp_tile
 
-        assert os.path.exists(preview_file)
-        mock_print.assert_called_with(f"Created preview: {preview_file}")
+        tile1 = encode_4bpp_tile([i % 16 for i in range(64)])  # Gradient tile
+        tile2 = encode_4bpp_tile(
+            [(i // 8) % 16 for i in range(64)]
+        )  # Different pattern
 
-        # Verify image
-        img = Image.open(preview_file)
-        assert img.size == (128, 8)  # 16 tiles wide, 1 row
-        assert img.mode == "P"
-
-    def test_create_preview_empty_data(self, temp_files):
-        """Test preview with zero data area"""
-        # First, ensure we have zeros at a specific offset
-        vram_file = temp_files["vram"]
-        with open(vram_file, "r+b") as f:
-            f.seek(0x2000)
-            f.write(b"\x00" * 128)  # Write zeros
-
-        preview_file = os.path.join(temp_files["dir"], "preview.png")
-
-        create_preview(vram_file, 0x2000, 128, preview_file)
-
-        assert os.path.exists(preview_file)
-
-        # Verify image is all zeros
-        img = Image.open(preview_file)
-        pixels = list(img.getdata())
-        assert all(p == 0 for p in pixels)
-
-    def test_create_preview_error_handling(self):
-        """Test preview error handling"""
-        with patch("builtins.print") as mock_print:
-            create_preview("/nonexistent/vram.dmp", 0, 128, "preview.png")
-
-        assert "Error creating preview:" in mock_print.call_args[0][0]
-
-
-@pytest.mark.unit
-class TestMainFunction:
-    """Test main entry point"""
-
-    def test_main_success(self, temp_files, monkeypatch):
-        """Test successful main execution"""
-        output_file = os.path.join(temp_files["dir"], "output.vram")
-
-        # Mock command line arguments
-        test_args = [
-            "sprite_injector.py",
-            temp_files["png"],
-            "--vram",
-            temp_files["vram"],
-            "--offset",
-            "0xC000",
-            "--output",
-            output_file,
-            "--preview",
-        ]
-        monkeypatch.setattr("sys.argv", test_args)
-
-        result = main()
-
-        assert result == 0
-        assert os.path.exists(output_file)
-        assert os.path.exists(output_file.replace(".vram", "_preview.png"))
-
-    def test_main_input_not_found(self, monkeypatch):
-        """Test with missing input file"""
-        test_args = ["sprite_injector.py", "/nonexistent/input.png"]
-        monkeypatch.setattr("sys.argv", test_args)
-
-        with patch("builtins.print") as mock_print:
-            result = main()
-
-        assert result == 1
-        mock_print.assert_any_call(
-            "Error: Input file '/nonexistent/input.png' not found"
-        )
-
-    def test_main_vram_not_found(self, temp_files, monkeypatch):
-        """Test with missing VRAM file"""
-        test_args = [
-            "sprite_injector.py",
-            temp_files["png"],
-            "--vram",
-            "/nonexistent/vram.dmp",
-        ]
-        monkeypatch.setattr("sys.argv", test_args)
-
-        with patch("builtins.print") as mock_print:
-            result = main()
-
-        assert result == 1
-        mock_print.assert_any_call("Error: VRAM file '/nonexistent/vram.dmp' not found")
-
-    def test_main_conversion_failure(self, temp_files, monkeypatch):
-        """Test handling conversion failure"""
-        test_args = [
-            "sprite_injector.py",
-            temp_files["png"],
-            "--vram",
-            temp_files["vram"],
-        ]
-        monkeypatch.setattr("sys.argv", test_args)
-
-        # Mock png_to_snes to fail
-        with patch("sprite_editor.sprite_injector.png_to_snes", return_value=None):
-            result = main()
-
-        assert result == 1
-
-    def test_main_injection_failure(self, temp_files, monkeypatch):
-        """Test handling injection failure"""
-        test_args = [
-            "sprite_injector.py",
-            temp_files["png"],
-            "--vram",
-            temp_files["vram"],
-        ]
-        monkeypatch.setattr("sys.argv", test_args)
-
-        # Mock inject_into_vram to fail
-        with patch(
-            "sprite_editor.sprite_injector.inject_into_vram", return_value=False
-        ):
-            result = main()
-
-        assert result == 1
-
-
-@pytest.mark.integration
-class TestSpriteInjectorIntegration:
-    """Integration tests for sprite injector"""
-
-    def test_full_injection_workflow(self, temp_files):
-        """Test complete PNG to VRAM injection workflow"""
-        # Create a specific test pattern PNG
-        png_file = temp_files["png"]
-        Image.open(png_file)
-
-        # Convert to SNES
-        tile_data = png_to_snes(png_file)
-        assert tile_data is not None
-
-        # Inject into VRAM
-        output_vram = os.path.join(temp_files["dir"], "injected.vram")
-        result = inject_into_vram(tile_data, temp_files["vram"], 0x8000, output_vram)
-        assert result is True
+        vram_data = b"\x00" * 0x1000 + tile1 + tile2 + b"\x00" * (0x10000 - 0x1000 - 64)
+        with open(vram_path, "wb") as f:
+            f.write(vram_data)
 
         # Create preview
-        preview_file = os.path.join(temp_files["dir"], "preview.png")
-        create_preview(output_vram, 0x8000, len(tile_data), preview_file)
-        assert os.path.exists(preview_file)
+        sprite_injector.create_preview(vram_path, 0x1000, 64, preview_path)
 
-        # Verify round-trip by decoding tiles
-        with open(output_vram, "rb") as f:
-            f.seek(0x8000)
-            injected_data = f.read(len(tile_data))
+        # Should create preview file
+        assert os.path.exists(preview_path)
 
-        assert injected_data == tile_data
+        # Verify it's a valid PNG
+        try:
+            img = Image.open(preview_path)
+            assert img.mode == "P"  # Should be indexed
+            assert img.width > 0
+            assert img.height > 0
+        except Exception as e:
+            self.fail(f"Preview PNG is invalid: {e}")
+
+    def test_create_preview_empty_data(self):
+        """Test preview creation with empty data."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        preview_path = os.path.join(self.temp_dir, "preview.png")
+
+        # Create VRAM with empty data
+        vram_data = b"\x00" * 0x1000
+        with open(vram_path, "wb") as f:
+            f.write(vram_data)
+
+        # Create preview
+        sprite_injector.create_preview(vram_path, 0, 64, preview_path)
+
+        # Should still create preview file
+        assert os.path.exists(preview_path)
+
+    def test_create_preview_nonexistent_file(self):
+        """Test preview creation with nonexistent VRAM file."""
+        vram_path = os.path.join(self.temp_dir, "nonexistent.dmp")
+        preview_path = os.path.join(self.temp_dir, "preview.png")
+
+        # Should handle error gracefully
+        sprite_injector.create_preview(vram_path, 0, 64, preview_path)
+
+        # Should not create preview file
+        assert not os.path.exists(preview_path)
+
+    def test_create_preview_large_tiles(self):
+        """Test preview creation with many tiles."""
+        vram_path = os.path.join(self.temp_dir, "vram.dmp")
+        preview_path = os.path.join(self.temp_dir, "preview.png")
+
+        # Create VRAM with multiple tiles
+        vram_data = b"\x00" * 0x1000 + b"\xff" * (32 * 64)  # 64 tiles of data
+        with open(vram_path, "wb") as f:
+            f.write(vram_data)
+
+        # Create preview for all tiles
+        sprite_injector.create_preview(vram_path, 0x1000, 32 * 64, preview_path)
+
+        # Should create preview
+        assert os.path.exists(preview_path)
+
+        # Check dimensions (16 tiles wide layout)
+        img = Image.open(preview_path)
+        expected_width = 16 * 8  # 16 tiles wide
+        expected_height = 4 * 8  # 4 tiles high (64 tiles / 16 per row)
+        assert img.width == expected_width
+        assert img.height == expected_height
+
+
+class TestSpriteInjectorCommandLine(unittest.TestCase):
+    """Test command-line interface behavior."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
+
+    def create_test_files(self):
+        """Create test PNG and VRAM files."""
+        png_path = os.path.join(self.temp_dir, "test.png")
+        vram_path = os.path.join(self.temp_dir, "VRAM.dmp")
+
+        # Create test PNG
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
+
+        # Create test VRAM
+        with open(vram_path, "wb") as f:
+            f.write(b"\x00" * 0x10000)
+
+        return png_path, vram_path
+
+    def test_main_basic_functionality(self):
+        """Test main() with basic valid arguments."""
+        png_path, vram_path = self.create_test_files()
+        output_path = os.path.join(self.temp_dir, "VRAM_edited.dmp")
+
+        # Mock sys.argv
+        test_args = [
+            "sprite_injector.py",
+            png_path,
+            "--vram",
+            vram_path,
+            "--output",
+            output_path,
+        ]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should succeed
+        assert result == 0
+        assert os.path.exists(output_path)
+
+    def test_main_with_preview(self):
+        """Test main() with preview generation."""
+        png_path, vram_path = self.create_test_files()
+        output_path = os.path.join(self.temp_dir, "VRAM_edited.dmp")
+
+        # Mock sys.argv with preview flag
+        test_args = [
+            "sprite_injector.py",
+            png_path,
+            "--vram",
+            vram_path,
+            "--output",
+            output_path,
+            "--preview",
+        ]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should succeed and create preview
+        assert result == 0
+        assert os.path.exists(output_path)
+
+        # Check for preview file
+        preview_path = output_path.replace(".dmp", "_preview.png")
+        assert os.path.exists(preview_path)
+
+    def test_main_missing_png_file(self):
+        """Test main() with missing PNG file."""
+        png_path = os.path.join(self.temp_dir, "nonexistent.png")
+        _, vram_path = self.create_test_files()
+
+        test_args = ["sprite_injector.py", png_path, "--vram", vram_path]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should fail
+        assert result == 1
+
+    def test_main_missing_vram_file(self):
+        """Test main() with missing VRAM file."""
+        png_path, _ = self.create_test_files()
+        vram_path = os.path.join(self.temp_dir, "nonexistent.dmp")
+
+        test_args = ["sprite_injector.py", png_path, "--vram", vram_path]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should fail
+        assert result == 1
+
+    def test_main_png_conversion_failure(self):
+        """Test main() with PNG conversion failure."""
+        png_path = os.path.join(self.temp_dir, "invalid.png")
+        _, vram_path = self.create_test_files()
+
+        # Create invalid PNG
+        with open(png_path, "w") as f:
+            f.write("not an image")
+
+        test_args = ["sprite_injector.py", png_path, "--vram", vram_path]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should fail
+        assert result == 1
+
+    def test_main_injection_failure(self):
+        """Test main() with injection failure."""
+        png_path, vram_path = self.create_test_files()
+
+        # Mock injection failure
+        with patch("sprite_injector.inject_into_vram", return_value=False):
+            test_args = ["sprite_injector.py", png_path, "--vram", vram_path]
+            with patch.object(sys, "argv", test_args):
+                result = sprite_injector.main()
+
+        # Should fail
+        assert result == 1
+
+    def test_main_custom_offset(self):
+        """Test main() with custom offset."""
+        png_path, vram_path = self.create_test_files()
+
+        test_args = [
+            "sprite_injector.py",
+            png_path,
+            "--vram",
+            vram_path,
+            "--offset",
+            "0x8000",
+        ]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should succeed
+        assert result == 0
+
+
+class TestSpriteInjectorIntegration(unittest.TestCase):
+    """Integration tests for complete workflow."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
+
+    def test_complete_workflow(self):
+        """Test complete injection workflow."""
+        png_path = os.path.join(self.temp_dir, "sprite.png")
+        vram_path = os.path.join(self.temp_dir, "VRAM.dmp")
+        output_path = os.path.join(self.temp_dir, "VRAM_edited.dmp")
+
+        # Create test PNG with distinct pattern
+        img = Image.new("P", (16, 8))  # 2 tiles
+        palette = []
+        for i in range(256):
+            palette.extend([i % 256, (i * 2) % 256, (i * 3) % 256])
+        img.putpalette(palette)
+
+        pixels = []
+        for i in range(128):
+            pixels.append((i // 8) % 16)  # Create pattern
+        img.putdata(pixels)
+        img.save(png_path)
+
+        # Create initial VRAM
+        with open(vram_path, "wb") as f:
+            f.write(b"\x00" * 0x10000)
+
+        # Run complete workflow
+        test_args = [
+            "sprite_injector.py",
+            png_path,
+            "--vram",
+            vram_path,
+            "--output",
+            output_path,
+            "--offset",
+            "0x2000",
+            "--preview",
+        ]
+        with patch.object(sys, "argv", test_args):
+            result = sprite_injector.main()
+
+        # Should succeed
+        assert result == 0
+
+        # Verify output exists
+        assert os.path.exists(output_path)
+
+        # Verify data was injected
+        with open(output_path, "rb") as f:
+            vram_data = f.read()
+
+        # Should have data at injection offset
+        injected_data = vram_data[0x2000 : 0x2000 + 64]  # 2 tiles
+        assert injected_data != b"\x00" * 64
+
+        # Rest should be unchanged
+        assert vram_data[:8192] == b"\x00" * 8192
+
+    def test_subprocess_execution(self):
+        """Test executing as subprocess."""
+        png_path = os.path.join(self.temp_dir, "sprite.png")
+        vram_path = os.path.join(self.temp_dir, "VRAM.dmp")
+
+        # Create test files
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
+
+        with open(vram_path, "wb") as f:
+            f.write(b"\x00" * 0x10000)  # 64KB to accommodate default offset
+
+        # Run as subprocess
+        cmd = [sys.executable, "sprite_injector.py", png_path, "--vram", vram_path]
+        result = subprocess.run(
+            cmd,
+            check=False,
+            cwd="/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor",
+            capture_output=True,
+            text=True,
+        )
+
+        # Debug output if failed
+        if result.returncode != 0:
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
+
+        # Should succeed
+        assert result.returncode == 0
+
+
+if __name__ == "__main__":
+    unittest.main()

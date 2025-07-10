@@ -179,8 +179,7 @@ def main():
     # Return exit code based on results
     if total_passed == total_tests:
         return 0
-    else:
-        return 1
+    return 1
 
 if __name__ == "__main__":
     sys.exit(main())

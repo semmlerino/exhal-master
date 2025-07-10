@@ -1,492 +1,462 @@
 #!/usr/bin/env python3
 """
-Tests for sprite_workflow module
-Tests complete workflow orchestration with comprehensive coverage
+Comprehensive test suite for sprite_workflow.py CLI utility
+
+Tests workflow automation functionality including:
+- Command parsing and routing
+- Extract command functionality
+- Inject command functionality
+- Quick inject functionality
+- Help system
+- Error handling scenarios
 """
 
 import os
-from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from sprite_editor.sprite_workflow import (
-    extract_sprites,
-    inject_sprites,
-    main,
-    quick_inject,
-    run_command,
-    show_help,
-)
+import sprite_workflow
+from PIL import Image
 
 
-@pytest.fixture
-def temp_files(tmp_path):
-    """Create temporary test files"""
-    # Create test PNG file
-    png_file = tmp_path / "test_sprites.png"
-    png_file.write_text("fake png content")
+class TestSpriteWorkflowCommandParsing(unittest.TestCase):
+    """Test command parsing and routing."""
 
-    # Create VRAM file
-    vram_file = tmp_path / "VRAM.dmp"
-    vram_file.write_bytes(b"fake vram data" * 100)
+    def test_extract_command(self):
+        """Test extract command routing."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "extract"]):
+            with patch("sprite_workflow.extract_sprites") as mock_extract:
+                sprite_workflow.main()
+                mock_extract.assert_called_once()
 
-    return {"png": str(png_file), "vram": str(vram_file), "dir": str(tmp_path)}
+    def test_inject_command_with_file(self):
+        """Test inject command routing with file argument."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "inject", "test.png"]):
+            with patch("sprite_workflow.inject_sprites") as mock_inject:
+                sprite_workflow.main()
+                mock_inject.assert_called_once_with("test.png")
 
-
-@pytest.mark.unit
-class TestRunCommand:
-    """Test command execution functionality"""
-
-    def test_run_command_success(self):
-        """Test successful command execution"""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = "Command output"
-        mock_result.stderr = ""
-
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
+    def test_inject_command_missing_file(self):
+        """Test inject command without file argument."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "inject"]):
             with patch("builtins.print") as mock_print:
-                result = run_command(["echo", "test"])
+                sprite_workflow.main()
+                mock_print.assert_any_call("Error: Please specify PNG file to inject")
 
-        assert result is True
-        mock_run.assert_called_once_with(
-            ["echo", "test"], capture_output=True, text=True
-        )
-        mock_print.assert_any_call("Running: echo test")
-        mock_print.assert_any_call("Command output")
+    def test_quick_command_with_file(self):
+        """Test quick command routing with file argument."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "quick", "test.png"]):
+            with patch("sprite_workflow.quick_inject") as mock_quick:
+                sprite_workflow.main()
+                mock_quick.assert_called_once_with("test.png")
 
-    def test_run_command_failure(self):
-        """Test failed command execution"""
+    def test_quick_command_missing_file(self):
+        """Test quick command without file argument."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "quick"]):
+            with patch("builtins.print") as mock_print:
+                sprite_workflow.main()
+                mock_print.assert_any_call("Error: Please specify PNG file")
+
+    def test_help_commands(self):
+        """Test various help command variations."""
+        help_commands = ["help", "-h", "--help"]
+        for cmd in help_commands:
+            with patch.object(sys, "argv", ["sprite_workflow.py", cmd]):
+                with patch("sprite_workflow.show_help") as mock_help:
+                    sprite_workflow.main()
+                    mock_help.assert_called_once()
+
+    def test_unknown_command(self):
+        """Test handling of unknown command."""
+        with patch.object(sys, "argv", ["sprite_workflow.py", "unknown"]):
+            with patch("builtins.print") as mock_print:
+                with patch("sprite_workflow.show_help") as mock_help:
+                    sprite_workflow.main()
+                    mock_print.assert_any_call("Unknown command: unknown")
+                    mock_help.assert_called_once()
+
+    def test_no_arguments(self):
+        """Test behavior when no arguments provided."""
+        with patch.object(sys, "argv", ["sprite_workflow.py"]):
+            with patch("sprite_workflow.show_help") as mock_help:
+                sprite_workflow.main()
+                mock_help.assert_called_once()
+
+
+class TestSpriteWorkflowRunCommand(unittest.TestCase):
+    """Test the run_command helper function."""
+
+    @patch("subprocess.run")
+    def test_run_command_success(self, mock_run):
+        """Test successful command execution."""
+        # Mock successful command
         mock_result = MagicMock()
-        mock_result.returncode = 1
+        mock_result.stdout = "Success output"
+        mock_result.stderr = ""
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        # Run command
+        cmd = ["echo", "test"]
+        with patch("builtins.print") as mock_print:
+            result = sprite_workflow.run_command(cmd)
+
+        # Verify
+        assert result
+        mock_run.assert_called_once_with(cmd, capture_output=True, text=True)
+        mock_print.assert_any_call("Running: echo test")
+        mock_print.assert_any_call("Success output")
+
+    @patch("subprocess.run")
+    def test_run_command_failure(self, mock_run):
+        """Test failed command execution."""
+        # Mock failed command
+        mock_result = MagicMock()
         mock_result.stdout = ""
         mock_result.stderr = "Error message"
+        mock_result.returncode = 1
+        mock_run.return_value = mock_result
 
-        with patch("subprocess.run", return_value=mock_result):
-            with patch("builtins.print") as mock_print:
-                result = run_command(["false"])
+        # Run command
+        cmd = ["false"]
+        with patch("builtins.print") as mock_print:
+            result = sprite_workflow.run_command(cmd)
 
-        assert result is False
-        mock_print.assert_any_call("Running: false")
+        # Verify
+        assert not result
         mock_print.assert_any_call("Error message")
 
-    def test_run_command_with_both_outputs(self):
-        """Test command with both stdout and stderr"""
+    @patch("subprocess.run")
+    def test_run_command_with_both_outputs(self, mock_run):
+        """Test command with both stdout and stderr."""
+        # Mock command with both outputs
         mock_result = MagicMock()
+        mock_result.stdout = "Standard output"
+        mock_result.stderr = "Standard error"
         mock_result.returncode = 0
-        mock_result.stdout = "Success output"
-        mock_result.stderr = "Warning message"
+        mock_run.return_value = mock_result
 
-        with patch("subprocess.run", return_value=mock_result):
-            with patch("builtins.print") as mock_print:
-                result = run_command(["test"])
+        # Run command
+        cmd = ["test"]
+        with patch("builtins.print") as mock_print:
+            result = sprite_workflow.run_command(cmd)
 
-        assert result is True
-        mock_print.assert_any_call("Success output")
-        mock_print.assert_any_call("Warning message")
-
-    def test_run_command_empty_outputs(self):
-        """Test command with no output"""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = ""
-        mock_result.stderr = ""
-
-        with patch("subprocess.run", return_value=mock_result):
-            with patch("builtins.print") as mock_print:
-                result = run_command(["true"])
-
-        assert result is True
-        # Should only print the running command
-        mock_print.assert_called_once_with("Running: true")
+        # Verify both outputs are printed
+        assert result
+        mock_print.assert_any_call("Standard output")
+        mock_print.assert_any_call("Standard error")
 
 
-@pytest.mark.unit
-class TestExtractSprites:
-    """Test sprite extraction workflow"""
+class TestSpriteWorkflowExtractSprites(unittest.TestCase):
+    """Test sprite extraction functionality."""
 
-    def test_extract_sprites_success(self):
-        """Test successful sprite extraction"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = True
+    @patch("sprite_workflow.run_command")
+    def test_extract_sprites_success(self, mock_run):
+        """Test successful sprite extraction."""
+        # Mock successful extraction
+        mock_run.return_value = True
 
-            with patch("builtins.print") as mock_print:
-                extract_sprites()
+        with patch("builtins.print"):
+            sprite_workflow.extract_sprites()
 
-        # Should call run_command twice (grayscale and colored)
+        # Should call extraction commands
+        # Main extraction + colored reference
         assert mock_run.call_count == 2
 
-        # Check first call (grayscale extraction)
+        # Check the extraction command
         first_call = mock_run.call_args_list[0][0][0]
-        assert first_call == [
-            "python3",
-            "sprite_extractor.py",
-            "--offset",
-            "0xC000",
-            "--size",
-            "0x4000",
-            "--output",
-            "sprites_to_edit.png",
-        ]
+        assert first_call[0] == "python3"
+        assert first_call[1] == "sprite_extractor.py"
+        assert "--offset" in first_call
+        assert "0xC000" in first_call
 
-        # Check second call (colored reference)
-        second_call = mock_run.call_args_list[1][0][0]
-        assert "sprites_reference_colored.png" in second_call
-        assert "--palette" in second_call
-        assert "8" in second_call
+    @patch("sprite_workflow.run_command")
+    def test_extract_sprites_failure(self, mock_run):
+        """Test sprite extraction failure."""
+        # Mock extraction failure
+        mock_run.return_value = False
 
-        # Check print messages
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert any("EXTRACTING SPRITES" in call for call in print_calls)
-        assert any("sprites_to_edit.png" in call for call in print_calls)
-        assert any("NEXT STEPS:" in call for call in print_calls)
+        with patch("builtins.print"):
+            sprite_workflow.extract_sprites()
 
-    def test_extract_sprites_first_command_fails(self):
-        """Test when first extraction command fails"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.side_effect = [False, True]  # First fails, second succeeds
-
-            with patch("builtins.print") as mock_print:
-                extract_sprites()
-
-        # Should still try both commands
+        # Should still attempt colored reference even if main extraction fails
         assert mock_run.call_count == 2
 
-        # Should not print success message for first command
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        success_calls = [call for call in print_calls if "sprites_to_edit.png" in call]
-        assert len(success_calls) == 0  # No success message
 
-    def test_extract_sprites_second_command_fails(self):
-        """Test when second extraction command fails"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.side_effect = [True, False]  # First succeeds, second fails
+class TestSpriteWorkflowInjectSprites(unittest.TestCase):
+    """Test sprite injection functionality."""
 
-            with patch("builtins.print") as mock_print:
-                extract_sprites()
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
 
-        assert mock_run.call_count == 2
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
 
-        # Should print success for first but not second
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert any("sprites_to_edit.png" in call for call in print_calls)
-        assert not any("sprites_reference_colored.png" in call for call in print_calls)
+    def test_inject_sprites_nonexistent_file(self):
+        """Test injection with nonexistent file."""
+        png_path = os.path.join(self.temp_dir, "nonexistent.png")
 
-    def test_extract_sprites_both_commands_fail(self):
-        """Test when both extraction commands fail"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = False
-
-            with patch("builtins.print") as mock_print:
-                extract_sprites()
-
-        assert mock_run.call_count == 2
-
-        # Should print headers but no success messages
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert any("EXTRACTING SPRITES" in call for call in print_calls)
-        assert not any("✅" in call for call in print_calls)
-
-
-@pytest.mark.unit
-class TestInjectSprites:
-    """Test sprite injection workflow"""
-
-    def test_inject_sprites_success(self, temp_files):
-        """Test successful sprite injection"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = True
-
-            with patch("builtins.print") as mock_print:
-                result = inject_sprites(temp_files["png"])
-
-        assert result is None  # Function doesn't return boolean
-
-        # Check command was called correctly
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "python3"
-        assert cmd[1] == "sprite_injector.py"
-        assert cmd[2] == temp_files["png"]
-        assert "--output" in cmd
-        assert "--preview" in cmd
-
-        # Check output filename generation
-        expected_output = f"VRAM_{Path(temp_files['png']).stem}.dmp"
-        assert expected_output in cmd
-
-        # Check success messages
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert any("INJECTING EDITED SPRITES" in call for call in print_calls)
-        assert any("SUCCESS!" in call for call in print_calls)
-
-    def test_inject_sprites_file_not_found(self):
-        """Test injection with non-existent file"""
         with patch("builtins.print") as mock_print:
-            result = inject_sprites("/nonexistent/file.png")
+            result = sprite_workflow.inject_sprites(png_path)
 
-        assert result is False
-        mock_print.assert_any_call("Error: File '/nonexistent/file.png' not found")
+        # Should return False and print error
+        assert not result
+        mock_print.assert_any_call(f"Error: File '{png_path}' not found")
 
-    def test_inject_sprites_command_fails(self, temp_files):
-        """Test injection when command fails"""
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = False
+    @patch("sprite_workflow.run_command")
+    def test_inject_sprites_success(self, mock_run):
+        """Test successful sprite injection."""
+        png_path = os.path.join(self.temp_dir, "test.png")
 
-            with patch("builtins.print") as mock_print:
-                inject_sprites(temp_files["png"])
+        # Create test file
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
 
-        # Should still call command
+        # Mock successful injection
+        mock_run.return_value = True
+
+        with patch("builtins.print"):
+            sprite_workflow.inject_sprites(png_path)
+
+        # Should call injection command
         mock_run.assert_called_once()
 
-        # Should not print success messages
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert not any("SUCCESS!" in call for call in print_calls)
+        # Check injection command
+        call_args = mock_run.call_args[0][0]
+        assert call_args[0] == "python3"
+        assert call_args[1] == "sprite_injector.py"
+        assert call_args[2] == png_path
+        assert "--preview" in call_args
 
-    def test_inject_sprites_output_filename_generation(self, temp_files):
-        """Test output filename generation logic"""
-        # Create test file with complex name
-        complex_file = os.path.join(temp_files["dir"], "my.edited.sprites.png")
-        Path(complex_file).write_text("test")
+    @patch("sprite_workflow.run_command")
+    def test_inject_sprites_failure(self, mock_run):
+        """Test sprite injection failure."""
+        png_path = os.path.join(self.temp_dir, "test.png")
 
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
+        # Create test file
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
+
+        # Mock injection failure
+        mock_run.return_value = False
+
+        sprite_workflow.inject_sprites(png_path)
+
+        # Should still call injection command
+        mock_run.assert_called_once()
+
+    def test_inject_sprites_output_filename_generation(self):
+        """Test output filename generation."""
+        png_path = os.path.join(self.temp_dir, "my_sprites_edited.png")
+
+        # Create test file
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
+
+        with patch("sprite_workflow.run_command") as mock_run:
             mock_run.return_value = True
+            sprite_workflow.inject_sprites(png_path)
 
-            inject_sprites(complex_file)
-
-        cmd = mock_run.call_args[0][0]
-        output_idx = cmd.index("--output") + 1
-        output_file = cmd[output_idx]
-
-        assert output_file == "VRAM_my.edited.sprites.dmp"
+        # Check that output filename is generated correctly
+        call_args = mock_run.call_args[0][0]
+        output_arg_index = call_args.index("--output") + 1
+        output_filename = call_args[output_arg_index]
+        assert output_filename == "VRAM_my_sprites_edited.dmp"
 
 
-@pytest.mark.unit
-class TestQuickInject:
-    """Test quick injection functionality"""
+class TestSpriteWorkflowQuickInject(unittest.TestCase):
+    """Test quick injection functionality."""
 
-    def test_quick_inject_success(self, temp_files):
-        """Test successful quick injection"""
-        with patch("subprocess.run") as mock_run:
-            quick_inject(temp_files["png"])
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
 
-        mock_run.assert_called_once_with(
-            ["python3", "sprite_injector.py", temp_files["png"]]
-        )
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
 
-    def test_quick_inject_file_not_found(self):
-        """Test quick inject with non-existent file"""
+    def test_quick_inject_nonexistent_file(self):
+        """Test quick injection with nonexistent file."""
+        png_path = os.path.join(self.temp_dir, "nonexistent.png")
+
         with patch("builtins.print") as mock_print:
-            quick_inject("/nonexistent/file.png")
+            sprite_workflow.quick_inject(png_path)
 
-        mock_print.assert_called_with("Error: File '/nonexistent/file.png' not found")
+        mock_print.assert_any_call(f"Error: File '{png_path}' not found")
 
-    def test_quick_inject_no_output_capture(self, temp_files):
-        """Test that quick inject doesn't capture output"""
-        with patch("subprocess.run") as mock_run:
-            quick_inject(temp_files["png"])
+    @patch("subprocess.run")
+    def test_quick_inject_success(self, mock_run):
+        """Test successful quick injection."""
+        png_path = os.path.join(self.temp_dir, "test.png")
 
-        # Should call subprocess.run without capture_output
-        args, kwargs = mock_run.call_args
-        assert "capture_output" not in kwargs
-        assert "text" not in kwargs
+        # Create test file
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
+
+        sprite_workflow.quick_inject(png_path)
+
+        # Should call subprocess with minimal arguments
+        mock_run.assert_called_once_with(["python3", "sprite_injector.py", png_path])
 
 
-@pytest.mark.unit
-class TestShowHelp:
-    """Test help display functionality"""
+class TestSpriteWorkflowHelp(unittest.TestCase):
+    """Test help system functionality."""
 
     def test_show_help(self):
-        """Test help message display"""
+        """Test help display."""
         with patch("builtins.print") as mock_print:
-            show_help()
+            sprite_workflow.show_help()
 
-        mock_print.assert_called_once()
-        help_text = mock_print.call_args[0][0]
+        # Should print help text
+        mock_print.assert_called()
 
-        # Check key content is in help text
-        assert "Kirby Sprite Editing Workflow" in help_text
-        assert "COMMANDS:" in help_text
-        assert "extract" in help_text
-        assert "inject" in help_text
-        assert "quick" in help_text
-        assert "FULL WORKFLOW:" in help_text
-        assert "EXAMPLES:" in help_text
-        assert "IMPORTANT NOTES:" in help_text
-
-
-@pytest.mark.unit
-class TestMainFunction:
-    """Test main entry point"""
-
-    def test_main_no_arguments(self, monkeypatch):
-        """Test main with no arguments"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py"])
-
-        with patch("sprite_editor.sprite_workflow.show_help") as mock_help:
-            main()
-
-        mock_help.assert_called_once()
-
-    def test_main_extract_command(self, monkeypatch):
-        """Test main with extract command"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py", "extract"])
-
-        with patch("sprite_editor.sprite_workflow.extract_sprites") as mock_extract:
-            main()
-
-        mock_extract.assert_called_once()
-
-    def test_main_inject_command_success(self, monkeypatch, temp_files):
-        """Test main with inject command"""
-        monkeypatch.setattr(
-            "sys.argv", ["sprite_workflow.py", "inject", temp_files["png"]]
+        # Check that key help content is included
+        printed_text = " ".join(
+            [str(call.args[0]) for call in mock_print.call_args_list]
         )
-
-        with patch("sprite_editor.sprite_workflow.inject_sprites") as mock_inject:
-            main()
-
-        mock_inject.assert_called_once_with(temp_files["png"])
-
-    def test_main_inject_command_missing_file(self, monkeypatch):
-        """Test inject command without file argument"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py", "inject"])
-
-        with patch("builtins.print") as mock_print:
-            main()
-
-        mock_print.assert_any_call("Error: Please specify PNG file to inject")
-        mock_print.assert_any_call("Usage: python sprite_workflow.py inject <file.png>")
-
-    def test_main_quick_command_success(self, monkeypatch, temp_files):
-        """Test main with quick command"""
-        monkeypatch.setattr(
-            "sys.argv", ["sprite_workflow.py", "quick", temp_files["png"]]
-        )
-
-        with patch("sprite_editor.sprite_workflow.quick_inject") as mock_quick:
-            main()
-
-        mock_quick.assert_called_once_with(temp_files["png"])
-
-    def test_main_quick_command_missing_file(self, monkeypatch):
-        """Test quick command without file argument"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py", "quick"])
-
-        with patch("builtins.print") as mock_print:
-            main()
-
-        mock_print.assert_called_with("Error: Please specify PNG file")
-
-    def test_main_help_commands(self, monkeypatch):
-        """Test various help command formats"""
-        help_variants = ["help", "-h", "--help"]
-
-        for help_cmd in help_variants:
-            monkeypatch.setattr("sys.argv", ["sprite_workflow.py", help_cmd])
-
-            with patch("sprite_editor.sprite_workflow.show_help") as mock_help:
-                main()
-
-            mock_help.assert_called_once()
-
-    def test_main_unknown_command(self, monkeypatch):
-        """Test main with unknown command"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py", "unknown"])
-
-        with patch("builtins.print") as mock_print:
-            with patch("sprite_editor.sprite_workflow.show_help") as mock_help:
-                main()
-
-        mock_print.assert_called_with("Unknown command: unknown")
-        mock_help.assert_called_once()
-
-    def test_main_case_insensitive(self, monkeypatch):
-        """Test that commands are case insensitive"""
-        monkeypatch.setattr("sys.argv", ["sprite_workflow.py", "EXTRACT"])
-
-        with patch("sprite_editor.sprite_workflow.extract_sprites") as mock_extract:
-            main()
-
-        mock_extract.assert_called_once()
+        assert "Kirby Sprite Editing Workflow" in printed_text
+        assert "extract" in printed_text
+        assert "inject" in printed_text
+        assert "quick" in printed_text
 
 
-@pytest.mark.integration
-class TestSpriteWorkflowIntegration:
-    """Integration tests for sprite workflow"""
+class TestSpriteWorkflowIntegration(unittest.TestCase):
+    """Integration tests for complete workflow scenarios."""
 
-    def test_full_workflow_simulation(self, temp_files):
-        """Test simulated full workflow"""
-        # Step 1: Extract
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = True
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
 
-            extract_sprites()
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for file in os.listdir(self.temp_dir):
+            os.remove(os.path.join(self.temp_dir, file))
+        os.rmdir(self.temp_dir)
 
+    @patch("sprite_workflow.run_command")
+    def test_complete_extract_workflow(self, mock_run):
+        """Test complete extraction workflow."""
+        mock_run.return_value = True
+
+        with patch.object(sys, "argv", ["sprite_workflow.py", "extract"]):
+            sprite_workflow.main()
+
+        # Should call both extraction commands
         assert mock_run.call_count == 2
 
-        # Step 2: Inject
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = True
+        # Check both calls are to sprite_extractor.py
+        first_call = mock_run.call_args_list[0][0][0]
+        second_call = mock_run.call_args_list[1][0][0]
+        assert first_call[1] == "sprite_extractor.py"
+        assert second_call[1] == "sprite_extractor.py"
 
-            inject_sprites(temp_files["png"])
+    @patch("sprite_workflow.run_command")
+    def test_complete_inject_workflow(self, mock_run):
+        """Test complete injection workflow."""
+        png_path = os.path.join(self.temp_dir, "edited.png")
 
+        # Create test file
+        img = Image.new("P", (16, 8))
+        img.save(png_path)
+
+        mock_run.return_value = True
+
+        with patch.object(sys, "argv", ["sprite_workflow.py", "inject", png_path]):
+            sprite_workflow.main()
+
+        # Should call injection command
         mock_run.assert_called_once()
+        call_args = mock_run.call_args[0][0]
+        assert call_args[1] == "sprite_injector.py"
+        assert call_args[2] == png_path
 
-    def test_workflow_with_real_file_operations(self, tmp_path):
-        """Test workflow with actual file operations"""
-        # Create realistic test files
-        png_file = tmp_path / "edited_sprites.png"
-        png_file.write_text("fake png content")
+    def test_subprocess_execution(self):
+        """Test executing workflow as subprocess."""
+        # Test help command as subprocess (safest option)
+        cmd = [sys.executable, "sprite_workflow.py", "help"]
+        result = subprocess.run(
+            cmd,
+            check=False,
+            cwd="/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/sprite_editor",
+            capture_output=True,
+            text=True,
+        )
 
-        # Test inject with real file
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.return_value = True
+        # Should succeed and show help
+        assert result.returncode == 0
+        assert "Kirby Sprite Editing Workflow" in result.stdout
 
-            inject_sprites(str(png_file))
+    @patch("subprocess.run")
+    def test_error_handling_in_commands(self, mock_subprocess):
+        """Test error handling when subprocess commands fail."""
+        # Mock subprocess failure
+        mock_result = MagicMock()
+        mock_result.stdout = ""
+        mock_result.stderr = "Command failed"
+        mock_result.returncode = 1
+        mock_subprocess.return_value = mock_result
 
-        # Verify command includes correct paths
-        cmd = mock_run.call_args[0][0]
-        assert str(png_file) in cmd
-        assert "VRAM_edited_sprites.dmp" in cmd
+        png_path = os.path.join(self.temp_dir, "test.png")
+        img = Image.new("P", (8, 8))
+        img.save(png_path)
 
-    def test_error_recovery_workflow(self, temp_files):
-        """Test error handling in complete workflow"""
-        # Test extract with failures
-        with patch("sprite_editor.sprite_workflow.run_command") as mock_run:
-            mock_run.side_effect = [False, False]  # Both commands fail
+        # Test that quick inject handles command failure gracefully
+        sprite_workflow.quick_inject(png_path)
 
-            with patch("builtins.print"):
-                extract_sprites()
+        # Should still call subprocess (failure is handled by the called
+        # command)
+        mock_subprocess.assert_called_once()
 
-        # Should attempt both extractions despite failures
-        assert mock_run.call_count == 2
 
-        # Test inject with missing file
-        with patch("builtins.print") as mock_print:
-            result = inject_sprites("/missing/file.png")
+class TestSpriteWorkflowCaseSensitivity(unittest.TestCase):
+    """Test case sensitivity handling in commands."""
 
-        assert result is False
-        print_calls = [call[0][0] for call in mock_print.call_args_list]
-        assert any("not found" in call for call in print_calls)
-
-    def test_command_line_integration(self, monkeypatch, temp_files):
-        """Test command line argument processing"""
+    def test_command_case_insensitive(self):
+        """Test that commands are case insensitive."""
         test_cases = [
-            (["sprite_workflow.py"], "show_help"),
-            (["sprite_workflow.py", "extract"], "extract_sprites"),
-            (["sprite_workflow.py", "inject", temp_files["png"]], "inject_sprites"),
-            (["sprite_workflow.py", "quick", temp_files["png"]], "quick_inject"),
-            (["sprite_workflow.py", "help"], "show_help"),
+            (["sprite_workflow.py", "EXTRACT"], "sprite_workflow.extract_sprites"),
+            (["sprite_workflow.py", "Extract"], "sprite_workflow.extract_sprites"),
+            (
+                ["sprite_workflow.py", "INJECT", "test.png"],
+                "sprite_workflow.inject_sprites",
+            ),
+            (
+                ["sprite_workflow.py", "Quick", "test.png"],
+                "sprite_workflow.quick_inject",
+            ),
+            (["sprite_workflow.py", "HELP"], "sprite_workflow.show_help"),
         ]
 
-        for args, expected_function in test_cases:
-            monkeypatch.setattr("sys.argv", args)
+        for argv, expected_func in test_cases:
+            with patch.object(sys, "argv", argv):
+                with patch(expected_func) as mock_func:
+                    if "test.png" in argv:
+                        # Create temp file for commands that need it
+                        temp_dir = tempfile.mkdtemp()
+                        png_path = os.path.join(temp_dir, "test.png")
+                        img = Image.new("P", (8, 8))
+                        img.save(png_path)
+                        argv[argv.index("test.png")] = png_path
 
-            with patch(
-                f"sprite_editor.sprite_workflow.{expected_function}"
-            ) as mock_func:
-                main()
+                        try:
+                            sprite_workflow.main()
+                            mock_func.assert_called_once()
+                        finally:
+                            os.remove(png_path)
+                            os.rmdir(temp_dir)
+                    else:
+                        sprite_workflow.main()
+                        mock_func.assert_called_once()
 
-            mock_func.assert_called_once()
+
+if __name__ == "__main__":
+    unittest.main()

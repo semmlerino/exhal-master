@@ -31,37 +31,35 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+# Import undo/redo command system
+from pixel_editor_commands import (
+    BatchCommand,
+    DrawLineCommand,
+    DrawPixelCommand,
+    FloodFillCommand,
+    UndoManager,
+)
+
 # Import constants
 from pixel_editor_constants import (
-    GRID_VISIBLE_THRESHOLD,
-    COLOR_INVALID_INDEX,
     COLOR_GRID_LINES,
+    COLOR_INVALID_INDEX,
+    GRID_VISIBLE_THRESHOLD,
     PALETTE_COLORS_COUNT,
 )
 
 # Import common utilities
 from pixel_editor_utils import (
-    DEBUG_MODE,
-    debug_log,
+    DEFAULT_COLOR_PALETTE,
+    DEFAULT_GRAYSCALE_PALETTE,
+    create_indexed_palette,
     debug_color,
-    debug_exception,
-    validate_color_index,
-    validate_rgb_color,
-    should_use_white_text,
+    debug_log,
     extract_palette_from_pil_image,
     is_grayscale_palette,
-    create_indexed_palette,
-    DEFAULT_GRAYSCALE_PALETTE,
-    DEFAULT_COLOR_PALETTE,
-)
-
-# Import undo/redo command system
-from pixel_editor_commands import (
-    UndoManager,
-    DrawPixelCommand,
-    DrawLineCommand,
-    FloodFillCommand,
-    BatchCommand,
+    should_use_white_text,
+    validate_color_index,
+    validate_rgb_color,
 )
 
 
@@ -111,7 +109,7 @@ class ColorPaletteWidget(QWidget):
         # Use default palettes from utilities
         self.default_grayscale = DEFAULT_GRAYSCALE_PALETTE.copy()
         self.default_colors = DEFAULT_COLOR_PALETTE.copy()
-        
+
         # Start with grayscale palette by default
         self.colors = self.default_grayscale.copy()
         self.selected_index = 1
@@ -121,7 +119,7 @@ class ColorPaletteWidget(QWidget):
         # External palette tracking
         self.is_external_palette = False
         self.palette_source = "Default Grayscale Palette"
-        
+
         # Connected canvas for automatic updates
         self._connected_canvas = None
 
@@ -160,7 +158,7 @@ class ColorPaletteWidget(QWidget):
             # Check if colors are valid
             if all(c == (0, 0, 0) for c in self.colors):
                 debug_log("PALETTE", "All colors are black!", "WARNING")
-            
+
             # Signal that colors have changed
             self.colors_changed()
 
@@ -173,7 +171,7 @@ class ColorPaletteWidget(QWidget):
         self._update_tooltip()
         self.update()
         debug_log("PALETTE", "Reset to default grayscale palette")
-        
+
         # Signal that colors have changed
         self.colors_changed()
 
@@ -198,14 +196,14 @@ class ColorPaletteWidget(QWidget):
                 f"New palette colors: {[debug_color(i, c) for i, c in enumerate(self.colors[:4])]}",
                 "DEBUG",
             )
-    
+
     def colors_changed(self):
         """Signal that colors have changed - used by canvas for cache invalidation"""
         # Notify connected canvas to update its color cache
-        if hasattr(self, '_connected_canvas') and self._connected_canvas:
+        if hasattr(self, "_connected_canvas") and self._connected_canvas:
             self._connected_canvas._palette_version += 1
             self._connected_canvas.update()
-    
+
     def connect_canvas(self, canvas):
         """Connect a canvas widget to receive palette updates"""
         self._connected_canvas = canvas
@@ -322,7 +320,6 @@ class PixelCanvas(QWidget):
         self.zoom = 4  # Default zoom level - better for sprite sheets
         self.grid_visible = True
         self.greyscale_mode = False  # Show indices as greyscale
-        self.show_color_preview = True  # Show color preview
         self.current_color = 1
         self.tool = "pencil"
         self.drawing = False
@@ -336,7 +333,7 @@ class PixelCanvas(QWidget):
             0.0, 0.0
         )  # Current pan offset for rendering (use float for smooth)
         self.editor_parent = None  # Reference to parent editor for zoom control
-        
+
         # QColor caching for performance
         self._qcolor_cache = {}  # Dict[int, QColor] - maps color index to QColor
         self._palette_version = 0  # Incremented when palette changes
@@ -368,7 +365,7 @@ class PixelCanvas(QWidget):
         # Undo/redo system - using delta-based command pattern
         self.undo_manager = UndoManager(max_commands=100, compression_age=20)
         self.current_batch = None  # For grouping continuous drawing operations
-        
+
         # Connect to palette widget for automatic updates
         if self.palette_widget:
             self.palette_widget.connect_canvas(self)
@@ -379,7 +376,7 @@ class PixelCanvas(QWidget):
 
         # Hover support
         self.hover_pos = None
-        
+
         # Dirty rectangle tracking
         self._dirty_rect = None  # QRect of area needing redraw
         self._accumulate_dirty = False  # Whether to accumulate dirty rects
@@ -508,19 +505,19 @@ class PixelCanvas(QWidget):
     def get_undo_count(self) -> int:
         """Get number of available undo operations"""
         stats = self.undo_manager.get_memory_usage()
-        return stats['current_index'] + 1 if stats['can_undo'] else 0
+        return stats["current_index"] + 1 if stats["can_undo"] else 0
 
     def get_redo_count(self) -> int:
         """Get number of available redo operations"""
         stats = self.undo_manager.get_memory_usage()
-        if stats['can_redo']:
-            return stats['command_count'] - stats['current_index'] - 1
+        if stats["can_redo"]:
+            return stats["command_count"] - stats["current_index"] - 1
         return 0
 
     def _update_qcolor_cache(self):
         """Update cached QColor objects when palette changes"""
         self._qcolor_cache.clear()
-        
+
         # Get current color palette
         if self.greyscale_mode:
             # Greyscale mode: show indices as shades of grey
@@ -537,33 +534,37 @@ class PixelCanvas(QWidget):
         else:
             # Default grayscale palette
             colors = [(i * 17, i * 17, i * 17) for i in range(PALETTE_COLORS_COUNT)]
-        
+
         # Pre-create QColor objects for all 16 colors
         for i in range(min(len(colors), PALETTE_COLORS_COUNT)):
             self._qcolor_cache[i] = QColor(*colors[i])
-        
+
         # Add magenta for invalid indices
         self._qcolor_cache[-1] = QColor(*COLOR_INVALID_INDEX)
-        
+
         self._cached_palette_version = self._palette_version
-        debug_log("CANVAS", f"Updated QColor cache with {len(self._qcolor_cache)-1} colors", "DEBUG")
+        debug_log(
+            "CANVAS",
+            f"Updated QColor cache with {len(self._qcolor_cache)-1} colors",
+            "DEBUG",
+        )
 
     def _get_visible_pixel_range(self):
         """Calculate which pixels are visible in the current viewport"""
         if self.image_data is None:
             return None
-        
+
         # Get the parent widget (should be the scroll area's viewport)
         parent = self.parent()
         if not parent:
             return None
-            
+
         # Get viewport rect in our coordinate system
         viewport_rect = self.rect()
-        
+
         # If we're in a scroll area, get the actual visible rect
         scroll_area = parent.parent() if parent else None
-        if scroll_area and hasattr(scroll_area, 'viewport'):
+        if scroll_area and hasattr(scroll_area, "viewport"):
             viewport = scroll_area.viewport()
             if viewport:
                 # Get the visible area in scroll area coordinates
@@ -572,16 +573,20 @@ class PixelCanvas(QWidget):
                 top_left = self.mapFromParent(visible_rect.topLeft())
                 bottom_right = self.mapFromParent(visible_rect.bottomRight())
                 viewport_rect = QRect(top_left, bottom_right)
-        
+
         # Account for pan offset
-        adjusted_rect = viewport_rect.translated(-int(self.pan_offset.x()), -int(self.pan_offset.y()))
-        
+        adjusted_rect = viewport_rect.translated(
+            -int(self.pan_offset.x()), -int(self.pan_offset.y())
+        )
+
         # Calculate pixel boundaries
         left = max(0, adjusted_rect.left() // self.zoom)
         top = max(0, adjusted_rect.top() // self.zoom)
         right = min(self.image_data.shape[1], (adjusted_rect.right() // self.zoom) + 2)
-        bottom = min(self.image_data.shape[0], (adjusted_rect.bottom() // self.zoom) + 2)
-        
+        bottom = min(
+            self.image_data.shape[0], (adjusted_rect.bottom() // self.zoom) + 2
+        )
+
         return (left, top, right, bottom)
 
     def paintEvent(self, event):
@@ -594,7 +599,7 @@ class PixelCanvas(QWidget):
         painter.translate(self.pan_offset)
 
         height, width = self.image_data.shape
-        
+
         # Update color cache if palette changed
         if self._cached_palette_version != self._palette_version:
             self._update_qcolor_cache()
@@ -604,21 +609,24 @@ class PixelCanvas(QWidget):
         if not visible_range:
             # Fallback to full image if we can't determine visibility
             visible_range = (0, 0, width, height)
-        
+
         left, top, right, bottom = visible_range
         debug_log(
-            "CANVAS", 
+            "CANVAS",
             f"Viewport culling: drawing pixels ({left},{top}) to ({right},{bottom}) out of {width}x{height}",
-            "DEBUG"
+            "DEBUG",
         )
 
         # Draw pixels with viewport culling
         for y in range(top, bottom):
             for x in range(left, right):
                 pixel_index = self.image_data[y, x]
-                
+
                 # Use cached QColor - much faster than creating new ones
-                if pixel_index < PALETTE_COLORS_COUNT and pixel_index in self._qcolor_cache:
+                if (
+                    pixel_index < PALETTE_COLORS_COUNT
+                    and pixel_index in self._qcolor_cache
+                ):
                     color = self._qcolor_cache[pixel_index]
                 else:
                     color = self._qcolor_cache.get(-1, QColor(*COLOR_INVALID_INDEX))
@@ -640,27 +648,27 @@ class PixelCanvas(QWidget):
                 self.zoom,
                 self.zoom,
             )
-        
+
         # Clear dirty rect after painting
         self._dirty_rect = None
-    
+
     def _draw_grid_optimized(self, painter, left, top, right, bottom):
         """Draw grid lines only for visible area using QPainterPath for efficiency"""
         painter.setPen(QPen(QColor(*COLOR_GRID_LINES), 1))
-        
+
         # Create a path for all grid lines
         grid_path = QPainterPath()
-        
+
         # Vertical lines
         for x in range(left, right + 1):
             grid_path.moveTo(x * self.zoom, top * self.zoom)
             grid_path.lineTo(x * self.zoom, bottom * self.zoom)
-        
-        # Horizontal lines  
+
+        # Horizontal lines
         for y in range(top, bottom + 1):
             grid_path.moveTo(left * self.zoom, y * self.zoom)
             grid_path.lineTo(right * self.zoom, y * self.zoom)
-        
+
         # Draw all grid lines in one operation
         painter.drawPath(grid_path)
 
@@ -720,7 +728,7 @@ class PixelCanvas(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.drawing = False
             self.last_point = None
-            
+
             # Finalize batch command if we were doing continuous drawing
             if self.current_batch and len(self.current_batch.commands) > 0:
                 self.undo_manager.execute_command(self.current_batch, self)
@@ -824,20 +832,20 @@ class PixelCanvas(QWidget):
         """Mark a region as needing redraw"""
         # Convert pixel coordinates to canvas coordinates
         canvas_x = int(x * self.zoom)
-        canvas_y = int(y * self.zoom) 
+        canvas_y = int(y * self.zoom)
         canvas_w = int(w * self.zoom)
         canvas_h = int(h * self.zoom)
-        
+
         dirty = QRect(canvas_x, canvas_y, canvas_w, canvas_h)
-        
+
         if self._dirty_rect is None:
             self._dirty_rect = dirty
         else:
             self._dirty_rect = self._dirty_rect.united(dirty)
-        
+
         # Schedule update for dirty region only
         self.update(self._dirty_rect)
-    
+
     def draw_pixel(self, x: int, y: int):
         """Draw a single pixel"""
         if self.image_data is None:
@@ -849,14 +857,14 @@ class PixelCanvas(QWidget):
             # Validate and clamp color to 4bpp range (0-15)
             color = validate_color_index(self.current_color)
             old_value = self.image_data[y, x]
-            
+
             # Don't draw if color is already the same
             if old_value == color:
                 return
-            
+
             # Create command for this pixel change
             command = DrawPixelCommand(x=x, y=y, old_color=old_value, new_color=color)
-            
+
             # If we're in a batch (continuous drawing), add to batch
             if self.current_batch is not None:
                 self.current_batch.add_command(command)
@@ -899,7 +907,7 @@ class PixelCanvas(QWidget):
         """Draw a line between two points using Bresenham's algorithm"""
         if self.image_data is None:
             return
-            
+
         # Collect all pixels in the line first
         pixels = []
         dx = abs(x1 - x0)
@@ -907,7 +915,7 @@ class PixelCanvas(QWidget):
         sx = 1 if x0 < x1 else -1
         sy = 1 if y0 < y1 else -1
         err = dx - dy
-        
+
         x, y = x0, y0
         while True:
             # Only add valid pixels
@@ -926,11 +934,11 @@ class PixelCanvas(QWidget):
             if e2 < dx:
                 err += dx
                 y += sy
-        
+
         # Create line command
         color = validate_color_index(self.current_color)
         command = DrawLineCommand(pixels=pixels, new_color=color)
-        
+
         # If we're in a batch (continuous drawing), add to batch
         if self.current_batch is not None:
             self.current_batch.add_command(command)
@@ -939,7 +947,7 @@ class PixelCanvas(QWidget):
         else:
             # Single line operation - execute through undo manager
             self.undo_manager.execute_command(command, self)
-        
+
         # Mark affected area as dirty
         if pixels:
             min_x = min(p[0] for p in pixels)
@@ -947,7 +955,7 @@ class PixelCanvas(QWidget):
             min_y = min(p[1] for p in pixels)
             max_y = max(p[1] for p in pixels)
             self.mark_dirty(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
-        
+
         self.pixelChanged.emit()
 
     def flood_fill(self, x: int, y: int):
@@ -972,45 +980,47 @@ class PixelCanvas(QWidget):
         visited = set()
         min_x, max_x = x, x
         min_y, max_y = y, y
-        
+
         # Find bounds of affected area
         while stack:
             cx, cy = stack.pop()
-            
+
             if (cx, cy) in visited:
                 continue
             if not (0 <= cx < width and 0 <= cy < height):
                 continue
             if self.image_data[cy, cx] != target_color:
                 continue
-                
+
             visited.add((cx, cy))
             min_x = min(min_x, cx)
             max_x = max(max_x, cx)
             min_y = min(min_y, cy)
             max_y = max(max_y, cy)
-            
+
             # Add neighboring pixels
             stack.extend([(cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)])
-        
+
         # Create affected region data
         region_width = max_x - min_x + 1
         region_height = max_y - min_y + 1
-        old_data = np.full((region_height, region_width), 255, dtype=np.uint8)  # 255 = not affected
-        
+        old_data = np.full(
+            (region_height, region_width), 255, dtype=np.uint8
+        )  # 255 = not affected
+
         # Copy old data for affected pixels
         for py in range(min_y, max_y + 1):
             for px in range(min_x, max_x + 1):
                 if (px, py) in visited:
                     old_data[py - min_y, px - min_x] = self.image_data[py, px]
-        
+
         # Create flood fill command
         command = FloodFillCommand(
             affected_region=(min_x, min_y, region_width, region_height),
             old_data=old_data,
-            new_color=replacement_color
+            new_color=replacement_color,
         )
-        
+
         # Execute through undo manager
         self.undo_manager.execute_command(command, self)
 
@@ -1042,7 +1052,7 @@ class PixelCanvas(QWidget):
                 self.palette_widget.update()
                 self.palette_widget.colorSelected.emit(picked_color)
                 # Update palette version when external palette changes
-                if hasattr(self.palette_widget, 'colors_changed'):
+                if hasattr(self.palette_widget, "colors_changed"):
                     self._palette_version += 1
 
             # Get color info for logging
@@ -1052,7 +1062,7 @@ class PixelCanvas(QWidget):
                 color_info = debug_color(picked_color, rgb)
 
             debug_log("CANVAS", f"Picked {color_info} from pixel ({x},{y})")
-    
+
     def set_greyscale_mode(self, enabled: bool):
         """Toggle greyscale mode"""
         if self.greyscale_mode != enabled:
@@ -1060,7 +1070,7 @@ class PixelCanvas(QWidget):
             self._palette_version += 1  # Force color cache update
             self.update()
             debug_log("CANVAS", f"Greyscale mode changed to: {enabled}")
-    
+
     def get_undo_memory_stats(self) -> dict:
         """Get memory usage statistics for the undo system"""
         return self.undo_manager.get_memory_usage()
@@ -1068,10 +1078,10 @@ class PixelCanvas(QWidget):
 
 class ProgressDialog(QDialog):
     """Progress dialog for long-running operations with cancel support"""
-    
+
     def __init__(self, title: str, message: str, parent=None):
         """Initialize the progress dialog.
-        
+
         Args:
             title: Dialog window title
             message: Progress message to display
@@ -1079,58 +1089,57 @@ class ProgressDialog(QDialog):
         """
         super().__init__(parent)
         self.cancelled = False
-        
+
         # Dialog settings
         self.setWindowTitle(title)
         self.setModal(True)
         self.setFixedSize(400, 150)
-        
+
         # Remove close button (user must cancel explicitly)
         self.setWindowFlags(
-            self.windowFlags() 
-            & ~Qt.WindowType.WindowCloseButtonHint
+            self.windowFlags() & ~Qt.WindowType.WindowCloseButtonHint
             | Qt.WindowType.WindowStaysOnTopHint
         )
-        
+
         # Layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
-        
+
         # Message label
         self.message_label = QLabel(message)
         self.message_label.setWordWrap(True)
         layout.addWidget(self.message_label)
-        
+
         # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
         layout.addWidget(self.progress_bar)
-        
+
         # Status label
         self.status_label = QLabel("")
         self.status_label.setStyleSheet("QLabel { color: #666; }")
         layout.addWidget(self.status_label)
-        
+
         # Cancel button
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.on_cancel)
         layout.addWidget(self.cancel_button)
-        
+
         layout.addStretch()
-        
+
     def on_cancel(self):
         """Handle cancel button click"""
         self.cancelled = True
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText("Cancelling...")
         self.status_label.setText("Cancelling operation...")
-        
+
     def update_progress(self, value: int, message: str = ""):
         """Update progress bar value and optionally update message.
-        
+
         Args:
             value: Progress percentage (0-100)
             message: Optional message to display (updates main message label)
@@ -1138,31 +1147,64 @@ class ProgressDialog(QDialog):
         self.progress_bar.setValue(value)
         if message:
             self.message_label.setText(message)
-        
+
     def update_message(self, message: str):
         """Update the main message.
-        
+
         Args:
             message: New message to display
         """
         self.message_label.setText(message)
-        
+
     def update_status(self, status: str):
         """Update the status message.
-        
+
         Args:
             status: Status text to display
         """
         self.status_label.setText(status)
-        
+
     def is_cancelled(self) -> bool:
         """Check if operation was cancelled.
-        
+
         Returns:
             True if user clicked cancel
         """
         return self.cancelled
-        
+
     def finish(self):
         """Mark operation as finished and close dialog"""
         self.accept()
+
+    def set_value(self, value: int) -> None:
+        """Set progress value without changing message.
+
+        Args:
+            value: Progress percentage (0-100)
+        """
+        self.progress_bar.setValue(value)
+
+    def set_indeterminate(self, show: bool = True) -> None:
+        """Set progress bar to indeterminate mode.
+
+        Args:
+            show: If True, show indeterminate progress (animated bar).
+                  If False, return to normal progress mode.
+        """
+        if show:
+            self.progress_bar.setRange(0, 0)
+        else:
+            self.progress_bar.setRange(0, 100)
+
+    def reset(self) -> None:
+        """Reset dialog to initial state.
+
+        Resets progress to 0, clears cancelled flag, re-enables cancel button,
+        and clears the status label.
+        """
+        self.progress_bar.setValue(0)
+        self.progress_bar.setRange(0, 100)  # Ensure we're not in indeterminate mode
+        self.cancelled = False
+        self.cancel_button.setEnabled(True)
+        self.cancel_button.setText("Cancel")
+        self.status_label.setText("")

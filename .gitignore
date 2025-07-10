@@ -3,3 +3,6 @@ SuperFamiconv/
 __pycache__/
 *.pyc
 htmlcov/
+
+# Archived obsolete files
+archive/

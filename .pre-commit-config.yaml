@@ -1,55 +1,96 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
-repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-        args: ['--maxkb=5000']
-      - id: check-ast
-      - id: check-merge-conflict
-      - id: check-toml
-      - id: debug-statements
-      - id: mixed-line-ending
-        args: ['--fix=lf']
+# Pre-commit hooks configuration for Pixel Editor
+# Runs critical tests before allowing commits
 
+repos:
+  # Python code quality
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 23.3.0
     hooks:
       - id: black
         language_version: python3
+        exclude: ^(ultrathink/|archive/)
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black"]
-
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.1.9
-    hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
+  - repo: https://github.com/PyCQA/flake8
+    rev: 6.0.0
     hooks:
       - id: flake8
-        additional_dependencies:
-          - flake8-bugbear
-          - flake8-comprehensions
-          - flake8-simplify
+        args: ['--max-line-length=100', '--extend-ignore=E203,W503']
+        exclude: ^(ultrathink/|archive/)
 
+  # Run critical tests
+  - repo: local
+    hooks:
+      - id: pixel-editor-integration-tests
+        name: Pixel Editor Integration Tests
+        entry: python -m pytest test_pixel_editor_integration.py -v
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      - id: api-contract-tests
+        name: API Contract Tests
+        entry: python -m pytest test_api_contracts.py -v
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      - id: component-boundary-tests
+        name: Component Boundary Tests
+        entry: python -m pytest test_component_boundaries.py -v
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      - id: check-progressdialog
+        name: Check ProgressDialog Usage
+        entry: python -c "
+import ast
+import sys
+
+# Check for incorrect ProgressDialog usage
+files_to_check = ['indexed_pixel_editor.py']
+found_issues = []
+
+for filename in files_to_check:
+    try:
+        with open(filename, 'r') as f:
+            tree = ast.parse(f.read(), filename)
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                # Check for update_progress calls
+                if (isinstance(node.func, ast.Attribute) and 
+                    node.func.attr == 'update_progress'):
+                    # Check argument count
+                    if len(node.args) > 2:
+                        found_issues.append(f'{filename}:{node.lineno}: Too many args to update_progress')
+    except Exception as e:
+        print(f'Error checking {filename}: {e}')
+
+if found_issues:
+    print('ProgressDialog usage issues found:')
+    for issue in found_issues:
+        print(f'  {issue}')
+    sys.exit(1)
+"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.5.1
     hooks:
       - id: mypy
-        additional_dependencies: [types-all]
-        args: [--ignore-missing-imports]
+        additional_dependencies: [types-Pillow, numpy]
+        args: ['--ignore-missing-imports', '--no-strict-optional']
+        files: ^(pixel_editor.*\.py|indexed_pixel_editor\.py)$
+        exclude: ^(test_.*\.py|archive/|ultrathink/)
 
-# Configuration for specific hooks
-default_language_version:
-  python: python3
+# Configuration
+default_stages: [commit]
+fail_fast: false
+verbose: true

@@ -46,26 +46,28 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+# Import common utilities
+from pixel_editor_utils import (
+    count_non_black_colors,
+    create_indexed_palette,
+    debug_color,
+    debug_exception,
+    debug_log,
+    validate_metadata_palette,
+    validate_palette_file,
+)
+
 # Local imports
 # Import our custom widgets
-from pixel_editor_widgets import ColorPaletteWidget, PixelCanvas, ZoomableScrollArea, ProgressDialog
+from pixel_editor_widgets import (
+    ColorPaletteWidget,
+    PixelCanvas,
+    ProgressDialog,
+    ZoomableScrollArea,
+)
 
 # Import worker threads
 from pixel_editor_workers import FileLoadWorker, FileSaveWorker, PaletteLoadWorker
-
-# Import common utilities
-from pixel_editor_utils import (
-    DEBUG_MODE,
-    debug_log,
-    debug_color,
-    debug_exception,
-    validate_palette_file,
-    validate_metadata_palette,
-    extract_palette_from_pil_image,
-    is_grayscale_palette,
-    create_indexed_palette,
-    count_non_black_colors,
-)
 
 
 class SettingsManager:
@@ -554,13 +556,12 @@ class IndexedPixelEditor(QMainWindow):
         self.grid_checkbox.setChecked(True)
         self.grid_checkbox.toggled.connect(self.toggle_grid)
 
-        self.greyscale_checkbox = QCheckBox("Greyscale Mode")
-        self.greyscale_checkbox.setChecked(False)
-        self.greyscale_checkbox.toggled.connect(self.toggle_greyscale_mode)
-
-        self.preview_checkbox = QCheckBox("Show Color Preview")
-        self.preview_checkbox.setChecked(True)
-        self.preview_checkbox.toggled.connect(self.toggle_color_preview)
+        self.apply_palette_checkbox = QCheckBox("Apply Palette")
+        self.apply_palette_checkbox.setChecked(True)  # Start with palette applied
+        self.apply_palette_checkbox.setToolTip(
+            "When checked, shows actual palette colors. When unchecked, shows palette indices (0-15) as grayscale values."
+        )
+        self.apply_palette_checkbox.toggled.connect(self.toggle_apply_palette)
 
         # Enhanced zoom controls
         zoom_group = QGroupBox("Zoom Controls")
@@ -597,8 +598,7 @@ class IndexedPixelEditor(QMainWindow):
         zoom_group.setLayout(zoom_group_layout)
 
         options_layout.addWidget(self.grid_checkbox)
-        options_layout.addWidget(self.greyscale_checkbox)
-        options_layout.addWidget(self.preview_checkbox)
+        options_layout.addWidget(self.apply_palette_checkbox)
         options_layout.addWidget(zoom_group)
         options_group.setLayout(options_layout)
 
@@ -661,6 +661,9 @@ class IndexedPixelEditor(QMainWindow):
             "EDITOR",
             f"Canvas created with initial color: {debug_color(self.canvas.current_color, rgb)}",
         )
+
+        # Initialize canvas mode to match checkbox state (Apply Palette = True means NOT grayscale)
+        self.canvas.set_greyscale_mode(False)  # Start with palette applied
         scroll_area.setWidget(self.canvas)
         scroll_area.setWidgetResizable(False)
         scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -872,66 +875,71 @@ class IndexedPixelEditor(QMainWindow):
         if not img:
             QMessageBox.warning(self, "Warning", "No image to save")
             return
-            
+
         # Extract image array and palette
         image_array = np.array(img, dtype=np.uint8)
         palette_data = img.getpalette()
-        
+
         if palette_data is None:
             QMessageBox.critical(self, "Error", "Image has no palette data")
             return
-            
+
         # Create progress dialog
-        progress_dialog = ProgressDialog("Saving Image", f"Saving {os.path.basename(file_path)}...", self)
+        progress_dialog = ProgressDialog(
+            "Saving Image", f"Saving {os.path.basename(file_path)}...", self
+        )
         progress_dialog.show()
-        
+
         # Create worker thread
         self.save_worker = FileSaveWorker(image_array, palette_data, file_path, self)
-        
+
         # Connect signals
         self.save_worker.progress.connect(progress_dialog.update_progress)
         self.save_worker.error.connect(self._handle_save_error)
         self.save_worker.saved.connect(self._handle_save_success)
         self.save_worker.finished.connect(progress_dialog.finish)
-        
+
         # Connect cancel
         def on_cancel():
             self.save_worker.cancel()
             progress_dialog.finish()
+
         progress_dialog.cancel_button.clicked.disconnect()  # Remove default handler
         progress_dialog.cancel_button.clicked.connect(on_cancel)
-        
+
         # Store dialog for use in handlers
         self._save_progress_dialog = progress_dialog
-        
+
         # Start the worker
         self.save_worker.start()
-        
+
     def _handle_save_error(self, error_message: str):
         """Handle errors from file saving"""
-        if hasattr(self, '_save_progress_dialog'):
+        if hasattr(self, "_save_progress_dialog"):
             self._save_progress_dialog.finish()
-            
+
         QMessageBox.critical(self, "Error", f"Failed to save file: {error_message}")
         debug_log("EDITOR", f"Save error: {error_message}", "ERROR")
-        
+
     def _handle_save_success(self, saved_path: str):
         """Handle successful file save"""
         try:
             self.current_file = saved_path
             self.modified = False
-            self.setWindowTitle(f"Indexed Pixel Editor - {os.path.basename(saved_path)}")
+            self.setWindowTitle(
+                f"Indexed Pixel Editor - {os.path.basename(saved_path)}"
+            )
             self.status_bar.showMessage(f"Saved to {saved_path}", 3000)
-            
+
             # Add to recent files
             self.settings.add_recent_file(saved_path)
             self.update_recent_files_menu()
-            
+
             debug_log("EDITOR", f"Successfully saved file: {saved_path}")
-            
+
         finally:
             # Clean up
-            if hasattr(self, '_save_progress_dialog'):
+            if hasattr(self, "_save_progress_dialog"):
                 self._save_progress_dialog.finish()
             self._save_progress_dialog = None
 
@@ -965,107 +973,134 @@ class IndexedPixelEditor(QMainWindow):
     def load_file_by_path(self, file_path: str):
         """Load a file by its path"""
         # Create progress dialog
-        progress_dialog = ProgressDialog("Loading Image", f"Loading {os.path.basename(file_path)}...", self)
+        progress_dialog = ProgressDialog(
+            "Loading Image", f"Loading {os.path.basename(file_path)}...", self
+        )
         progress_dialog.show()
-        
+
         # Create worker thread
         self.load_worker = FileLoadWorker(file_path, self)
-        
+
         # Connect signals
         self.load_worker.progress.connect(progress_dialog.update_progress)
         self.load_worker.error.connect(self._handle_load_error)
         self.load_worker.result.connect(self._handle_load_result)
         self.load_worker.finished.connect(progress_dialog.finish)
-        
+
         # Connect cancel
         progress_dialog.cancelled = False
+
         def on_cancel():
             progress_dialog.cancelled = True
             self.load_worker.cancel()
             progress_dialog.finish()
+
         progress_dialog.cancel_button.clicked.disconnect()  # Remove default handler
         progress_dialog.cancel_button.clicked.connect(on_cancel)
-        
+
         # Store file path and dialog for use in handlers
         self._loading_file_path = file_path
         self._load_progress_dialog = progress_dialog
-        
+
         # Start the worker
         self.load_worker.start()
-        
+
         # Return True to indicate load started (actual result comes via signals)
         return True
-        
+
     def _handle_load_error(self, error_message: str):
         """Handle errors from file loading"""
-        if hasattr(self, '_load_progress_dialog'):
+        if hasattr(self, "_load_progress_dialog") and self._load_progress_dialog:
             self._load_progress_dialog.finish()
-        
+
         QMessageBox.critical(self, "Error", f"Failed to load file: {error_message}")
         debug_log("EDITOR", f"Load error: {error_message}", "ERROR")
-        
+
     def _handle_load_result(self, image_array: np.ndarray, metadata: dict):
         """Handle successful file load"""
         try:
             # Create PIL image from array for compatibility with existing code
-            img = Image.fromarray(image_array, mode='P')
-            
+            img = Image.fromarray(image_array, mode="P")
+
             # Apply palette from metadata
-            if 'palette' in metadata:
-                img.putpalette(metadata['palette'])
-            
+            if "palette" in metadata:
+                img.putpalette(metadata["palette"])
+
             # Load into canvas
             self.canvas.load_image(img)
-            self.current_file = self._loading_file_path
-            self.modified = False
-            self.setWindowTitle(f"Indexed Pixel Editor - {os.path.basename(self._loading_file_path)}")
+
+            # Use the loading file path if available, otherwise try to extract from metadata
+            file_path = getattr(self, "_loading_file_path", None)
+            if not file_path and "filename" in metadata:
+                file_path = metadata["filename"]
+
+            if file_path:
+                self.current_file = file_path
+                self.modified = False
+                self.setWindowTitle(
+                    f"Indexed Pixel Editor - {os.path.basename(file_path)}"
+                )
+
+                # Add to recent files
+                self.settings.add_recent_file(file_path)
+                self.update_recent_files_menu()
+
+                debug_log("EDITOR", f"Successfully loaded file: {file_path}")
+
+                # Check for metadata file (for multi-palette support)
+                metadata_path = file_path.replace(".png", "_metadata.json")
+                if os.path.exists(metadata_path) and not metadata_path.endswith(
+                    "_metadata.json"
+                ):
+                    # Make sure we don't double-add _metadata.json
+                    metadata_path = os.path.splitext(file_path)[0] + "_metadata.json"
+            else:
+                self.current_file = None
+                self.modified = False
+                self.setWindowTitle("Indexed Pixel Editor - Untitled")
+                debug_log("EDITOR", "Loaded image without file path")
+                metadata_path = None
+
             self.update_preview()
-            
-            # Add to recent files
-            self.settings.add_recent_file(self._loading_file_path)
-            self.update_recent_files_menu()
-            
-            debug_log("EDITOR", f"Successfully loaded file: {self._loading_file_path}")
-            
-            # Check for metadata file (for multi-palette support)
-            metadata_path = self._loading_file_path.replace(".png", "_metadata.json")
-            if os.path.exists(metadata_path) and not metadata_path.endswith(
-                "_metadata.json"
-            ):
-                # Make sure we don't double-add _metadata.json
-                metadata_path = os.path.splitext(self._loading_file_path)[0] + "_metadata.json"
-            
-            if os.path.exists(metadata_path):
+
+            if metadata_path and os.path.exists(metadata_path):
                 try:
                     with open(metadata_path) as f:
                         self.metadata = json.load(f)
                     debug_log("EDITOR", f"Loaded metadata from {metadata_path}")
-                    
+
                     # Enable palette switching
                     if hasattr(self, "switch_palette_action"):
                         self.switch_palette_action.setEnabled(True)
-                    
+
                     # Update status
                     self.update_status_palette_info()
                 except Exception as e:
                     debug_log("EDITOR", f"Failed to load metadata: {e}", "WARNING")
                     self.metadata = None
-            
+
             # Check for paired palette file - do this AFTER image is loaded
             # This ensures the external palette overrides any palette from the image
-            self._check_and_offer_palette_loading(self._loading_file_path)
-            
-            # Update status bar
-            self.status_bar.showMessage(f"Loaded {os.path.basename(self._loading_file_path)}", 3000)
-            
+            if file_path:
+                self._check_and_offer_palette_loading(file_path)
+
+                # Update status bar
+                self.status_bar.showMessage(
+                    f"Loaded {os.path.basename(file_path)}", 3000
+                )
+            else:
+                self.status_bar.showMessage("Image loaded", 3000)
+
         except Exception as e:
             self._handle_load_error(str(e))
         finally:
             # Clean up
-            if hasattr(self, '_load_progress_dialog'):
+            if hasattr(self, "_load_progress_dialog") and self._load_progress_dialog:
                 self._load_progress_dialog.finish()
-            self._loading_file_path = None
-            self._load_progress_dialog = None
+            if hasattr(self, "_loading_file_path"):
+                self._loading_file_path = None
+            if hasattr(self, "_load_progress_dialog"):
+                self._load_progress_dialog = None
 
     def load_palette_file(self):
         """Load an external palette file (.pal.json)"""
@@ -1086,21 +1121,23 @@ class IndexedPixelEditor(QMainWindow):
     def load_palette_by_path(self, file_path: str) -> bool:
         """Load a palette file by its path"""
         # Create progress dialog
-        progress_dialog = ProgressDialog("Loading Palette", f"Loading {os.path.basename(file_path)}...", self)
+        progress_dialog = ProgressDialog(
+            "Loading Palette", f"Loading {os.path.basename(file_path)}...", self
+        )
         progress_dialog.show()
-        
+
         # For JSON files, we need to handle our custom format
-        if file_path.endswith('.json'):
+        if file_path.endswith(".json"):
             # Use synchronous loading for our custom JSON format
             # since PaletteLoadWorker expects a different format
             try:
                 progress_dialog.update_progress(30, "Reading palette file...")
-                
+
                 with open(file_path) as f:
                     palette_data = json.load(f)
-                
+
                 progress_dialog.update_progress(50, "Validating palette...")
-                
+
                 # Validate palette format
                 if not self._validate_palette_file(palette_data):
                     progress_dialog.finish()
@@ -1110,9 +1147,9 @@ class IndexedPixelEditor(QMainWindow):
                         f"File {os.path.basename(file_path)} is not a valid palette file",
                     )
                     return False
-                
+
                 progress_dialog.update_progress(70, "Extracting colors...")
-                
+
                 # Extract colors
                 colors = palette_data["palette"]["colors"]
                 if len(colors) < 16:
@@ -1123,34 +1160,38 @@ class IndexedPixelEditor(QMainWindow):
                         f"Palette has only {len(colors)} colors, need 16",
                     )
                     return False
-                
+
                 progress_dialog.update_progress(90, "Applying palette...")
-                
+
                 # Convert to tuples and store
                 self.external_palette = palette_data
-                self.external_palette_colors = [tuple(color[:3]) for color in colors[:16]]
+                self.external_palette_colors = [
+                    tuple(color[:3]) for color in colors[:16]
+                ]
                 self.current_palette_file = file_path
-                
+
                 debug_log(
                     "EDITOR",
-                    f"Loading palette colors: {self.external_palette_colors[:4]}"
+                    f"Loading palette colors: {self.external_palette_colors[:4]}",
                 )
-                
+
                 # Get palette name
                 palette_name = palette_data.get("palette", {}).get(
                     "name", "External Palette"
                 )
-                
+
                 # Apply to palette widget
-                self.palette_widget.set_palette(self.external_palette_colors, palette_name)
-                
+                self.palette_widget.set_palette(
+                    self.external_palette_colors, palette_name
+                )
+
                 # Force updates
                 self.canvas.update()
                 self.palette_widget.update()
-                
+
                 # Update preview to show new colors
                 self.update_preview()
-                
+
                 # Update title to show palette
                 current_title = self.windowTitle()
                 if " | " in current_title:
@@ -1158,10 +1199,10 @@ class IndexedPixelEditor(QMainWindow):
                 else:
                     base_title = current_title
                 self.setWindowTitle(f"{base_title} | {palette_name}")
-                
+
                 # Update preview with new palette
                 self.update_preview()
-                
+
                 debug_log(
                     "EDITOR",
                     f"Successfully loaded external palette: {os.path.basename(file_path)}",
@@ -1170,19 +1211,21 @@ class IndexedPixelEditor(QMainWindow):
                     "EDITOR",
                     f"Palette info: {palette_name}, {len(self.external_palette_colors)} colors",
                 )
-                
+
                 # Add to recent palette files
                 self.settings.add_recent_palette_file(file_path)
-                
+
                 # Associate with current image if one is loaded
                 if self.current_file:
-                    self.settings.associate_palette_with_image(self.current_file, file_path)
-                    
+                    self.settings.associate_palette_with_image(
+                        self.current_file, file_path
+                    )
+
                 progress_dialog.update_progress(100, "Complete!")
                 progress_dialog.finish()
-                
+
                 return True
-                
+
             except Exception as e:
                 progress_dialog.finish()
                 QMessageBox.critical(self, "Error", f"Failed to load palette: {e!s}")
@@ -1190,71 +1233,74 @@ class IndexedPixelEditor(QMainWindow):
         else:
             # For non-JSON files, use the worker thread
             self.palette_worker = PaletteLoadWorker(file_path, self)
-            
+
             # Connect signals
             self.palette_worker.progress.connect(progress_dialog.update_progress)
             self.palette_worker.error.connect(self._handle_palette_error)
             self.palette_worker.result.connect(self._handle_palette_result)
             self.palette_worker.finished.connect(progress_dialog.finish)
-            
+
             # Connect cancel
             def on_cancel():
                 self.palette_worker.cancel()
                 progress_dialog.finish()
+
             progress_dialog.cancel_button.clicked.disconnect()
             progress_dialog.cancel_button.clicked.connect(on_cancel)
-            
+
             # Store dialog and path for handlers
             self._palette_progress_dialog = progress_dialog
             self._loading_palette_path = file_path
-            
+
             # Start worker
             self.palette_worker.start()
-            
+
             return True  # Actual result comes via signals
-            
+
     def _handle_palette_error(self, error_message: str):
         """Handle errors from palette loading"""
-        if hasattr(self, '_palette_progress_dialog'):
+        if hasattr(self, "_palette_progress_dialog"):
             self._palette_progress_dialog.finish()
-            
+
         QMessageBox.critical(self, "Error", f"Failed to load palette: {error_message}")
         debug_log("EDITOR", f"Palette load error: {error_message}", "ERROR")
-        
+
     def _handle_palette_result(self, palette_data: dict):
         """Handle successful palette load from worker"""
         try:
             # Extract colors based on format
-            if 'colors' in palette_data:
-                colors = palette_data['colors']
+            if "colors" in palette_data:
+                colors = palette_data["colors"]
             else:
                 self._handle_palette_error("Invalid palette format")
                 return
-                
+
             # Ensure we have at least 16 colors
             if len(colors) < 16:
                 # Pad with black
                 while len(colors) < 16:
                     colors.append([0, 0, 0])
-                    
+
             # Convert to tuples
             color_tuples = [tuple(c[:3]) for c in colors[:16]]
-            
+
             # Store palette data
             self.external_palette = palette_data
             self.external_palette_colors = color_tuples
             self.current_palette_file = self._loading_palette_path
-            
+
             # Get palette name
-            palette_name = palette_data.get('name', os.path.basename(self._loading_palette_path))
-            
+            palette_name = palette_data.get(
+                "name", os.path.basename(self._loading_palette_path)
+            )
+
             # Apply to palette widget
             self.palette_widget.set_palette(color_tuples, palette_name)
-            
+
             # Update canvas and preview
             self.canvas.update()
             self.update_preview()
-            
+
             # Update title
             current_title = self.windowTitle()
             if " | " in current_title:
@@ -1262,19 +1308,21 @@ class IndexedPixelEditor(QMainWindow):
             else:
                 base_title = current_title
             self.setWindowTitle(f"{base_title} | {palette_name}")
-            
+
             # Add to recent files
             self.settings.add_recent_palette_file(self._loading_palette_path)
-            
+
             # Associate with current image
             if self.current_file:
-                self.settings.associate_palette_with_image(self.current_file, self._loading_palette_path)
-                
+                self.settings.associate_palette_with_image(
+                    self.current_file, self._loading_palette_path
+                )
+
             debug_log("EDITOR", f"Successfully loaded palette: {palette_name}")
-            
+
         finally:
             # Clean up
-            if hasattr(self, '_palette_progress_dialog'):
+            if hasattr(self, "_palette_progress_dialog"):
                 self._palette_progress_dialog.finish()
             self._palette_progress_dialog = None
             self._loading_palette_path = None
@@ -1456,12 +1504,14 @@ class IndexedPixelEditor(QMainWindow):
     def apply_palette(self, palette_idx: int, colors: list):
         """Apply a different palette from metadata"""
         # Create progress dialog
-        progress_dialog = ProgressDialog("Applying Palette", f"Switching to palette {palette_idx}...", self)
+        progress_dialog = ProgressDialog(
+            "Applying Palette", f"Switching to palette {palette_idx}...", self
+        )
         progress_dialog.show()
-        
+
         try:
             progress_dialog.update_progress(20, "Converting colors...")
-            
+
             self.current_palette_index = palette_idx
 
             # Convert colors to tuples
@@ -1499,9 +1549,9 @@ class IndexedPixelEditor(QMainWindow):
             self.update_status_palette_info()
 
             debug_log("EDITOR", f"Applied palette {palette_idx}")
-            
+
             progress_dialog.update_progress(100, "Complete!")
-            
+
         finally:
             progress_dialog.finish()
 
@@ -1518,11 +1568,11 @@ class IndexedPixelEditor(QMainWindow):
     def toggle_color_mode_shortcut(self):
         """Toggle color mode via keyboard shortcut"""
         # Toggle the checkbox
-        current = self.greyscale_checkbox.isChecked()
-        self.greyscale_checkbox.setChecked(not current)
+        current = self.apply_palette_checkbox.isChecked()
+        self.apply_palette_checkbox.setChecked(not current)
         debug_log(
             "EDITOR",
-            f"Color mode toggled via shortcut: {'Grayscale' if not current else 'Color'}",
+            f"Color mode toggled via shortcut: Apply Palette {'OFF' if current else 'ON'}",
         )
 
     def _validate_palette_file(self, data: dict) -> bool:
@@ -1624,19 +1674,18 @@ class IndexedPixelEditor(QMainWindow):
         self.canvas.grid_visible = checked
         self.canvas.update()
 
-    def toggle_greyscale_mode(self, checked: bool):
-        """Toggle greyscale drawing mode"""
-        self.canvas.greyscale_mode = checked
-        self.canvas.update()
-        debug_log("EDITOR", f"Greyscale mode: {'ON' if checked else 'OFF'}")
-        # Don't change palette widget colors when toggling greyscale mode
+    def toggle_apply_palette(self, checked: bool):
+        """Toggle palette application - when checked shows colors, when unchecked shows grayscale indices"""
+        # Inverted logic: Apply Palette checked = NOT grayscale mode
+        self.canvas.set_greyscale_mode(not checked)
+        debug_log(
+            "EDITOR",
+            f"Apply palette: {'ON' if checked else 'OFF'} (Greyscale mode: {'OFF' if checked else 'ON'})",
+        )
+        # Don't change palette widget colors when toggling
         # The palette widget should always show the actual colors
-
-    def toggle_color_preview(self, checked: bool):
-        """Toggle color preview"""
-        self.canvas.show_color_preview = checked
+        # Also update the preview to reflect the change
         self.update_preview()
-        debug_log("EDITOR", f"Color preview: {'ON' if checked else 'OFF'}")
 
     def on_zoom_changed(self, value: int):
         """Handle zoom slider change"""
@@ -1719,31 +1768,28 @@ class IndexedPixelEditor(QMainWindow):
             self.preview_label.setPixmap(scaled_pixmap)
 
         # Get colored preview (always shows colored version)
-        if self.preview_checkbox.isChecked():
-            color_img = self.get_colored_preview()
-            if color_img:
-                # Convert to QPixmap for display
-                img_rgb = color_img.convert("RGBA")
-                data = img_rgb.tobytes("raw", "RGBA")
-                qimage = QImage(
-                    data,
-                    color_img.width,
-                    color_img.height,
-                    QImage.Format.Format_RGBA8888,
-                )
-                pixmap = QPixmap.fromImage(qimage)
+        color_img = self.get_colored_preview()
+        if color_img:
+            # Convert to QPixmap for display
+            img_rgb = color_img.convert("RGBA")
+            data = img_rgb.tobytes("raw", "RGBA")
+            qimage = QImage(
+                data,
+                color_img.width,
+                color_img.height,
+                QImage.Format.Format_RGBA8888,
+            )
+            pixmap = QPixmap.fromImage(qimage)
 
-                # Scale up for better visibility
-                scale = min(100 // color_img.width, 100 // color_img.height, 8)
-                scaled_pixmap = pixmap.scaled(
-                    pixmap.width() * scale,
-                    pixmap.height() * scale,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.FastTransformation,
-                )
-                self.color_preview_label.setPixmap(scaled_pixmap)
-            else:
-                self.color_preview_label.clear()
+            # Scale up for better visibility
+            scale = min(100 // color_img.width, 100 // color_img.height, 8)
+            scaled_pixmap = pixmap.scaled(
+                pixmap.width() * scale,
+                pixmap.height() * scale,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.FastTransformation,
+            )
+            self.color_preview_label.setPixmap(scaled_pixmap)
         else:
             self.color_preview_label.clear()
 
