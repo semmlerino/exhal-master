@@ -13,7 +13,7 @@ def test_focused_extraction():
     """Test extracting just Kirby sprites for better visibility"""
 
     print("Testing focused sprite extraction for multi-palette preview")
-    print("="*60)
+    print("=" * 60)
 
     core = SpriteEditorCore()
 
@@ -54,7 +54,9 @@ def test_focused_extraction():
             print(f"  Saved: {filename}")
 
             # Also create a 2x zoom version for clarity
-            img_2x = img.resize((img.width * 2, img.height * 2), Image.Resampling.NEAREST)
+            img_2x = img.resize(
+                (img.width * 2, img.height * 2), Image.Resampling.NEAREST
+            )
             img_2x.save(f"preview_{num_tiles}_tiles_2x.png")
 
         except Exception as e:
@@ -73,6 +75,7 @@ def test_focused_extraction():
 
     except Exception as e:
         print(f"✗ Error: {e}")
+
 
 if __name__ == "__main__":
     test_focused_extraction()

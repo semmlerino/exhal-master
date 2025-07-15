@@ -13,7 +13,7 @@ def test_multi_palette_extraction():
     """Test the multi-palette extraction functionality"""
 
     print("Testing Multi-Palette Preview System")
-    print("="*50)
+    print("=" * 50)
 
     # Initialize core
     core = SpriteEditorCore()
@@ -100,6 +100,7 @@ def test_multi_palette_extraction():
 
     print("\n✓ All tests passed!")
     return True
+
 
 if __name__ == "__main__":
     success = test_multi_palette_extraction()

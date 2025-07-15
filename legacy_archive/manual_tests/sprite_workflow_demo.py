@@ -25,6 +25,7 @@ def add_edit_guides(sprite_path, output_path):
     scaled.save(output_path)
     print(f"Created edit template: {output_path}")
 
+
 def create_workflow_example():
     """Create a complete example of the sprite editing workflow."""
 
@@ -79,11 +80,19 @@ def create_workflow_example():
         print("Created example edited sprite: kirby_edited_example.png")
 
         # Create scaled versions for viewing
-        original_scaled = sprite.resize((sprite.width * 8, sprite.height * 8), Image.NEAREST)
-        edited_scaled = edited.resize((edited.width * 8, edited.height * 8), Image.NEAREST)
+        original_scaled = sprite.resize(
+            (sprite.width * 8, sprite.height * 8), Image.NEAREST
+        )
+        edited_scaled = edited.resize(
+            (edited.width * 8, edited.height * 8), Image.NEAREST
+        )
 
         # Create comparison image
-        comparison = Image.new("RGBA", (original_scaled.width * 2 + 10, original_scaled.height), (64, 64, 64, 255))
+        comparison = Image.new(
+            "RGBA",
+            (original_scaled.width * 2 + 10, original_scaled.height),
+            (64, 64, 64, 255),
+        )
         comparison.paste(original_scaled.convert("RGBA"), (0, 0))
         comparison.paste(edited_scaled.convert("RGBA"), (original_scaled.width + 10, 0))
         comparison.save("kirby_edit_comparison.png")
@@ -95,15 +104,19 @@ def create_workflow_example():
     print("\n=== Complete Workflow Commands ===")
     print("1. Extract: python3 find_kirby_sprites.py all_chars.png")
     print("2. Edit: (use image editor on kirby_*.png files)")
-    print("3. Update tileset: python3 sprite_disassembler.py all_chars.png kirby_edited.png updated_chars.png")
+    print(
+        "3. Update tileset: python3 sprite_disassembler.py all_chars.png kirby_edited.png updated_chars.png"
+    )
     print("4. Convert to SNES: python3 png_to_snes.py updated_chars.png")
     print("5. Insert to VRAM: python3 update_vram_sprites.py")
+
 
 if __name__ == "__main__":
     create_workflow_example()
 
     # Create edit templates for all extracted sprites
     import os
+
     for f in os.listdir("."):
         if f.startswith("kirby_kirby_") and f.endswith(".png"):
             output = f.replace(".png", "_edit_template.png")
