@@ -4,9 +4,11 @@ Indexed Pixel Editor for SNES Sprites - Phase 3 Refactored Version
 Uses MVC architecture with separated UI components and controller
 """
 
+# Standard library imports
 import os
 import sys
 
+# Third-party imports
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import (
@@ -38,7 +40,13 @@ from .views.panels import (
     ToolPanel,
 )
 
-__all__ = ["IndexedPixelEditor", "PaletteSwitcherDialog", "debug_color", "debug_exception", "debug_log"]
+__all__ = [
+    "IndexedPixelEditor",
+    "PaletteSwitcherDialog",
+    "debug_color",
+    "debug_exception",
+    "debug_log",
+]
 
 
 class IndexedPixelEditor(QMainWindow):
@@ -184,7 +192,7 @@ class IndexedPixelEditor(QMainWindow):
         save_as_action = QAction("Save As...", self)
         save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
         save_as_action.triggered.connect(self.save_file_as)
-        
+
         save_with_colors_action = QAction("Save with Color Palette...", self)
         save_with_colors_action.triggered.connect(self.save_file_with_colors)
 
@@ -282,16 +290,20 @@ class IndexedPixelEditor(QMainWindow):
 
     def save_file_as(self):
         """Save with a new filename"""
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Indexed PNG", "", "PNG Files (*.png)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Indexed PNG", "", "PNG Files (*.png)"
+        )
 
         if file_path:
             if not file_path.endswith(".png"):
                 file_path += ".png"
             self.controller.save_file(file_path)
-            
+
     def save_file_with_colors(self):
         """Save with color palette applied"""
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save PNG with Color Palette", "", "PNG Files (*.png)")
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save PNG with Color Palette", "", "PNG Files (*.png)"
+        )
 
         if file_path:
             if not file_path.endswith(".png"):
@@ -329,7 +341,6 @@ class IndexedPixelEditor(QMainWindow):
 
         # Update preview
         self.update_preview()
-
 
     def _on_grid_toggled(self, checked: bool):
         """Handle grid toggle"""
@@ -391,7 +402,9 @@ class IndexedPixelEditor(QMainWindow):
     def update_preview(self):
         """Update the preview panels"""
         # Get main preview (respects grayscale mode)
-        main_preview = self.controller.get_preview_pixmap(self.options_panel.is_palette_applied())
+        main_preview = self.controller.get_preview_pixmap(
+            self.options_panel.is_palette_applied()
+        )
         if main_preview:
             self.preview_panel.set_main_preview(main_preview)
 
@@ -443,7 +456,9 @@ class IndexedPixelEditor(QMainWindow):
         if not palettes:
             return
 
-        dialog = PaletteSwitcherDialog(palettes, self.controller.palette_manager.current_palette_index, self)
+        dialog = PaletteSwitcherDialog(
+            palettes, self.controller.palette_manager.current_palette_index, self
+        )
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             selected_index = dialog.get_selected_palette()
@@ -464,7 +479,9 @@ class IndexedPixelEditor(QMainWindow):
             if os.path.exists(file_path):
                 action = self.recent_menu.addAction(os.path.basename(file_path))
                 action.setToolTip(file_path)
-                action.triggered.connect(lambda checked, path=file_path: self.controller.open_file(path))
+                action.triggered.connect(
+                    lambda checked, path=file_path: self.controller.open_file(path)
+                )
 
         self.recent_menu.addSeparator()
         clear_action = self.recent_menu.addAction("Clear Recent Files")
@@ -497,12 +514,14 @@ class IndexedPixelEditor(QMainWindow):
         rgb_colors = []
         for i in range(0, len(colors), 3):
             if i + 2 < len(colors):
-                rgb_colors.append((colors[i], colors[i+1], colors[i+2]))
+                rgb_colors.append((colors[i], colors[i + 1], colors[i + 2]))
 
         # Update palette model
         self.controller.palette_model.colors = rgb_colors[:16]
         self.controller.palette_model.name = f"Palette {palette_idx}"
-        self.controller.palette_manager.add_palette(palette_idx, self.controller.palette_model)
+        self.controller.palette_manager.add_palette(
+            palette_idx, self.controller.palette_model
+        )
         self.controller.palette_manager.current_palette_index = palette_idx
         self.controller.paletteChanged.emit()
 
@@ -533,10 +552,12 @@ class IndexedPixelEditor(QMainWindow):
             for idx in range(16):
                 pal = self.controller.palette_manager.get_palette(idx)
                 if pal:
-                    palettes.append({
-                        "colors": [c for rgb in pal.colors for c in rgb],
-                        "name": pal.name
-                    })
+                    palettes.append(
+                        {
+                            "colors": [c for rgb in pal.colors for c in rgb],
+                            "name": pal.name,
+                        }
+                    )
             if palettes:
                 metadata["palettes"] = palettes
         return metadata if metadata else None
@@ -580,30 +601,47 @@ class IndexedPixelEditor(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle keyboard shortcuts"""
-        if event.key() == Qt.Key.Key_C and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+        if (
+            event.key() == Qt.Key.Key_C
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
             # Toggle color mode
             checked = self.options_panel.apply_palette_checkbox.isChecked()
             self.options_panel.apply_palette_checkbox.setChecked(not checked)
-        elif event.key() == Qt.Key.Key_G and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+        elif (
+            event.key() == Qt.Key.Key_G
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
             # Toggle grid visibility
             checked = self.options_panel.grid_checkbox.isChecked()
             self.options_panel.grid_checkbox.setChecked(not checked)
-        elif event.key() == Qt.Key.Key_I and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+        elif (
+            event.key() == Qt.Key.Key_I
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
             # Switch to color picker tool
             self.tool_panel.set_tool("picker")
-        elif event.key() == Qt.Key.Key_P and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+        elif (
+            event.key() == Qt.Key.Key_P
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
             # Show palette switcher
             if self.controller.has_metadata_palettes():
                 self.show_palette_switcher()
-        elif event.key() == Qt.Key.Key_Z and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+        elif (
+            event.key() == Qt.Key.Key_Z
+            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
+        ):
             # Undo
             self.undo()
-        elif event.key() == Qt.Key.Key_Y and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+        elif (
+            event.key() == Qt.Key.Key_Y
+            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
+        ):
             # Redo
             self.redo()
         else:
             super().keyPressEvent(event)
-
 
 
 def main():

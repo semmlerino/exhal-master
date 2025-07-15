@@ -4,32 +4,40 @@ Simplified controller for the pixel editor Phase 3 refactoring
 Handles all business logic and coordinates between models, managers, and views
 """
 
+# Standard library imports
 import json
 import os
 import traceback
 from typing import Optional
 
+# Third-party imports
 import numpy as np
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QPixmap
 
+from .pixel_editor_commands import (
+    BatchCommand,
+    DrawPixelCommand,
+    FloodFillCommand,
+    UndoManager,
+)
 from .pixel_editor_managers import FileManager, PaletteManager, ToolManager
 from .pixel_editor_models import ImageModel, PaletteModel, ProjectModel
 from .pixel_editor_settings_adapter import PixelEditorSettingsAdapter
 from .pixel_editor_utils import debug_log
-from .pixel_editor_commands import UndoManager, DrawPixelCommand, FloodFillCommand, BatchCommand
 
 
 class ImageModelAdapter:
     """Adapter to make ImageModel work with undo commands that expect PixelCanvas"""
+
     def __init__(self, image_model):
         self.image_model = image_model
-    
+
     @property
     def image_data(self):
         return self.image_model.data
-    
+
     @image_data.setter
     def image_data(self, value):
         self.image_model.data = value
@@ -68,7 +76,7 @@ class PixelEditorController(QObject):
         # Workers
         self.load_worker = None
         self.save_worker = None
-        
+
         # Drawing state tracking for undo
         self._is_drawing = False
         self._drawing_pixels = []  # List of (x, y, old_color, new_color) tuples
@@ -157,7 +165,11 @@ class PixelEditorController(QObject):
             return
 
         # Connect signals
-        self.load_worker.progress.connect(lambda p, msg: debug_log("CONTROLLER", f"Load progress: {p}% - {msg}", "DEBUG"))
+        self.load_worker.progress.connect(
+            lambda p, msg: debug_log(
+                "CONTROLLER", f"Load progress: {p}% - {msg}", "DEBUG"
+            )
+        )
         self.load_worker.error.connect(self._handle_load_error)
         self.load_worker.result.connect(self._handle_load_result)
 
@@ -166,30 +178,55 @@ class PixelEditorController(QObject):
 
     def save_file(self, file_path: str):
         """Save the current image with grayscale palette (default)"""
+        # Check if image is loaded
+        if self.image_model.data is None:
+            self.error.emit("No image loaded to save")
+            return
+
         # Create worker with grayscale palette
-        debug_log("CONTROLLER", f"Saving image (grayscale): {os.path.basename(file_path)}", "INFO")
-        self.save_worker = self.file_manager.save_file(self.image_model, self.palette_model, file_path, use_grayscale_palette=True)
+        debug_log(
+            "CONTROLLER",
+            f"Saving image (grayscale): {os.path.basename(file_path)}",
+            "INFO",
+        )
+        self.save_worker = self.file_manager.save_file(
+            self.image_model, self.palette_model, file_path, use_grayscale_palette=True
+        )
         if not self.save_worker:
             return
 
         # Connect signals
-        self.save_worker.progress.connect(lambda p, msg: debug_log("CONTROLLER", f"Save progress: {p}% - {msg}", "DEBUG"))
+        self.save_worker.progress.connect(
+            lambda p, msg: debug_log(
+                "CONTROLLER", f"Save progress: {p}% - {msg}", "DEBUG"
+            )
+        )
         self.save_worker.error.connect(self._handle_save_error)
         self.save_worker.saved.connect(self._handle_save_success)
 
         # Start saving
         self.save_worker.start()
-        
+
     def save_file_with_colors(self, file_path: str):
         """Save the current image with color palette applied"""
         # Create worker with color palette
-        debug_log("CONTROLLER", f"Saving image (with colors): {os.path.basename(file_path)}", "INFO")
-        self.save_worker = self.file_manager.save_file(self.image_model, self.palette_model, file_path, use_grayscale_palette=False)
+        debug_log(
+            "CONTROLLER",
+            f"Saving image (with colors): {os.path.basename(file_path)}",
+            "INFO",
+        )
+        self.save_worker = self.file_manager.save_file(
+            self.image_model, self.palette_model, file_path, use_grayscale_palette=False
+        )
         if not self.save_worker:
             return
 
         # Connect signals
-        self.save_worker.progress.connect(lambda p, msg: debug_log("CONTROLLER", f"Save progress: {p}% - {msg}", "DEBUG"))
+        self.save_worker.progress.connect(
+            lambda p, msg: debug_log(
+                "CONTROLLER", f"Save progress: {p}% - {msg}", "DEBUG"
+            )
+        )
         self.save_worker.error.connect(self._handle_save_error)
         self.save_worker.saved.connect(self._handle_save_success)
 
@@ -205,7 +242,11 @@ class PixelEditorController(QObject):
 
     def _handle_load_result(self, image_array: np.ndarray, metadata: dict):
         """Handle successful file load"""
-        debug_log("CONTROLLER", f"Handling load result: array shape={image_array.shape}", "DEBUG")
+        debug_log(
+            "CONTROLLER",
+            f"Handling load result: array shape={image_array.shape}",
+            "DEBUG",
+        )
         debug_log("CONTROLLER", f"Metadata keys: {list(metadata.keys())}", "DEBUG")
         try:
             # Create PIL image for model
@@ -220,14 +261,18 @@ class PixelEditorController(QObject):
 
             # Load into model
             self.image_model.load_from_pil(img)
-            
+
             # Clear undo history for newly loaded file
             self.undo_manager = UndoManager()
 
             # Update project info
             if hasattr(self.load_worker, "file_path"):
                 file_path = self.load_worker.file_path
-                debug_log("CONTROLLER", f"file_path type: {type(file_path)}, value: {file_path}", "DEBUG")
+                debug_log(
+                    "CONTROLLER",
+                    f"file_path type: {type(file_path)}, value: {file_path}",
+                    "DEBUG",
+                )
                 # Store as strings to maintain consistency
                 self.project_model.image_path = str(file_path)
                 self.image_model.file_path = str(file_path)
@@ -238,8 +283,12 @@ class PixelEditorController(QObject):
                 # Emit signals
                 self.imageChanged.emit()
                 self.paletteChanged.emit()
-                self.titleChanged.emit(f"Indexed Pixel Editor - {os.path.basename(str(file_path))}")
-                self.statusMessage.emit(f"Loaded {os.path.basename(str(file_path))}", 3000)
+                self.titleChanged.emit(
+                    f"Indexed Pixel Editor - {os.path.basename(str(file_path))}"
+                )
+                self.statusMessage.emit(
+                    f"Loaded {os.path.basename(str(file_path))}", 3000
+                )
 
                 # Check for metadata (ensure path is string)
                 self._check_for_metadata(str(file_path))
@@ -248,7 +297,11 @@ class PixelEditorController(QObject):
                 self._check_for_paired_palette(str(file_path))
 
         except Exception as e:
-            debug_log("CONTROLLER", f"Exception in _handle_load_result: {type(e).__name__}: {e}", "ERROR")
+            debug_log(
+                "CONTROLLER",
+                f"Exception in _handle_load_result: {type(e).__name__}: {e}",
+                "ERROR",
+            )
             debug_log("CONTROLLER", f"Error type: {type(e)}", "DEBUG")
             debug_log("CONTROLLER", f"Traceback: {traceback.format_exc()}", "DEBUG")
             self._handle_load_error(str(e))
@@ -291,7 +344,11 @@ class PixelEditorController(QObject):
         """Load JSON palette file directly"""
         try:
             # Load and validate palette
-            debug_log("CONTROLLER", f"Loading JSON palette: {os.path.basename(file_path)}", "INFO")
+            debug_log(
+                "CONTROLLER",
+                f"Loading JSON palette: {os.path.basename(file_path)}",
+                "INFO",
+            )
             palette = PaletteModel()
             palette.from_json_file(file_path)
 
@@ -304,7 +361,9 @@ class PixelEditorController(QObject):
             # Update settings (convert Path to string for JSON serialization)
             self.settings.add_recent_palette_file(str(file_path))
             if self.project_model.image_path:
-                self.settings.associate_palette_with_image(str(self.project_model.image_path), str(file_path))
+                self.settings.associate_palette_with_image(
+                    str(self.project_model.image_path), str(file_path)
+                )
 
             # Emit signals
             self.paletteChanged.emit()
@@ -319,13 +378,21 @@ class PixelEditorController(QObject):
     def _load_palette_with_worker(self, file_path: str):
         """Load palette file using worker thread"""
         # Create worker
-        debug_log("CONTROLLER", f"Loading palette with worker: {os.path.basename(file_path)}", "INFO")
+        debug_log(
+            "CONTROLLER",
+            f"Loading palette with worker: {os.path.basename(file_path)}",
+            "INFO",
+        )
         self.palette_worker = self.palette_manager.load_palette_file(file_path)
         if not self.palette_worker:
             return
 
         # Connect signals
-        self.palette_worker.progress.connect(lambda p, msg: debug_log("CONTROLLER", f"Palette load progress: {p}% - {msg}", "DEBUG"))
+        self.palette_worker.progress.connect(
+            lambda p, msg: debug_log(
+                "CONTROLLER", f"Palette load progress: {p}% - {msg}", "DEBUG"
+            )
+        )
         self.palette_worker.error.connect(self._handle_palette_error)
         self.palette_worker.result.connect(self._handle_palette_result)
 
@@ -375,7 +442,8 @@ class PixelEditorController(QObject):
                 # Associate with current image
                 if self.project_model.image_path:
                     self.settings.associate_palette_with_image(
-                        str(self.project_model.image_path), str(self._loading_palette_path)
+                        str(self.project_model.image_path),
+                        str(self._loading_palette_path),
                     )
 
             # Emit signals
@@ -517,31 +585,79 @@ class PixelEditorController(QObject):
         # Get current tool
         tool = self.tool_manager.get_tool()
         tool_name = self.tool_manager.current_tool_name
-        
+
         if tool_name == "pencil":
             # For pencil, track pixel changes
             old_color = self.image_model.get_color_at(x, y)
-            result = tool.on_press(x, y, self.tool_manager.current_color, self.image_model)
+            result = tool.on_press(
+                x, y, self.tool_manager.current_color, self.image_model
+            )
             if result:
-                self._drawing_pixels.append((x, y, old_color, self.tool_manager.current_color))
+                self._drawing_pixels.append(
+                    (x, y, old_color, self.tool_manager.current_color)
+                )
                 self.imageChanged.emit()
         elif tool_name == "fill":
-            # For fill, get all affected pixels before filling
+            # For fill, we need to capture the state before filling
             old_color = self.image_model.get_color_at(x, y)
             if old_color != self.tool_manager.current_color:
-                # Execute the fill and create a command
-                result = tool.on_press(x, y, self.tool_manager.current_color, self.image_model)
+                # Get the affected region before filling
+                # First, find the bounds of the fill area
+                min_x = max_x = x
+                min_y = max_y = y
+
+                # Store the old image data before filling
+                old_data = self.image_model.data.copy()
+
+                # Execute the fill
+                result = tool.on_press(
+                    x, y, self.tool_manager.current_color, self.image_model
+                )
+
                 if result and len(result) > 0:
-                    # Create and execute fill command
-                    command = FloodFillCommand(x, y, old_color, self.tool_manager.current_color)
-                    # Store in command's history (it already executed)
-                    adapter = ImageModelAdapter(self.image_model)
-                    self.undo_manager.execute_command(command, adapter)
+                    # Calculate affected region from result
+                    for px, py in result:
+                        min_x = min(min_x, px)
+                        max_x = max(max_x, px)
+                        min_y = min(min_y, py)
+                        max_y = max(max_y, py)
+
+                    # Create command with proper data
+                    command = FloodFillCommand()
+                    command.affected_region = (
+                        min_x,
+                        min_y,
+                        max_x - min_x + 1,
+                        max_y - min_y + 1,
+                    )
+                    command.new_color = self.tool_manager.current_color
+
+                    # Store only the affected region from old data
+                    command.old_data = np.full(
+                        (max_y - min_y + 1, max_x - min_x + 1), 255, dtype=np.uint8
+                    )
+                    for px, py in result:
+                        command.old_data[py - min_y, px - min_x] = old_data[py, px]
+
+                    # The fill has already been executed, so we just need to track it
+                    self.undo_manager.command_stack.append(command)
+                    self.undo_manager.current_index += 1
+
+                    # Limit stack size
+                    if (
+                        len(self.undo_manager.command_stack)
+                        > self.undo_manager.max_commands
+                    ):
+                        self.undo_manager.command_stack.pop(0)
+                        self.undo_manager.current_index -= 1
+
                     self.imageChanged.emit()
             self._is_drawing = False  # Fill is a single action
         elif tool_name == "picker":
             # Color picker doesn't need undo
-            result = tool.on_press(x, y, self.tool_manager.current_color, self.image_model)
+            result = tool.on_press(
+                x, y, self.tool_manager.current_color, self.image_model
+            )
             self._is_drawing = False
 
     def handle_canvas_move(self, x: int, y: int):
@@ -553,41 +669,55 @@ class PixelEditorController(QObject):
         if self.tool_manager.current_tool_name == "pencil":
             old_color = self.image_model.get_color_at(x, y)
             tool = self.tool_manager.get_tool()
-            result = tool.on_move(x, y, self.tool_manager.current_color, self.image_model)
-            
+            result = tool.on_move(
+                x, y, self.tool_manager.current_color, self.image_model
+            )
+
             if result:
                 # Track this pixel change
-                self._drawing_pixels.append((x, y, old_color, self.tool_manager.current_color))
+                self._drawing_pixels.append(
+                    (x, y, old_color, self.tool_manager.current_color)
+                )
                 self.imageChanged.emit()
 
     def handle_canvas_release(self, x: int, y: int):
         """Handle mouse release on canvas"""
         if self.image_model.data is None:
             return
-        
+
         # Create undo command for pencil drawing
-        if self._is_drawing and self.tool_manager.current_tool_name == "pencil" and self._drawing_pixels:
+        if (
+            self._is_drawing
+            and self.tool_manager.current_tool_name == "pencil"
+            and self._drawing_pixels
+        ):
             # Create individual commands for each pixel and batch them
             batch = BatchCommand()
             for x, y, old_color, new_color in self._drawing_pixels:
-                cmd = DrawPixelCommand(x=x, y=y, old_color=old_color, new_color=new_color)
+                cmd = DrawPixelCommand(
+                    x=x, y=y, old_color=old_color, new_color=new_color
+                )
                 batch.add_command(cmd)
-            
+
             # The pixels are already drawn, so we don't execute, just add to history
             self.undo_manager.command_stack.append(batch)
             self.undo_manager.current_index += 1
             # Clear redo stack
-            if self.undo_manager.current_index < len(self.undo_manager.command_stack) - 1:
-                self.undo_manager.command_stack = self.undo_manager.command_stack[:self.undo_manager.current_index + 1]
-        
+            if (
+                self.undo_manager.current_index
+                < len(self.undo_manager.command_stack) - 1
+            ):
+                self.undo_manager.command_stack = self.undo_manager.command_stack[
+                    : self.undo_manager.current_index + 1
+                ]
+
         # Reset drawing state
         self._is_drawing = False
         self._drawing_pixels = []
-        
+
         # Get current tool and delegate to it
         tool = self.tool_manager.get_tool()
         tool.on_release(x, y, self.tool_manager.current_color, self.image_model)
-
 
     def has_image(self) -> bool:
         """Check if an image is loaded"""
