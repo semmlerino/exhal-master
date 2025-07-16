@@ -228,7 +228,11 @@ class PixelCanvasV3(QWidget):
             for x in range(width):
                 color_index = image_model.data[y, x]
                 qcolor = self._qcolor_cache.get(color_index, self._qcolor_cache.get(-1))
-                self._qimage_buffer.setPixel(x, y, qcolor.rgb())
+                if qcolor is not None:
+                    self._qimage_buffer.setPixel(x, y, qcolor.rgb())
+                else:
+                    # Fallback to magenta for invalid colors
+                    self._qimage_buffer.setPixel(x, y, QColor(255, 0, 255).rgb())
 
         self._cached_image_version = self._image_version
 

@@ -144,7 +144,7 @@ def is_grayscale_palette(colors: list[tuple[int, int, int]]) -> bool:
 
 
 def extract_palette_from_pil_image(
-    pil_image, max_colors: int = 16
+    pil_image: Any, max_colors: int = 16
 ) -> list[tuple[int, int, int]]:
     """Extract palette colors from a PIL image
 
@@ -201,7 +201,7 @@ def create_indexed_palette(colors: list[tuple[int, int, int]]) -> list[int]:
     Returns:
         Flat list of RGB values suitable for PIL Image.putpalette()
     """
-    palette = []
+    palette: list[int] = []
     for color in colors:
         palette.extend(validate_rgb_color(color))
 

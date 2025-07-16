@@ -180,7 +180,7 @@ class FileLoadWorker(BaseWorker):
                         "WARNING"
                     )
                     self.emit_progress(
-                        30, 
+                        30,
                         f"Reducing {unique_colors} colors to 16 for SNES compatibility..."
                     )
                     # Convert to RGB then back to P with 16 colors
@@ -193,7 +193,7 @@ class FileLoadWorker(BaseWorker):
 
         try:
             # For non-indexed images, check color count before conversion
-            if image.mode == "RGB" or image.mode == "RGBA":
+            if image.mode in {"RGB", "RGBA"}:
                 # Get unique colors
                 unique_colors = len(set(image.convert("RGB").getdata()))
                 if unique_colors > 16:
@@ -206,7 +206,7 @@ class FileLoadWorker(BaseWorker):
                         30,
                         f"Reducing {unique_colors} colors to 16 for SNES compatibility..."
                     )
-            
+
             # Convert to indexed color with 16 colors (SNES sprite limit)
             return image.convert("P", palette=Image.ADAPTIVE, colors=16)
         except Exception as e:
@@ -260,8 +260,8 @@ class FileLoadWorker(BaseWorker):
                 else str(image.format) if image.format else None
             ),
             "palette": palette_data,
-            "file_path": str(self.file_path),
-            "file_name": str(self.file_path.name),
+            "file_path": str(self.file_path) if self.file_path else "",
+            "file_name": str(self.file_path.name) if self.file_path else "unknown",
         }
         debug_log(
             "WORKER",
@@ -320,7 +320,7 @@ class FileLoadWorker(BaseWorker):
             if not self.validate_file_path(must_exist=True):
                 return
 
-            self.emit_progress(0, f"Loading {self.file_path.name}...")
+            self.emit_progress(0, f"Loading {self.file_path.name if self.file_path else 'file'}...")
             if self.is_cancelled():
                 return
 
@@ -486,7 +486,8 @@ class FileSaveWorker(BaseWorker):
             self.emit_progress(60, "Applying color palette...")
 
             # Ensure parent directory exists
-            self.file_path.parent.mkdir(parents=True, exist_ok=True)
+            if self.file_path:
+                self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Save image
             try:
