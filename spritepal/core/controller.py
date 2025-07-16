@@ -7,11 +7,13 @@ import os
 import subprocess
 import sys
 
-from core.extractor import SpriteExtractor
-from core.palette_manager import PaletteManager
+from spritepal.core.extractor import SpriteExtractor
+from spritepal.core.palette_manager import PaletteManager
+from spritepal.core.injector import InjectionWorker
+from spritepal.ui.injection_dialog import InjectionDialog
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
-from utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START
+from spritepal.utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START, BYTES_PER_TILE
 
 
 class ExtractionWorker(QThread):
@@ -92,9 +94,19 @@ class ExtractionWorker(QThread):
                     # Create metadata file
                     if self.params["create_metadata"]:
                         self.progress.emit("Creating metadata file...")
+                        
+                        # Prepare extraction parameters for metadata
+                        extraction_params = {
+                            "vram_source": os.path.basename(self.params["vram_path"]),
+                            "vram_offset": vram_offset if vram_offset is not None else 0xC000,
+                            "tile_count": num_tiles,
+                            "extraction_size": num_tiles * BYTES_PER_TILE
+                        }
+                        
                         metadata_file = self.palette_manager.create_metadata_json(
                             self.params["output_base"],
-                            palette_files
+                            palette_files,
+                            extraction_params
                         )
                         extracted_files.append(metadata_file)
 
@@ -136,6 +148,7 @@ class ExtractionController(QObject):
         # Connect signals
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
+        self.main_window.inject_requested.connect(self.start_injection)
         self.main_window.extraction_panel.offset_changed.connect(self.update_preview_with_offset)
 
     def start_extraction(self):
@@ -268,3 +281,54 @@ class ExtractionController(QObject):
                 self.main_window.status_bar.showMessage(f"Failed to open pixel editor: {e}")
         else:
             self.main_window.status_bar.showMessage("Pixel editor not found")
+    
+    def start_injection(self):
+        """Start the injection process"""
+        # Get sprite path and metadata path
+        output_base = self.main_window._output_path
+        if not output_base:
+            self.main_window.status_bar.showMessage("No extraction to inject")
+            return
+        
+        sprite_path = f"{output_base}.png"
+        metadata_path = f"{output_base}.metadata.json"
+        
+        # Show injection dialog
+        dialog = InjectionDialog(
+            self.main_window,
+            sprite_path=sprite_path,
+            metadata_path=metadata_path if os.path.exists(metadata_path) else ""
+        )
+        
+        if dialog.exec():
+            params = dialog.get_parameters()
+            if params:
+                # Create and start injection worker
+                self.injection_worker = InjectionWorker(
+                    params["sprite_path"],
+                    params["input_vram"],
+                    params["output_vram"],
+                    params["offset"],
+                    params.get("metadata_path")
+                )
+                
+                # Connect signals
+                self.injection_worker.progress.connect(self._on_injection_progress)
+                self.injection_worker.finished.connect(self._on_injection_finished)
+                
+                # Start injection
+                self.main_window.status_bar.showMessage("Starting injection...")
+                self.injection_worker.start()
+    
+    def _on_injection_progress(self, message):
+        """Handle injection progress updates"""
+        self.main_window.status_bar.showMessage(message)
+    
+    def _on_injection_finished(self, success, message):
+        """Handle injection completion"""
+        if success:
+            self.main_window.status_bar.showMessage(f"Injection successful: {message}")
+        else:
+            self.main_window.status_bar.showMessage(f"Injection failed: {message}")
+        
+        self.injection_worker = None

@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
     # Signals
     extract_requested = pyqtSignal()
     open_in_editor_requested = pyqtSignal(str)  # sprite file path
+    inject_requested = pyqtSignal()  # inject sprite to VRAM
 
     def __init__(self):
         super().__init__()
@@ -151,6 +152,30 @@ class MainWindow(QMainWindow):
         """)
         button_layout.addWidget(self.open_editor_button)
 
+        self.inject_button = QPushButton("Inject to VRAM")
+        self.inject_button.setMinimumHeight(40)
+        self.inject_button.setEnabled(False)
+        self.inject_button.setToolTip("Inject edited sprite back into VRAM")
+        self.inject_button.setStyleSheet("""
+            QPushButton {
+                background-color: #744da9;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #5b3d85;
+            }
+            QPushButton:pressed {
+                background-color: #472d68;
+            }
+            QPushButton:disabled {
+                background-color: #555;
+                color: #999;
+            }
+        """)
+        button_layout.addWidget(self.inject_button)
+
         left_layout.addLayout(button_layout)
         left_layout.addStretch()
 
@@ -227,6 +252,7 @@ class MainWindow(QMainWindow):
         """Connect internal signals"""
         self.extract_button.clicked.connect(self._on_extract_clicked)
         self.open_editor_button.clicked.connect(self._on_open_editor_clicked)
+        self.inject_button.clicked.connect(self._on_inject_clicked)
 
         # Connect extraction panel signals
         self.extraction_panel.files_changed.connect(self._on_files_changed)
@@ -298,6 +324,11 @@ class MainWindow(QMainWindow):
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.open_in_editor_requested.emit(sprite_file)
+    
+    def _on_inject_clicked(self):
+        """Handle inject to VRAM button click"""
+        if self._output_path:
+            self.inject_requested.emit()
 
     def _new_extraction(self):
         """Start a new extraction"""
@@ -345,6 +376,7 @@ class MainWindow(QMainWindow):
         self._extracted_files = extracted_files
         self.extract_button.setEnabled(True)
         self.open_editor_button.setEnabled(True)
+        self.inject_button.setEnabled(True)
 
         # Update preview info
         sprite_file = f"{self._output_path}.png"
