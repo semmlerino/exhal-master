@@ -2,6 +2,9 @@
 Zoomable sprite preview widget for SpritePal
 """
 
+import io
+from typing import Optional, Any
+
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import (
     QColor,
@@ -26,7 +29,7 @@ from PyQt6.QtWidgets import (
 class ZoomablePreviewWidget(QWidget):
     """Widget for previewing sprites with zoom and pan functionality"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._pixmap = None
         self._tile_count = 0
@@ -52,7 +55,7 @@ class ZoomablePreviewWidget(QWidget):
             }
         """)
 
-    def paintEvent(self, event):  # noqa: N802
+    def paintEvent(self, event: Any) -> None:  # noqa: N802
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))
@@ -68,11 +71,11 @@ class ZoomablePreviewWidget(QWidget):
             center_y = self.height() / 2
 
             # Apply pan and zoom around center
-            transform.translate(center_x + self._pan_offset.x(),
-                              center_y + self._pan_offset.y())
+            transform.translate(
+                center_x + self._pan_offset.x(), center_y + self._pan_offset.y()
+            )
             transform.scale(self._zoom, self._zoom)
-            transform.translate(-self._pixmap.width() / 2,
-                              -self._pixmap.height() / 2)
+            transform.translate(-self._pixmap.width() / 2, -self._pixmap.height() / 2)
 
             painter.setTransform(transform)
 
@@ -100,10 +103,10 @@ class ZoomablePreviewWidget(QWidget):
             painter.drawText(
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
-                "Sprite preview will appear here"
+                "Sprite preview will appear here",
             )
 
-    def _draw_checkerboard(self, painter, transform):
+    def _draw_checkerboard(self, painter: Any, transform: Any) -> None:
         """Draw a checkerboard background for transparency visibility"""
         if not self._pixmap:
             return
@@ -131,7 +134,7 @@ class ZoomablePreviewWidget(QWidget):
                 else:
                     painter.fillRect(x, y, tile_size, tile_size, QColor(120, 120, 120))
 
-    def _draw_pixel_grid(self, painter, transform):
+    def _draw_pixel_grid(self, painter: Any, transform: Any) -> None:
         """Draw a pixel grid when zoomed in"""
         if not self._pixmap:
             return
@@ -163,7 +166,7 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
-    def wheelEvent(self, event: QWheelEvent):  # noqa: N802
+    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802
         """Handle mouse wheel for zooming"""
         if not self._pixmap:
             return
@@ -182,33 +185,37 @@ class ZoomablePreviewWidget(QWidget):
             # Get the current transformation matrix
             center_x = self.width() / 2
             center_y = self.height() / 2
-            
+
             # Create the current transform
             current_transform = QTransform()
-            current_transform.translate(center_x + self._pan_offset.x(),
-                                      center_y + self._pan_offset.y())
+            current_transform.translate(
+                center_x + self._pan_offset.x(), center_y + self._pan_offset.y()
+            )
             current_transform.scale(self._zoom, self._zoom)
-            current_transform.translate(-self._pixmap.width() / 2,
-                                      -self._pixmap.height() / 2)
-            
+            current_transform.translate(
+                -self._pixmap.width() / 2, -self._pixmap.height() / 2
+            )
+
             # Transform mouse position to image coordinates
             inv_transform, _ = current_transform.inverted()
             image_pos = inv_transform.map(mouse_pos)
-            
+
             # Apply new zoom
             self._zoom = new_zoom
-            
+
             # Create new transform with updated zoom
             new_transform = QTransform()
-            new_transform.translate(center_x + self._pan_offset.x(),
-                                  center_y + self._pan_offset.y())
+            new_transform.translate(
+                center_x + self._pan_offset.x(), center_y + self._pan_offset.y()
+            )
             new_transform.scale(self._zoom, self._zoom)
-            new_transform.translate(-self._pixmap.width() / 2,
-                                  -self._pixmap.height() / 2)
-            
+            new_transform.translate(
+                -self._pixmap.width() / 2, -self._pixmap.height() / 2
+            )
+
             # Find where the image point would be with new transform
             new_widget_pos = new_transform.map(image_pos)
-            
+
             # Adjust pan offset to keep image point under cursor
             self._pan_offset.setX(
                 self._pan_offset.x() + mouse_pos.x() - new_widget_pos.x()
@@ -219,7 +226,7 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
-    def mousePressEvent(self, event: QMouseEvent):  # noqa: N802
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         """Handle mouse press for panning"""
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = True
@@ -229,13 +236,13 @@ class ZoomablePreviewWidget(QWidget):
             # Right click to reset view
             self.reset_view()
 
-    def mouseReleaseEvent(self, event: QMouseEvent):  # noqa: N802
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         """Handle mouse release"""
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def mouseMoveEvent(self, event: QMouseEvent):  # noqa: N802
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         """Handle mouse move for panning"""
         if self._is_panning and self._last_mouse_pos:
             delta = event.position() - self._last_mouse_pos
@@ -243,7 +250,7 @@ class ZoomablePreviewWidget(QWidget):
             self._last_mouse_pos = event.position()
             self.update()
 
-    def keyPressEvent(self, event):  # noqa: N802
+    def keyPressEvent(self, event: Any) -> None:  # noqa: N802
         """Handle keyboard input"""
         if event.key() == Qt.Key.Key_G:
             self._grid_visible = not self._grid_visible
@@ -254,31 +261,33 @@ class ZoomablePreviewWidget(QWidget):
                 self._zoom = 4.0
                 self._pan_offset = QPointF(0, 0)
                 self.update()
-            elif event.modifiers() == (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+            elif event.modifiers() == (
+                Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+            ):
                 # Ctrl+Shift+0: Zoom to fit
                 self.zoom_to_fit()
         else:
             super().keyPressEvent(event)
 
-    def set_preview(self, pixmap, tile_count=0, tiles_per_row=0):
+    def set_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
         """Set the preview pixmap"""
         self._pixmap = pixmap
         self._tile_count = tile_count
         self._tiles_per_row = tiles_per_row
         self.reset_view()
 
-    def update_pixmap(self, pixmap):
+    def update_pixmap(self, pixmap: Any) -> None:
         """Update the preview pixmap without resetting view"""
         self._pixmap = pixmap
         self.update()
 
-    def set_preview_from_file(self, file_path):
+    def set_preview_from_file(self, file_path: str) -> None:
         """Load preview from file"""
         pixmap = QPixmap(file_path)
         if not pixmap.isNull():
             self.set_preview(pixmap)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the preview"""
         self._pixmap = None
         self._tile_count = 0
@@ -287,17 +296,17 @@ class ZoomablePreviewWidget(QWidget):
         self._pan_offset = QPointF(0, 0)
         self.update()
 
-    def get_tile_info(self):
+    def get_tile_info(self) -> tuple[int, int]:
         """Get tile information"""
         return self._tile_count, self._tiles_per_row
 
-    def reset_view(self):
+    def reset_view(self) -> None:
         """Reset zoom and pan to default"""
         self._zoom = 1.0
         self._pan_offset = QPointF(0, 0)
         self.update()
 
-    def zoom_to_fit(self):
+    def zoom_to_fit(self) -> None:
         """Zoom to fit the image in the widget"""
         if not self._pixmap:
             return
@@ -313,15 +322,15 @@ class ZoomablePreviewWidget(QWidget):
 class PreviewPanel(QWidget):
     """Panel containing the zoomable preview with controls"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._grayscale_image = None
         self._colorized_image = None
-        self._current_palettes = {}
+        self._current_palettes: dict[str, Any] = {}
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._init_ui()
 
-    def _init_ui(self):
+    def _init_ui(self) -> None:
         """Initialize the UI"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -358,7 +367,9 @@ class PreviewPanel(QWidget):
         self.zoom_reset_btn.setMaximumWidth(60)
 
         # Help text
-        help_label = QLabel("Scroll: Zoom | Drag/MMB: Pan | Right-click: Reset | G: Grid | C: Palette | Ctrl+0: 4x | Ctrl+Shift+0: Fit")
+        help_label = QLabel(
+            "Scroll: Zoom | Drag/MMB: Pan | Right-click: Reset | G: Grid | C: Palette | Ctrl+0: 4x | Ctrl+Shift+0: Fit"
+        )
         help_label.setStyleSheet("color: #888; font-size: 10px;")
 
         controls.addWidget(self.palette_toggle)
@@ -371,7 +382,7 @@ class PreviewPanel(QWidget):
 
         layout.addLayout(controls)
 
-    def _on_palette_toggle(self, checked):
+    def _on_palette_toggle(self, checked: bool) -> None:
         """Handle palette toggle"""
         self.palette_selector.setEnabled(checked)
         if checked and self._grayscale_image and self._current_palettes:
@@ -379,12 +390,16 @@ class PreviewPanel(QWidget):
         else:
             self._show_grayscale()
 
-    def _on_palette_changed(self, palette_name):
+    def _on_palette_changed(self, palette_name: str) -> None:
         """Handle palette selection change"""
-        if self.palette_toggle.isChecked() and self._grayscale_image and self._current_palettes:
+        if (
+            self.palette_toggle.isChecked()
+            and self._grayscale_image
+            and self._current_palettes
+        ):
             self._apply_current_palette()
 
-    def _apply_current_palette(self):
+    def _apply_current_palette(self) -> None:
         """Apply the currently selected palette to the grayscale image"""
         if not self._grayscale_image or not self._current_palettes:
             return
@@ -396,8 +411,7 @@ class PreviewPanel(QWidget):
 
         # Apply palette to create colorized version
         self._colorized_image = self._apply_palette_to_image(
-            self._grayscale_image,
-            self._current_palettes[palette_index]
+            self._grayscale_image, self._current_palettes[palette_index]
         )
 
         # Update preview with colorized image
@@ -405,7 +419,7 @@ class PreviewPanel(QWidget):
             pixmap = self._pil_to_pixmap(self._colorized_image)
             self.preview.update_pixmap(pixmap)
 
-    def _show_grayscale(self):
+    def _show_grayscale(self) -> None:
         """Show the grayscale version of the image"""
         if self._grayscale_image:
             # Convert grayscale to RGBA for transparency
@@ -429,21 +443,25 @@ class PreviewPanel(QWidget):
                         pixels[x, y] = (0, 0, 0, 0)
                     else:
                         # Keep grayscale value with full alpha
-                        gray_value = pixel_value if self._grayscale_image.mode != "P" else (pixel_value * 255) // 15
+                        gray_value = (
+                            pixel_value
+                            if self._grayscale_image.mode != "P"
+                            else (pixel_value * 255) // 15
+                        )
                         pixels[x, y] = (gray_value, gray_value, gray_value, 255)
 
             pixmap = self._pil_to_pixmap(rgba_image)
             self.preview.update_pixmap(pixmap)
 
-    def set_preview(self, pixmap, tile_count=0, tiles_per_row=0):
+    def set_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
         """Set the preview pixmap"""
         self.preview.set_preview(pixmap, tile_count, tiles_per_row)
 
-    def set_preview_from_file(self, file_path):
+    def set_preview_from_file(self, file_path: str) -> None:
         """Load preview from file"""
         self.preview.set_preview_from_file(file_path)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the preview"""
         self._grayscale_image = None
         self._colorized_image = None
@@ -452,11 +470,11 @@ class PreviewPanel(QWidget):
         self.palette_selector.setEnabled(False)
         self.preview.clear()
 
-    def set_grayscale_image(self, pil_image):
+    def set_grayscale_image(self, pil_image: Any) -> None:
         """Set the grayscale PIL image for palette application"""
         self._grayscale_image = pil_image
 
-    def set_palettes(self, palettes_dict):
+    def set_palettes(self, palettes_dict: Any) -> None:
         """Set the available palettes"""
         self._current_palettes = palettes_dict
 
@@ -467,7 +485,7 @@ class PreviewPanel(QWidget):
         if self.palette_toggle.isChecked() and has_data:
             self._apply_current_palette()
 
-    def _apply_palette_to_image(self, grayscale_image, palette_colors):
+    def _apply_palette_to_image(self, grayscale_image: Any, palette_colors: Any) -> Optional[Any]:
         """Apply a palette to a grayscale image"""
         if not grayscale_image or not palette_colors:
             return None
@@ -505,19 +523,18 @@ class PreviewPanel(QWidget):
                         # Use black for out of range indices
                         pixels[x, y] = (0, 0, 0, 255)
 
-            return rgba_image
-
         except Exception as e:
             print(f"Error applying palette: {e}")
             return None
+        else:
+            return rgba_image
 
-    def _pil_to_pixmap(self, pil_image):
+    def _pil_to_pixmap(self, pil_image: Any) -> Optional[Any]:
         """Convert PIL image to QPixmap"""
         if not pil_image:
             return None
 
         try:
-            import io
             # Save to bytes
             buffer = io.BytesIO()
             pil_image.save(buffer, format="PNG")
@@ -526,12 +543,13 @@ class PreviewPanel(QWidget):
             # Create QPixmap
             pixmap = QPixmap()
             pixmap.loadFromData(buffer.read())
-            return pixmap
         except Exception as e:
             print(f"Error converting PIL to QPixmap: {e}")
             return None
+        else:
+            return pixmap
 
-    def keyPressEvent(self, event):  # noqa: N802
+    def keyPressEvent(self, event: Any) -> None:  # noqa: N802
         """Handle keyboard input"""
         if event.key() == Qt.Key.Key_C:
             # Toggle palette application
@@ -539,7 +557,7 @@ class PreviewPanel(QWidget):
         else:
             super().keyPressEvent(event)
 
-    def mousePressEvent(self, event):  # noqa: N802
+    def mousePressEvent(self, event: Any) -> None:  # noqa: N802
         """Handle mouse press to ensure focus"""
         self.setFocus()
         super().mousePressEvent(event)

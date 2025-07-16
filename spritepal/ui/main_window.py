@@ -3,11 +3,13 @@ Main window for SpritePal application
 """
 
 from pathlib import Path
+from typing import Dict, List, Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -36,10 +38,10 @@ class MainWindow(QMainWindow):
     arrange_rows_requested = pyqtSignal(str)  # sprite file path for arrangement
     inject_requested = pyqtSignal()  # inject sprite to VRAM
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._output_path = ""
-        self._extracted_files = []
+        self._extracted_files: List[str] = []
         self.settings = get_settings_manager()
 
         self._setup_ui()
@@ -52,7 +54,7 @@ class MainWindow(QMainWindow):
         # Restore session after UI is set up
         self._restore_session()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Initialize the user interface"""
         self.setWindowTitle("SpritePal - Sprite Extraction Tool")
         self.setMinimumSize(900, 600)
@@ -93,12 +95,16 @@ class MainWindow(QMainWindow):
         # Output options
         self.grayscale_check = QCheckBox("Create grayscale with palettes")
         self.grayscale_check.setChecked(True)
-        self.grayscale_check.setToolTip("Extract sprites in grayscale with separate .pal.json files")
+        self.grayscale_check.setToolTip(
+            "Extract sprites in grayscale with separate .pal.json files"
+        )
         output_layout.addWidget(self.grayscale_check)
 
         self.metadata_check = QCheckBox("Generate metadata for palette switching")
         self.metadata_check.setChecked(True)
-        self.metadata_check.setToolTip("Create .metadata.json file for easy palette switching in editor")
+        self.metadata_check.setToolTip(
+            "Create .metadata.json file for easy palette switching in editor"
+        )
         output_layout.addWidget(self.metadata_check)
 
         output_group.setLayout(output_layout)
@@ -244,7 +250,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready to extract sprites")
 
-    def _create_menus(self):
+    def _create_menus(self) -> None:
         """Create application menus"""
         menubar = self.menuBar()
 
@@ -273,7 +279,7 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
         """Connect internal signals"""
         self.extract_button.clicked.connect(self._on_extract_clicked)
         self.open_editor_button.clicked.connect(self._on_open_editor_clicked)
@@ -284,7 +290,7 @@ class MainWindow(QMainWindow):
         self.extraction_panel.files_changed.connect(self._on_files_changed)
         self.extraction_panel.extraction_ready.connect(self._on_extraction_ready)
 
-    def _on_files_changed(self):
+    def _on_files_changed(self) -> None:
         """Handle when input files change"""
         # Update output name based on input files
         if self.extraction_panel.has_vram():
@@ -294,7 +300,7 @@ class MainWindow(QMainWindow):
             # Clean up common suffixes
             for suffix in ["_VRAM", ".SnesVideoRam", "_VideoRam", ".VRAM"]:
                 if base_name.endswith(suffix):
-                    base_name = base_name[:-len(suffix)]
+                    base_name = base_name[: -len(suffix)]
                     break
 
             # Convert to lowercase and add suffix
@@ -304,7 +310,7 @@ class MainWindow(QMainWindow):
         # Save session data when files change
         self._save_session()
 
-    def _on_extraction_ready(self, ready):
+    def _on_extraction_ready(self, ready: bool) -> None:
         """Handle extraction ready state change"""
         self.extract_button.setEnabled(ready)
         if ready:
@@ -312,15 +318,13 @@ class MainWindow(QMainWindow):
         else:
             self.status_bar.showMessage("Please load VRAM and CGRAM files")
 
-    def _browse_output(self):
+    def _browse_output(self) -> None:
         """Browse for output location"""
-        from PyQt6.QtWidgets import QFileDialog
-
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save Sprites As",
             self.output_name_edit.text() + ".png",
-            "PNG Files (*.png)"
+            "PNG Files (*.png)",
         )
 
         if filename:
@@ -328,13 +332,13 @@ class MainWindow(QMainWindow):
             base_name = Path(filename).stem
             self.output_name_edit.setText(base_name)
 
-    def _on_extract_clicked(self):
+    def _on_extract_clicked(self) -> None:
         """Handle extract button click"""
         if not self.output_name_edit.text():
             QMessageBox.warning(
                 self,
                 "Output Name Required",
-                "Please enter a name for the output files."
+                "Please enter a name for the output files.",
             )
             return
 
@@ -345,24 +349,24 @@ class MainWindow(QMainWindow):
         # Emit signal for controller to handle extraction
         self.extract_requested.emit()
 
-    def _on_open_editor_clicked(self):
+    def _on_open_editor_clicked(self) -> None:
         """Handle open in editor button click"""
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.open_in_editor_requested.emit(sprite_file)
-    
-    def _on_arrange_rows_clicked(self):
+
+    def _on_arrange_rows_clicked(self) -> None:
         """Handle arrange rows button click"""
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.arrange_rows_requested.emit(sprite_file)
-    
-    def _on_inject_clicked(self):
+
+    def _on_inject_clicked(self) -> None:
         """Handle inject to VRAM button click"""
         if self._output_path:
             self.inject_requested.emit()
 
-    def _new_extraction(self):
+    def _new_extraction(self) -> None:
         """Start a new extraction"""
         # Reset UI
         self.extraction_panel.clear_files()
@@ -379,7 +383,7 @@ class MainWindow(QMainWindow):
         # Clear session data
         self.settings.clear_session()
 
-    def _show_about(self):
+    def _show_about(self) -> None:
         """Show about dialog"""
         QMessageBox.about(
             self,
@@ -389,10 +393,10 @@ class MainWindow(QMainWindow):
             "<p>A modern sprite extraction tool for SNES games.</p>"
             "<p>Simplifies sprite extraction with automatic palette association.</p>"
             "<br>"
-            "<p>Part of the Kirby Super Star sprite editing toolkit.</p>"
+            "<p>Part of the Kirby Super Star sprite editing toolkit.</p>",
         )
 
-    def get_extraction_params(self):
+    def get_extraction_params(self) -> Dict[str, Any]:
         """Get extraction parameters from UI"""
         return {
             "vram_path": self.extraction_panel.get_vram_path(),
@@ -404,7 +408,7 @@ class MainWindow(QMainWindow):
             "create_metadata": self.metadata_check.isChecked(),
         }
 
-    def extraction_complete(self, extracted_files):
+    def extraction_complete(self, extracted_files: List[str]) -> None:
         """Called when extraction is complete"""
         self._extracted_files = extracted_files
         self.extract_button.setEnabled(True)
@@ -420,17 +424,15 @@ class MainWindow(QMainWindow):
         else:
             self.status_bar.showMessage("Extraction failed")
 
-    def extraction_failed(self, error_message):
+    def extraction_failed(self, error_message: str) -> None:
         """Called when extraction fails"""
         self.extract_button.setEnabled(True)
         self.status_bar.showMessage("Extraction failed")
         QMessageBox.critical(
-            self,
-            "Extraction Failed",
-            f"Failed to extract sprites:\n\n{error_message}"
+            self, "Extraction Failed", f"Failed to extract sprites:\n\n{error_message}"
         )
 
-    def _restore_session(self):
+    def _restore_session(self) -> None:
         """Restore the previous session"""
         if self.settings.has_valid_session():
             # Restore file paths
@@ -455,17 +457,19 @@ class MainWindow(QMainWindow):
 
             self.status_bar.showMessage("Previous session restored")
 
-    def _save_session(self):
+    def _save_session(self) -> None:
         """Save the current session"""
         # Get session data from extraction panel
         session_data = self.extraction_panel.get_session_data()
 
         # Add output settings
-        session_data.update({
-            "output_name": self.output_name_edit.text(),
-            "create_grayscale": self.grayscale_check.isChecked(),
-            "create_metadata": self.metadata_check.isChecked()
-        })
+        session_data.update(
+            {
+                "output_name": self.output_name_edit.text(),
+                "create_grayscale": self.grayscale_check.isChecked(),
+                "create_metadata": self.metadata_check.isChecked(),
+            }
+        )
 
         # Save session data
         self.settings.save_session_data(session_data)
@@ -475,11 +479,11 @@ class MainWindow(QMainWindow):
             "window_width": self.width(),
             "window_height": self.height(),
             "window_x": self.x(),
-            "window_y": self.y()
+            "window_y": self.y(),
         }
         self.settings.save_ui_data(ui_data)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Handle window close event"""
         self._save_session()
         super().closeEvent(event)
