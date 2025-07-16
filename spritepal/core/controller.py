@@ -7,11 +7,10 @@ import os
 import subprocess
 import sys
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap
-
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtGui import QPixmap
 from utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START
 
 
@@ -41,9 +40,14 @@ class ExtractionWorker(QThread):
             self.progress.emit("Extracting sprites from VRAM...")
 
             output_file = f"{self.params['output_base']}.png"
+            
+            # Get VRAM offset if provided
+            vram_offset = self.params.get("vram_offset", None)
+            
             img, num_tiles = self.extractor.extract_sprites_grayscale(
                 self.params["vram_path"],
-                output_file
+                output_file,
+                offset=vram_offset
             )
             extracted_files.append(output_file)
 
@@ -51,7 +55,7 @@ class ExtractionWorker(QThread):
             self.progress.emit("Creating preview...")
             preview_pixmap = self._create_pixmap_from_image(img)
             self.preview_ready.emit(preview_pixmap, num_tiles)
-            
+
             # Emit PIL image for palette application
             self.preview_image_ready.emit(img)
 
@@ -188,11 +192,16 @@ class ExtractionController(QObject):
 
     def open_in_editor(self, sprite_file):
         """Open the extracted sprites in the pixel editor"""
-        # Look for pixel editor launcher
+        # Get the directory where this spritepal package is located
+        spritepal_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        exhal_dir = os.path.dirname(spritepal_dir)
+        
+        # Look for pixel editor launcher using absolute paths
         launcher_paths = [
-            "launch_pixel_editor.py",
-            "pixel_editor/launch_pixel_editor.py",
-            "../launch_pixel_editor.py"
+            os.path.join(spritepal_dir, "launch_pixel_editor.py"),
+            os.path.join(spritepal_dir, "pixel_editor", "launch_pixel_editor.py"),
+            os.path.join(exhal_dir, "launch_pixel_editor.py"),
+            os.path.join(exhal_dir, "pixel_editor", "launch_pixel_editor.py")
         ]
 
         launcher_path = None
@@ -203,11 +212,14 @@ class ExtractionController(QObject):
 
         if launcher_path:
             # Launch pixel editor with the sprite file
-            subprocess.Popen([
-                sys.executable,
-                launcher_path,
-                sprite_file
-            ])
-            self.main_window.status_bar.showMessage(f"Opened {sprite_file} in pixel editor")
+            try:
+                subprocess.Popen([
+                    sys.executable,
+                    launcher_path,
+                    sprite_file
+                ])
+                self.main_window.status_bar.showMessage(f"Opened {sprite_file} in pixel editor")
+            except Exception as e:
+                self.main_window.status_bar.showMessage(f"Failed to open pixel editor: {e}")
         else:
             self.main_window.status_bar.showMessage("Pixel editor not found")
