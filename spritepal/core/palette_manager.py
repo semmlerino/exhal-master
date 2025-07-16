@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from utils.constants import (
+from spritepal.utils.constants import (
     COLORS_PER_PALETTE,
     PALETTE_INFO,
     SPRITE_PALETTE_END,

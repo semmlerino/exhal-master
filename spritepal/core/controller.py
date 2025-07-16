@@ -11,6 +11,7 @@ from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.core.injector import InjectionWorker
 from spritepal.ui.injection_dialog import InjectionDialog
+from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from spritepal.utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START, BYTES_PER_TILE
@@ -148,6 +149,7 @@ class ExtractionController(QObject):
         # Connect signals
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
+        self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
         self.main_window.inject_requested.connect(self.start_injection)
         self.main_window.extraction_panel.offset_changed.connect(self.update_preview_with_offset)
 
@@ -281,6 +283,29 @@ class ExtractionController(QObject):
                 self.main_window.status_bar.showMessage(f"Failed to open pixel editor: {e}")
         else:
             self.main_window.status_bar.showMessage("Pixel editor not found")
+    
+    def open_row_arrangement(self, sprite_file):
+        """Open the row arrangement dialog"""
+        if not os.path.exists(sprite_file):
+            self.main_window.status_bar.showMessage("Sprite file not found")
+            return
+        
+        # Calculate tiles per row from the current extraction
+        tiles_per_row = self.extractor.tiles_per_row if hasattr(self, 'extractor') else 16
+        
+        # Open row arrangement dialog
+        dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
+        
+        if dialog.exec():
+            # Get the arranged sprite path
+            arranged_path = dialog.get_arranged_path()
+            
+            if arranged_path and os.path.exists(arranged_path):
+                # Open the arranged sprite in the pixel editor
+                self.open_in_editor(arranged_path)
+                self.main_window.status_bar.showMessage(f"Opened arranged sprites in pixel editor")
+            else:
+                self.main_window.status_bar.showMessage("Row arrangement cancelled")
     
     def start_injection(self):
         """Start the injection process"""

@@ -6,7 +6,6 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, mock_open
 
 import pytest
 
@@ -14,7 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from spritepal.core.palette_manager import PaletteManager
-from spritepal.utils.constants import SPRITE_PALETTE_START, SPRITE_PALETTE_END
+from spritepal.utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START
 
 
 class TestPaletteManagerExtended:
@@ -29,7 +28,7 @@ class TestPaletteManagerExtended:
     def sample_cgram_data(self):
         """Create sample CGRAM data for testing"""
         cgram_data = bytearray(512)
-        
+
         # Set up test colors for palette 8
         cgram_data[256] = 0x00  # Black
         cgram_data[257] = 0x00
@@ -39,7 +38,7 @@ class TestPaletteManagerExtended:
         cgram_data[261] = 0x03
         cgram_data[262] = 0x00  # Blue
         cgram_data[263] = 0x7C
-        
+
         return bytes(cgram_data)
 
     def test_extract_palettes_with_no_data(self, palette_manager):
@@ -52,9 +51,9 @@ class TestPaletteManagerExtended:
         # Create truncated CGRAM data (less than 512 bytes)
         truncated_data = bytearray(100)
         palette_manager.cgram_data = bytes(truncated_data)
-        
+
         palette_manager._extract_palettes()
-        
+
         # Should handle truncated data gracefully
         assert len(palette_manager.palettes) == 16
         # Colors beyond available data should be black
@@ -64,34 +63,34 @@ class TestPaletteManagerExtended:
         """Test creating metadata.json file"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             output_base = Path(temp_dir) / "test_sprites"
-            
+
             # Create sample palette files
             palette_files = {}
             for i in range(SPRITE_PALETTE_START, SPRITE_PALETTE_END):
                 pal_file = f"{output_base}_pal{i}.pal.json"
                 palette_files[i] = pal_file
                 Path(pal_file).touch()  # Create empty file
-            
+
             # Create metadata
             metadata_path = palette_manager.create_metadata_json(
                 str(output_base), palette_files
             )
-            
+
             # Verify metadata file exists
             assert Path(metadata_path).exists()
-            
+
             # Load and verify metadata content
             with open(metadata_path) as f:
                 metadata = json.load(f)
-            
+
             assert metadata["format_version"] == "1.0"
             assert metadata["default_palette"] == 8
             assert "palettes" in metadata
             assert "palette_info" in metadata
-            
+
             # Check palette references
             assert str(SPRITE_PALETTE_START) in metadata["palettes"]
             assert metadata["palettes"][str(SPRITE_PALETTE_START)].endswith(".pal.json")
@@ -100,39 +99,39 @@ class TestPaletteManagerExtended:
         """Test successful OAM palette analysis"""
         # Create mock OAM data
         oam_data = bytearray(512)
-        
+
         # Create some test OAM entries
         # Entry 1: Y=50, palette=0 (sprite on-screen)
         oam_data[0] = 0x00  # X low
         oam_data[1] = 50    # Y
         oam_data[2] = 0x00  # Tile
         oam_data[3] = 0x00  # Attrs (palette 0)
-        
+
         # Entry 2: Y=100, palette=3 (sprite on-screen)
         oam_data[4] = 0x00  # X low
         oam_data[5] = 100   # Y
         oam_data[6] = 0x00  # Tile
         oam_data[7] = 0x03  # Attrs (palette 3)
-        
+
         # Entry 3: Y=240, palette=1 (sprite off-screen)
         oam_data[8] = 0x00  # X low
         oam_data[9] = 240   # Y
         oam_data[10] = 0x00 # Tile
         oam_data[11] = 0x01 # Attrs (palette 1)
-        
+
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(oam_data)
             f.flush()
-            
+
             try:
                 active_palettes = palette_manager.analyze_oam_palettes(f.name)
-                
+
                 # Should include palettes from on-screen sprites (0+8=8, 3+8=11)
                 # Should exclude off-screen sprite (1+8=9)
                 assert 8 in active_palettes  # palette 0 -> CGRAM 8
                 assert 11 in active_palettes # palette 3 -> CGRAM 11
                 assert 9 not in active_palettes # palette 1 -> CGRAM 9 (off-screen)
-                
+
             finally:
                 Path(f.name).unlink()
 
@@ -140,7 +139,7 @@ class TestPaletteManagerExtended:
         """Test OAM palette analysis error handling"""
         # Test with non-existent file
         active_palettes = palette_manager.analyze_oam_palettes("/nonexistent/file.oam")
-        
+
         # Should return all sprite palettes on error
         expected_palettes = list(range(SPRITE_PALETTE_START, SPRITE_PALETTE_END))
         assert active_palettes == expected_palettes
@@ -149,17 +148,17 @@ class TestPaletteManagerExtended:
         """Test OAM analysis with truncated data"""
         # Create very short OAM data
         oam_data = bytearray(10)  # Less than one full entry
-        
+
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(oam_data)
             f.flush()
-            
+
             try:
                 active_palettes = palette_manager.analyze_oam_palettes(f.name)
-                
+
                 # Should handle short data gracefully
                 assert isinstance(active_palettes, list)
-                
+
             finally:
                 Path(f.name).unlink()
 
@@ -167,20 +166,20 @@ class TestPaletteManagerExtended:
         """Test creating palette JSON without companion image"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()
-        
+
         with tempfile.NamedTemporaryFile(suffix=".pal.json", delete=False) as f:
             output_path = f.name
-            
+
         try:
             palette_manager.create_palette_json(8, output_path)
-            
+
             # Load and verify JSON
             with open(output_path) as f:
                 data = json.load(f)
-            
+
             # Should not have source info
             assert "source" not in data
-            
+
         finally:
             Path(output_path).unlink(missing_ok=True)
 
@@ -195,10 +194,10 @@ class TestPaletteManagerExtended:
         cgram_data = bytearray(512)
         cgram_data[0] = 0xFF  # Max low byte
         cgram_data[1] = 0x7F  # Max high byte
-        
+
         palette_manager.cgram_data = bytes(cgram_data)
         palette_manager._extract_palettes()
-        
+
         # Should convert to maximum RGB values
         assert palette_manager.palettes[0][0] == [248, 248, 248]  # Max RGB
 
@@ -206,7 +205,7 @@ class TestPaletteManagerExtended:
         """Test palette JSON creation with I/O error"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()
-        
+
         # Try to write to invalid path
         with pytest.raises(OSError):
             palette_manager.create_palette_json(8, "/invalid/path/file.json")
@@ -221,16 +220,16 @@ class TestPaletteManagerExtended:
         """Test get_palette with boundary conditions"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()
-        
+
         # Test valid palette
         pal8 = palette_manager.get_palette(8)
         assert len(pal8) == 16
-        
+
         # Test invalid palette indices
         pal_negative = palette_manager.get_palette(-1)
         assert len(pal_negative) == 16
         assert all(color == [0, 0, 0] for color in pal_negative)
-        
+
         pal_too_high = palette_manager.get_palette(999)
         assert len(pal_too_high) == 16
         assert all(color == [0, 0, 0] for color in pal_too_high)
@@ -246,9 +245,9 @@ class TestPaletteManagerExtended:
         cgram_data = bytearray(256)  # Only first 8 palettes
         palette_manager.cgram_data = bytes(cgram_data)
         palette_manager._extract_palettes()
-        
+
         sprite_palettes = palette_manager.get_sprite_palettes()
-        
+
         # Should handle missing sprite palettes gracefully
         assert isinstance(sprite_palettes, dict)
         # All requested palette indices should be present but might be empty

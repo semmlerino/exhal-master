@@ -9,7 +9,7 @@ import os
 import sys
 
 # Third-party imports
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QAction, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
@@ -106,6 +106,11 @@ class IndexedPixelEditor(QMainWindow):
         # Status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
+        
+        # Add zoom indicator to status bar
+        from PyQt6.QtWidgets import QLabel
+        self.zoom_label = QLabel("Zoom: 400%")
+        self.status_bar.addPermanentWidget(self.zoom_label)
 
         # Progress dialogs removed
 
@@ -158,7 +163,7 @@ class IndexedPixelEditor(QMainWindow):
         self.canvas.pixelPressed.connect(self.controller.handle_canvas_press)
         self.canvas.pixelMoved.connect(self.controller.handle_canvas_move)
         self.canvas.pixelReleased.connect(self.controller.handle_canvas_release)
-        self.canvas.zoomRequested.connect(self.options_panel.set_zoom)
+        self.canvas.zoomRequested.connect(self._on_canvas_zoom_request)
 
         # Connect tool manager for color picker
         self.controller.tool_manager.set_color_picked_callback(self._on_color_picked)
@@ -240,6 +245,19 @@ class IndexedPixelEditor(QMainWindow):
 
         view_menu.addAction(zoom_in_action)
         view_menu.addAction(zoom_out_action)
+        
+        # Zoom reset action
+        zoom_reset_action = QAction("Reset Zoom", self)
+        zoom_reset_action.setShortcut("Ctrl+0")
+        zoom_reset_action.triggered.connect(self._zoom_reset)
+        
+        # Zoom to fit action
+        zoom_fit_action = QAction("Zoom to Fit", self)
+        zoom_fit_action.setShortcut("Ctrl+Shift+0")
+        zoom_fit_action.triggered.connect(self._zoom_to_fit)
+        
+        view_menu.addAction(zoom_reset_action)
+        view_menu.addAction(zoom_fit_action)
         view_menu.addSeparator()
 
         # Switch palette action
@@ -357,12 +375,13 @@ class IndexedPixelEditor(QMainWindow):
     def _on_zoom_changed(self, value: int):
         """Handle zoom slider change"""
         self.canvas.set_zoom(value)
+        self._update_zoom_label(value)
 
     def _zoom_to_fit(self):
         """Zoom to fit the visible area"""
         if self.canvas.parent():
             viewport = self.canvas.parent().parent()  # ScrollArea's viewport
-            if viewport:
+            if viewport and self.controller.get_image_size():
                 # Calculate zoom to fit
                 img_width, img_height = self.controller.get_image_size()
                 viewport_width = viewport.width() - 20
@@ -372,7 +391,22 @@ class IndexedPixelEditor(QMainWindow):
                 zoom_y = viewport_height // img_height
                 optimal_zoom = max(1, min(zoom_x, zoom_y, 64))
 
+                # Reset pan offset to center the image
+                self.canvas.pan_offset = QPointF(0.0, 0.0)
+                
+                # Set zoom
                 self.options_panel.set_zoom(optimal_zoom)
+                
+                # Center the canvas in the scroll area
+                scroll_area = self.canvas.parent().parent()
+                if hasattr(scroll_area, 'horizontalScrollBar') and hasattr(scroll_area, 'verticalScrollBar'):
+                    # Center horizontally
+                    h_bar = scroll_area.horizontalScrollBar()
+                    h_bar.setValue((h_bar.maximum() + h_bar.minimum()) // 2)
+                    
+                    # Center vertically
+                    v_bar = scroll_area.verticalScrollBar()
+                    v_bar.setValue((v_bar.maximum() + v_bar.minimum()) // 2)
 
     def _zoom_in(self):
         """Zoom in"""
@@ -385,6 +419,21 @@ class IndexedPixelEditor(QMainWindow):
         current = self.options_panel.get_zoom()
         if current > 1:
             self.options_panel.set_zoom(max(1, current - 2))
+    
+    def _zoom_reset(self):
+        """Reset zoom to default level (4x)"""
+        from .pixel_editor_constants import ZOOM_DEFAULT
+        self.options_panel.set_zoom(ZOOM_DEFAULT)
+    
+    def _update_zoom_label(self, zoom_value: int):
+        """Update the zoom percentage in status bar"""
+        percentage = zoom_value * 100
+        self.zoom_label.setText(f"Zoom: {percentage}%")
+    
+    def _on_canvas_zoom_request(self, zoom_value: int):
+        """Handle zoom request from canvas (mouse wheel)"""
+        self.options_panel.set_zoom(zoom_value)
+        self._update_zoom_label(zoom_value)
 
     def _on_color_picked(self, color_index: int):
         """Handle color picked by picker tool"""
@@ -649,6 +698,22 @@ class IndexedPixelEditor(QMainWindow):
         ):
             # Redo
             self.redo()
+        elif event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down):
+            # Arrow key panning
+            pan_delta = 20  # pixels to pan
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                pan_delta = 50  # larger pan with Shift
+            
+            if event.key() == Qt.Key.Key_Left:
+                self.canvas.pan_offset.setX(self.canvas.pan_offset.x() + pan_delta)
+            elif event.key() == Qt.Key.Key_Right:
+                self.canvas.pan_offset.setX(self.canvas.pan_offset.x() - pan_delta)
+            elif event.key() == Qt.Key.Key_Up:
+                self.canvas.pan_offset.setY(self.canvas.pan_offset.y() + pan_delta)
+            elif event.key() == Qt.Key.Key_Down:
+                self.canvas.pan_offset.setY(self.canvas.pan_offset.y() - pan_delta)
+            
+            self.canvas.update()
         else:
             super().keyPressEvent(event)
 

@@ -168,11 +168,47 @@ class FileLoadWorker(BaseWorker):
             Indexed PIL Image or None if conversion failed
         """
         if image.mode == "P":
+            # Check if already indexed image has more than 16 colors
+            palette = image.getpalette()
+            if palette:
+                # Count unique colors in the image
+                unique_colors = len(set(image.getdata()))
+                if unique_colors > 16:
+                    debug_log(
+                        "WORKER",
+                        f"Warning: Image has {unique_colors} colors, will be reduced to 16 for SNES compatibility",
+                        "WARNING"
+                    )
+                    self.emit_progress(
+                        30, 
+                        f"Reducing {unique_colors} colors to 16 for SNES compatibility..."
+                    )
+                    # Convert to RGB then back to P with 16 colors
+                    try:
+                        return image.convert("RGB").convert("P", palette=Image.ADAPTIVE, colors=16)
+                    except Exception as e:
+                        self.emit_error(f"Failed to reduce colors: {e!s}")
+                        return None
             return image
 
         try:
-            # Convert to indexed color with 256 colors
-            return image.convert("P", palette=Image.ADAPTIVE, colors=256)
+            # For non-indexed images, check color count before conversion
+            if image.mode == "RGB" or image.mode == "RGBA":
+                # Get unique colors
+                unique_colors = len(set(image.convert("RGB").getdata()))
+                if unique_colors > 16:
+                    debug_log(
+                        "WORKER",
+                        f"Warning: Image has {unique_colors} colors, will be reduced to 16 for SNES compatibility",
+                        "WARNING"
+                    )
+                    self.emit_progress(
+                        30,
+                        f"Reducing {unique_colors} colors to 16 for SNES compatibility..."
+                    )
+            
+            # Convert to indexed color with 16 colors (SNES sprite limit)
+            return image.convert("P", palette=Image.ADAPTIVE, colors=16)
         except Exception as e:
             self.emit_error(f"Failed to convert image to indexed color: {e!s}")
             return None

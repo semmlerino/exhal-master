@@ -83,10 +83,10 @@ class TestExtractionWorkerHeadless:
         """Test worker logic without Qt dependencies"""
         # Create worker first
         worker = ExtractionWorker(worker_params)
-        
+
         # Create test image
         test_img = Image.new("P", (128, 64), 0)
-        
+
         # Patch the instance method on the worker's extractor
         with patch.object(worker.extractor, "extract_sprites_grayscale", return_value=(test_img, 10)) as mock_extract:
             # Create proper mocks for signals

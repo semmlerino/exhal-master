@@ -26,10 +26,10 @@ def run_tests(test_type="all"):
         print(f"Unknown test type: {test_type}")
         print(f"Available types: {', '.join(test_commands.keys())}")
         return 1
-    
+
     cmd = test_commands[test_type]
     print(f"Running: {' '.join(cmd)}")
-    
+
     return subprocess.call(cmd)
 
 if __name__ == "__main__":

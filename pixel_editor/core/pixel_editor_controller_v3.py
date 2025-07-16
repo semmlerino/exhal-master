@@ -52,6 +52,7 @@ class PixelEditorController(QObject):
     titleChanged = pyqtSignal(str)
     statusMessage = pyqtSignal(str, int)  # message, timeout
     error = pyqtSignal(str)
+    toolChanged = pyqtSignal(str)  # tool name
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -87,6 +88,7 @@ class PixelEditorController(QObject):
         """Set the current drawing tool"""
         self.tool_manager.set_tool(tool_name)
         debug_log("CONTROLLER", f"Tool changed to: {tool_name}")
+        self.toolChanged.emit(tool_name)
 
     def set_drawing_color(self, color_index: int):
         """Set the current drawing color"""
@@ -693,9 +695,9 @@ class PixelEditorController(QObject):
         ):
             # Create individual commands for each pixel and batch them
             batch = BatchCommand()
-            for x, y, old_color, new_color in self._drawing_pixels:
+            for px, py, old_color, new_color in self._drawing_pixels:
                 cmd = DrawPixelCommand(
-                    x=x, y=y, old_color=old_color, new_color=new_color
+                    x=px, y=py, old_color=old_color, new_color=new_color
                 )
                 batch.add_command(cmd)
 

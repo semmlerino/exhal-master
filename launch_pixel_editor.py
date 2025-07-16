@@ -5,8 +5,9 @@ import os
 import subprocess
 import sys
 
-# Launch the actual pixel editor
-launcher_path = os.path.join("pixel_editor", "launch_pixel_editor.py")
+# Get the directory where this script is located (exhal-master)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+launcher_path = os.path.join(script_dir, "pixel_editor", "launch_pixel_editor.py")
 
 if os.path.exists(launcher_path):
     sys.exit(subprocess.call([sys.executable, launcher_path] + sys.argv[1:]))

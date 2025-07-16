@@ -2,16 +2,16 @@
 Palette preview widget for SpritePal
 """
 
-from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QFrame
-from PyQt6.QtCore import Qt, QSize, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QMouseEvent
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
+from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
 
 
 class PaletteColorWidget(QWidget):
     """Widget for displaying a single palette color"""
-    
+
     clicked = pyqtSignal(int)  # color index
-    
+
     def __init__(self, index, color=(0, 0, 0)):
         super().__init__()
         self.index = index
@@ -19,12 +19,12 @@ class PaletteColorWidget(QWidget):
         self.setFixedSize(QSize(32, 32))
         self.setToolTip(f"Color {index}: RGB({color[0]}, {color[1]}, {color[2]})")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        
-    def paintEvent(self, event):
+
+    def paintEvent(self, event):  # noqa: N802
         """Paint the color swatch"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
+
         # Draw background for transparency
         if self.index == 0:
             # Draw checkerboard for transparent color
@@ -35,23 +35,23 @@ class PaletteColorWidget(QWidget):
                         painter.fillRect(x, y, checker_size, checker_size, QColor(80, 80, 80))
                     else:
                         painter.fillRect(x, y, checker_size, checker_size, QColor(100, 100, 100))
-        
+
         # Draw color
         painter.fillRect(self.rect(), self.color)
-        
+
         # Draw border
         painter.setPen(QPen(QColor(100, 100, 100), 1))
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
-        
+
         # Draw index number
         painter.setPen(QPen(Qt.GlobalColor.white if self.color.lightness() < 128 else Qt.GlobalColor.black, 1))
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.index))
-        
-    def mousePressEvent(self, event: QMouseEvent):
+
+    def mousePressEvent(self, event: QMouseEvent):  # noqa: N802
         """Handle mouse press"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.index)
-            
+
     def set_color(self, color):
         """Set the color"""
         self.color = QColor(*color)
@@ -61,7 +61,7 @@ class PaletteColorWidget(QWidget):
 
 class PaletteWidget(QFrame):
     """Widget for displaying a single palette"""
-    
+
     def __init__(self, palette_index, name=""):
         super().__init__()
         self.palette_index = palette_index
@@ -76,18 +76,18 @@ class PaletteWidget(QFrame):
                 padding: 4px;
             }
         """)
-        
+
         # Layout
         layout = QGridLayout()
         layout.setSpacing(2)
         layout.setContentsMargins(4, 4, 4, 4)
-        
+
         # Palette label
-        label = QLabel(f"{palette_index}")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-weight: bold; color: #ddd;")
-        layout.addWidget(label, 0, 0, 1, 4)
-        
+        self.label = QLabel(f"{palette_index}")
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setStyleSheet("font-weight: bold; color: #ddd;")
+        layout.addWidget(self.label, 0, 0, 1, 4)
+
         # Color swatches
         self.color_widgets = []
         for i in range(16):
@@ -96,66 +96,73 @@ class PaletteWidget(QFrame):
             col = i % 4
             layout.addWidget(color_widget, row, col)
             self.color_widgets.append(color_widget)
-            
+
         self.setLayout(layout)
-        
+
     def set_palette(self, colors):
         """Set the palette colors"""
         self.colors = colors
         for i, color in enumerate(colors[:16]):
             self.color_widgets[i].set_color(color)
-            
+
     def clear(self):
         """Clear the palette"""
         self.colors = []
         for widget in self.color_widgets:
             widget.set_color((0, 0, 0))
 
+    def set_name(self, name):
+        """Set the palette name"""
+        self.name = name
+        if name:
+            self.label.setText(f"{self.palette_index}: {name}")
+        else:
+            self.label.setText(f"{self.palette_index}")
+
 
 class PalettePreviewWidget(QWidget):
     """Widget for previewing multiple palettes"""
-    
+
     def __init__(self):
         super().__init__()
         self._setup_ui()
-        
+
     def _setup_ui(self):
         """Set up the UI"""
         layout = QGridLayout()
         layout.setSpacing(8)
-        
+
         # Create palette widgets for palettes 8-15
         self.palette_widgets = {}
         for i in range(8):
             palette_index = i + 8
             palette_widget = PaletteWidget(palette_index)
-            
+
             row = i // 4
             col = i % 4
             layout.addWidget(palette_widget, row, col)
-            
+
             self.palette_widgets[palette_index] = palette_widget
-            
+
         self.setLayout(layout)
-        
+
     def set_palette(self, palette_index, colors, name=""):
         """Set a specific palette"""
         if palette_index in self.palette_widgets:
             self.palette_widgets[palette_index].set_palette(colors)
             if name:
-                # Could update the label with the name
-                pass
-                
+                self.palette_widgets[palette_index].set_name(name)
+
     def set_all_palettes(self, palettes_dict):
         """Set all palettes from a dictionary"""
         for palette_index, colors in palettes_dict.items():
             self.set_palette(palette_index, colors)
-            
+
     def clear(self):
         """Clear all palettes"""
         for widget in self.palette_widgets.values():
             widget.clear()
-            
+
     def highlight_palette(self, palette_index, highlight=True):
         """Highlight a specific palette"""
         if palette_index in self.palette_widgets:
@@ -178,13 +185,13 @@ class PalettePreviewWidget(QWidget):
                         padding: 4px;
                     }
                 """)
-                
+
     def highlight_active_palettes(self, active_indices):
         """Highlight multiple active palettes"""
         # Clear all highlights first
         for idx in range(8, 16):
             self.highlight_palette(idx, False)
-            
+
         # Highlight active ones
         for idx in active_indices:
             self.highlight_palette(idx, True)

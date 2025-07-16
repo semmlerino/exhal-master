@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
     # Signals
     extract_requested = pyqtSignal()
     open_in_editor_requested = pyqtSignal(str)  # sprite file path
+    arrange_rows_requested = pyqtSignal(str)  # sprite file path for arrangement
     inject_requested = pyqtSignal()  # inject sprite to VRAM
 
     def __init__(self):
@@ -152,6 +153,30 @@ class MainWindow(QMainWindow):
         """)
         button_layout.addWidget(self.open_editor_button)
 
+        self.arrange_rows_button = QPushButton("Arrange Rows")
+        self.arrange_rows_button.setMinimumHeight(40)
+        self.arrange_rows_button.setEnabled(False)
+        self.arrange_rows_button.setToolTip("Arrange sprite rows for easier editing")
+        self.arrange_rows_button.setStyleSheet("""
+            QPushButton {
+                background-color: #c7672a;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #a85521;
+            }
+            QPushButton:pressed {
+                background-color: #86441a;
+            }
+            QPushButton:disabled {
+                background-color: #555;
+                color: #999;
+            }
+        """)
+        button_layout.addWidget(self.arrange_rows_button)
+
         self.inject_button = QPushButton("Inject to VRAM")
         self.inject_button.setMinimumHeight(40)
         self.inject_button.setEnabled(False)
@@ -252,6 +277,7 @@ class MainWindow(QMainWindow):
         """Connect internal signals"""
         self.extract_button.clicked.connect(self._on_extract_clicked)
         self.open_editor_button.clicked.connect(self._on_open_editor_clicked)
+        self.arrange_rows_button.clicked.connect(self._on_arrange_rows_clicked)
         self.inject_button.clicked.connect(self._on_inject_clicked)
 
         # Connect extraction panel signals
@@ -325,6 +351,12 @@ class MainWindow(QMainWindow):
             sprite_file = f"{self._output_path}.png"
             self.open_in_editor_requested.emit(sprite_file)
     
+    def _on_arrange_rows_clicked(self):
+        """Handle arrange rows button click"""
+        if self._output_path:
+            sprite_file = f"{self._output_path}.png"
+            self.arrange_rows_requested.emit(sprite_file)
+    
     def _on_inject_clicked(self):
         """Handle inject to VRAM button click"""
         if self._output_path:
@@ -339,6 +371,7 @@ class MainWindow(QMainWindow):
         self.palette_preview.clear()
         self.preview_info.setText("No sprites loaded")
         self.open_editor_button.setEnabled(False)
+        self.arrange_rows_button.setEnabled(False)
         self._output_path = ""
         self._extracted_files = []
         self.status_bar.showMessage("Ready to extract sprites")
@@ -376,6 +409,7 @@ class MainWindow(QMainWindow):
         self._extracted_files = extracted_files
         self.extract_button.setEnabled(True)
         self.open_editor_button.setEnabled(True)
+        self.arrange_rows_button.setEnabled(True)
         self.inject_button.setEnabled(True)
 
         # Update preview info

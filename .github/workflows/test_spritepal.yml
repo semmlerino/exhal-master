@@ -1,0 +1,130 @@
+name: SpritePal Tests
+
+on:
+  push:
+    paths:
+      - 'spritepal/**'
+      - '.github/workflows/test_spritepal.yml'
+  pull_request:
+    paths:
+      - 'spritepal/**'
+      - '.github/workflows/test_spritepal.yml'
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        exclude:
+          # macOS runners are expensive, test only latest Python
+          - os: macos-latest
+            python-version: '3.8'
+          - os: macos-latest
+            python-version: '3.9'
+          - os: macos-latest
+            python-version: '3.10'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install system dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          xvfb \
+          libxkbcommon-x11-0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-xinerama0 \
+          libxcb-xfixes0 \
+          libxcb-shape0 \
+          libxcb-cursor0 \
+          x11-utils \
+          libglib2.0-0 \
+          libgl1-mesa-glx \
+          libdbus-1-3
+    
+    - name: Install Python dependencies
+      working-directory: spritepal
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-xvfb pytest-cov
+        pip install PyQt6 Pillow
+        # Install any additional requirements if they exist
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      shell: bash
+    
+    - name: Run tests (Linux)
+      if: runner.os == 'Linux'
+      working-directory: spritepal
+      run: |
+        # pytest-xvfb will automatically handle virtual display
+        pytest tests/ --cov=. --cov-report=xml --cov-report=term -v
+    
+    - name: Run tests (macOS)
+      if: runner.os == 'macOS'
+      working-directory: spritepal
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        # macOS doesn't support Xvfb, use offscreen backend
+        pytest tests/ --cov=. --cov-report=xml --cov-report=term -v
+    
+    - name: Run tests (Windows)
+      if: runner.os == 'Windows'
+      working-directory: spritepal
+      env:
+        QT_QPA_PLATFORM: offscreen
+      run: |
+        # Windows: Run non-GUI tests only in CI
+        pytest tests/ -m "not gui" --cov=. --cov-report=xml --cov-report=term -v
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./spritepal/coverage.xml
+        flags: spritepal
+        name: spritepal-${{ matrix.os }}-py${{ matrix.python-version }}
+      continue-on-error: true
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff mypy
+        pip install PyQt6 Pillow pytest  # For type checking
+    
+    - name: Run ruff
+      working-directory: spritepal
+      run: ruff check .
+    
+    - name: Run mypy
+      working-directory: spritepal
+      run: mypy . --ignore-missing-imports || true
+      continue-on-error: true

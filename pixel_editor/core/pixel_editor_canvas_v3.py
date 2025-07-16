@@ -39,6 +39,8 @@ class PixelCanvasV3(QWidget):
         self.pan_offset = QPointF(0.0, 0.0)
         self.pan_last_point = None
         self.hover_pos = None
+        self.temporary_picker = False  # Track if we're temporarily using picker with right-click
+        self.previous_tool = None  # Store previous tool when using temporary picker
 
         # Performance caches
         self._qcolor_cache = {}
@@ -52,6 +54,11 @@ class PixelCanvasV3(QWidget):
         # Connect to controller signals
         self.controller.imageChanged.connect(self._on_image_changed)
         self.controller.paletteChanged.connect(self._on_palette_changed)
+        self.controller.toolChanged.connect(self._on_tool_changed)
+
+        # Set initial cursor for current tool
+        current_tool = self.controller.get_current_tool_name()
+        self._update_cursor_for_tool(current_tool)
 
     def _on_image_changed(self):
         """Handle image change from controller"""
@@ -64,6 +71,27 @@ class PixelCanvasV3(QWidget):
         self._palette_version += 1  # Force color cache update
         self.update()
 
+    def _on_tool_changed(self, tool_name: str):
+        """Handle tool change from controller"""
+        self._update_cursor_for_tool(tool_name)
+
+    def _update_cursor_for_tool(self, tool_name: str):
+        """Update cursor based on the current tool"""
+        if self.panning:
+            # Don't change cursor while panning
+            return
+
+        if tool_name == "pencil":
+            self.setCursor(Qt.CursorShape.CrossCursor)
+        elif tool_name == "fill":
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        elif tool_name == "picker":
+            # Use WhatsThisCursor as a dropper cursor substitute
+            # (Qt doesn't have a built-in eyedropper cursor)
+            self.setCursor(Qt.CursorShape.WhatsThisCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
     def _update_size(self):
         """Update widget size based on image and zoom"""
         size = self.controller.get_image_size()
@@ -71,11 +99,35 @@ class PixelCanvasV3(QWidget):
             width, height = size
             self.setFixedSize(width * self.zoom, height * self.zoom)
 
-    def set_zoom(self, zoom: int):
-        """Set zoom level"""
-        self.zoom = max(1, min(64, zoom))
-        self._update_size()
-        self.update()
+    def set_zoom(self, zoom: int, center_on_canvas: bool = True):
+        """Set zoom level
+
+        Args:
+            zoom: New zoom level
+            center_on_canvas: If True, zoom centered on canvas; if False, preserve pan
+        """
+        new_zoom = max(1, min(64, zoom))
+        if new_zoom != self.zoom:
+            if center_on_canvas and self.controller.get_image_size():
+                # Get canvas center point
+                canvas_center = QPointF(self.width() / 2, self.height() / 2)
+
+                # Calculate the point in image space that's at center
+                old_image_point = (canvas_center - self.pan_offset) / self.zoom
+
+                # Update zoom
+                self.zoom = new_zoom
+                self._update_size()
+
+                # Calculate new position to keep the same image point at center
+                new_canvas_point = old_image_point * new_zoom
+                self.pan_offset = canvas_center - new_canvas_point
+            else:
+                # Simple zoom without adjusting pan
+                self.zoom = new_zoom
+                self._update_size()
+
+            self.update()
 
     def set_grid_visible(self, visible: bool):
         """Toggle grid visibility"""
@@ -123,7 +175,7 @@ class PixelCanvasV3(QWidget):
         checker_size = 8  # Size of each checker square
         light_color = QColor(220, 220, 220)
         dark_color = QColor(180, 180, 180)
-        
+
         for y in range(0, height, checker_size):
             for x in range(0, width, checker_size):
                 # Alternate colors in checkerboard pattern
@@ -131,12 +183,12 @@ class PixelCanvasV3(QWidget):
                     color = light_color
                 else:
                     color = dark_color
-                
+
                 # Draw the checker square
                 painter.fillRect(
-                    x, y, 
-                    min(checker_size, width - x), 
-                    min(checker_size, height - y), 
+                    x, y,
+                    min(checker_size, width - x),
+                    min(checker_size, height - y),
                     color
                 )
 
@@ -216,10 +268,12 @@ class PixelCanvasV3(QWidget):
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
         elif event.button() == Qt.MouseButton.RightButton:
-            # Color picker
+            # Temporary color picker
             pos = self._get_pixel_pos(event.position())
             if pos and self.controller.has_image():
-                # Set tool to picker and trigger pick
+                # Store current tool and temporarily switch to picker
+                self.previous_tool = self.controller.get_current_tool_name()
+                self.temporary_picker = True
                 self.controller.set_tool("picker")
                 self.pixelPressed.emit(pos.x(), pos.y())
 
@@ -255,7 +309,15 @@ class PixelCanvasV3(QWidget):
         elif event.button() == Qt.MouseButton.MiddleButton:
             self.panning = False
             self.pan_last_point = None
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            # Restore cursor for current tool
+            current_tool = self.controller.get_current_tool_name()
+            self._update_cursor_for_tool(current_tool)
+
+        elif event.button() == Qt.MouseButton.RightButton and self.temporary_picker and self.previous_tool:
+            # Restore previous tool after temporary picker
+            self.controller.set_tool(self.previous_tool)
+            self.temporary_picker = False
+            self.previous_tool = None
 
     def wheelEvent(self, event: QWheelEvent):
         """Handle mouse wheel for zooming"""
@@ -281,7 +343,23 @@ class PixelCanvasV3(QWidget):
         new_zoom = zoom_levels[new_index]
 
         if new_zoom != self.zoom:
+            # Store the mouse position before zoom for cursor-focused zooming
+            mouse_pos = event.position()
+
+            # Calculate the point in image space that's under the cursor
+            old_image_point = (mouse_pos - self.pan_offset) / self.zoom
+
+            # Update zoom
+            self.zoom = new_zoom
+            self._update_size()
+
+            # Calculate new position to keep the same image point under cursor
+            new_canvas_point = old_image_point * new_zoom
+            self.pan_offset = mouse_pos - new_canvas_point
+
+            # Emit signal for UI update
             self.zoomRequested.emit(new_zoom)
+            self.update()
 
         event.accept()
 
@@ -307,9 +385,13 @@ class PixelCanvasV3(QWidget):
         return None
 
     def enterEvent(self, event):
-        """Show tooltip on enter"""
+        """Show tooltip on enter and update cursor"""
         self.setToolTip(
             "Left click: Draw • Right click: Pick color • "
             "Middle click + drag: Pan • Wheel: Zoom"
         )
+        # Update cursor for current tool
+        if not self.panning:
+            current_tool = self.controller.get_current_tool_name()
+            self._update_cursor_for_tool(current_tool)
         super().enterEvent(event)

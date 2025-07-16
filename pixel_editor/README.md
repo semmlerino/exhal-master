@@ -49,7 +49,11 @@ python pixel_editor/launch_pixel_editor.py
 - **4bpp Indexed Color Editing**: Optimized for SNES sprite formats
 - **16-Color Palette Support**: Full SNES palette management
 - **Drawing Tools**: Pencil, fill, and color picker tools
-- **Zoom and Grid**: Pixel-perfect editing with grid overlay
+- **Enhanced Zoom and Pan**: 
+  - Cursor-focused zoom (zooms towards mouse position)
+  - Keyboard shortcuts for zoom reset and fit
+  - Pan with middle mouse or arrow keys
+  - Zoom level display in status bar
 - **Undo/Redo**: Full undo/redo support with command pattern
 - **Import/Export**: PNG file support with palette preservation
 - **Keyboard Shortcuts**: Efficient workflow with keyboard shortcuts
@@ -67,6 +71,12 @@ python pixel_editor/launch_pixel_editor.py
 - **Ctrl+Y** - Redo
 - **Ctrl++** - Zoom in
 - **Ctrl+-** - Zoom out
+- **Ctrl+0** - Reset zoom to default (4x)
+- **Ctrl+Shift+0** - Zoom to fit window
+- **Arrow Keys** - Pan the canvas
+- **Shift+Arrow Keys** - Pan the canvas faster
+- **Mouse Wheel** - Zoom in/out (focused on cursor position)
+- **Middle Mouse Button + Drag** - Pan the canvas
 
 ## Architecture
 

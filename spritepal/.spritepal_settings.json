@@ -1,0 +1,16 @@
+{
+  "session": {
+    "vram_path": "C:/CustomScripts/KirbyMax/workshop/exhal-master/Cave.SnesVideoRam.dmp",
+    "cgram_path": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\Cave.SnesCgRam.dmp",
+    "oam_path": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\Cave.SnesSpriteRam.dmp",
+    "output_name": "cave_sprites_editor",
+    "create_grayscale": true,
+    "create_metadata": true
+  },
+  "ui": {
+    "window_width": 900,
+    "window_height": 600,
+    "window_x": 0,
+    "window_y": 0
+  }
+}

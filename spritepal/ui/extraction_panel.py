@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from utils.constants import VRAM_SPRITE_OFFSET
+from spritepal.utils.constants import VRAM_SPRITE_OFFSET
 
 
 class DropZone(QWidget):
@@ -171,10 +171,11 @@ class ExtractionPanel(QGroupBox):
         
         # Timer for debouncing offset changes
         self._offset_timer = QTimer()
-        self._offset_timer.setInterval(150)  # 150ms delay
+        self._offset_timer.setInterval(16)  # 16ms delay for ~60fps updates
         self._offset_timer.setSingleShot(True)
         self._offset_timer.timeout.connect(self._emit_offset_changed)
         self._pending_offset = None
+        self._slider_changing = False  # Track if change is from slider
 
     def _setup_ui(self):
         """Set up the UI"""
@@ -367,8 +368,17 @@ class ExtractionPanel(QGroupBox):
 
     def _on_offset_slider_changed(self, value):
         """Handle offset slider change"""
+        # Mark that this change is from the slider
+        self._slider_changing = True
+        
         # Update spinbox (will trigger its handler)
         self.offset_spinbox.setValue(value)
+        
+        # Emit change immediately for smooth real-time updates when dragging
+        if self.preset_combo.currentIndex() == 1 and self.has_vram():  # Custom Range
+            self.offset_changed.emit(value)
+        
+        self._slider_changing = False
         
     def _on_offset_spinbox_changed(self, value):
         """Handle offset spinbox change"""
@@ -380,8 +390,8 @@ class ExtractionPanel(QGroupBox):
         # Update hex label
         self.offset_hex_label.setText(f"0x{value:04X}")
         
-        # Debounce offset changes for real-time preview
-        if self.preset_combo.currentIndex() == 1:  # Custom Range
+        # Only use debounce for direct spinbox changes (not from slider)
+        if self.preset_combo.currentIndex() == 1 and not self._slider_changing:  # Custom Range
             self._pending_offset = value
             self._offset_timer.stop()
             self._offset_timer.start()
