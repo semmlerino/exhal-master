@@ -233,6 +233,11 @@ class ZoomablePreviewWidget(QWidget):
         self._tiles_per_row = tiles_per_row
         self.reset_view()
 
+    def update_pixmap(self, pixmap):
+        """Update the preview pixmap without resetting view"""
+        self._pixmap = pixmap
+        self.update()
+
     def set_preview_from_file(self, file_path):
         """Load preview from file"""
         pixmap = QPixmap(file_path)
@@ -364,7 +369,7 @@ class PreviewPanel(QWidget):
         # Update preview with colorized image
         if self._colorized_image:
             pixmap = self._pil_to_pixmap(self._colorized_image)
-            self.preview.set_preview(pixmap, self.preview._tile_count, self.preview._tiles_per_row)
+            self.preview.update_pixmap(pixmap)
 
     def _show_grayscale(self):
         """Show the grayscale version of the image"""
@@ -394,7 +399,7 @@ class PreviewPanel(QWidget):
                         pixels[x, y] = (gray_value, gray_value, gray_value, 255)
             
             pixmap = self._pil_to_pixmap(rgba_image)
-            self.preview.set_preview(pixmap, self.preview._tile_count, self.preview._tiles_per_row)
+            self.preview.update_pixmap(pixmap)
 
     def set_preview(self, pixmap, tile_count=0, tiles_per_row=0):
         """Set the preview pixmap"""
