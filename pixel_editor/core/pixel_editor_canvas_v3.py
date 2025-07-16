@@ -8,7 +8,7 @@ Uses controller's models and managers instead of maintaining its own state
 from typing import Optional
 
 # Third-party imports
-from PyQt6.QtCore import QPoint, QPointF, Qt, pyqtSignal, QRect
+from PyQt6.QtCore import QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QWheelEvent
 from PyQt6.QtWidgets import QWidget
 
@@ -39,14 +39,16 @@ class PixelCanvasV3(QWidget):
         self.pan_offset = QPointF(0.0, 0.0)
         self.pan_last_point = None
         self.hover_pos = None
-        self.temporary_picker = False  # Track if we're temporarily using picker with right-click
+        self.temporary_picker = (
+            False  # Track if we're temporarily using picker with right-click
+        )
         self.previous_tool = None  # Store previous tool when using temporary picker
 
         # Performance caches
         self._qcolor_cache = {}
         self._palette_version = 0
         self._cached_palette_version = -1
-        
+
         # QImage-based rendering optimization
         self._qimage_buffer = None  # QImage buffer for efficient rendering
         self._qimage_scaled = None  # Cached scaled version of the image
@@ -198,58 +200,60 @@ class PixelCanvasV3(QWidget):
 
     def _update_qimage_buffer(self):
         """Update QImage buffer from current image data"""
-        if (self._qimage_buffer is not None and 
-            self._cached_image_version == self._image_version and
-            self._cached_palette_version == self._palette_version):
+        if (
+            self._qimage_buffer is not None
+            and self._cached_image_version == self._image_version
+            and self._cached_palette_version == self._palette_version
+        ):
             return  # Cache is still valid
-        
+
         if not self.controller.has_image():
             return
-            
+
         image_model = self.controller.image_model
         if image_model.data is None:
             return
-            
+
         height, width = image_model.data.shape
-        
+
         # Update color cache if needed
         if self._cached_palette_version != self._palette_version:
             self._update_qcolor_cache()
-            
+
         # Create QImage buffer
         self._qimage_buffer = QImage(width, height, QImage.Format.Format_RGB32)
-        
+
         # Fill the buffer with pixel data
         for y in range(height):
             for x in range(width):
                 color_index = image_model.data[y, x]
                 qcolor = self._qcolor_cache.get(color_index, self._qcolor_cache.get(-1))
                 self._qimage_buffer.setPixel(x, y, qcolor.rgb())
-        
+
         self._cached_image_version = self._image_version
 
     def _get_scaled_qimage(self):
         """Get scaled QImage for current zoom level"""
-        if (self._qimage_scaled is not None and 
-            self._cached_zoom == self.zoom):
+        if self._qimage_scaled is not None and self._cached_zoom == self.zoom:
             return self._qimage_scaled
-            
+
         # Update base image buffer first
         self._update_qimage_buffer()
-        
+
         if self._qimage_buffer is None:
             return None
-            
+
         # Create scaled version
         scaled_width = self._qimage_buffer.width() * self.zoom
         scaled_height = self._qimage_buffer.height() * self.zoom
-        
+
         self._qimage_scaled = self._qimage_buffer.scaled(
-            scaled_width, scaled_height, 
+            scaled_width,
+            scaled_height,
             Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.FastTransformation
+            Qt.TransformationMode.FastTransformation,
         )
-        
+
         self._cached_zoom = self.zoom
         return self._qimage_scaled
 
@@ -258,28 +262,32 @@ class PixelCanvasV3(QWidget):
         if self.drawing:
             # Skip hover updates during drawing
             return
-            
+
         # Calculate update regions
         regions_to_update = []
-        
+
         # Add old hover position to update list
         if old_pos is not None:
-            regions_to_update.append(QRect(
-                old_pos.x() * self.zoom,
-                old_pos.y() * self.zoom,
-                self.zoom,
-                self.zoom
-            ))
-        
+            regions_to_update.append(
+                QRect(
+                    old_pos.x() * self.zoom,
+                    old_pos.y() * self.zoom,
+                    self.zoom,
+                    self.zoom,
+                )
+            )
+
         # Add new hover position to update list
         if new_pos is not None:
-            regions_to_update.append(QRect(
-                new_pos.x() * self.zoom,
-                new_pos.y() * self.zoom,
-                self.zoom,
-                self.zoom
-            ))
-        
+            regions_to_update.append(
+                QRect(
+                    new_pos.x() * self.zoom,
+                    new_pos.y() * self.zoom,
+                    self.zoom,
+                    self.zoom,
+                )
+            )
+
         # Apply pan offset to regions
         for rect in regions_to_update:
             rect.translate(int(self.pan_offset.x()), int(self.pan_offset.y()))
@@ -301,10 +309,11 @@ class PixelCanvasV3(QWidget):
 
                 # Draw the checker square
                 painter.fillRect(
-                    x, y,
+                    x,
+                    y,
                     min(checker_size, width - x),
                     min(checker_size, height - y),
-                    color
+                    color,
                 )
 
     def paintEvent(self, event):
@@ -337,7 +346,7 @@ class PixelCanvasV3(QWidget):
         # Draw grid if visible and zoomed in enough
         if self.grid_visible and self.zoom >= 4:
             painter.setPen(QPen(QColor(64, 64, 64), 1))
-            
+
             # Get original image dimensions
             image_width = width // self.zoom
             image_height = height // self.zoom
@@ -355,7 +364,7 @@ class PixelCanvasV3(QWidget):
             x, y = self.hover_pos.x(), self.hover_pos.y()
             image_width = width // self.zoom
             image_height = height // self.zoom
-            
+
             if 0 <= x < image_width and 0 <= y < image_height:
                 painter.setPen(QPen(QColor(255, 255, 0), 2))
                 painter.drawRect(
@@ -401,7 +410,7 @@ class PixelCanvasV3(QWidget):
         if pos != self.hover_pos:
             old_hover_pos = self.hover_pos
             self.hover_pos = pos
-            
+
             # Only update the regions that need repainting
             self._update_hover_regions(old_hover_pos, pos)
 
@@ -425,7 +434,11 @@ class PixelCanvasV3(QWidget):
             current_tool = self.controller.get_current_tool_name()
             self._update_cursor_for_tool(current_tool)
 
-        elif event.button() == Qt.MouseButton.RightButton and self.temporary_picker and self.previous_tool:
+        elif (
+            event.button() == Qt.MouseButton.RightButton
+            and self.temporary_picker
+            and self.previous_tool
+        ):
             # Restore previous tool after temporary picker
             self.controller.set_tool(self.previous_tool)
             self.temporary_picker = False

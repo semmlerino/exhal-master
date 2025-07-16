@@ -13,7 +13,7 @@ from typing import Optional
 # Third-party imports
 import numpy as np
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QPixmap
 
 from .pixel_editor_commands import (
@@ -82,20 +82,20 @@ class PixelEditorController(QObject):
         self._is_drawing = False
         self._drawing_pixels = []  # List of (x, y, old_color, new_color) tuples
         self.palette_worker = None
-        
+
         # Update batching for performance optimization
         self._update_timer = QTimer()
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._emit_batched_update)
         self._update_pending = False
         self._batch_interval = 16  # ~60 FPS (16ms)
-        
+
     def _request_update(self):
         """Request an update with batching for performance"""
         if not self._update_pending:
             self._update_pending = True
             self._update_timer.start(self._batch_interval)
-    
+
     def _emit_batched_update(self):
         """Emit the batched update signal"""
         self._update_pending = False
