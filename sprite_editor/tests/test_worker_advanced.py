@@ -455,14 +455,15 @@ class TestWorkerIntegration:
 
         # Hook into the worker creation in extract_sprites
         original_extract = controller.extract_sprites
+        controller_ref = controller  # Capture controller reference
 
         def mock_extract():
             nonlocal worker_ref
             # Call original method
             original_extract()
-            # Capture the worker
-            if hasattr(controller, "extract_worker"):
-                worker_ref = controller.extract_worker
+            # Capture the worker using the captured reference
+            if hasattr(controller_ref, "extract_worker"):
+                worker_ref = controller_ref.extract_worker
 
         controller.extract_sprites = mock_extract
 

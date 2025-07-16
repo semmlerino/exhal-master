@@ -84,7 +84,7 @@ class OAMAnalyzer:
             "x_flip": x_flip,
             "y_flip": y_flip,
             "size_toggle": size_toggle,
-            "attrs_raw": attrs
+            "attrs_raw": attrs,
         }
 
     def analyze_oam_file(self, filename: str):
@@ -116,9 +116,12 @@ class OAMAnalyzer:
         kirby_candidates = []
         for sprite in sprites:
             # Common Kirby tile ranges and characteristics
-            if (sprite["tile"] in range(0x40) or  # Common character tiles
-                sprite["tile"] in range(0x80, 0xC0)):    # More character tiles
-                if sprite["palette"] in [0, 1, 2, 3]:    # Kirby often uses lower palettes
+            if sprite["tile"] in range(0x40) or sprite[  # Common character tiles
+                "tile"
+            ] in range(
+                0x80, 0xC0
+            ):  # More character tiles
+                if sprite["palette"] in [0, 1, 2, 3]:  # Kirby often uses lower palettes
                     kirby_candidates.append(sprite)
 
         if kirby_candidates:
@@ -134,13 +137,16 @@ class OAMAnalyzer:
                 if len(group) >= 2:  # Kirby is usually made of multiple sprites
                     print(f"  Cluster at ~({pos[0]*32}, {pos[1]*32}):")
                     for sprite in sorted(group, key=lambda s: (s["y"], s["x"])):
-                        print(f"    Sprite {sprite['index']}: Tile 0x{sprite['tile']:02X}, "
-                              f"Palette {sprite['palette']}, Pos ({sprite['x']}, {sprite['y']})")
+                        print(
+                            f"    Sprite {sprite['index']}: Tile 0x{sprite['tile']:02X}, "
+                            f"Palette {sprite['palette']}, Pos ({sprite['x']}, {sprite['y']})"
+                        )
 
         # Show tile-palette mappings
         print("\nTiles using multiple palettes in this file:")
-        multi_palette_tiles = {tile: pals for tile, pals in tile_palette_map.items()
-                              if len(pals) > 1}
+        multi_palette_tiles = {
+            tile: pals for tile, pals in tile_palette_map.items() if len(pals) > 1
+        }
         for tile, palettes in sorted(multi_palette_tiles.items())[:10]:
             print(f"  Tile 0x{tile:02X}: palettes {sorted(palettes)}")
 
@@ -157,7 +163,7 @@ class OAMAnalyzer:
             "mss_OAM.dmp",
             "mss2_OAM.dmp",
             "Kirby Super Star (USA)_1_OAM.dmp",
-            "Kirby Super Star (USA)_2_OAM.dmp"
+            "Kirby Super Star (USA)_2_OAM.dmp",
         ]
 
         existing_files = []
@@ -173,63 +179,81 @@ class OAMAnalyzer:
             all_sprites.extend([(filename, s) for s in sprites])
 
         # Global analysis
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("GLOBAL PALETTE ANALYSIS")
-        print("="*60)
+        print("=" * 60)
 
         print("\nPalettes by usage frequency:")
-        palette_tile_counts = [(pal, len(tiles)) for pal, tiles in self.palette_usage.items()]
-        for palette, count in sorted(palette_tile_counts, key=lambda x: x[1], reverse=True):
+        palette_tile_counts = [
+            (pal, len(tiles)) for pal, tiles in self.palette_usage.items()
+        ]
+        for palette, count in sorted(
+            palette_tile_counts, key=lambda x: x[1], reverse=True
+        ):
             print(f"  Palette {palette}: {count} unique tiles")
             # Show some example tiles
             example_tiles = sorted(self.palette_usage[palette])[:10]
             print(f"    Examples: {', '.join(f'0x{t:02X}' for t in example_tiles)}")
 
         print("\nTiles that use multiple palettes across all files:")
-        multi_palette_tiles = [(tile, pals) for tile, pals in self.tile_palettes.items()
-                              if len(pals) > 1]
-        for tile, palettes in sorted(multi_palette_tiles, key=lambda x: len(x[1]), reverse=True)[:20]:
+        multi_palette_tiles = [
+            (tile, pals) for tile, pals in self.tile_palettes.items() if len(pals) > 1
+        ]
+        for tile, palettes in sorted(
+            multi_palette_tiles, key=lambda x: len(x[1]), reverse=True
+        )[:20]:
             print(f"  Tile 0x{tile:02X}: palettes {sorted(palettes)}")
 
         # Look for Kirby patterns
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("KIRBY SPRITE DETECTION")
-        print("="*60)
+        print("=" * 60)
 
         # Kirby sprites often appear in groups and use consistent palettes
         # Look for recurring tile patterns
         tile_positions = defaultdict(list)
         for filename, sprite in all_sprites:
             if sprite["palette"] in [0, 1, 2, 3]:  # Focus on lower palettes
-                tile_positions[sprite["tile"]].append({
-                    "file": os.path.basename(filename),
-                    "x": sprite["x"],
-                    "y": sprite["y"],
-                    "palette": sprite["palette"]
-                })
+                tile_positions[sprite["tile"]].append(
+                    {
+                        "file": os.path.basename(filename),
+                        "x": sprite["x"],
+                        "y": sprite["y"],
+                        "palette": sprite["palette"],
+                    }
+                )
 
         print("\nFrequently used tiles (potential Kirby tiles):")
-        frequent_tiles = [(tile, positions) for tile, positions in tile_positions.items()
-                         if len(positions) >= 3]
-        for tile, positions in sorted(frequent_tiles, key=lambda x: len(x[1]), reverse=True)[:15]:
+        frequent_tiles = [
+            (tile, positions)
+            for tile, positions in tile_positions.items()
+            if len(positions) >= 3
+        ]
+        for tile, positions in sorted(
+            frequent_tiles, key=lambda x: len(x[1]), reverse=True
+        )[:15]:
             print(f"\nTile 0x{tile:02X} appears {len(positions)} times:")
             palette_counts = Counter(p["palette"] for p in positions)
             print(f"  Palette usage: {dict(palette_counts)}")
             # Show a few examples
             for pos in positions[:3]:
-                print(f"    {pos['file']}: ({pos['x']}, {pos['y']}) palette {pos['palette']}")
+                print(
+                    f"    {pos['file']}: ({pos['x']}, {pos['y']}) palette {pos['palette']}"
+                )
 
         # Create tile-to-palette mapping
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("TILE TO PALETTE MAPPING")
-        print("="*60)
+        print("=" * 60)
 
         consistent_tiles = {}
         for tile, palettes in self.tile_palettes.items():
             if len(palettes) == 1:
                 consistent_tiles[tile] = next(iter(palettes))
 
-        print(f"\nTiles with consistent palette assignment ({len(consistent_tiles)} tiles):")
+        print(
+            f"\nTiles with consistent palette assignment ({len(consistent_tiles)} tiles):"
+        )
         for palette in range(8):
             tiles = [t for t, p in consistent_tiles.items() if p == palette]
             if tiles:
@@ -253,6 +277,7 @@ class OAMAnalyzer:
                     f.write(f"Tile 0x{tile:02X} -> Palettes {sorted(palettes)}\n")
 
         print("\nResults saved to oam_palette_mapping.txt")
+
 
 if __name__ == "__main__":
     analyzer = OAMAnalyzer()

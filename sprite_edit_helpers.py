@@ -27,7 +27,7 @@ def parse_cgram(cgram_file: str) -> list[list[tuple[int, int, int]]]:
         for color_idx in range(16):
             offset = (pal_idx * 16 + color_idx) * 2
             if offset + 2 <= len(cgram_data):
-                bgr555 = struct.unpack("<H", cgram_data[offset:offset+2])[0]
+                bgr555 = struct.unpack("<H", cgram_data[offset : offset + 2])[0]
 
                 # Convert BGR555 to RGB888
                 r = ((bgr555 >> 0) & 0x1F) * 8
@@ -98,10 +98,12 @@ def decode_4bpp_tile(tile_data: bytes) -> list[int]:
         # Extract each pixel
         for col in range(8):
             bit = 7 - col
-            pixel = ((bp0 >> bit) & 1) | \
-                    (((bp1 >> bit) & 1) << 1) | \
-                    (((bp2 >> bit) & 1) << 2) | \
-                    (((bp3 >> bit) & 1) << 3)
+            pixel = (
+                ((bp0 >> bit) & 1)
+                | (((bp1 >> bit) & 1) << 1)
+                | (((bp2 >> bit) & 1) << 2)
+                | (((bp3 >> bit) & 1) << 3)
+            )
             pixels.append(pixel)
 
     return pixels

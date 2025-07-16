@@ -94,6 +94,9 @@ class SettingsManager:
 
     def add_recent_file(self, file_type: str, file_path: str):
         """Add a file to recent files list"""
+        # Ensure file_path is a string (not Path object) for JSON serialization
+        file_path = str(file_path)
+
         if file_type not in self.settings["recent_files"]:
             self.settings["recent_files"][file_type] = []
 

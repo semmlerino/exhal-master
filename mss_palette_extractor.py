@@ -51,9 +51,9 @@ class MSSPaletteExtractor:
             raise ValueError(f"Failed to decompress savestate: {e}")
 
         # Extract memory regions
-        self.vram = decompressed[0x00000:0x10000]   # 64KB
+        self.vram = decompressed[0x00000:0x10000]  # 64KB
         self.cgram = decompressed[0x10000:0x10200]  # 512 bytes
-        self.oam = decompressed[0x10200:0x10420]    # 544 bytes
+        self.oam = decompressed[0x10200:0x10420]  # 544 bytes
 
         # Parse the data
         self._parse_oam()
@@ -94,18 +94,20 @@ class MSSPaletteExtractor:
             if x_msb:
                 x |= 0x100
 
-            self.sprites.append({
-                "index": sprite_idx,
-                "x": x,
-                "y": y,
-                "tile": tile,
-                "palette": palette + 8,  # Sprite palettes are 8-15
-                "priority": priority,
-                "h_flip": h_flip,
-                "v_flip": v_flip,
-                "size": "large" if size_bit else "small",
-                "active": tile != 0
-            })
+            self.sprites.append(
+                {
+                    "index": sprite_idx,
+                    "x": x,
+                    "y": y,
+                    "tile": tile,
+                    "palette": palette + 8,  # Sprite palettes are 8-15
+                    "priority": priority,
+                    "h_flip": h_flip,
+                    "v_flip": v_flip,
+                    "size": "large" if size_bit else "small",
+                    "active": tile != 0,
+                }
+            )
 
     def _parse_cgram(self):
         """Parse CGRAM data to extract color palettes"""
@@ -115,7 +117,7 @@ class MSSPaletteExtractor:
             colors = []
             for color_idx in range(16):
                 offset = (pal_idx * 16 + color_idx) * 2
-                bgr555 = struct.unpack("<H", self.cgram[offset:offset+2])[0]
+                bgr555 = struct.unpack("<H", self.cgram[offset : offset + 2])[0]
 
                 # Convert BGR555 to RGB
                 r = ((bgr555 >> 0) & 0x1F) * 8
@@ -179,14 +181,13 @@ class MSSPaletteExtractor:
             "source_file": str(self.mss_file),
             "sprites": self.sprites,
             "sprite_palette_mappings": {
-                str(k): list(v)
-                for k, v in self.get_sprite_palette_mappings().items()
+                str(k): list(v) for k, v in self.get_sprite_palette_mappings().items()
             },
             "palettes": {
                 str(i): [f"#{r:02X}{g:02X}{b:02X}" for r, g, b in colors]
                 for i, colors in enumerate(self.palettes)
             },
-            "kirby_sprites": self.find_kirby_sprites()
+            "kirby_sprites": self.find_kirby_sprites(),
         }
 
         json_file = output_dir / f"{base_name}_palette_data.json"
@@ -207,44 +208,77 @@ class MSSPaletteExtractor:
 
         # Try to load font
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
-            small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14
+            )
+            small_font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10
+            )
         except:
             font = ImageFont.load_default()
             small_font = font
 
         # Title
-        draw.text((20, 20), f"MSS Palette Mapping Report: {self.mss_file.name}",
-                  fill=(255, 255, 255), font=font)
+        draw.text(
+            (20, 20),
+            f"MSS Palette Mapping Report: {self.mss_file.name}",
+            fill=(255, 255, 255),
+            font=font,
+        )
 
         # Summary
         active_sprites = [s for s in self.sprites if s["active"]]
         kirby_sprites = self.find_kirby_sprites()
-        draw.text((20, 50), f"Active Sprites: {len(active_sprites)}", fill=(200, 200, 200), font=small_font)
-        draw.text((20, 70), f"Kirby Sprites (tiles 0x00-0x3F): {len(kirby_sprites)}", fill=(200, 200, 200), font=small_font)
+        draw.text(
+            (20, 50),
+            f"Active Sprites: {len(active_sprites)}",
+            fill=(200, 200, 200),
+            font=small_font,
+        )
+        draw.text(
+            (20, 70),
+            f"Kirby Sprites (tiles 0x00-0x3F): {len(kirby_sprites)}",
+            fill=(200, 200, 200),
+            font=small_font,
+        )
 
         # Draw palettes
         y_offset = 100
-        draw.text((20, y_offset), "Sprite Palettes (8-15):", fill=(255, 255, 255), font=font)
+        draw.text(
+            (20, y_offset), "Sprite Palettes (8-15):", fill=(255, 255, 255), font=font
+        )
         y_offset += 30
 
         for pal_idx in range(8, 16):
             x_offset = 20
-            draw.text((x_offset, y_offset), f"Pal {pal_idx}:", fill=(200, 200, 200), font=small_font)
+            draw.text(
+                (x_offset, y_offset),
+                f"Pal {pal_idx}:",
+                fill=(200, 200, 200),
+                font=small_font,
+            )
             x_offset += 50
 
             # Draw color swatches
             for color_idx in range(16):
                 color = self.palettes[pal_idx][color_idx]
-                draw.rectangle([x_offset, y_offset, x_offset + 20, y_offset + 20],
-                              fill=color, outline=(64, 64, 64))
+                draw.rectangle(
+                    [x_offset, y_offset, x_offset + 20, y_offset + 20],
+                    fill=color,
+                    outline=(64, 64, 64),
+                )
                 x_offset += 22
 
             y_offset += 30
 
         # Draw sprite mappings
         y_offset += 20
-        draw.text((20, y_offset), "Sprite to Palette Mappings:", fill=(255, 255, 255), font=font)
+        draw.text(
+            (20, y_offset),
+            "Sprite to Palette Mappings:",
+            fill=(255, 255, 255),
+            font=font,
+        )
         y_offset += 30
 
         mappings = self.get_sprite_palette_mappings()
@@ -253,15 +287,24 @@ class MSSPaletteExtractor:
                 continue
 
             sprites = mappings[pal_idx]
-            draw.text((20, y_offset), f"Palette {pal_idx}: {len(sprites)} sprites",
-                      fill=(200, 200, 200), font=small_font)
+            draw.text(
+                (20, y_offset),
+                f"Palette {pal_idx}: {len(sprites)} sprites",
+                fill=(200, 200, 200),
+                font=small_font,
+            )
 
             # Show tile numbers
             tiles = sorted({s["tile"] for s in sprites})[:20]  # First 20 unique tiles
             tile_str = ", ".join(f"0x{t:02X}" for t in tiles)
             if len(tiles) < len({s["tile"] for s in sprites}):
                 tile_str += "..."
-            draw.text((150, y_offset), f"Tiles: {tile_str}", fill=(150, 150, 150), font=small_font)
+            draw.text(
+                (150, y_offset),
+                f"Tiles: {tile_str}",
+                fill=(150, 150, 150),
+                font=small_font,
+            )
 
             y_offset += 20
             if y_offset > 700:
@@ -280,7 +323,9 @@ def main():
     if len(sys.argv) < 2:
         print("MSS Savestate Palette Extractor")
         print("Usage: python mss_palette_extractor.py <savestate.mss> [output_dir]")
-        print("\nThis tool extracts palette mapping information from Mesen-S savestates.")
+        print(
+            "\nThis tool extracts palette mapping information from Mesen-S savestates."
+        )
         sys.exit(1)
 
     mss_file = sys.argv[1]
@@ -314,6 +359,7 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

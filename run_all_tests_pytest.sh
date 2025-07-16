@@ -13,6 +13,7 @@ echo "Running tests with coverage..."
 python3 -m pytest \
     --cov=sprite_editor \
     --cov=sprite_editor_unified \
+    --cov=pixel_editor \
     --cov-report=html \
     --cov-report=term-missing \
     --cov-branch \

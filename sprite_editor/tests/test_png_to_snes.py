@@ -16,9 +16,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import png_to_snes
 import pytest
 from PIL import Image
+
+from sprite_editor import png_to_snes
 
 
 class TestPngToSnesFunction(unittest.TestCase):

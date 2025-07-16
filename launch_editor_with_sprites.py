@@ -7,9 +7,10 @@ This script helps with quick testing of the enhanced zoom functionality
 import os
 import sys
 
+from PIL import Image
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
-from indexed_pixel_editor import IndexedPixelEditor
+from pixel_editor.core.indexed_pixel_editor import IndexedPixelEditor
 
 
 def main():
@@ -22,7 +23,7 @@ def main():
     sprite_files = [
         "kirby_visual_friendly_ultrathink.png",
         "kirby_editor_ready_ultrathink.png",
-        "kirby_focused_4bpp_ultrathink.png"
+        "kirby_focused_4bpp_ultrathink.png",
     ]
 
     available_files = [f for f in sprite_files if os.path.exists(f)]
@@ -53,21 +54,29 @@ def main():
 
             # Try to load the file
             try:
-                from PIL import Image
                 img = Image.open(filename)
                 if img.mode == "P":
                     editor.canvas.load_image(img)
                     editor.current_file = filename
-                    editor.setWindowTitle(f"Indexed Pixel Editor - {os.path.basename(filename)}")
+                    editor.setWindowTitle(
+                        f"Indexed Pixel Editor - {os.path.basename(filename)}"
+                    )
                     print(f"✓ Loaded {filename} successfully!")
                     print(f"  Size: {img.size}")
                     print(f"  Mode: {img.mode} (indexed)")
-                    print(f"  Colors: {len(img.getpalette())//3 if img.palette else 'unknown'}")
+                    print(
+                        f"  Colors: {len(img.getpalette())//3 if img.palette else 'unknown'}"
+                    )
                 else:
-                    QMessageBox.warning(editor, "Format Error",
-                                      f"File {filename} is not in indexed mode. Please use an indexed PNG.")
+                    QMessageBox.warning(
+                        editor,
+                        "Format Error",
+                        f"File {filename} is not in indexed mode. Please use an indexed PNG.",
+                    )
             except Exception as e:
-                QMessageBox.critical(editor, "Load Error", f"Failed to load {filename}:\\n{e!s}")
+                QMessageBox.critical(
+                    editor, "Load Error", f"Failed to load {filename}:\\n{e!s}"
+                )
 
     editor.show()
 
@@ -99,6 +108,7 @@ def main():
     print("")
 
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

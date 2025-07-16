@@ -17,8 +17,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import sprite_injector
 from PIL import Image
+
+from sprite_editor import sprite_injector
 
 
 class TestSpriteInjectorPngConversion(unittest.TestCase):

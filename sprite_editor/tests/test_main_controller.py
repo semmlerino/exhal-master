@@ -253,13 +253,17 @@ class TestMainControllerInitialization:
 
     def test_initialization_connects_signals(self, real_models, mock_views):
         """Test that initialization connects all signals"""
-        with patch.object(
-            MainController, "_connect_main_window_signals"
-        ) as mock_main_signals, patch.object(
-            MainController, "_connect_cross_controller_signals"
-        ) as mock_cross_signals, patch.object(
-            MainController, "_initialize_from_settings"
-        ) as mock_init_settings:
+        with (
+            patch.object(
+                MainController, "_connect_main_window_signals"
+            ) as mock_main_signals,
+            patch.object(
+                MainController, "_connect_cross_controller_signals"
+            ) as mock_cross_signals,
+            patch.object(
+                MainController, "_initialize_from_settings"
+            ) as mock_init_settings,
+        ):
             MainController(real_models, mock_views)
 
             mock_main_signals.assert_called_once()

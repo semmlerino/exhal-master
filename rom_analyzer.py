@@ -15,9 +15,11 @@ def snes_to_pc(addr):
         return None
     return ((bank & 0x7F) << 15) | (offset & 0x7FFF)
 
+
 def pc_to_snes(pc):
     """Convert PC offset to SNES address."""
     return ((pc & 0x7F8000) << 1) | (pc & 0x7FFF) | 0x8000
+
 
 def read_pointer_table(rom_data, table_offset, num_entries, pointer_size=3):
     """Read a table of SNES pointers."""
@@ -28,10 +30,14 @@ def read_pointer_table(rom_data, table_offset, num_entries, pointer_size=3):
         for j in range(4):
             ptr_offset = offset + (j * pointer_size)
             if pointer_size == 3:
-                ptr = struct.unpack_from("<I", rom_data + b"\x00", ptr_offset)[0] & 0xFFFFFF
+                ptr = (
+                    struct.unpack_from("<I", rom_data + b"\x00", ptr_offset)[0]
+                    & 0xFFFFFF
+                )
                 entry.append(ptr)
         pointers.append(entry)
     return pointers
+
 
 def main():
     if len(sys.argv) < 2:
@@ -49,8 +55,8 @@ def main():
     # Master pointer tables at bank $FF
     print("=== Master Pointer Tables (Bank $FF) ===")
     room_ptr_table = 0x3F0000  # Direct PC offset for $FF:0000
-    gfx_ptr_table = 0x3F0002   # Direct PC offset for $FF:0002
-    level_ptr_table = 0x3F000C # Direct PC offset for $FF:000C
+    gfx_ptr_table = 0x3F0002  # Direct PC offset for $FF:0002
+    level_ptr_table = 0x3F000C  # Direct PC offset for $FF:000C
 
     print(f"Room pointer table:     PC 0x{room_ptr_table:06X}")
     print(f"GFX/Palette ptr table:  PC 0x{gfx_ptr_table:06X}")
@@ -65,7 +71,7 @@ def main():
         offset = gfx_ptr_table + (idx * 12)  # 4 pointers × 3 bytes
         print(f"\nIndex 0x{idx:02X}:")
         for i in range(4):
-            ptr_bytes = rom_data[offset + i*3:offset + i*3 + 3]
+            ptr_bytes = rom_data[offset + i * 3 : offset + i * 3 + 3]
             ptr = struct.unpack("<I", ptr_bytes + b"\x00")[0] & 0xFFFFFF
             pc_offset = snes_to_pc(ptr)
             print(f"  Pointer {i+1}: ${ptr:06X} -> PC 0x{pc_offset:06X}")
@@ -82,6 +88,7 @@ def main():
     header = struct.unpack_from("<H", rom_data, offset)[0]
     print(f"Data at 0x{offset:06X}: 0x{header:04X}")
     print("(HAL compression typically starts with size header)")
+
 
 if __name__ == "__main__":
     main()

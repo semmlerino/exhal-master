@@ -18,8 +18,9 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-import sprite_workflow
 from PIL import Image
+
+from sprite_editor import sprite_workflow
 
 
 class TestSpriteWorkflowCommandParsing(unittest.TestCase):

@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import QApplication
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from indexed_pixel_editor import IndexedPixelEditor
-from pixel_editor_widgets import ColorPaletteWidget, PixelCanvas
-from pixel_editor_workers import FileLoadWorker, FileSaveWorker
+from pixel_editor.core.indexed_pixel_editor import IndexedPixelEditor
+from pixel_editor.core.pixel_editor_widgets import ColorPaletteWidget, PixelCanvas
+from pixel_editor.core.pixel_editor_workers import FileLoadWorker, FileSaveWorker
 
 
 class TestIntegrationComprehensive:
@@ -41,14 +41,14 @@ class TestIntegrationComprehensive:
         editor = IndexedPixelEditor()
         # Set up a basic palette
         editor.default_palette = [
-            (0, 0, 0),      # Black
-            (255, 0, 0),    # Red
-            (0, 255, 0),    # Green
-            (0, 0, 255),    # Blue
+            (0, 0, 0),  # Black
+            (255, 0, 0),  # Red
+            (0, 255, 0),  # Green
+            (0, 0, 255),  # Blue
             (255, 255, 0),  # Yellow
             (255, 0, 255),  # Magenta
             (0, 255, 255),  # Cyan
-            (255, 255, 255) # White
+            (255, 255, 255),  # White
         ] * 2  # Extend to 16 colors
         return editor
 
@@ -61,6 +61,7 @@ class TestIntegrationComprehensive:
 
         # Convert to PIL Image and save
         from PIL import Image
+
         pil_image = Image.fromarray(test_array, mode="P")
         # Set palette
         palette = []
@@ -146,7 +147,9 @@ class TestIntegrationComprehensive:
         # Prepare palette data for save
         palette_data = {"palette": editor.default_palette[:16]}
 
-        save_worker = FileSaveWorker(editor.image_array, palette_data, str(save_file), editor)
+        save_worker = FileSaveWorker(
+            editor.image_array, palette_data, str(save_file), editor
+        )
         save_worker.finished.connect(on_save_complete)
         save_worker.error.connect(on_save_error)
         save_worker.start()
@@ -192,7 +195,9 @@ class TestIntegrationComprehensive:
             image_array[y, x] = canvas.current_color
 
         pixel_time = time.time() - start_time
-        assert pixel_time < 1.0, f"100 pixel operations took {pixel_time:.2f}s, should be < 1s"
+        assert (
+            pixel_time < 1.0
+        ), f"100 pixel operations took {pixel_time:.2f}s, should be < 1s"
 
         # Test dirty rectangle consolidation
         assert canvas._dirty_rect is not None
@@ -229,7 +234,9 @@ class TestIntegrationComprehensive:
         palette_data = {"palette": editor.default_palette[:16]}
 
         invalid_save_path = "/invalid/path/test.png"
-        save_worker = FileSaveWorker(image_array, palette_data, invalid_save_path, editor)
+        save_worker = FileSaveWorker(
+            image_array, palette_data, invalid_save_path, editor
+        )
         save_worker.error.connect(on_error)
         save_worker.start()
 
@@ -325,7 +332,9 @@ class TestIntegrationComprehensive:
 
         for i in range(3):
             save_path = tmp_path / f"concurrent_save_{i}.png"
-            worker = FileSaveWorker(test_array.copy(), palette_data, str(save_path), editor)
+            worker = FileSaveWorker(
+                test_array.copy(), palette_data, str(save_path), editor
+            )
             worker.finished.connect(lambda i=i: on_complete(f"save_{i}"))
             worker.error.connect(on_error)
             worker.start()
@@ -334,7 +343,9 @@ class TestIntegrationComprehensive:
         # Wait for all operations
         qtbot.waitUntil(lambda: len(operations_completed) == 3, timeout=5000)
 
-        assert len(operations_completed) == 3, "All concurrent operations should complete"
+        assert (
+            len(operations_completed) == 3
+        ), "All concurrent operations should complete"
         assert len(errors) == 0, f"No errors should occur: {errors}"
 
         # Verify all files created

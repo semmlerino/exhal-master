@@ -44,7 +44,9 @@ def analyze_palettes(cgram_file):
         # Print analysis
         if pal_idx >= 8 or pink_count > 2:  # Focus on sprite palettes or pink palettes
             print(f'\nPalette {pal_idx} {"(Sprite)" if pal_idx >= 8 else "(BG)"}:')
-            print(f'  First color: RGB{first_color} {"[BLACK/TRANSPARENT]" if has_black else ""}')
+            print(
+                f'  First color: RGB{first_color} {"[BLACK/TRANSPARENT]" if has_black else ""}'
+            )
             print(f"  Pink colors: {pink_count}")
             print(f"  Has white: {has_white}")
             print(f"  Has red: {has_red}")
@@ -56,6 +58,7 @@ def analyze_palettes(cgram_file):
             for i in range(6):
                 r, g, b = palette[i]
                 print(f"    {i}: RGB({r:3}, {g:3}, {b:3})")
+
 
 def compare_with_reference():
     """Compare CGRAM palettes with the reference Kirby palette"""
@@ -82,7 +85,10 @@ def compare_with_reference():
         cgram_color = palettes[8][i]
         ref_color = tuple(ref_colors[i])
         match = cgram_color == ref_color
-        print(f'  {i}   | RGB{cgram_color:<16} | RGB{ref_color!s:<16} {"✓" if match else "✗"}')
+        print(
+            f'  {i}   | RGB{cgram_color:<16} | RGB{ref_color!s:<16} {"✓" if match else "✗"}'
+        )
+
 
 if __name__ == "__main__":
     # Analyze Cave CGRAM
@@ -95,4 +101,6 @@ if __name__ == "__main__":
     print("The Cave.SnesCgRam.dmp file appears to be from a different game state")
     print("where Kirby's normal pink palette is not loaded. The colors in palette 8")
     print("are purple/magenta instead of the expected pink shades.")
-    print("\nRecommendation: Use the kirby_reference.pal.json for accurate Kirby colors!")
+    print(
+        "\nRecommendation: Use the kirby_reference.pal.json for accurate Kirby colors!"
+    )

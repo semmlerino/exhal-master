@@ -16,8 +16,9 @@ from typing import Any, Optional
 from sprite_edit_helpers import parse_cgram
 
 
-def extract_palette_for_editor(cgram_file: str, palette_index: int,
-                              output_file: Optional[str] = None) -> dict[str, Any]:
+def extract_palette_for_editor(
+    cgram_file: str, palette_index: int, output_file: Optional[str] = None
+) -> dict[str, Any]:
     """
     Extract a specific 16-color palette from CGRAM for use in the indexed pixel editor.
 
@@ -34,7 +35,9 @@ def extract_palette_for_editor(cgram_file: str, palette_index: int,
     palettes = parse_cgram(cgram_file)
 
     if palette_index < 0 or palette_index >= len(palettes):
-        raise ValueError(f"Palette index {palette_index} out of range (0-{len(palettes)-1})")
+        raise ValueError(
+            f"Palette index {palette_index} out of range (0-{len(palettes)-1})"
+        )
 
     # Get the specific palette
     palette_colors = palettes[palette_index]
@@ -46,24 +49,26 @@ def extract_palette_for_editor(cgram_file: str, palette_index: int,
         "source": {
             "cgram_file": os.path.abspath(cgram_file),
             "palette_index": palette_index,
-            "extraction_tool": "extract_palette_for_editor.py"
+            "extraction_tool": "extract_palette_for_editor.py",
         },
         "palette": {
             "name": f"CGRAM Palette {palette_index}",
-            "colors": [list(color) for color in palette_colors],  # Convert tuples to lists for JSON
+            "colors": [
+                list(color) for color in palette_colors
+            ],  # Convert tuples to lists for JSON
             "color_count": len(palette_colors),
-            "format": "RGB888"
+            "format": "RGB888",
         },
         "usage_hints": {
             "transparent_index": 0,
             "typical_use": "sprite" if palette_index >= 8 else "background",
-            "kirby_palette": palette_index == 8
+            "kirby_palette": palette_index == 8,
         },
         "editor_compatibility": {
             "indexed_pixel_editor": True,
             "supports_grayscale_mode": True,
-            "auto_loadable": True
-        }
+            "auto_loadable": True,
+        },
     }
 
     # Generate output filename if not provided
@@ -85,7 +90,9 @@ def extract_palette_for_editor(cgram_file: str, palette_index: int,
     return palette_data, output_file
 
 
-def extract_all_sprite_palettes(cgram_file: str, output_dir: Optional[str] = None) -> list[str]:
+def extract_all_sprite_palettes(
+    cgram_file: str, output_dir: Optional[str] = None
+) -> list[str]:
     """
     Extract all sprite palettes (8-15) from CGRAM file.
 
@@ -131,22 +138,22 @@ def create_kirby_palette_from_notes() -> dict[str, Any]:
 
     # Colors from SPRITE_EXTRACTION_NOTES.md
     kirby_colors = [
-        [0, 0, 0],        # 0: Transparent/black
+        [0, 0, 0],  # 0: Transparent/black
         [248, 224, 248],  # 1: Light pink (highlight)
         [248, 184, 232],  # 2: Pink (main body)
         [248, 144, 200],  # 3: Medium pink
-        [240, 96, 152],   # 4: Dark pink (shadow)
-        [192, 48, 104],   # 5: Deep pink/red (outline)
+        [240, 96, 152],  # 4: Dark pink (shadow)
+        [192, 48, 104],  # 5: Deep pink/red (outline)
         [248, 248, 248],  # 6: White (eyes)
         [216, 216, 216],  # 7: Light gray
         [168, 168, 168],  # 8: Gray
         [120, 120, 120],  # 9: Dark gray
         [248, 144, 144],  # A: Light red/pink (cheeks)
-        [248, 80, 80],    # B: Red (feet)
-        [216, 0, 0],      # C: Dark red
-        [144, 0, 0],      # D: Deep red
-        [80, 0, 0],       # E: Very dark red
-        [40, 0, 0],       # F: Black-red
+        [248, 80, 80],  # B: Red (feet)
+        [216, 0, 0],  # C: Dark red
+        [144, 0, 0],  # D: Deep red
+        [80, 0, 0],  # E: Very dark red
+        [40, 0, 0],  # F: Black-red
     ]
 
     return {
@@ -156,26 +163,25 @@ def create_kirby_palette_from_notes() -> dict[str, Any]:
             "cgram_file": "DOCUMENTED_REFERENCE",
             "palette_index": 8,
             "extraction_tool": "extract_palette_for_editor.py",
-            "reference": "SPRITE_EXTRACTION_NOTES.md"
+            "reference": "SPRITE_EXTRACTION_NOTES.md",
         },
         "palette": {
             "name": "Kirby Reference Palette",
             "colors": kirby_colors,
             "color_count": 16,
-            "format": "RGB888"
+            "format": "RGB888",
         },
         "usage_hints": {
             "transparent_index": 0,
             "typical_use": "sprite",
-            "kirby_palette": True
+            "kirby_palette": True,
         },
         "editor_compatibility": {
             "indexed_pixel_editor": True,
             "supports_grayscale_mode": True,
-            "auto_loadable": True
-        }
+            "auto_loadable": True,
+        },
     }
-
 
 
 def create_reference_palette_file(output_file: str = "kirby_reference.pal.json"):
@@ -191,14 +197,25 @@ def create_reference_palette_file(output_file: str = "kirby_reference.pal.json")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract sprite palettes for the indexed pixel editor")
+    parser = argparse.ArgumentParser(
+        description="Extract sprite palettes for the indexed pixel editor"
+    )
     parser.add_argument("cgram_file", nargs="?", help="CGRAM dump file (.dmp)")
-    parser.add_argument("-p", "--palette", type=int, help="Extract specific palette index (0-15)")
-    parser.add_argument("-a", "--all-sprites", action="store_true",
-                       help="Extract all sprite palettes (8-15)")
+    parser.add_argument(
+        "-p", "--palette", type=int, help="Extract specific palette index (0-15)"
+    )
+    parser.add_argument(
+        "-a",
+        "--all-sprites",
+        action="store_true",
+        help="Extract all sprite palettes (8-15)",
+    )
     parser.add_argument("-o", "--output", help="Output file/directory")
-    parser.add_argument("--reference", action="store_true",
-                       help="Create reference Kirby palette from documented colors")
+    parser.add_argument(
+        "--reference",
+        action="store_true",
+        help="Create reference Kirby palette from documented colors",
+    )
 
     args = parser.parse_args()
 
@@ -210,7 +227,9 @@ def main():
 
     # Require CGRAM file for other operations
     if not args.cgram_file:
-        print("Error: CGRAM file required (or use --reference for documented Kirby palette)")
+        print(
+            "Error: CGRAM file required (or use --reference for documented Kirby palette)"
+        )
         parser.print_help()
         return
 
@@ -237,7 +256,9 @@ def main():
             print(f"\nPalette {args.palette} colors:")
             for i, color in enumerate(palette_data["palette"]["colors"]):
                 r, g, b = color
-                print(f"  Index {i:2d}: RGB({r:3d},{g:3d},{b:3d}) #{r:02X}{g:02X}{b:02X}")
+                print(
+                    f"  Index {i:2d}: RGB({r:3d},{g:3d},{b:3d}) #{r:02X}{g:02X}{b:02X}"
+                )
 
         else:
             # Default: extract Kirby's palette (index 8)
@@ -250,6 +271,7 @@ def main():
     except Exception as e:
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -25,5 +25,6 @@ def main():
     zoomed.save(output_file)
     print(f"Saved zoomed image to {output_file}")
 
+
 if __name__ == "__main__":
     main()

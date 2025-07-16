@@ -11,9 +11,16 @@ from PIL import Image
 from sprite_edit_helpers import decode_4bpp_tile, parse_cgram
 
 
-def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
-                        start_tile=0, tile_count=64, tiles_per_row=8,
-                        offset=0xC000, output_png="4bpp_section_ultrathink.png"):
+def extract_4bpp_section(
+    vram_file,
+    cgram_file,
+    mapping_file=None,
+    start_tile=0,
+    tile_count=64,
+    tiles_per_row=8,
+    offset=0xC000,
+    output_png="4bpp_section_ultrathink.png",
+):
     """Extract a small section of sprites in indexed grayscale mode"""
 
     # Load palette mappings if available
@@ -48,7 +55,7 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
     gray_levels = {}
     gray_levels[0] = 0  # Transparent
     for i in range(1, 16):
-        gray_levels[i] = int(17 + (i-1) * (255-17) / 14)
+        gray_levels[i] = int(17 + (i - 1) * (255 - 17) / 14)
 
     # Create metadata
     metadata = {
@@ -65,8 +72,8 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
         "grayscale_mapping": {
             "description": "4bpp palette indices mapped to grayscale",
             "transparent": 0,
-            "color_mapping": gray_levels
-        }
+            "color_mapping": gray_levels,
+        },
     }
 
     # Store original palette colors
@@ -86,7 +93,9 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
         if tile_idx * bytes_per_tile >= len(vram_data):
             break
 
-        tile_data = vram_data[tile_idx * bytes_per_tile:(tile_idx + 1) * bytes_per_tile]
+        tile_data = vram_data[
+            tile_idx * bytes_per_tile : (tile_idx + 1) * bytes_per_tile
+        ]
 
         # Skip completely empty tiles
         if all(b == 0 for b in tile_data):
@@ -122,7 +131,7 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
             "cgram_palette": cgram_pal,
             "empty": False,
             "section_x": section_x,
-            "section_y": section_y
+            "section_y": section_y,
         }
 
     # Convert to indexed mode
@@ -144,8 +153,13 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
         json.dump(metadata, f, indent=2)
 
     # Create editing guide
-    _create_section_guide(indexed_sheet, gray_levels, start_tile, tile_count,
-                         output_png.replace(".png", "_guide.png"))
+    _create_section_guide(
+        indexed_sheet,
+        gray_levels,
+        start_tile,
+        tile_count,
+        output_png.replace(".png", "_guide.png"),
+    )
 
     print(f"4bpp section extracted to: {output_png}")
     print(f"Metadata saved to: {metadata_file}")
@@ -155,6 +169,7 @@ def extract_4bpp_section(vram_file, cgram_file, mapping_file=None,
     print(f"Grid: {tiles_per_row} tiles per row, {rows} rows")
 
     return metadata
+
 
 def _create_section_guide(sheet, gray_levels, start_tile, tile_count, output_file):
     """Create editing guide for the section"""
@@ -178,6 +193,7 @@ def _create_section_guide(sheet, gray_levels, start_tile, tile_count, output_fil
     guide.save(output_file)
     print(f"Editing guide saved to: {output_file}")
 
+
 def find_interesting_section(vram_file, offset=0xC000):
     """Find a section with interesting sprite data"""
     with open(vram_file, "rb") as f:
@@ -197,7 +213,9 @@ def find_interesting_section(vram_file, offset=0xC000):
             if tile_idx >= total_tiles:
                 break
 
-            tile_data = vram_data[tile_idx * bytes_per_tile:(tile_idx + 1) * bytes_per_tile]
+            tile_data = vram_data[
+                tile_idx * bytes_per_tile : (tile_idx + 1) * bytes_per_tile
+            ]
             if not all(b == 0 for b in tile_data):
                 non_empty += 1
 
@@ -213,6 +231,7 @@ def find_interesting_section(vram_file, offset=0xC000):
 
     return best_sections[0][0] if best_sections else 0
 
+
 if __name__ == "__main__":
     vram_file = "Cave.SnesVideoRam.dmp"
     cgram_file = "Cave.SnesCgRam.dmp"
@@ -224,11 +243,13 @@ if __name__ == "__main__":
         print(f"\\nExtracting section starting at tile {best_start}...")
 
         extract_4bpp_section(
-            vram_file, cgram_file, mapping_file,
+            vram_file,
+            cgram_file,
+            mapping_file,
             start_tile=best_start,
             tile_count=64,  # 8x8 tile grid
             tiles_per_row=8,
-            output_png="kirby_4bpp_section_ultrathink.png"
+            output_png="kirby_4bpp_section_ultrathink.png",
         )
     else:
         print("Required dump files not found!")

@@ -184,9 +184,10 @@ class ProperPixelCanvas(QWidget):
 
         # Scale once and cache
         self._cached_pixmap = QPixmap.fromImage(qimage).scaled(
-            w * self.zoom, h * self.zoom,
+            w * self.zoom,
+            h * self.zoom,
             Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.FastTransformation
+            Qt.TransformationMode.FastTransformation,
         )
         self._cache_valid = True
 
@@ -257,7 +258,9 @@ class ImageCache:
     def __init__(self):
         self._cache = {}  # (image_id, format) -> QPixmap
 
-    def get_qpixmap(self, pil_image: Image.Image, image_id: Optional[str] = None) -> QPixmap:
+    def get_qpixmap(
+        self, pil_image: Image.Image, image_id: Optional[str] = None
+    ) -> QPixmap:
         """Get QPixmap with caching"""
         if image_id is None:
             image_id = id(pil_image)
@@ -273,28 +276,19 @@ class ImageCache:
             image_rgb = pil_image.convert("RGBA")
             data = image_rgb.tobytes("raw", "RGBA")
             qimage = QImage(
-                data,
-                pil_image.width,
-                pil_image.height,
-                QImage.Format.Format_RGBA8888
+                data, pil_image.width, pil_image.height, QImage.Format.Format_RGBA8888
             )
         elif pil_image.mode == "RGBA":
             data = pil_image.tobytes("raw", "RGBA")
             qimage = QImage(
-                data,
-                pil_image.width,
-                pil_image.height,
-                QImage.Format.Format_RGBA8888
+                data, pil_image.width, pil_image.height, QImage.Format.Format_RGBA8888
             )
         else:
             # Convert to RGB for other modes
             image_rgb = pil_image.convert("RGB")
             data = image_rgb.tobytes("raw", "RGB")
             qimage = QImage(
-                data,
-                image_rgb.width,
-                image_rgb.height,
-                QImage.Format.Format_RGB888
+                data, image_rgb.width, image_rgb.height, QImage.Format.Format_RGB888
             )
 
         pixmap = QPixmap.fromImage(qimage)

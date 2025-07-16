@@ -60,30 +60,52 @@ Examples:
 
   # Stop on first failure
   python run_tests_pytest.py -x
-"""
+""",
     )
 
     # Common options
     parser.add_argument("tests", nargs="*", help="Specific tests to run")
-    parser.add_argument("-m", "--mark", help="Run tests matching given mark (e.g., unit, integration, gui)")
-    parser.add_argument("-k", "--keyword", help="Run tests matching given keyword expression")
-    parser.add_argument("-x", "--exitfirst", action="store_true", help="Exit on first failure")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Increase verbosity")
+    parser.add_argument(
+        "-m",
+        "--mark",
+        help="Run tests matching given mark (e.g., unit, integration, gui)",
+    )
+    parser.add_argument(
+        "-k", "--keyword", help="Run tests matching given keyword expression"
+    )
+    parser.add_argument(
+        "-x", "--exitfirst", action="store_true", help="Exit on first failure"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Increase verbosity"
+    )
     parser.add_argument("-q", "--quiet", action="store_true", help="Decrease verbosity")
-    parser.add_argument("-s", "--capture", action="store_true", help="Disable output capturing")
-    parser.add_argument("--pdb", action="store_true", help="Drop into debugger on failures")
+    parser.add_argument(
+        "-s", "--capture", action="store_true", help="Disable output capturing"
+    )
+    parser.add_argument(
+        "--pdb", action="store_true", help="Drop into debugger on failures"
+    )
 
     # Coverage options
     parser.add_argument("--cov", action="store_true", help="Run with coverage report")
-    parser.add_argument("--cov-html", action="store_true", help="Generate HTML coverage report")
+    parser.add_argument(
+        "--cov-html", action="store_true", help="Generate HTML coverage report"
+    )
 
     # Performance options
-    parser.add_argument("-n", "--numprocesses", help="Number of processes for parallel testing")
-    parser.add_argument("--durations", type=int, metavar="N", help="Show N slowest test durations")
+    parser.add_argument(
+        "-n", "--numprocesses", help="Number of processes for parallel testing"
+    )
+    parser.add_argument(
+        "--durations", type=int, metavar="N", help="Show N slowest test durations"
+    )
 
     # GUI test options
     parser.add_argument("--no-qt-log", action="store_true", help="Disable Qt logging")
-    parser.add_argument("--headed", action="store_true", help="Run GUI tests with visible windows")
+    parser.add_argument(
+        "--headed", action="store_true", help="Run GUI tests with visible windows"
+    )
 
     args = parser.parse_args()
 
@@ -142,6 +164,7 @@ Examples:
     if args.headed:
         # For GUI tests to show windows
         import os
+
         os.environ["QT_QPA_PLATFORM"] = "xcb"
 
     # Run pytest
