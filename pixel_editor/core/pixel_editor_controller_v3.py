@@ -13,7 +13,7 @@ from typing import Optional
 # Third-party imports
 import numpy as np
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor, QImage, QPixmap
 
 from .pixel_editor_commands import (
@@ -82,6 +82,24 @@ class PixelEditorController(QObject):
         self._is_drawing = False
         self._drawing_pixels = []  # List of (x, y, old_color, new_color) tuples
         self.palette_worker = None
+        
+        # Update batching for performance optimization
+        self._update_timer = QTimer()
+        self._update_timer.setSingleShot(True)
+        self._update_timer.timeout.connect(self._emit_batched_update)
+        self._update_pending = False
+        self._batch_interval = 16  # ~60 FPS (16ms)
+        
+    def _request_update(self):
+        """Request an update with batching for performance"""
+        if not self._update_pending:
+            self._update_pending = True
+            self._update_timer.start(self._batch_interval)
+    
+    def _emit_batched_update(self):
+        """Emit the batched update signal"""
+        self._update_pending = False
+        self.imageChanged.emit()
 
     # Tool operations
     def set_tool(self, tool_name: str):
@@ -106,7 +124,7 @@ class PixelEditorController(QObject):
             # Create adapter for the image model
             adapter = ImageModelAdapter(self.image_model)
             if self.undo_manager.undo(adapter):
-                self.imageChanged.emit()
+                self._request_update()
                 self.statusMessage.emit("Undo", 1000)
             else:
                 self.statusMessage.emit("Nothing to undo", 1000)
@@ -119,7 +137,7 @@ class PixelEditorController(QObject):
             # Create adapter for the image model
             adapter = ImageModelAdapter(self.image_model)
             if self.undo_manager.redo(adapter):
-                self.imageChanged.emit()
+                self._request_update()
                 self.statusMessage.emit("Redo", 1000)
             else:
                 self.statusMessage.emit("Nothing to redo", 1000)
@@ -131,7 +149,7 @@ class PixelEditorController(QObject):
         # Create adapter for the image model
         adapter = ImageModelAdapter(self.image_model)
         self.undo_manager.execute_command(command, adapter)
-        self.imageChanged.emit()
+        self._request_update()
 
     # File operations
     def new_file(self, width: int = 8, height: int = 8):
@@ -148,7 +166,7 @@ class PixelEditorController(QObject):
         self.palette_manager.add_palette(8, self.palette_model)
 
         # Emit signals
-        self.imageChanged.emit()
+        self._request_update()
         self.paletteChanged.emit()
         self.titleChanged.emit("Indexed Pixel Editor - New File")
 
@@ -283,7 +301,7 @@ class PixelEditorController(QObject):
                 self.settings.add_recent_file(str(file_path))
 
                 # Emit signals
-                self.imageChanged.emit()
+                self._request_update()
                 self.paletteChanged.emit()
                 self.titleChanged.emit(
                     f"Indexed Pixel Editor - {os.path.basename(str(file_path))}"
@@ -471,7 +489,7 @@ class PixelEditorController(QObject):
         """Update the image model with new data"""
         self.image_model.data = image_data
         self.image_model.modified = True
-        self.imageChanged.emit()
+        self._request_update()
 
     def get_image_size(self) -> tuple[int, int]:
         """Get current image dimensions"""
@@ -598,7 +616,7 @@ class PixelEditorController(QObject):
                 self._drawing_pixels.append(
                     (x, y, old_color, self.tool_manager.current_color)
                 )
-                self.imageChanged.emit()
+                self._request_update()
         elif tool_name == "fill":
             # For fill, we need to capture the state before filling
             old_color = self.image_model.get_color_at(x, y)
@@ -653,7 +671,7 @@ class PixelEditorController(QObject):
                         self.undo_manager.command_stack.pop(0)
                         self.undo_manager.current_index -= 1
 
-                    self.imageChanged.emit()
+                    self._request_update()
             self._is_drawing = False  # Fill is a single action
         elif tool_name == "picker":
             # Color picker doesn't need undo
@@ -680,7 +698,7 @@ class PixelEditorController(QObject):
                 self._drawing_pixels.append(
                     (x, y, old_color, self.tool_manager.current_color)
                 )
-                self.imageChanged.emit()
+                self._request_update()
 
     def handle_canvas_release(self, x: int, y: int):
         """Handle mouse release on canvas"""
