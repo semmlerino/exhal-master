@@ -5,7 +5,7 @@ Extraction panel with drag & drop zones for dump files
 import os
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPainter, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -162,11 +162,19 @@ class ExtractionPanel(QGroupBox):
 
     files_changed = pyqtSignal()
     extraction_ready = pyqtSignal(bool)
+    offset_changed = pyqtSignal(int)  # Emitted when VRAM offset changes
 
     def __init__(self):
         super().__init__("Input Files")
         self._setup_ui()
         self._connect_signals()
+        
+        # Timer for debouncing offset changes
+        self._offset_timer = QTimer()
+        self._offset_timer.setInterval(150)  # 150ms delay
+        self._offset_timer.setSingleShot(True)
+        self._offset_timer.timeout.connect(self._emit_offset_changed)
+        self._pending_offset = None
 
     def _setup_ui(self):
         """Set up the UI"""
@@ -256,6 +264,10 @@ class ExtractionPanel(QGroupBox):
 
         # Try to auto-detect related files
         self._auto_detect_related(file_path)
+        
+        # Trigger preview update if VRAM was just loaded
+        if self.has_vram() and file_path == self.vram_drop.get_file_path():
+            self.offset_changed.emit(self.get_vram_offset())
 
     def _check_extraction_ready(self):
         """Check if we're ready to extract"""
@@ -341,11 +353,17 @@ class ExtractionPanel(QGroupBox):
         # Show/hide custom offset controls based on preset
         if index == 1:  # Custom Range
             self.offset_widget.setVisible(True)
+            # Trigger preview update if files are loaded
+            if self.has_vram():
+                self.offset_changed.emit(self.offset_spinbox.value())
         else:  # Kirby Sprites
             self.offset_widget.setVisible(False)
             # Reset to default Kirby offset
             self.offset_slider.setValue(VRAM_SPRITE_OFFSET)
             self.offset_spinbox.setValue(VRAM_SPRITE_OFFSET)
+            # Trigger preview update with default offset
+            if self.has_vram():
+                self.offset_changed.emit(VRAM_SPRITE_OFFSET)
 
     def _on_offset_slider_changed(self, value):
         """Handle offset slider change"""
@@ -361,6 +379,17 @@ class ExtractionPanel(QGroupBox):
         
         # Update hex label
         self.offset_hex_label.setText(f"0x{value:04X}")
+        
+        # Debounce offset changes for real-time preview
+        if self.preset_combo.currentIndex() == 1:  # Custom Range
+            self._pending_offset = value
+            self._offset_timer.stop()
+            self._offset_timer.start()
+    
+    def _emit_offset_changed(self):
+        """Emit the pending offset change after debounce"""
+        if self._pending_offset is not None:
+            self.offset_changed.emit(self._pending_offset)
 
     def clear_files(self):
         """Clear all loaded files"""

@@ -136,6 +136,7 @@ class ExtractionController(QObject):
         # Connect signals
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
+        self.main_window.extraction_panel.offset_changed.connect(self.update_preview_with_offset)
 
     def start_extraction(self):
         """Start the extraction process"""
@@ -189,6 +190,50 @@ class ExtractionController(QObject):
         """Handle extraction error"""
         self.main_window.extraction_failed(error_message)
         self.worker = None
+
+    def update_preview_with_offset(self, offset):
+        """Update preview with new VRAM offset without full extraction"""
+        # Check if we have VRAM loaded
+        if not self.main_window.extraction_panel.has_vram():
+            return
+            
+        # Get VRAM path
+        vram_path = self.main_window.extraction_panel.get_vram_path()
+        
+        try:
+            # Create a temporary extractor for preview
+            extractor = SpriteExtractor()
+            extractor.load_vram(vram_path)
+            
+            # Extract tiles with new offset
+            tiles, num_tiles = extractor.extract_tiles(offset=offset)
+            
+            # Create grayscale image
+            img = extractor.create_grayscale_image(tiles)
+            
+            # Convert to pixmap
+            pixmap = self._create_pixmap_from_image(img)
+            
+            # Update preview
+            self.main_window.sprite_preview.set_preview(pixmap, num_tiles)
+            self.main_window.preview_info.setText(f"Tiles: {num_tiles} (Offset: 0x{offset:04X})")
+            
+            # Also update the grayscale image for palette application
+            self.main_window.sprite_preview.set_grayscale_image(img)
+            
+        except Exception as e:
+            self.main_window.status_bar.showMessage(f"Preview update failed: {str(e)}")
+    
+    def _create_pixmap_from_image(self, pil_image):
+        """Create QPixmap from PIL image"""
+        # Convert PIL image to QPixmap
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format='PNG')
+        buffer.seek(0)
+        
+        pixmap = QPixmap()
+        pixmap.loadFromData(buffer.read())
+        return pixmap
 
     def open_in_editor(self, sprite_file):
         """Open the extracted sprites in the pixel editor"""
