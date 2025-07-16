@@ -469,6 +469,8 @@ class FileSaveWorker(BaseWorker):
                 save_kwargs = {}
                 if file_format == "PNG":
                     save_kwargs["optimize"] = True
+                    # Set transparency for palette index 0
+                    save_kwargs["transparency"] = 0
 
                 self.emit_progress(80, f"Writing {file_format} to disk...")
                 debug_log(

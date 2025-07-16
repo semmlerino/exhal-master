@@ -71,8 +71,12 @@ def run_headless_test():
     return False
 
 
-def launch_gui():
-    """Launch the GUI version of the pixel editor"""
+def launch_gui(file_path=None):
+    """Launch the GUI version of the pixel editor
+    
+    Args:
+        file_path: Optional path to a file to open on startup
+    """
     print("Launching GUI pixel editor...")
 
     if not check_display():
@@ -86,10 +90,21 @@ def launch_gui():
         # Local imports
         from PyQt6.QtWidgets import QApplication
 
-        from .core.indexed_pixel_editor_v3 import IndexedPixelEditor
+        from pixel_editor.core.indexed_pixel_editor_v3 import IndexedPixelEditor
 
         app = QApplication(sys.argv)
-        editor = IndexedPixelEditor()
+        
+        # If a file path was provided and exists, pass it to the editor
+        initial_file = None
+        if file_path and os.path.exists(file_path):
+            print(f"Opening file: {file_path}")
+            initial_file = file_path
+        elif file_path:
+            print(f"⚠ Warning: File not found: {file_path}")
+        
+        # Create editor with initial file (will skip startup dialog if provided)
+        editor = IndexedPixelEditor(initial_file)
+        
         editor.show()
         return app.exec()
     except Exception as e:
@@ -104,7 +119,7 @@ def show_usage():
 Indexed Pixel Editor for SNES Sprites
 
 Usage:
-  python launch_pixel_editor.py [options]
+  python launch_pixel_editor.py [options] [file]
 
 Options:
   --gui      Launch GUI version (default)
@@ -112,8 +127,13 @@ Options:
   --check    Check dependencies and environment
   --help     Show this help message
 
+Arguments:
+  file       Optional PNG file to open on startup
+
 Examples:
-  python launch_pixel_editor.py --gui
+  python launch_pixel_editor.py                    # Launch empty editor
+  python launch_pixel_editor.py sprite.png         # Open sprite.png
+  python launch_pixel_editor.py --gui sprite.png   # Same as above
   python launch_pixel_editor.py --test
   python launch_pixel_editor.py --check
 
@@ -137,12 +157,16 @@ Features:
 def main():
     """Main function"""
     args = sys.argv[1:]
+    
+    # Separate flags from positional arguments (file paths)
+    flags = [arg for arg in args if arg.startswith("-")]
+    file_paths = [arg for arg in args if not arg.startswith("-")]
 
-    if "--help" in args or "-h" in args:
+    if "--help" in flags or "-h" in flags:
         show_usage()
         return 0
 
-    if "--check" in args:
+    if "--check" in flags:
         print("=== Dependency Check ===")
         deps_ok = check_dependencies()
         display_ok = check_display()
@@ -159,7 +183,7 @@ def main():
 
         return 0 if deps_ok else 1
 
-    if "--test" in args:
+    if "--test" in flags:
         print("=== Headless Test Mode ===")
         if not check_dependencies():
             return 1
@@ -174,7 +198,12 @@ def main():
         success = run_headless_test()
         return 0 if success else 1
 
-    return launch_gui()
+    # Pass the first file path if provided
+    file_to_open = file_paths[0] if file_paths else None
+    if file_to_open:
+        print(f"File to open: {file_to_open}")
+    
+    return launch_gui(file_to_open)
 
 
 if __name__ == "__main__":

@@ -99,16 +99,46 @@ class PixelCanvasV3(QWidget):
             # Override with grayscale
             for i in range(16):
                 gray = (i * 255) // 15
-                self._qcolor_cache[i] = QColor(gray, gray, gray)
+                if i == 0:
+                    # Index 0 is transparent
+                    self._qcolor_cache[i] = QColor(gray, gray, gray, 0)
+                else:
+                    self._qcolor_cache[i] = QColor(gray, gray, gray)
         else:
             # Use actual colors
             for i, rgb in enumerate(colors[:16]):
-                self._qcolor_cache[i] = QColor(*rgb)
+                if i == 0:
+                    # Index 0 is transparent
+                    self._qcolor_cache[i] = QColor(rgb[0], rgb[1], rgb[2], 0)
+                else:
+                    self._qcolor_cache[i] = QColor(*rgb)
 
         # Add magenta for invalid indices
         self._qcolor_cache[-1] = QColor(255, 0, 255)
 
         self._cached_palette_version = self._palette_version
+
+    def _draw_checkerboard(self, painter, width, height):
+        """Draw a checkerboard background for transparency visualization"""
+        checker_size = 8  # Size of each checker square
+        light_color = QColor(220, 220, 220)
+        dark_color = QColor(180, 180, 180)
+        
+        for y in range(0, height, checker_size):
+            for x in range(0, width, checker_size):
+                # Alternate colors in checkerboard pattern
+                if (x // checker_size + y // checker_size) % 2 == 0:
+                    color = light_color
+                else:
+                    color = dark_color
+                
+                # Draw the checker square
+                painter.fillRect(
+                    x, y, 
+                    min(checker_size, width - x), 
+                    min(checker_size, height - y), 
+                    color
+                )
 
     def paintEvent(self, event):
         """Paint the canvas"""
@@ -130,6 +160,12 @@ class PixelCanvasV3(QWidget):
         # Update color cache if needed
         if self._cached_palette_version != self._palette_version:
             self._update_qcolor_cache()
+
+        # Draw checkerboard background for transparency
+        self._draw_checkerboard(painter, width * self.zoom, height * self.zoom)
+
+        # Enable composition mode for proper transparency
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
 
         # Draw pixels
         for y in range(height):

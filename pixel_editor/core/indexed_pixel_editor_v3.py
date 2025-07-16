@@ -52,8 +52,11 @@ __all__ = [
 class IndexedPixelEditor(QMainWindow):
     """Main window for the indexed pixel editor - Phase 3 refactored"""
 
-    def __init__(self):
+    def __init__(self, initial_file=None):
         super().__init__()
+
+        # Store initial file if provided
+        self.initial_file = initial_file
 
         # Initialize controller
         self.controller = PixelEditorController(self)
@@ -426,6 +429,12 @@ class IndexedPixelEditor(QMainWindow):
     # Startup and utilities
     def handle_startup(self):
         """Handle application startup"""
+        # If initial file was provided (e.g., from command line), load it directly
+        if self.initial_file:
+            debug_log("EDITOR", f"Loading initial file: {self.initial_file}")
+            self.controller.open_file(self.initial_file)
+            return
+
         if self.controller.should_auto_load_last():
             last_file = self.controller.get_last_file()
             if last_file:
