@@ -69,9 +69,10 @@ class TestConstants:
         assert SPRITE_EXTENSION == ".png"
 
         # All should start with dot
-        assert all(ext.startswith(".") for ext in [
-            PALETTE_EXTENSION, METADATA_EXTENSION, SPRITE_EXTENSION
-        ])
+        assert all(
+            ext.startswith(".")
+            for ext in [PALETTE_EXTENSION, METADATA_EXTENSION, SPRITE_EXTENSION]
+        )
 
     def test_palette_info(self):
         """Test palette information dictionary"""
@@ -107,5 +108,4 @@ class TestConstants:
         assert all("*" in pattern for pattern in all_patterns)
 
         # All should end with .dmp
-        assert all(pattern.endswith((".dmp", "*.dmp"))
-                  for pattern in all_patterns)
+        assert all(pattern.endswith((".dmp", "*.dmp")) for pattern in all_patterns)

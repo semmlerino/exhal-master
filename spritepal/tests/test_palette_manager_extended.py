@@ -103,23 +103,23 @@ class TestPaletteManagerExtended:
         # Create some test OAM entries
         # Entry 1: Y=50, palette=0 (sprite on-screen)
         oam_data[0] = 0x00  # X low
-        oam_data[1] = 50    # Y
+        oam_data[1] = 50  # Y
         oam_data[2] = 0x00  # Tile
         oam_data[3] = 0x00  # Attrs (palette 0)
 
         # Entry 2: Y=100, palette=3 (sprite on-screen)
         oam_data[4] = 0x00  # X low
-        oam_data[5] = 100   # Y
+        oam_data[5] = 100  # Y
         oam_data[6] = 0x00  # Tile
         oam_data[7] = 0x03  # Attrs (palette 3)
 
         # Entry 3: Y=240, palette=1 (sprite off-screen)
         oam_data[8] = 0x00  # X low
-        oam_data[9] = 240   # Y
-        oam_data[10] = 0x00 # Tile
-        oam_data[11] = 0x01 # Attrs (palette 1)
+        oam_data[9] = 240  # Y
+        oam_data[10] = 0x00  # Tile
+        oam_data[11] = 0x01  # Attrs (palette 1)
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             f.flush()
 
@@ -129,8 +129,8 @@ class TestPaletteManagerExtended:
                 # Should include palettes from on-screen sprites (0+8=8, 3+8=11)
                 # Should exclude off-screen sprite (1+8=9)
                 assert 8 in active_palettes  # palette 0 -> CGRAM 8
-                assert 11 in active_palettes # palette 3 -> CGRAM 11
-                assert 9 not in active_palettes # palette 1 -> CGRAM 9 (off-screen)
+                assert 11 in active_palettes  # palette 3 -> CGRAM 11
+                assert 9 not in active_palettes  # palette 1 -> CGRAM 9 (off-screen)
 
             finally:
                 Path(f.name).unlink()
@@ -149,7 +149,7 @@ class TestPaletteManagerExtended:
         # Create very short OAM data
         oam_data = bytearray(10)  # Less than one full entry
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(oam_data)
             f.flush()
 
@@ -162,7 +162,9 @@ class TestPaletteManagerExtended:
             finally:
                 Path(f.name).unlink()
 
-    def test_create_palette_json_without_companion_image(self, palette_manager, sample_cgram_data):
+    def test_create_palette_json_without_companion_image(
+        self, palette_manager, sample_cgram_data
+    ):
         """Test creating palette JSON without companion image"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()
@@ -199,7 +201,7 @@ class TestPaletteManagerExtended:
         palette_manager._extract_palettes()
 
         # Should convert to maximum RGB values
-        assert palette_manager.palettes[0][0] == [248, 248, 248]  # Max RGB
+        assert palette_manager.palettes[0][0] == [255, 255, 255]  # Max RGB
 
     def test_palette_json_with_io_error(self, palette_manager, sample_cgram_data):
         """Test palette JSON creation with I/O error"""

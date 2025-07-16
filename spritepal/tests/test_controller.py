@@ -2,6 +2,7 @@
 Comprehensive tests for controller functionality
 """
 
+import os
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -13,6 +14,56 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from spritepal.core.controller import ExtractionController, ExtractionWorker
+
+
+class TestControllerImports:
+    """Test that controller module imports work correctly"""
+    
+    def test_controller_imports(self):
+        """Test that all imports in controller module work without errors"""
+        # This test will catch import-time errors like missing pil_to_qpixmap
+        try:
+            import spritepal.core.controller
+            # Force module reload to catch any import errors
+            import importlib
+            importlib.reload(spritepal.core.controller)
+        except ImportError as e:
+            pytest.fail(f"Import error in controller module: {e}")
+        except NameError as e:
+            pytest.fail(f"Name error in controller module: {e}")
+        except Exception as e:
+            pytest.fail(f"Unexpected error importing controller module: {e}")
+    
+    def test_pil_to_qpixmap_import(self):
+        """Test that pil_to_qpixmap function is available"""
+        from spritepal.core.controller import ExtractionWorker
+        
+        # Create a worker instance to test the method
+        worker_params = {
+            "vram_path": "/path/to/vram.dmp",
+            "cgram_path": "/path/to/cgram.dmp", 
+            "output_base": "/path/to/output",
+            "create_grayscale": True,
+            "create_metadata": True,
+        }
+        
+        with (
+            patch("spritepal.core.controller.SpriteExtractor"),
+            patch("spritepal.core.controller.PaletteManager"),
+        ):
+            worker = ExtractionWorker(worker_params)
+            
+            # Test that the method exists and can be called
+            assert hasattr(worker, '_create_pixmap_from_image')
+            
+            # Test with a mock image - this should not raise NameError
+            mock_image = Mock()
+            mock_image.save = Mock()
+            
+            with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
+                mock_pil_to_qpixmap.return_value = Mock()
+                result = worker._create_pixmap_from_image(mock_image)
+                mock_pil_to_qpixmap.assert_called_once_with(mock_image)
 
 
 class TestExtractionController:
@@ -48,7 +99,7 @@ class TestExtractionController:
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": "",
             "cgram_path": "/path/to/cgram.dmp",
-            "output_base": "/path/to/output"
+            "output_base": "/path/to/output",
         }
 
         controller.start_extraction()
@@ -62,7 +113,7 @@ class TestExtractionController:
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": "/path/to/vram.dmp",
             "cgram_path": "",
-            "output_base": "/path/to/output"
+            "output_base": "/path/to/output",
         }
 
         controller.start_extraction()
@@ -76,7 +127,7 @@ class TestExtractionController:
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": None,
             "cgram_path": None,
-            "output_base": "/path/to/output"
+            "output_base": "/path/to/output",
         }
 
         controller.start_extraction()
@@ -86,12 +137,14 @@ class TestExtractionController:
         )
 
     @patch("spritepal.core.controller.ExtractionWorker")
-    def test_start_extraction_valid_params(self, mock_worker_class, controller, mock_main_window):
+    def test_start_extraction_valid_params(
+        self, mock_worker_class, controller, mock_main_window
+    ):
         """Test starting extraction with valid parameters"""
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": "/path/to/vram.dmp",
             "cgram_path": "/path/to/cgram.dmp",
-            "output_base": "/path/to/output"
+            "output_base": "/path/to/output",
         }
 
         mock_worker_instance = Mock()
@@ -127,7 +180,9 @@ class TestExtractionController:
 
         controller._on_preview_ready(mock_pixmap, tile_count)
 
-        mock_main_window.sprite_preview.set_preview.assert_called_once_with(mock_pixmap, tile_count)
+        mock_main_window.sprite_preview.set_preview.assert_called_once_with(
+            mock_pixmap, tile_count
+        )
         mock_main_window.preview_info.setText.assert_called_once_with("Tiles: 42")
 
     def test_on_preview_image_ready_handler(self, controller, mock_main_window):
@@ -136,7 +191,9 @@ class TestExtractionController:
 
         controller._on_preview_image_ready(mock_pil_image)
 
-        mock_main_window.sprite_preview.set_grayscale_image.assert_called_once_with(mock_pil_image)
+        mock_main_window.sprite_preview.set_grayscale_image.assert_called_once_with(
+            mock_pil_image
+        )
 
     def test_on_palettes_ready_handler(self, controller, mock_main_window):
         """Test palettes ready handler"""
@@ -144,8 +201,12 @@ class TestExtractionController:
 
         controller._on_palettes_ready(test_palettes)
 
-        mock_main_window.palette_preview.set_all_palettes.assert_called_once_with(test_palettes)
-        mock_main_window.sprite_preview.set_palettes.assert_called_once_with(test_palettes)
+        mock_main_window.palette_preview.set_all_palettes.assert_called_once_with(
+            test_palettes
+        )
+        mock_main_window.sprite_preview.set_palettes.assert_called_once_with(
+            test_palettes
+        )
 
     def test_on_active_palettes_ready_handler(self, controller, mock_main_window):
         """Test active palettes ready handler"""
@@ -153,7 +214,9 @@ class TestExtractionController:
 
         controller._on_active_palettes_ready(active_palettes)
 
-        mock_main_window.palette_preview.highlight_active_palettes.assert_called_once_with(active_palettes)
+        mock_main_window.palette_preview.highlight_active_palettes.assert_called_once_with(
+            active_palettes
+        )
 
     def test_on_extraction_finished_handler(self, controller, mock_main_window):
         """Test extraction finished handler"""
@@ -175,56 +238,83 @@ class TestExtractionController:
         mock_main_window.extraction_failed.assert_called_once_with(error_message)
         assert controller.worker is None  # Worker should be cleaned up
 
+    @patch("spritepal.core.controller.validate_image_file")
     @patch("spritepal.core.controller.subprocess.Popen")
     @patch("spritepal.core.controller.os.path.exists")
-    def test_open_in_editor_launcher_found(self, mock_exists, mock_popen, controller, mock_main_window):
+    def test_open_in_editor_launcher_found(
+        self, mock_exists, mock_popen, mock_validate, controller, mock_main_window
+    ):
         """Test opening in editor when launcher is found"""
-        mock_exists.side_effect = lambda path: path == "launch_pixel_editor.py"
+        # Mock validation to pass
+        mock_validate.return_value = (True, "")
+        
+        # Mock exists to return True for the first launcher path
+        mock_exists.side_effect = lambda path: path.endswith("launch_pixel_editor.py")
         sprite_file = "/path/to/sprite.png"
 
         controller.open_in_editor(sprite_file)
 
-        mock_popen.assert_called_once_with([
-            sys.executable,
-            "launch_pixel_editor.py",
-            sprite_file
-        ])
+        # Verify Popen was called with the correct arguments
+        mock_popen.assert_called_once()
+        call_args = mock_popen.call_args[0][0]
+        assert call_args[0] == sys.executable
+        assert call_args[1].endswith("launch_pixel_editor.py")
+        assert call_args[2] == os.path.abspath(sprite_file)
+        
         mock_main_window.status_bar.showMessage.assert_called_once_with(
-            f"Opened {sprite_file} in pixel editor"
+            f"Opened {os.path.basename(sprite_file)} in pixel editor"
         )
 
+    @patch("spritepal.core.controller.validate_image_file")
     @patch("spritepal.core.controller.subprocess.Popen")
     @patch("spritepal.core.controller.os.path.exists")
-    def test_open_in_editor_launcher_in_subdirectory(self, mock_exists, mock_popen, controller, mock_main_window):
+    def test_open_in_editor_launcher_in_subdirectory(
+        self, mock_exists, mock_popen, mock_validate, controller, mock_main_window
+    ):
         """Test opening in editor when launcher is in subdirectory"""
-        mock_exists.side_effect = lambda path: path == "pixel_editor/launch_pixel_editor.py"
+        # Mock validation to pass
+        mock_validate.return_value = (True, "")
+        
+        # Mock exists to return True for the second launcher path (in subdirectory)
+        mock_exists.side_effect = lambda path: "pixel_editor/launch_pixel_editor.py" in path
         sprite_file = "/path/to/sprite.png"
 
         controller.open_in_editor(sprite_file)
 
-        mock_popen.assert_called_once_with([
-            sys.executable,
-            "pixel_editor/launch_pixel_editor.py",
-            sprite_file
-        ])
+        # Verify Popen was called with the correct arguments
+        mock_popen.assert_called_once()
+        call_args = mock_popen.call_args[0][0]
+        assert call_args[0] == sys.executable
+        assert call_args[1].endswith("pixel_editor/launch_pixel_editor.py")
+        assert call_args[2] == os.path.abspath(sprite_file)
 
+    @patch("spritepal.core.controller.validate_image_file")
     @patch("spritepal.core.controller.subprocess.Popen")
     @patch("spritepal.core.controller.os.path.exists")
-    def test_open_in_editor_launcher_in_parent_directory(self, mock_exists, mock_popen, controller, mock_main_window):
+    def test_open_in_editor_launcher_in_parent_directory(
+        self, mock_exists, mock_popen, mock_validate, controller, mock_main_window
+    ):
         """Test opening in editor when launcher is in parent directory"""
-        mock_exists.side_effect = lambda path: path == "../launch_pixel_editor.py"
+        # Mock validation to pass
+        mock_validate.return_value = (True, "")
+        
+        # Mock exists to return True for the third launcher path (in parent directory)
+        mock_exists.side_effect = lambda path: path.endswith("launch_pixel_editor.py") and "exhal-master" in path
         sprite_file = "/path/to/sprite.png"
 
         controller.open_in_editor(sprite_file)
 
-        mock_popen.assert_called_once_with([
-            sys.executable,
-            "../launch_pixel_editor.py",
-            sprite_file
-        ])
+        # Verify Popen was called with the correct arguments
+        mock_popen.assert_called_once()
+        call_args = mock_popen.call_args[0][0]
+        assert call_args[0] == sys.executable
+        assert call_args[1].endswith("launch_pixel_editor.py")
+        assert call_args[2] == os.path.abspath(sprite_file)
 
     @patch("spritepal.core.controller.os.path.exists")
-    def test_open_in_editor_launcher_not_found(self, mock_exists, controller, mock_main_window):
+    def test_open_in_editor_launcher_not_found(
+        self, mock_exists, controller, mock_main_window
+    ):
         """Test opening in editor when launcher is not found"""
         mock_exists.return_value = False
         sprite_file = "/path/to/sprite.png"
@@ -237,7 +327,9 @@ class TestExtractionController:
 
     @patch("spritepal.core.controller.subprocess.Popen")
     @patch("spritepal.core.controller.os.path.exists")
-    def test_open_in_editor_subprocess_error(self, mock_exists, mock_popen, controller, mock_main_window):
+    def test_open_in_editor_subprocess_error(
+        self, mock_exists, mock_popen, controller, mock_main_window
+    ):
         """Test opening in editor when subprocess fails"""
         mock_exists.return_value = True
         mock_popen.side_effect = Exception("Subprocess failed")
@@ -263,14 +355,16 @@ class TestExtractionWorker:
             "oam_path": "/path/to/oam.dmp",
             "output_base": "/path/to/output",
             "create_grayscale": True,
-            "create_metadata": True
+            "create_metadata": True,
         }
 
     @pytest.fixture
     def worker(self, worker_params):
         """Create worker instance"""
-        with patch("spritepal.core.controller.SpriteExtractor"), \
-             patch("spritepal.core.controller.PaletteManager"):
+        with (
+            patch("spritepal.core.controller.SpriteExtractor"),
+            patch("spritepal.core.controller.PaletteManager"),
+        ):
             return ExtractionWorker(worker_params)
 
     def test_init_creates_components(self, worker, worker_params):
@@ -283,7 +377,7 @@ class TestExtractionWorker:
         """Test creating pixmap from valid PIL image"""
         test_image = Image.new("RGB", (32, 32), "red")
 
-        with patch("spritepal.core.controller.QPixmap") as mock_pixmap:
+        with patch("spritepal.utils.image_utils.QPixmap") as mock_pixmap:
             mock_pixmap_instance = Mock()
             mock_pixmap_instance.loadFromData.return_value = True
             mock_pixmap.return_value = mock_pixmap_instance
@@ -299,10 +393,11 @@ class TestExtractionWorker:
         test_image = Mock()
         test_image.save.side_effect = OSError("Cannot save image")
 
-        with pytest.raises(OSError):
-            worker._create_pixmap_from_image(test_image)
+        # The function should handle the error gracefully and return None
+        result = worker._create_pixmap_from_image(test_image)
+        assert result is None
 
-    @patch("spritepal.core.controller.QPixmap")
+    @patch("spritepal.utils.image_utils.QPixmap")
     def test_run_full_workflow_success(self, mock_pixmap, worker):
         """Test successful full workflow execution"""
         # Mock image and pixmap
@@ -374,7 +469,7 @@ class TestExtractionWorker:
         worker.finished = Mock()
         worker.error = Mock()
 
-        with patch("spritepal.core.controller.QPixmap"):
+        with patch("spritepal.utils.image_utils.QPixmap"):
             worker.run()
 
         # Should not call palette-related methods
@@ -405,7 +500,7 @@ class TestExtractionWorker:
         worker.finished = Mock()
         worker.error = Mock()
 
-        with patch("spritepal.core.controller.QPixmap"):
+        with patch("spritepal.utils.image_utils.QPixmap"):
             worker.run()
 
         # Should not call OAM analysis
@@ -435,7 +530,7 @@ class TestExtractionWorker:
         worker.finished = Mock()
         worker.error = Mock()
 
-        with patch("spritepal.core.controller.QPixmap"):
+        with patch("spritepal.utils.image_utils.QPixmap"):
             worker.run()
 
         # Should not call metadata creation
@@ -464,7 +559,7 @@ class TestExtractionWorker:
         worker.finished = Mock()
         worker.error = Mock()
 
-        with patch("spritepal.core.controller.QPixmap"):
+        with patch("spritepal.utils.image_utils.QPixmap"):
             worker.run()
 
         # Should not call palette file creation
@@ -491,6 +586,7 @@ class TestExtractionWorker:
         def track_signal(signal_name):
             def emit_tracker(*args):
                 signal_order.append(signal_name)
+
             return emit_tracker
 
         worker.progress = Mock()
@@ -506,7 +602,7 @@ class TestExtractionWorker:
         worker.finished = Mock()
         worker.finished.emit = track_signal("finished")
 
-        with patch("spritepal.core.controller.QPixmap"):
+        with patch("spritepal.utils.image_utils.QPixmap"):
             worker.run()
 
         # Verify signals were emitted in logical order
@@ -515,7 +611,9 @@ class TestExtractionWorker:
         assert "palettes_ready" in signal_order
         assert "active_palettes_ready" in signal_order
         assert "finished" in signal_order
-        assert signal_order.index("preview_ready") < signal_order.index("palettes_ready")
+        assert signal_order.index("preview_ready") < signal_order.index(
+            "palettes_ready"
+        )
         assert signal_order.index("palettes_ready") < signal_order.index("finished")
 
 
@@ -539,7 +637,7 @@ class TestControllerWorkerIntegration:
             "cgram_path": "/path/to/cgram.dmp",
             "output_base": "/path/to/output",
             "create_grayscale": True,
-            "create_metadata": True
+            "create_metadata": True,
         }
         return window
 
@@ -549,7 +647,9 @@ class TestControllerWorkerIntegration:
         return ExtractionController(mock_main_window)
 
     @patch("spritepal.core.controller.ExtractionWorker")
-    def test_worker_signals_connected_to_controller(self, mock_worker_class, controller, mock_main_window):
+    def test_worker_signals_connected_to_controller(
+        self, mock_worker_class, controller, mock_main_window
+    ):
         """Test that worker signals are properly connected to controller handlers"""
         mock_worker = Mock()
         mock_worker_class.return_value = mock_worker
@@ -558,12 +658,24 @@ class TestControllerWorkerIntegration:
 
         # Verify all signals were connected
         mock_worker.progress.connect.assert_called_once_with(controller._on_progress)
-        mock_worker.preview_ready.connect.assert_called_once_with(controller._on_preview_ready)
-        mock_worker.preview_image_ready.connect.assert_called_once_with(controller._on_preview_image_ready)
-        mock_worker.palettes_ready.connect.assert_called_once_with(controller._on_palettes_ready)
-        mock_worker.active_palettes_ready.connect.assert_called_once_with(controller._on_active_palettes_ready)
-        mock_worker.finished.connect.assert_called_once_with(controller._on_extraction_finished)
-        mock_worker.error.connect.assert_called_once_with(controller._on_extraction_error)
+        mock_worker.preview_ready.connect.assert_called_once_with(
+            controller._on_preview_ready
+        )
+        mock_worker.preview_image_ready.connect.assert_called_once_with(
+            controller._on_preview_image_ready
+        )
+        mock_worker.palettes_ready.connect.assert_called_once_with(
+            controller._on_palettes_ready
+        )
+        mock_worker.active_palettes_ready.connect.assert_called_once_with(
+            controller._on_active_palettes_ready
+        )
+        mock_worker.finished.connect.assert_called_once_with(
+            controller._on_extraction_finished
+        )
+        mock_worker.error.connect.assert_called_once_with(
+            controller._on_extraction_error
+        )
 
     def test_full_signal_chain_simulation(self, controller, mock_main_window):
         """Test full signal chain from worker to UI"""
@@ -593,7 +705,9 @@ class TestControllerWorkerIntegration:
         controller._on_extraction_error("Failed to read file")
 
         # Verify error handling
-        mock_main_window.extraction_failed.assert_called_once_with("Failed to read file")
+        mock_main_window.extraction_failed.assert_called_once_with(
+            "Failed to read file"
+        )
         assert controller.worker is None  # Worker should be cleaned up
 
     def test_worker_cleanup_on_completion(self, controller):
@@ -613,7 +727,9 @@ class TestControllerWorkerIntegration:
         assert controller.worker is None
 
     @patch("spritepal.core.controller.ExtractionWorker")
-    def test_concurrent_extraction_handling(self, mock_worker_class, controller, mock_main_window):
+    def test_concurrent_extraction_handling(
+        self, mock_worker_class, controller, mock_main_window
+    ):
         """Test handling of concurrent extraction requests"""
         # Create different mock instances for each call
         first_mock_worker = Mock()

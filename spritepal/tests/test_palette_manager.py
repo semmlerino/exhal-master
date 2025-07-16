@@ -38,12 +38,12 @@ class TestPaletteManager:
         cgram_data[256] = 0x00
         cgram_data[257] = 0x00
 
-        # Color 1: Pink (248, 152, 152) -> BGR555
+        # Color 1: Pink (255, 156, 156) -> BGR555
         # R=31, G=19, B=19 -> 0x4E7F
         cgram_data[258] = 0x7F
         cgram_data[259] = 0x4E
 
-        # Color 2: White (248, 248, 248) -> BGR555
+        # Color 2: White (255, 255, 255) -> BGR555
         # R=31, G=31, B=31 -> 0x7FFF
         cgram_data[260] = 0xFF
         cgram_data[261] = 0x7F
@@ -57,7 +57,7 @@ class TestPaletteManager:
 
     def test_load_cgram(self, palette_manager, sample_cgram_data):
         """Test loading CGRAM data"""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(sample_cgram_data)
             f.flush()
 
@@ -82,8 +82,8 @@ class TestPaletteManager:
 
         # Check specific colors
         assert pal8[0] == [0, 0, 0]  # Black
-        assert pal8[1] == [248, 152, 152]  # Pink
-        assert pal8[2] == [248, 248, 248]  # White
+        assert pal8[1] == [255, 156, 156]  # Pink
+        assert pal8[2] == [255, 255, 255]  # White
 
     def test_bgr555_conversion(self, palette_manager):
         """Test BGR555 to RGB888 conversion"""
@@ -92,11 +92,11 @@ class TestPaletteManager:
 
         # Test cases: BGR555 -> RGB888
         test_cases = [
-            (0x00, 0x00, [0, 0, 0]),       # Black
-            (0xFF, 0x7F, [248, 248, 248]),  # White
-            (0x1F, 0x00, [248, 0, 0]),      # Red
-            (0xE0, 0x03, [0, 248, 0]),      # Green
-            (0x00, 0x7C, [0, 0, 248]),      # Blue
+            (0x00, 0x00, [0, 0, 0]),  # Black
+            (0xFF, 0x7F, [255, 255, 255]),  # White
+            (0x1F, 0x00, [255, 0, 0]),  # Red
+            (0xE0, 0x03, [0, 255, 0]),  # Green
+            (0x00, 0x7C, [0, 0, 255]),  # Blue
         ]
 
         for low, high, expected in test_cases:
@@ -131,8 +131,10 @@ class TestPaletteManager:
 
         # Should only have palettes 8-15
         assert len(sprite_pals) == 8
-        assert all(idx in range(SPRITE_PALETTE_START, SPRITE_PALETTE_END)
-                  for idx in sprite_pals)
+        assert all(
+            idx in range(SPRITE_PALETTE_START, SPRITE_PALETTE_END)
+            for idx in sprite_pals
+        )
 
     def test_create_palette_json(self, palette_manager, sample_cgram_data):
         """Test creating palette JSON file"""
@@ -163,13 +165,18 @@ class TestPaletteManager:
         finally:
             Path(output_path).unlink(missing_ok=True)
 
-    @pytest.mark.parametrize(("pal_idx", "expected_name"), [
-        (8, "Kirby (Pink)"),
-        (12, "UI/HUD"),
-        (14, "Boss/Enemy"),
-        (99, "Palette 99"),  # Unknown palette
-    ])
-    def test_palette_info(self, palette_manager, sample_cgram_data, pal_idx, expected_name):
+    @pytest.mark.parametrize(
+        ("pal_idx", "expected_name"),
+        [
+            (8, "Kirby (Pink)"),
+            (12, "UI/HUD"),
+            (14, "Boss/Enemy"),
+            (99, "Palette 99"),  # Unknown palette
+        ],
+    )
+    def test_palette_info(
+        self, palette_manager, sample_cgram_data, pal_idx, expected_name
+    ):
         """Test palette naming from PALETTE_INFO"""
         palette_manager.cgram_data = sample_cgram_data
         palette_manager._extract_palettes()

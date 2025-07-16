@@ -46,7 +46,7 @@ class TestSpriteExtractor:
 
     def test_load_vram(self, extractor, sample_vram_data):
         """Test loading VRAM data from file"""
-        with tempfile.NamedTemporaryFile(delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
             f.write(sample_vram_data)
             f.flush()
 
@@ -61,8 +61,8 @@ class TestSpriteExtractor:
         # Create a simple tile with known pattern
         tile_data = bytearray(32)
         # Set first pixel of first row to color index 9 (binary 1001)
-        tile_data[0] = 0x80   # Plane 0, bit 7 = 1
-        tile_data[1] = 0x00   # Plane 1, bit 7 = 0
+        tile_data[0] = 0x80  # Plane 0, bit 7 = 1
+        tile_data[1] = 0x00  # Plane 1, bit 7 = 0
         tile_data[16] = 0x00  # Plane 2, bit 7 = 0
         tile_data[17] = 0x80  # Plane 3, bit 7 = 1
 
@@ -105,12 +105,17 @@ class TestSpriteExtractor:
         # Should only extract what's available
         assert num_tiles == 1  # Only 50 bytes available = 1 tile
 
-    @pytest.mark.parametrize(("tiles_per_row", "expected_width"), [
-        (16, 128),  # 16 tiles * 8 pixels
-        (8, 64),    # 8 tiles * 8 pixels
-        (32, 256),  # 32 tiles * 8 pixels
-    ])
-    def test_create_grayscale_image_dimensions(self, extractor, tiles_per_row, expected_width):
+    @pytest.mark.parametrize(
+        ("tiles_per_row", "expected_width"),
+        [
+            (16, 128),  # 16 tiles * 8 pixels
+            (8, 64),  # 8 tiles * 8 pixels
+            (32, 256),  # 32 tiles * 8 pixels
+        ],
+    )
+    def test_create_grayscale_image_dimensions(
+        self, extractor, tiles_per_row, expected_width
+    ):
         """Test grayscale image creation with different layouts"""
         # Create some test tiles
         test_tiles = [[[0] * 8 for _ in range(8)] for _ in range(tiles_per_row * 2)]
@@ -131,8 +136,7 @@ class TestSpriteExtractor:
 
         try:
             img, num_tiles = extractor.extract_sprites_grayscale(
-                vram_file.name,
-                output_path
+                vram_file.name, output_path
             )
 
             assert img is not None
