@@ -6,15 +6,21 @@ import io
 import os
 import subprocess
 import sys
+from typing import Any, Dict, List, Optional
 
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.injector import InjectionWorker
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
-from spritepal.utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START, BYTES_PER_TILE
+
+from spritepal.core.extractor import SpriteExtractor
+from spritepal.core.injector import InjectionWorker
+from spritepal.core.palette_manager import PaletteManager
+from spritepal.ui.injection_dialog import InjectionDialog
+from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from spritepal.utils.constants import (
+    BYTES_PER_TILE,
+    SPRITE_PALETTE_END,
+    SPRITE_PALETTE_START,
+)
 
 
 class ExtractionWorker(QThread):
@@ -28,13 +34,13 @@ class ExtractionWorker(QThread):
     finished = pyqtSignal(list)  # extracted files
     error = pyqtSignal(str)  # error message
 
-    def __init__(self, params):
+    def __init__(self, params: Dict[str, Any]) -> None:
         super().__init__()
         self.params = params
         self.extractor = SpriteExtractor()
         self.palette_manager = PaletteManager()
 
-    def run(self):
+    def run(self) -> None:
         """Run the extraction process"""
         try:
             extracted_files = []
@@ -43,14 +49,12 @@ class ExtractionWorker(QThread):
             self.progress.emit("Extracting sprites from VRAM...")
 
             output_file = f"{self.params['output_base']}.png"
-            
+
             # Get VRAM offset if provided
             vram_offset = self.params.get("vram_offset", None)
-            
+
             img, num_tiles = self.extractor.extract_sprites_grayscale(
-                self.params["vram_path"],
-                output_file,
-                offset=vram_offset
+                self.params["vram_path"], output_file, offset=vram_offset
             )
             extracted_files.append(output_file)
 
@@ -95,19 +99,19 @@ class ExtractionWorker(QThread):
                     # Create metadata file
                     if self.params["create_metadata"]:
                         self.progress.emit("Creating metadata file...")
-                        
+
                         # Prepare extraction parameters for metadata
                         extraction_params = {
                             "vram_source": os.path.basename(self.params["vram_path"]),
-                            "vram_offset": vram_offset if vram_offset is not None else 0xC000,
+                            "vram_offset": vram_offset
+                            if vram_offset is not None
+                            else 0xC000,
                             "tile_count": num_tiles,
-                            "extraction_size": num_tiles * BYTES_PER_TILE
+                            "extraction_size": num_tiles * BYTES_PER_TILE,
                         }
-                        
+
                         metadata_file = self.palette_manager.create_metadata_json(
-                            self.params["output_base"],
-                            palette_files,
-                            extraction_params
+                            self.params["output_base"], palette_files, extraction_params
                         )
                         extracted_files.append(metadata_file)
 
@@ -125,7 +129,7 @@ class ExtractionWorker(QThread):
         except Exception as e:
             self.error.emit(str(e))
 
-    def _create_pixmap_from_image(self, pil_image):
+    def _create_pixmap_from_image(self, pil_image: Any) -> QPixmap:
         """Convert PIL image to QPixmap"""
         # Save to bytes
         buffer = io.BytesIO()
@@ -141,19 +145,22 @@ class ExtractionWorker(QThread):
 class ExtractionController(QObject):
     """Controller for the extraction workflow"""
 
-    def __init__(self, main_window):
+    def __init__(self, main_window: Any) -> None:
         super().__init__()
         self.main_window = main_window
-        self.worker = None
+        self.worker: Optional[ExtractionWorker] = None
+        self.injection_worker: Optional[InjectionWorker] = None
 
         # Connect signals
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
         self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
         self.main_window.inject_requested.connect(self.start_injection)
-        self.main_window.extraction_panel.offset_changed.connect(self.update_preview_with_offset)
+        self.main_window.extraction_panel.offset_changed.connect(
+            self.update_preview_with_offset
+        )
 
-    def start_extraction(self):
+    def start_extraction(self) -> None:
         """Start the extraction process"""
         # Get parameters from UI
         params = self.main_window.get_extraction_params()
@@ -174,94 +181,96 @@ class ExtractionController(QObject):
         self.worker.error.connect(self._on_extraction_error)
         self.worker.start()
 
-    def _on_progress(self, message):
+    def _on_progress(self, message: str) -> None:
         """Handle progress updates"""
         self.main_window.status_bar.showMessage(message)
 
-    def _on_preview_ready(self, pixmap, tile_count):
+    def _on_preview_ready(self, pixmap: QPixmap, tile_count: int) -> None:
         """Handle preview ready"""
         self.main_window.sprite_preview.set_preview(pixmap, tile_count)
         self.main_window.preview_info.setText(f"Tiles: {tile_count}")
 
-    def _on_preview_image_ready(self, pil_image):
+    def _on_preview_image_ready(self, pil_image: Any) -> None:
         """Handle preview PIL image ready"""
         self.main_window.sprite_preview.set_grayscale_image(pil_image)
 
-    def _on_palettes_ready(self, palettes):
+    def _on_palettes_ready(self, palettes: Dict[str, Any]) -> None:
         """Handle palettes ready"""
         self.main_window.palette_preview.set_all_palettes(palettes)
         self.main_window.sprite_preview.set_palettes(palettes)
 
-    def _on_active_palettes_ready(self, active_palettes):
+    def _on_active_palettes_ready(self, active_palettes: List[int]) -> None:
         """Handle active palettes ready"""
         self.main_window.palette_preview.highlight_active_palettes(active_palettes)
 
-    def _on_extraction_finished(self, extracted_files):
+    def _on_extraction_finished(self, extracted_files: List[str]) -> None:
         """Handle extraction finished"""
         self.main_window.extraction_complete(extracted_files)
         self.worker = None
 
-    def _on_extraction_error(self, error_message):
+    def _on_extraction_error(self, error_message: str) -> None:
         """Handle extraction error"""
         self.main_window.extraction_failed(error_message)
         self.worker = None
 
-    def update_preview_with_offset(self, offset):
+    def update_preview_with_offset(self, offset: int) -> None:
         """Update preview with new VRAM offset without full extraction"""
         # Check if we have VRAM loaded
         if not self.main_window.extraction_panel.has_vram():
             return
-            
+
         # Get VRAM path
         vram_path = self.main_window.extraction_panel.get_vram_path()
-        
+
         try:
             # Create a temporary extractor for preview
             extractor = SpriteExtractor()
             extractor.load_vram(vram_path)
-            
+
             # Extract tiles with new offset
             tiles, num_tiles = extractor.extract_tiles(offset=offset)
-            
+
             # Create grayscale image
             img = extractor.create_grayscale_image(tiles)
-            
+
             # Convert to pixmap
             pixmap = self._create_pixmap_from_image(img)
-            
+
             # Update preview
             self.main_window.sprite_preview.set_preview(pixmap, num_tiles)
-            self.main_window.preview_info.setText(f"Tiles: {num_tiles} (Offset: 0x{offset:04X})")
-            
+            self.main_window.preview_info.setText(
+                f"Tiles: {num_tiles} (Offset: 0x{offset:04X})"
+            )
+
             # Also update the grayscale image for palette application
             self.main_window.sprite_preview.set_grayscale_image(img)
-            
+
         except Exception as e:
-            self.main_window.status_bar.showMessage(f"Preview update failed: {str(e)}")
-    
-    def _create_pixmap_from_image(self, pil_image):
+            self.main_window.status_bar.showMessage(f"Preview update failed: {e!s}")
+
+    def _create_pixmap_from_image(self, pil_image: Any) -> QPixmap:
         """Create QPixmap from PIL image"""
         # Convert PIL image to QPixmap
         buffer = io.BytesIO()
-        pil_image.save(buffer, format='PNG')
+        pil_image.save(buffer, format="PNG")
         buffer.seek(0)
-        
+
         pixmap = QPixmap()
         pixmap.loadFromData(buffer.read())
         return pixmap
 
-    def open_in_editor(self, sprite_file):
+    def open_in_editor(self, sprite_file: str) -> None:
         """Open the extracted sprites in the pixel editor"""
         # Get the directory where this spritepal package is located
         spritepal_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         exhal_dir = os.path.dirname(spritepal_dir)
-        
+
         # Look for pixel editor launcher using absolute paths
         launcher_paths = [
             os.path.join(spritepal_dir, "launch_pixel_editor.py"),
             os.path.join(spritepal_dir, "pixel_editor", "launch_pixel_editor.py"),
             os.path.join(exhal_dir, "launch_pixel_editor.py"),
-            os.path.join(exhal_dir, "pixel_editor", "launch_pixel_editor.py")
+            os.path.join(exhal_dir, "pixel_editor", "launch_pixel_editor.py"),
         ]
 
         launcher_path = None
@@ -273,58 +282,62 @@ class ExtractionController(QObject):
         if launcher_path:
             # Launch pixel editor with the sprite file
             try:
-                subprocess.Popen([
-                    sys.executable,
-                    launcher_path,
-                    sprite_file
-                ])
-                self.main_window.status_bar.showMessage(f"Opened {sprite_file} in pixel editor")
+                subprocess.Popen([sys.executable, launcher_path, sprite_file])
+                self.main_window.status_bar.showMessage(
+                    f"Opened {sprite_file} in pixel editor"
+                )
             except Exception as e:
-                self.main_window.status_bar.showMessage(f"Failed to open pixel editor: {e}")
+                self.main_window.status_bar.showMessage(
+                    f"Failed to open pixel editor: {e}"
+                )
         else:
             self.main_window.status_bar.showMessage("Pixel editor not found")
-    
-    def open_row_arrangement(self, sprite_file):
+
+    def open_row_arrangement(self, sprite_file: str) -> None:
         """Open the row arrangement dialog"""
         if not os.path.exists(sprite_file):
             self.main_window.status_bar.showMessage("Sprite file not found")
             return
-        
+
         # Calculate tiles per row from the current extraction
-        tiles_per_row = self.extractor.tiles_per_row if hasattr(self, 'extractor') else 16
-        
+        tiles_per_row = (
+            self.extractor.tiles_per_row if hasattr(self, "extractor") else 16
+        )
+
         # Open row arrangement dialog
         dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
-        
+
         if dialog.exec():
             # Get the arranged sprite path
             arranged_path = dialog.get_arranged_path()
-            
+
             if arranged_path and os.path.exists(arranged_path):
                 # Open the arranged sprite in the pixel editor
                 self.open_in_editor(arranged_path)
-                self.main_window.status_bar.showMessage(f"Opened arranged sprites in pixel editor")
+                self.main_window.status_bar.showMessage(
+                    "Opened arranged sprites in pixel editor"
+                )
             else:
                 self.main_window.status_bar.showMessage("Row arrangement cancelled")
-    
-    def start_injection(self):
+
+    def start_injection(self) -> None:
         """Start the injection process"""
         # Get sprite path and metadata path
         output_base = self.main_window._output_path
         if not output_base:
             self.main_window.status_bar.showMessage("No extraction to inject")
             return
-        
+
         sprite_path = f"{output_base}.png"
         metadata_path = f"{output_base}.metadata.json"
-        
+
         # Show injection dialog
         dialog = InjectionDialog(
             self.main_window,
             sprite_path=sprite_path,
-            metadata_path=metadata_path if os.path.exists(metadata_path) else ""
+            metadata_path=metadata_path if os.path.exists(metadata_path) else "",
         )
-        
+
         if dialog.exec():
             params = dialog.get_parameters()
             if params:
@@ -334,26 +347,26 @@ class ExtractionController(QObject):
                     params["input_vram"],
                     params["output_vram"],
                     params["offset"],
-                    params.get("metadata_path")
+                    params.get("metadata_path"),
                 )
-                
+
                 # Connect signals
                 self.injection_worker.progress.connect(self._on_injection_progress)
                 self.injection_worker.finished.connect(self._on_injection_finished)
-                
+
                 # Start injection
                 self.main_window.status_bar.showMessage("Starting injection...")
                 self.injection_worker.start()
-    
-    def _on_injection_progress(self, message):
+
+    def _on_injection_progress(self, message: str) -> None:
         """Handle injection progress updates"""
         self.main_window.status_bar.showMessage(message)
-    
-    def _on_injection_finished(self, success, message):
+
+    def _on_injection_finished(self, success: bool, message: str) -> None:
         """Handle injection completion"""
         if success:
             self.main_window.status_bar.showMessage(f"Injection successful: {message}")
         else:
             self.main_window.status_bar.showMessage(f"Injection failed: {message}")
-        
+
         self.injection_worker = None
