@@ -1,0 +1,214 @@
+"""
+Row-related widgets for SpritePal row arrangement dialog
+"""
+
+import io
+from typing import Optional
+
+from PIL import Image
+from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QDrag, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import QListWidget, QListWidgetItem, QWidget
+
+
+class RowPreviewWidget(QWidget):
+    """Enhanced widget displaying a thumbnail preview of a sprite row"""
+
+    def __init__(
+        self, row_index: int, row_image: Image.Image, tiles_per_row: int, 
+        is_selected: bool = False, parent: Optional[QWidget] = None
+    ):
+        super().__init__(parent)
+        self.row_index = row_index
+        self.row_image = row_image
+        self.tiles_per_row = tiles_per_row
+        self.is_selected = is_selected
+        self.is_hovered = False
+        self.setFixedHeight(85)  # Increased height for much better visibility
+        self.setMinimumWidth(350)  # Slightly wider for better layout
+        self.setMouseTracking(True)
+    
+    def update_image(self, new_image: Image.Image) -> None:
+        """Update the row image for display"""
+        self.row_image = new_image
+        self.update()
+
+    def paintEvent(self, event) -> None:  # noqa: N802
+        """Paint the row thumbnail with enhanced visuals"""
+        painter = QPainter(self)
+
+        # Draw main background
+        if self.is_selected:
+            painter.fillRect(self.rect(), QColor(50, 50, 50))  # Lighter for selected
+        elif self.is_hovered:
+            painter.fillRect(self.rect(), QColor(46, 46, 46))  # More noticeable hover
+        else:
+            painter.fillRect(self.rect(), QColor(40, 40, 40))
+
+        # Draw prominent selection border
+        if self.is_selected:
+            painter.setPen(QPen(QColor(70, 140, 200), 4))  # Thicker blue selection border
+            painter.drawRect(self.rect().adjusted(1, 1, -2, -2))
+        elif self.is_hovered:
+            painter.setPen(QPen(QColor(100, 100, 100), 2))  # More visible hover border
+            painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
+        else:
+            painter.setPen(QPen(QColor(70, 70, 70), 1))  # Normal border
+            painter.drawRect(self.rect().adjusted(0, 0, -1, -1))
+
+        # Create light image background well
+        image_well_rect = self.rect().adjusted(6, 6, -6, -6)
+        image_well_rect.setHeight(72)  # Increased to match new widget height
+        painter.fillRect(
+            image_well_rect, QColor(30, 30, 30)
+        )  # Dark background for enhanced sprites
+
+        # Draw subtle inset border for image well
+        painter.setPen(QPen(QColor(20, 20, 20), 1))
+        painter.drawRect(image_well_rect.adjusted(0, 0, -1, -1))
+
+        # Convert PIL image to QPixmap for display
+        image_end_x = 10  # Default position if no image
+
+        if self.row_image:
+            # Scale to fit within both width and height constraints
+            target_height = 70  # Maximum height for the image (fits within 72px well)
+            max_width = 320  # Maximum width to leave room for labels
+
+            # Calculate scale factors for both dimensions
+            height_scale = target_height / self.row_image.height
+            width_scale = max_width / self.row_image.width
+
+            # Use the smaller scale factor to maintain aspect ratio
+            scale_factor = min(height_scale, width_scale)
+
+            # Ensure at least 1x scaling and use integer scaling for pixel art
+            # Use minimum scale of 2 for better visibility in thumbnails
+            scale_factor = max(2, int(scale_factor))
+
+            scaled_width = self.row_image.width * scale_factor
+            scaled_height = self.row_image.height * scale_factor
+
+            scaled_image = self.row_image.resize(
+                (scaled_width, scaled_height), Image.Resampling.NEAREST
+            )
+
+            # Handle different image modes
+            if scaled_image.mode == "RGBA":
+                # For RGBA images (colorized), keep as is
+                pass
+            elif scaled_image.mode != "L":
+                # For other modes, convert to grayscale
+                scaled_image = scaled_image.convert("L")
+
+            # Convert to QPixmap using BytesIO to avoid stride issues
+            buffer = io.BytesIO()
+            scaled_image.save(buffer, format="PNG")
+            buffer.seek(0)
+
+            pixmap = QPixmap()
+            pixmap.loadFromData(buffer.read())
+
+            # Draw scaled thumbnail centered in the well
+            draw_x = image_well_rect.x() + 1
+            draw_y = image_well_rect.y() + 1
+            painter.drawPixmap(draw_x, draw_y, pixmap)
+
+            # Update image end position for label placement
+            image_end_x = draw_x + pixmap.width() + 10
+
+        # Draw row label with better formatting
+        painter.setPen(QColor(220, 220, 220))
+        font = painter.font()
+        font.setPointSize(10)
+        font.setBold(True)
+        painter.setFont(font)
+
+        # Position label after the image with some padding
+        painter.drawText(image_end_x, 30, f"Row {self.row_index}")
+
+        # Draw tile count
+        painter.setPen(QColor(180, 180, 180))
+        font.setBold(False)
+        font.setPointSize(9)
+        painter.setFont(font)
+        painter.drawText(image_end_x, 50, f"{self.tiles_per_row} tiles")
+
+        # Draw selection indicator with better styling
+        if self.is_selected:
+            painter.setPen(QColor(70, 140, 200))  # Match border color
+            painter.drawText(image_end_x, 70, "● Selected")
+
+    def enterEvent(self, event) -> None:  # noqa: N802
+        """Handle mouse enter"""
+        self.is_hovered = True
+        self.update()
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        """Handle mouse leave"""
+        self.is_hovered = False
+        self.update()
+
+    def set_selected(self, selected: bool) -> None:
+        """Set selection state"""
+        self.is_selected = selected
+        self.update()
+
+
+class DragDropListWidget(QListWidget):
+    """List widget with enhanced drag-and-drop support"""
+
+    item_dropped = pyqtSignal(int, int)  # from_index, to_index
+    external_drop = pyqtSignal(object)  # dropped item data
+
+    def __init__(self, accept_external_drops: bool = False):
+        super().__init__()
+        self.accept_external_drops = accept_external_drops
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QListWidget.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802
+        """Handle drag enter"""
+        if event.mimeData().hasText() and self.accept_external_drops:
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event) -> None:  # noqa: N802
+        """Handle drag move"""
+        if event.mimeData().hasText() and self.accept_external_drops:
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event) -> None:  # noqa: N802
+        """Handle drop events"""
+        if event.mimeData().hasText() and self.accept_external_drops:
+            # Handle external drop
+            try:
+                row_index = int(event.mimeData().text())
+                self.external_drop.emit(row_index)
+                event.acceptProposedAction()
+            except ValueError:
+                pass
+        else:
+            # Handle internal reordering
+            super().dropEvent(event)
+            self.item_dropped.emit(0, 0)  # Signal for refresh
+
+    def startDrag(self, supportedActions) -> None:  # noqa: N802
+        """Start drag operation"""
+        item = self.currentItem()
+        if item:
+            drag = QDrag(self)
+            mimeData = QMimeData()
+
+            # Store the row index for external drops
+            row_data = item.data(Qt.ItemDataRole.UserRole)
+            if row_data is not None:
+                mimeData.setText(str(row_data))
+
+            drag.setMimeData(mimeData)
+            drag.exec(Qt.DropAction.MoveAction)
