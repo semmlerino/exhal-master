@@ -105,7 +105,7 @@ class TestZoomablePreviewWidget:
         widget.zoom_to_fit()
 
         # Should calculate zoom to fit 64x64 pixmap in 256x256 widget
-        expected_zoom = min(256/64, 256/64) * 0.9  # 90% of perfect fit
+        expected_zoom = min(256 / 64, 256 / 64) * 0.9  # 90% of perfect fit
         assert abs(widget._zoom - expected_zoom) < 0.01
 
     def test_grid_toggle_keypress(self, widget, qtbot):
@@ -113,7 +113,9 @@ class TestZoomablePreviewWidget:
         initial_grid = widget._grid_visible
 
         # Simulate G key press
-        key_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_G, Qt.KeyboardModifier.NoModifier)
+        key_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_G, Qt.KeyboardModifier.NoModifier
+        )
         widget.keyPressEvent(key_event)
 
         assert widget._grid_visible != initial_grid
@@ -169,7 +171,8 @@ class TestPreviewPanel:
     def test_palettes(self):
         """Create test palette data"""
         return {
-            8: [[0, 0, 0], [255, 192, 203], [255, 255, 255], [128, 128, 128]] + [[0, 0, 0]] * 12,
+            8: [[0, 0, 0], [255, 192, 203], [255, 255, 255], [128, 128, 128]]
+            + [[0, 0, 0]] * 12,
             9: [[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]] + [[0, 0, 0]] * 12,
         }
 
@@ -177,7 +180,8 @@ class TestPreviewPanel:
         """Test panel initialization"""
         assert panel._grayscale_image is None
         assert panel._colorized_image is None
-        assert panel._current_palettes == {}
+        assert hasattr(panel, 'colorizer')
+        assert panel.colorizer is not None
         assert panel.palette_toggle.isChecked() is False
         assert panel.palette_selector.isEnabled() is False
 
@@ -191,7 +195,8 @@ class TestPreviewPanel:
         """Test setting palette data"""
         panel.set_palettes(test_palettes)
 
-        assert panel._current_palettes == test_palettes
+        # Verify palettes were set in colorizer
+        assert panel.colorizer.get_palettes() == test_palettes
 
     def test_palette_toggle_checkbox(self, panel, test_grayscale_image, test_palettes):
         """Test palette toggle checkbox functionality"""
@@ -222,7 +227,9 @@ class TestPreviewPanel:
         initial_checked = panel.palette_toggle.isChecked()
 
         # Simulate C key press
-        key_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_C, Qt.KeyboardModifier.NoModifier)
+        key_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_C, Qt.KeyboardModifier.NoModifier
+        )
         panel.keyPressEvent(key_event)
 
         assert panel.palette_toggle.isChecked() != initial_checked
@@ -235,17 +242,23 @@ class TestPreviewPanel:
         assert isinstance(pixmap, QPixmap)
         assert not pixmap.isNull()
 
-    def test_apply_palette_to_grayscale_image(self, panel, test_grayscale_image, test_palettes):
-        """Test applying palette to grayscale image"""
-        result = panel._apply_palette_to_image(test_grayscale_image, test_palettes[8])
+    def test_apply_palette_to_grayscale_image(
+        self, panel, test_grayscale_image, test_palettes
+    ):
+        """Test applying palette to grayscale image through colorizer"""
+        panel.set_palettes(test_palettes)
+        result = panel.colorizer.apply_palette_to_image(test_grayscale_image, test_palettes[8])
 
         assert result is not None
         assert result.mode == "RGBA"
         assert result.size == test_grayscale_image.size
 
-    def test_apply_palette_to_palette_image(self, panel, test_palette_image, test_palettes):
-        """Test applying palette to palette mode image"""
-        result = panel._apply_palette_to_image(test_palette_image, test_palettes[8])
+    def test_apply_palette_to_palette_image(
+        self, panel, test_palette_image, test_palettes
+    ):
+        """Test applying palette to palette mode image through colorizer"""
+        panel.set_palettes(test_palettes)
+        result = panel.colorizer.apply_palette_to_image(test_palette_image, test_palettes[8])
 
         assert result is not None
         assert result.mode == "RGBA"
@@ -255,8 +268,9 @@ class TestPreviewPanel:
         """Test transparency for palette index 0"""
         # Create image with palette index 0
         test_image = Image.new("P", (4, 4), 0)
-
-        result = panel._apply_palette_to_image(test_image, test_palettes[8])
+        
+        panel.set_palettes(test_palettes)
+        result = panel.colorizer.apply_palette_to_image(test_image, test_palettes[8])
 
         assert result is not None
         # Check that palette index 0 becomes transparent
@@ -273,12 +287,14 @@ class TestPreviewPanel:
 
         assert panel._grayscale_image is None
         assert panel._colorized_image is None
-        assert panel._current_palettes == {}
+        assert panel.colorizer.get_palettes() == {}
         assert panel.palette_toggle.isChecked() is False
         assert panel.palette_selector.isEnabled() is False
 
     @patch("spritepal.ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
-    def test_show_grayscale_preserves_view(self, mock_pil_to_pixmap, panel, test_grayscale_image):
+    def test_show_grayscale_preserves_view(
+        self, mock_pil_to_pixmap, panel, test_grayscale_image
+    ):
         """Test that showing grayscale preserves view state"""
         # Mock the conversion
         mock_pixmap = Mock()
@@ -297,7 +313,9 @@ class TestPreviewPanel:
         panel.preview.update_pixmap.assert_called_once_with(mock_pixmap)
 
     @patch("spritepal.ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
-    def test_apply_palette_preserves_view(self, mock_pil_to_pixmap, panel, test_grayscale_image, test_palettes):
+    def test_apply_palette_preserves_view(
+        self, mock_pil_to_pixmap, panel, test_grayscale_image, test_palettes
+    ):
         """Test that applying palette preserves view state"""
         # Mock the conversion
         mock_pixmap = Mock()
@@ -320,12 +338,12 @@ class TestPreviewPanel:
     def test_error_handling_in_palette_application(self, panel):
         """Test error handling when palette application fails"""
         # Try to apply palette with invalid data
-        result = panel._apply_palette_to_image(None, None)
+        result = panel.colorizer.apply_palette_to_image(None, None)
         assert result is None
 
         # Try with invalid palette
         test_image = Image.new("L", (4, 4), 0)
-        result = panel._apply_palette_to_image(test_image, [])
+        result = panel.colorizer.apply_palette_to_image(test_image, [])
         assert result is None
 
     def test_mouse_press_sets_focus(self, panel, qtbot):
@@ -339,7 +357,7 @@ class TestPreviewPanel:
             QPointF(10, 10),
             Qt.MouseButton.LeftButton,
             Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier
+            Qt.KeyboardModifier.NoModifier,
         )
 
         # Call mouse press event
@@ -347,3 +365,14 @@ class TestPreviewPanel:
 
         # Should set focus
         panel.setFocus.assert_called_once()
+    
+    def test_get_palettes_public_api(self, panel, test_palettes):
+        """Test the public get_palettes API"""
+        # Initially empty
+        assert panel.get_palettes() == {}
+        
+        # Set palettes
+        panel.set_palettes(test_palettes)
+        
+        # Should return the palettes
+        assert panel.get_palettes() == test_palettes

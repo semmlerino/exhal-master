@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
@@ -16,6 +17,8 @@ from spritepal.core.injector import InjectionWorker
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from spritepal.utils.validation import validate_image_file
+from spritepal.utils.image_utils import pil_to_qpixmap
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,
@@ -129,17 +132,9 @@ class ExtractionWorker(QThread):
         except Exception as e:
             self.error.emit(str(e))
 
-    def _create_pixmap_from_image(self, pil_image: Any) -> QPixmap:
-        """Convert PIL image to QPixmap"""
-        # Save to bytes
-        buffer = io.BytesIO()
-        pil_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        # Create QPixmap
-        pixmap = QPixmap()
-        pixmap.loadFromData(buffer.read())
-        return pixmap
+    def _create_pixmap_from_image(self, pil_image: Any) -> Optional[QPixmap]:
+        """Create QPixmap from PIL image using utility function"""
+        return pil_to_qpixmap(pil_image)
 
 
 class ExtractionController(QObject):
@@ -234,10 +229,10 @@ class ExtractionController(QObject):
             img = extractor.create_grayscale_image(tiles)
 
             # Convert to pixmap
-            pixmap = self._create_pixmap_from_image(img)
+            pixmap = pil_to_qpixmap(img)
 
-            # Update preview
-            self.main_window.sprite_preview.set_preview(pixmap, num_tiles)
+            # Update preview without resetting view (for real-time slider updates)
+            self.main_window.sprite_preview.update_preview(pixmap, num_tiles)
             self.main_window.preview_info.setText(
                 f"Tiles: {num_tiles} (Offset: 0x{offset:04X})"
             )
@@ -247,17 +242,6 @@ class ExtractionController(QObject):
 
         except Exception as e:
             self.main_window.status_bar.showMessage(f"Preview update failed: {e!s}")
-
-    def _create_pixmap_from_image(self, pil_image: Any) -> QPixmap:
-        """Create QPixmap from PIL image"""
-        # Convert PIL image to QPixmap
-        buffer = io.BytesIO()
-        pil_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        pixmap = QPixmap()
-        pixmap.loadFromData(buffer.read())
-        return pixmap
 
     def open_in_editor(self, sprite_file: str) -> None:
         """Open the extracted sprites in the pixel editor"""
@@ -280,11 +264,27 @@ class ExtractionController(QObject):
                 break
 
         if launcher_path:
+            # Validate sprite file before launching
+            is_valid, error_msg = validate_image_file(sprite_file)
+            if not is_valid:
+                self.main_window.status_bar.showMessage(
+                    f"Invalid sprite file: {error_msg}"
+                )
+                return
+                
+            # Ensure launcher path is absolute and exists
+            launcher_path = os.path.abspath(launcher_path)
+            if not os.path.exists(launcher_path):
+                self.main_window.status_bar.showMessage("Pixel editor launcher not found")
+                return
+                
             # Launch pixel editor with the sprite file
             try:
-                subprocess.Popen([sys.executable, launcher_path, sprite_file])
+                # Use absolute paths for safety
+                sprite_file_abs = os.path.abspath(sprite_file)
+                subprocess.Popen([sys.executable, launcher_path, sprite_file_abs])
                 self.main_window.status_bar.showMessage(
-                    f"Opened {sprite_file} in pixel editor"
+                    f"Opened {os.path.basename(sprite_file)} in pixel editor"
                 )
             except Exception as e:
                 self.main_window.status_bar.showMessage(
@@ -299,13 +299,18 @@ class ExtractionController(QObject):
             self.main_window.status_bar.showMessage("Sprite file not found")
             return
 
-        # Calculate tiles per row from the current extraction
-        tiles_per_row = (
-            self.extractor.tiles_per_row if hasattr(self, "extractor") else 16
-        )
+        # Use default tiles per row (controller doesn't have direct access to extractor)
+        tiles_per_row = 16  # DEFAULT_TILES_PER_ROW
 
         # Open row arrangement dialog
         dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
+        
+        # Pass palette data from the main window's sprite preview if available
+        if hasattr(self.main_window, 'sprite_preview') and self.main_window.sprite_preview:
+            if hasattr(self.main_window.sprite_preview, 'get_palettes'):
+                palettes = self.main_window.sprite_preview.get_palettes()
+                if palettes:
+                    dialog.set_palettes(palettes)
 
         if dialog.exec():
             # Get the arranged sprite path

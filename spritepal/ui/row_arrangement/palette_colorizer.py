@@ -31,6 +31,25 @@ class PaletteColorizer(QObject):
         self._current_palettes = palettes_dict
         self._colorized_cache.clear()  # Clear cache when palettes change
     
+    def get_palettes(self) -> Dict[int, List[Tuple[int, int, int]]]:
+        """Get the current palette data
+        
+        Returns:
+            Dictionary mapping palette index to RGB color lists
+        """
+        return self._current_palettes.copy()
+    
+    def set_selected_palette(self, palette_index: int) -> None:
+        """Set the selected palette index
+        
+        Args:
+            palette_index: The palette index to select (8-15)
+        """
+        if palette_index != self._selected_palette_index:
+            self._selected_palette_index = palette_index
+            self._colorized_cache.clear()  # Clear cache when selection changes
+            self.palette_index_changed.emit(palette_index)
+    
     def toggle_palette_mode(self) -> bool:
         """Toggle between grayscale and colorized display
         

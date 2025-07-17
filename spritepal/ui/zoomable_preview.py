@@ -3,7 +3,7 @@ Zoomable sprite preview widget for SpritePal
 """
 
 import io
-from typing import Optional, Any
+from typing import Optional, Any, Dict, List, Tuple
 
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import (
@@ -21,9 +21,12 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
+
+from .row_arrangement.palette_colorizer import PaletteColorizer
 
 
 class ZoomablePreviewWidget(QWidget):
@@ -48,6 +51,10 @@ class ZoomablePreviewWidget(QWidget):
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        # Set size policy to expand and fill available space
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
         self.setStyleSheet("""
             ZoomablePreviewWidget {
                 background-color: #1e1e1e;
@@ -255,6 +262,9 @@ class ZoomablePreviewWidget(QWidget):
         if event.key() == Qt.Key.Key_G:
             self._grid_visible = not self._grid_visible
             self.update()
+        elif event.key() == Qt.Key.Key_F:
+            # F: Zoom to fit
+            self.zoom_to_fit()
         elif event.key() == Qt.Key.Key_0:
             if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
                 # Ctrl+0: Reset zoom to default (4x zoom for pixel art)
@@ -326,8 +336,19 @@ class PreviewPanel(QWidget):
         super().__init__()
         self._grayscale_image = None
         self._colorized_image = None
-        self._current_palettes: dict[str, Any] = {}
+        
+        # Initialize colorizer component
+        self.colorizer = PaletteColorizer()
+        
+        # Connect colorizer signals
+        self.colorizer.palette_mode_changed.connect(self._on_colorizer_palette_mode_changed)
+        self.colorizer.palette_index_changed.connect(self._on_colorizer_palette_index_changed)
+        
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        # Set size policy to expand and fill available space
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -337,7 +358,7 @@ class PreviewPanel(QWidget):
 
         # Preview widget
         self.preview = ZoomablePreviewWidget()
-        layout.addWidget(self.preview)
+        layout.addWidget(self.preview, 1)  # Give stretch factor of 1 to expand
 
         # Control buttons
         controls = QHBoxLayout()
@@ -384,10 +405,15 @@ class PreviewPanel(QWidget):
 
     def _on_palette_toggle(self, checked: bool) -> None:
         """Handle palette toggle"""
+        # Only toggle if the state differs from colorizer
+        if checked != self.colorizer.is_palette_mode():
+            self.colorizer.toggle_palette_mode()
+        
         self.palette_selector.setEnabled(checked)
-        if checked and self._grayscale_image and self._current_palettes:
+        
+        if checked and self._grayscale_image and self.colorizer.has_palettes():
             self._apply_current_palette()
-        else:
+        elif not checked:
             self._show_grayscale()
 
     def _on_palette_changed(self, palette_name: str) -> None:
@@ -395,24 +421,21 @@ class PreviewPanel(QWidget):
         if (
             self.palette_toggle.isChecked()
             and self._grayscale_image
-            and self._current_palettes
+            and self.colorizer.has_palettes()
         ):
-            self._apply_current_palette()
+            # Update colorizer's selected palette
+            palette_index = self.palette_selector.currentData()
+            if palette_index:
+                self.colorizer.set_selected_palette(palette_index)
+                self._apply_current_palette()
 
     def _apply_current_palette(self) -> None:
         """Apply the currently selected palette to the grayscale image"""
-        if not self._grayscale_image or not self._current_palettes:
+        if not self._grayscale_image or not self.colorizer.has_palettes():
             return
 
-        # Get selected palette index
-        palette_index = self.palette_selector.currentData()
-        if palette_index not in self._current_palettes:
-            return
-
-        # Apply palette to create colorized version
-        self._colorized_image = self._apply_palette_to_image(
-            self._grayscale_image, self._current_palettes[palette_index]
-        )
+        # Get colorized image from colorizer
+        self._colorized_image = self.colorizer.get_display_image(0, self._grayscale_image)
 
         # Update preview with colorized image
         if self._colorized_image:
@@ -457,6 +480,15 @@ class PreviewPanel(QWidget):
         """Set the preview pixmap"""
         self.preview.set_preview(pixmap, tile_count, tiles_per_row)
 
+    def update_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
+        """Update the preview pixmap without resetting view (for real-time updates)"""
+        self.preview.update_pixmap(pixmap)
+        # Update tile info if provided
+        if tile_count > 0:
+            self.preview._tile_count = tile_count
+        if tiles_per_row > 0:
+            self.preview._tiles_per_row = tiles_per_row
+
     def set_preview_from_file(self, file_path: str) -> None:
         """Load preview from file"""
         self.preview.set_preview_from_file(file_path)
@@ -465,7 +497,9 @@ class PreviewPanel(QWidget):
         """Clear the preview"""
         self._grayscale_image = None
         self._colorized_image = None
-        self._current_palettes = {}
+        self.colorizer.set_palettes({})  # Clear palettes
+        if self.colorizer.is_palette_mode():
+            self.colorizer.toggle_palette_mode()  # Turn off palette mode
         self.palette_toggle.setChecked(False)
         self.palette_selector.setEnabled(False)
         self.preview.clear()
@@ -476,58 +510,15 @@ class PreviewPanel(QWidget):
 
     def set_palettes(self, palettes_dict: Any) -> None:
         """Set the available palettes"""
-        self._current_palettes = palettes_dict
+        self.colorizer.set_palettes(palettes_dict)
 
         # Enable palette controls if we have both image and palettes
-        has_data = self._grayscale_image is not None and bool(self._current_palettes)
+        has_data = self._grayscale_image is not None and self.colorizer.has_palettes()
         self.palette_toggle.setEnabled(has_data)
 
         if self.palette_toggle.isChecked() and has_data:
             self._apply_current_palette()
 
-    def _apply_palette_to_image(self, grayscale_image: Any, palette_colors: Any) -> Optional[Any]:
-        """Apply a palette to a grayscale image"""
-        if not grayscale_image or not palette_colors:
-            return None
-
-        try:
-            # Convert grayscale to RGBA for transparency support
-            rgba_image = grayscale_image.convert("RGBA")
-
-            # Get image data
-            pixels = rgba_image.load()
-            width, height = rgba_image.size
-
-            # Apply palette
-            for y in range(height):
-                for x in range(width):
-                    # Get pixel value
-                    pixel_value = grayscale_image.getpixel((x, y))
-
-                    # For palette mode images, pixel value is already the palette index
-                    if grayscale_image.mode == "P":
-                        palette_index = pixel_value
-                    else:
-                        # For grayscale images, map to palette index
-                        palette_index = min(15, pixel_value // 16)
-
-                    # Handle transparency for palette index 0
-                    if palette_index == 0:
-                        # Set transparent pixel
-                        pixels[x, y] = (0, 0, 0, 0)
-                    elif palette_index < len(palette_colors):
-                        # Get RGB color from palette
-                        r, g, b = palette_colors[palette_index]
-                        pixels[x, y] = (r, g, b, 255)
-                    else:
-                        # Use black for out of range indices
-                        pixels[x, y] = (0, 0, 0, 255)
-
-        except Exception as e:
-            print(f"Error applying palette: {e}")
-            return None
-        else:
-            return rgba_image
 
     def _pil_to_pixmap(self, pil_image: Any) -> Optional[Any]:
         """Convert PIL image to QPixmap"""
@@ -556,8 +547,30 @@ class PreviewPanel(QWidget):
             self.palette_toggle.setChecked(not self.palette_toggle.isChecked())
         else:
             super().keyPressEvent(event)
+    
+    def _on_colorizer_palette_mode_changed(self, enabled: bool) -> None:
+        """Handle palette mode change from colorizer"""
+        # Update UI to reflect colorizer state
+        self.palette_toggle.setChecked(enabled)
+        self.palette_selector.setEnabled(enabled)
+    
+    def _on_colorizer_palette_index_changed(self, index: int) -> None:
+        """Handle palette index change from colorizer"""
+        # Update selector to match colorizer state
+        for i in range(self.palette_selector.count()):
+            if self.palette_selector.itemData(i) == index:
+                self.palette_selector.setCurrentIndex(i)
+                break
 
     def mousePressEvent(self, event: Any) -> None:  # noqa: N802
         """Handle mouse press to ensure focus"""
         self.setFocus()
         super().mousePressEvent(event)
+    
+    def get_palettes(self) -> Dict[int, List[Tuple[int, int, int]]]:
+        """Get the current palette data
+        
+        Returns:
+            Dictionary mapping palette index to RGB color lists
+        """
+        return self.colorizer.get_palettes() if self.colorizer else {}
