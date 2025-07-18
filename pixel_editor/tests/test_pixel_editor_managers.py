@@ -48,14 +48,20 @@ class TestToolClasses:
         assert image_model.modified
 
     def test_pencil_tool_move(self, image_model):
-        """Test pencil tool on move (continuous drawing)"""
+        """Test pencil tool on move (continuous drawing with line interpolation)"""
         tool = PencilTool()
 
-        # Draw line
-        for x in range(4):
-            tool.on_move(x, 2, 7, image_model)
+        # Start drawing at position (0, 2)
+        tool.on_press(0, 2, 7, image_model)
 
-        # Check line drawn
+        # Draw line by moving to position (3, 2) - should interpolate between
+        line_points = tool.on_move(3, 2, 7, image_model)
+        
+        # Apply the line points to the image model
+        for x, y in line_points:
+            image_model.set_pixel(x, y, 7)
+
+        # Check line drawn (all points from 0 to 3 should be filled)
         for x in range(4):
             assert image_model.data[2, x] == 7
 

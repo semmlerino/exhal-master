@@ -632,81 +632,40 @@ class PixelEditorController(QObject):
         tool_name = self.tool_manager.current_tool_name
 
         if tool_name == "pencil":
+            # Call the tool's on_press method to initialize position tracking
+            tool.on_press(x, y, self.tool_manager.current_color, self.image_model)
+            
             # Get affected pixels for current brush size
             brush_pixels = self.tool_manager.get_brush_pixels(x, y)
             
             # Filter out pixels outside image bounds
             valid_pixels = self._filter_valid_pixels(brush_pixels)
             
-            # Draw each valid pixel in the brush area
+            # Create commands for each valid pixel and execute them
             for px, py in valid_pixels:
                 old_color = self.image_model.get_color_at(px, py)
                 new_color = self.tool_manager.current_color
                 
                 if old_color != new_color:
-                    # Update the pixel
-                    self.image_model.data[py, px] = new_color
+                    # Create and execute command through undo manager
+                    command = DrawPixelCommand(
+                        x=px, y=py, old_color=old_color, new_color=new_color
+                    )
+                    self.execute_command(command)
                     self._drawing_pixels.append((px, py, old_color, new_color))
             
-            if self._drawing_pixels:
-                self.image_model.modified = True
-                self._request_update()
         elif tool_name == "fill":
-            # For fill, we need to capture the state before filling
+            # For fill, create and execute command through undo manager
             old_color = self.image_model.get_color_at(x, y)
             if old_color != self.tool_manager.current_color:
-                # Get the affected region before filling
-                # First, find the bounds of the fill area
-                min_x = max_x = x
-                min_y = max_y = y
-
-                # Store the old image data before filling
-                old_data = self.image_model.data.copy()
-
-                # Execute the fill
-                result = tool.on_press(
-                    x, y, self.tool_manager.current_color, self.image_model
+                # Create fill command and execute it through undo manager
+                command = FloodFillCommand(
+                    x=x,
+                    y=y,
+                    old_color=old_color,
+                    new_color=self.tool_manager.current_color
                 )
-
-                if result and len(result) > 0:
-                    # Calculate affected region from result
-                    for px, py in result:
-                        min_x = min(min_x, px)
-                        max_x = max(max_x, px)
-                        min_y = min(min_y, py)
-                        max_y = max(max_y, py)
-
-                    # Create command with proper data
-                    command = FloodFillCommand()
-                    command.affected_region = (
-                        min_x,
-                        min_y,
-                        max_x - min_x + 1,
-                        max_y - min_y + 1,
-                    )
-                    command.new_color = self.tool_manager.current_color
-
-                    # Store only the affected region from old data
-                    command.old_data = np.full(
-                        (max_y - min_y + 1, max_x - min_x + 1), 255, dtype=np.uint8
-                    )
-                    for px, py in result:
-                        command.old_data[py - min_y, px - min_x] = old_data[py, px]
-
-                    # The fill has already been executed, so we just need to track it
-                    self.undo_manager.command_stack.append(command)
-                    self.undo_manager.current_index += 1
-
-                    # Limit stack size
-                    if (
-                        len(self.undo_manager.command_stack)
-                        > self.undo_manager.max_commands
-                    ):
-                        self.undo_manager.command_stack.pop(0)
-                        self.undo_manager.current_index -= 1
-
-                    self.image_model.modified = True
-                    self._request_update()
+                self.execute_command(command)
             self._is_drawing = False  # Fill is a single action
         elif tool_name == "picker":
             # Color picker doesn't need undo
@@ -722,58 +681,63 @@ class PixelEditorController(QObject):
 
         # Only pencil tool supports continuous drawing
         if self.tool_manager.current_tool_name == "pencil":
-            # Get affected pixels for current brush size
-            brush_pixels = self.tool_manager.get_brush_pixels(x, y)
+            # Get tool instance and call on_move to get line points
+            tool = self.tool_manager.get_tool()
+            line_points = tool.on_move(x, y, self.tool_manager.current_color, self.image_model)
             
-            # Filter out pixels outside image bounds
-            valid_pixels = self._filter_valid_pixels(brush_pixels)
-            
-            # Draw each valid pixel in the brush area
-            pixels_changed = False
-            for px, py in valid_pixels:
-                old_color = self.image_model.get_color_at(px, py)
-                new_color = self.tool_manager.current_color
+            # For each point in the line, apply brush size and draw
+            for line_x, line_y in line_points:
+                # Get affected pixels for current brush size
+                brush_pixels = self.tool_manager.get_brush_pixels(line_x, line_y)
                 
-                if old_color != new_color:
-                    # Update the pixel
-                    self.image_model.data[py, px] = new_color
-                    self._drawing_pixels.append((px, py, old_color, new_color))
-                    pixels_changed = True
-            
-            if pixels_changed:
-                self.image_model.modified = True
-                self._request_update()
+                # Filter out pixels outside image bounds
+                valid_pixels = self._filter_valid_pixels(brush_pixels)
+                
+                # Create commands for each valid pixel and execute them
+                for px, py in valid_pixels:
+                    old_color = self.image_model.get_color_at(px, py)
+                    new_color = self.tool_manager.current_color
+                    
+                    if old_color != new_color:
+                        # Create and execute command through undo manager
+                        command = DrawPixelCommand(
+                            x=px, y=py, old_color=old_color, new_color=new_color
+                        )
+                        self.execute_command(command)
+                        self._drawing_pixels.append((px, py, old_color, new_color))
 
     def handle_canvas_release(self, x: int, y: int):
         """Handle mouse release on canvas"""
         if self.image_model.data is None:
             return
 
-        # Create undo command for pencil drawing
+        # For pencil tool, group all drawing operations into a batch command
         if (
             self._is_drawing
             and self.tool_manager.current_tool_name == "pencil"
             and self._drawing_pixels
         ):
-            # Create individual commands for each pixel and batch them
-            batch = BatchCommand()
-            for px, py, old_color, new_color in self._drawing_pixels:
-                cmd = DrawPixelCommand(
-                    x=px, y=py, old_color=old_color, new_color=new_color
-                )
-                batch.add_command(cmd)
-
-            # The pixels are already drawn, so we don't execute, just add to history
-            self.undo_manager.command_stack.append(batch)
-            self.undo_manager.current_index += 1
-            # Clear redo stack
-            if (
-                self.undo_manager.current_index
-                < len(self.undo_manager.command_stack) - 1
-            ):
-                self.undo_manager.command_stack = self.undo_manager.command_stack[
-                    : self.undo_manager.current_index + 1
-                ]
+            # Commands were already executed individually during press/move
+            # Now group the last N commands into a batch for better undo experience
+            if len(self._drawing_pixels) > 1:
+                # Get the last N commands that were just executed
+                num_commands = len(self._drawing_pixels)
+                if len(self.undo_manager.command_stack) >= num_commands:
+                    # Remove the individual commands
+                    individual_commands = []
+                    for _ in range(num_commands):
+                        if self.undo_manager.command_stack:
+                            individual_commands.append(self.undo_manager.command_stack.pop())
+                            self.undo_manager.current_index -= 1
+                    
+                    # Create a batch command with all the individual commands
+                    batch = BatchCommand()
+                    for cmd in reversed(individual_commands):
+                        batch.add_command(cmd)
+                    
+                    # Add the batch command to the stack
+                    self.undo_manager.command_stack.append(batch)
+                    self.undo_manager.current_index += 1
 
         # Reset drawing state
         self._is_drawing = False

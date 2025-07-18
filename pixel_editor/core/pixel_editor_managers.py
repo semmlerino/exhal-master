@@ -50,18 +50,72 @@ class Tool(ABC):
 
 
 class PencilTool(Tool):
-    """Basic drawing tool"""
+    """Basic drawing tool with line interpolation"""
+
+    def __init__(self) -> None:
+        self.last_x: Optional[int] = None
+        self.last_y: Optional[int] = None
 
     def on_press(self, x: int, y: int, color: int, image_model: ImageModel) -> bool:
-        """Draw a single pixel"""
+        """Draw a single pixel and start tracking position"""
+        self.last_x = x
+        self.last_y = y
         return image_model.set_pixel(x, y, color)
 
-    def on_move(self, x: int, y: int, color: int, image_model: ImageModel) -> bool:
-        """Continue drawing"""
-        return image_model.set_pixel(x, y, color)
+    def on_move(self, x: int, y: int, color: int, image_model: ImageModel) -> List[Tuple[int, int]]:
+        """Continue drawing with line interpolation"""
+        if self.last_x is None or self.last_y is None:
+            # First move without a previous position
+            self.last_x = x
+            self.last_y = y
+            return [(x, y)]
+
+        # Get all points between last position and current position
+        line_points = self._get_line_points(self.last_x, self.last_y, x, y)
+        
+        # Update last position
+        self.last_x = x
+        self.last_y = y
+        
+        # Return the line points for the controller to handle
+        return line_points
 
     def on_release(self, x: int, y: int, color: int, image_model: ImageModel) -> None:
-        """Nothing to do on release"""
+        """Clear tracking state"""
+        self.last_x = None
+        self.last_y = None
+
+    def _get_line_points(self, x0: int, y0: int, x1: int, y1: int) -> List[Tuple[int, int]]:
+        """Get all points on a line using Bresenham's algorithm"""
+        points = []
+        
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        
+        # Determine direction
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        
+        err = dx - dy
+        x, y = x0, y0
+        
+        while True:
+            points.append((x, y))
+            
+            if x == x1 and y == y1:
+                break
+                
+            e2 = 2 * err
+            
+            if e2 > -dy:
+                err -= dy
+                x += sx
+                
+            if e2 < dx:
+                err += dx
+                y += sy
+                
+        return points
 
 
 class FillTool(Tool):
