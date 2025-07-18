@@ -213,10 +213,10 @@ class MainWindow(QMainWindow):
         """)
         button_layout.addWidget(self.arrange_grid_button, 1, 1)
 
-        self.inject_button = QPushButton("Inject to VRAM")
+        self.inject_button = QPushButton("Inject")
         self.inject_button.setMinimumHeight(35)
         self.inject_button.setEnabled(False)
-        self.inject_button.setToolTip("Inject edited sprite back into VRAM")
+        self.inject_button.setToolTip("Inject edited sprite back into VRAM or ROM")
         self.inject_button.setStyleSheet("""
             QPushButton {
                 background-color: #744da9;
