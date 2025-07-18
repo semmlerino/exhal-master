@@ -33,7 +33,7 @@ class SpritePreviewWidget(QWidget):
             scaled_pixmap = self._pixmap.scaled(
                 self.size(),
                 Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.FastTransformation
+                Qt.TransformationMode.FastTransformation,
             )
 
             # Center the pixmap
@@ -47,7 +47,7 @@ class SpritePreviewWidget(QWidget):
             painter.drawText(
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
-                "Sprite preview will appear here"
+                "Sprite preview will appear here",
             )
 
     def set_preview(self, pixmap, tile_count=0, tiles_per_row=0):

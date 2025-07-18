@@ -13,12 +13,41 @@ sys.path.insert(0, str(project_root))
 test_commands = {
     "all": ["python3", "-m", "pytest", str(project_root), "-v"],
     "unit": ["python3", "-m", "pytest", str(project_root), "-v", "-m", "unit"],
-    "integration": ["python3", "-m", "pytest", str(project_root), "-v", "-m", "integration"],
-    "sprite_editor": ["python3", "-m", "pytest", str(project_root / "sprite_editor/tests"), "-v"],
-    "pixel_editor": ["python3", "-m", "pytest", str(project_root / "pixel_editor/tests"), "-v"],
+    "integration": [
+        "python3",
+        "-m",
+        "pytest",
+        str(project_root),
+        "-v",
+        "-m",
+        "integration",
+    ],
+    "sprite_editor": [
+        "python3",
+        "-m",
+        "pytest",
+        str(project_root / "sprite_editor/tests"),
+        "-v",
+    ],
+    "pixel_editor": [
+        "python3",
+        "-m",
+        "pytest",
+        str(project_root / "pixel_editor/tests"),
+        "-v",
+    ],
     "no_gui": ["python3", "-m", "pytest", str(project_root), "-v", "-k", "not gui"],
-    "coverage": ["python3", "-m", "pytest", str(project_root), "--cov=sprite_editor", "--cov=pixel_editor", "--cov-report=html"],
+    "coverage": [
+        "python3",
+        "-m",
+        "pytest",
+        str(project_root / "spritepal"),
+        "--cov=spritepal",
+        "--cov-report=html",
+        "--cov-report=term-missing",
+    ],
 }
+
 
 def run_tests(test_type="all"):
     """Run tests based on type"""
@@ -31,6 +60,7 @@ def run_tests(test_type="all"):
     print(f"Running: {' '.join(cmd)}")
 
     return subprocess.call(cmd)
+
 
 if __name__ == "__main__":
     test_type = sys.argv[1] if len(sys.argv) > 1 else "all"

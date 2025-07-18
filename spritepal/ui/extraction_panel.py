@@ -4,6 +4,7 @@ Extraction panel with drag & drop zones for dump files
 
 import os
 from pathlib import Path
+from typing import List
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPainter, QPen
@@ -21,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from spritepal.utils.constants import VRAM_SPRITE_OFFSET
+from spritepal.utils.settings_manager import get_settings_manager
 
 
 class DropZone(QWidget):
@@ -115,15 +117,17 @@ class DropZone(QWidget):
 
     def _browse_file(self):
         """Browse for file"""
+        settings = get_settings_manager()
+        default_dir = settings.get_default_directory()
+        
         file_filter = f"{self.file_type} Files (*.dmp);;All Files (*)"
         filename, _ = QFileDialog.getOpenFileName(
-            self,
-            f"Select {self.file_type} File",
-            "",
-            file_filter
+            self, f"Select {self.file_type} File", default_dir, file_filter
         )
 
         if filename:
+            # Update last used directory
+            settings.set_last_used_directory(str(Path(filename).parent))
             self.set_file(filename)
 
     def set_file(self, file_path):
@@ -168,7 +172,7 @@ class ExtractionPanel(QGroupBox):
         super().__init__("Input Files")
         self._setup_ui()
         self._connect_signals()
-        
+
         # Timer for debouncing offset changes
         self._offset_timer = QTimer()
         self._offset_timer.setInterval(16)  # 16ms delay for ~60fps updates
@@ -186,10 +190,7 @@ class ExtractionPanel(QGroupBox):
         preset_layout.addWidget(QLabel("Preset:"))
 
         self.preset_combo = QComboBox()
-        self.preset_combo.addItems([
-            "Kirby Sprites (0xC000)",
-            "Custom Range"
-        ])
+        self.preset_combo.addItems(["Kirby Sprites (0xC000)", "Custom Range"])
         self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_layout.addWidget(self.preset_combo)
         preset_layout.addStretch()
@@ -199,7 +200,7 @@ class ExtractionPanel(QGroupBox):
         # Custom offset controls (hidden by default)
         self.offset_widget = QWidget()
         offset_layout = QVBoxLayout(self.offset_widget)
-        
+
         # Offset label
         offset_label_layout = QHBoxLayout()
         offset_label_layout.addWidget(QLabel("VRAM Offset:"))
@@ -208,7 +209,7 @@ class ExtractionPanel(QGroupBox):
         offset_label_layout.addWidget(self.offset_hex_label)
         offset_label_layout.addStretch()
         offset_layout.addLayout(offset_label_layout)
-        
+
         # Offset slider
         self.offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.offset_slider.setMinimum(0)
@@ -218,7 +219,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_slider.setTickInterval(0x1000)  # 4KB intervals
         self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
         offset_layout.addWidget(self.offset_slider)
-        
+
         # Offset spinbox
         offset_spin_layout = QHBoxLayout()
         self.offset_spinbox = QSpinBox()
@@ -230,7 +231,7 @@ class ExtractionPanel(QGroupBox):
         offset_spin_layout.addWidget(self.offset_spinbox)
         offset_spin_layout.addStretch()
         offset_layout.addLayout(offset_spin_layout)
-        
+
         # Hide by default
         self.offset_widget.setVisible(False)
         layout.addWidget(self.offset_widget)
@@ -265,7 +266,7 @@ class ExtractionPanel(QGroupBox):
 
         # Try to auto-detect related files
         self._auto_detect_related(file_path)
-        
+
         # Trigger preview update if VRAM was just loaded
         if self.has_vram() and file_path == self.vram_drop.get_file_path():
             self.offset_changed.emit(self.get_vram_offset())
@@ -282,9 +283,16 @@ class ExtractionPanel(QGroupBox):
         base_name = path.stem
 
         # Remove common suffixes to get base name
-        for suffix in ["_VRAM", "_CGRAM", "_OAM", ".SnesVideoRam", ".SnesCgRam", ".SnesSpriteRam"]:
+        for suffix in [
+            "_VRAM",
+            "_CGRAM",
+            "_OAM",
+            ".SnesVideoRam",
+            ".SnesCgRam",
+            ".SnesSpriteRam",
+        ]:
             if base_name.endswith(suffix):
-                base_name = base_name[:-len(suffix)]
+                base_name = base_name[: -len(suffix)]
                 break
 
         # Look for related files
@@ -308,43 +316,53 @@ class ExtractionPanel(QGroupBox):
             if file_path.exists() and not drop_zone.has_file():
                 drop_zone.set_file(str(file_path))
 
-    def _auto_detect_files(self):
-        """Auto-detect dump files in current directory"""
-        # Start from current directory
-        directory = Path.cwd()
+    def _find_files_for_type(self, directory: Path, patterns: List[str], drop_zone: DropZone) -> bool:
+        """Helper method to find and set files for a specific dump type"""
+        if drop_zone.has_file():
+            return False
+        
+        for pattern in patterns:
+            files = list(directory.glob(pattern))
+            if files:
+                drop_zone.set_file(str(files[0]))
+                return True
+        return False
 
-        # Common dump file patterns
-        vram_patterns = ["*VRAM*.dmp", "*VideoRam*.dmp"]
-        cgram_patterns = ["*CGRAM*.dmp", "*CgRam*.dmp"]
-        oam_patterns = ["*OAM*.dmp", "*SpriteRam*.dmp"]
-
-        # Find files
+    def _auto_detect_files(self) -> None:
+        """Auto-detect dump files in default directory (Mesen2 Debugger first, then current directory)"""
+        settings = get_settings_manager()
+        
+        # Define file type configurations
+        file_configs = [
+            (["*VRAM*.dmp", "*VideoRam*.dmp"], self.vram_drop),
+            (["*CGRAM*.dmp", "*CgRam*.dmp"], self.cgram_drop),
+            (["*OAM*.dmp", "*SpriteRam*.dmp"], self.oam_drop),
+        ]
+        
         found_any = False
-
-        for pattern in vram_patterns:
-            if not self.vram_drop.has_file():
-                files = list(directory.glob(pattern))
-                if files:
-                    self.vram_drop.set_file(str(files[0]))
+        
+        # Try directories in order: default (Mesen2), last used, current
+        directories_to_try = [
+            settings.get("paths", "default_dumps_dir", ""),
+            settings.get("paths", "last_used_dir", ""),
+            str(Path.cwd()),
+        ]
+        
+        for directory_str in directories_to_try:
+            if not directory_str or not os.path.exists(directory_str):
+                continue
+                
+            directory = Path(directory_str)
+            
+            # Try to find files in this directory
+            for patterns, drop_zone in file_configs:
+                if self._find_files_for_type(directory, patterns, drop_zone):
                     found_any = True
-                    break
-
-        for pattern in cgram_patterns:
-            if not self.cgram_drop.has_file():
-                files = list(directory.glob(pattern))
-                if files:
-                    self.cgram_drop.set_file(str(files[0]))
-                    found_any = True
-                    break
-
-        for pattern in oam_patterns:
-            if not self.oam_drop.has_file():
-                files = list(directory.glob(pattern))
-                if files:
-                    self.oam_drop.set_file(str(files[0]))
-                    found_any = True
-                    break
-
+            
+            # If we found any files in this directory, stop searching
+            if found_any:
+                break
+        
         if found_any:
             self.files_changed.emit()
             self._check_extraction_ready()
@@ -370,32 +388,34 @@ class ExtractionPanel(QGroupBox):
         """Handle offset slider change"""
         # Mark that this change is from the slider
         self._slider_changing = True
-        
+
         # Update spinbox (will trigger its handler)
         self.offset_spinbox.setValue(value)
-        
+
         # Emit change immediately for smooth real-time updates when dragging
         if self.preset_combo.currentIndex() == 1 and self.has_vram():  # Custom Range
             self.offset_changed.emit(value)
-        
+
         self._slider_changing = False
-        
+
     def _on_offset_spinbox_changed(self, value):
         """Handle offset spinbox change"""
         # Update slider without triggering its handler
         self.offset_slider.blockSignals(True)
         self.offset_slider.setValue(value)
         self.offset_slider.blockSignals(False)
-        
+
         # Update hex label
         self.offset_hex_label.setText(f"0x{value:04X}")
-        
+
         # Only use debounce for direct spinbox changes (not from slider)
-        if self.preset_combo.currentIndex() == 1 and not self._slider_changing:  # Custom Range
+        if (
+            self.preset_combo.currentIndex() == 1 and not self._slider_changing
+        ):  # Custom Range
             self._pending_offset = value
             self._offset_timer.stop()
             self._offset_timer.start()
-    
+
     def _emit_offset_changed(self):
         """Emit the pending offset change after debounce"""
         if self._pending_offset is not None:
@@ -437,8 +457,8 @@ class ExtractionPanel(QGroupBox):
         # Use the preset to determine offset
         if self.preset_combo.currentIndex() == 0:  # Kirby Sprites
             return VRAM_SPRITE_OFFSET
-        else:  # Custom Range
-            return self.offset_spinbox.value()
+        # Custom Range
+        return self.offset_spinbox.value()
 
     def restore_session_files(self, file_paths):
         """Restore file paths from session data"""
@@ -459,5 +479,5 @@ class ExtractionPanel(QGroupBox):
         return {
             "vram_path": self.get_vram_path(),
             "cgram_path": self.get_cgram_path(),
-            "oam_path": self.get_oam_path()
+            "oam_path": self.get_oam_path(),
         }

@@ -18,7 +18,8 @@ from PyQt6.QtWidgets import QApplication
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from pixel_editor.core.indexed_pixel_editor import IndexedPixelEditor
-from pixel_editor.core.pixel_editor_widgets import ColorPaletteWidget, PixelCanvas
+from pixel_editor.core.widgets.color_palette_widget import ColorPaletteWidget
+from pixel_editor.core.pixel_editor_canvas_v3 import PixelCanvasV3 as PixelCanvas
 from pixel_editor.core.pixel_editor_workers import FileLoadWorker, FileSaveWorker
 
 

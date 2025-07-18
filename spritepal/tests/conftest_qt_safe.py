@@ -11,10 +11,10 @@ import pytest
 
 # Detect if we're in a problematic headless environment
 IS_HEADLESS = (
-    not os.environ.get("DISPLAY") or
-    os.environ.get("QT_QPA_PLATFORM") == "offscreen" or
-    os.environ.get("CI") or
-    (sys.platform == "linux" and "microsoft" in os.uname().release.lower())
+    not os.environ.get("DISPLAY")
+    or os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+    or os.environ.get("CI")
+    or (sys.platform == "linux" and "microsoft" in os.uname().release.lower())
 )
 
 
@@ -104,14 +104,16 @@ def mock_main_window():
     window = Mock()
     window.extract_requested = Mock()
     window.open_in_editor_requested = Mock()
-    window.get_extraction_params = Mock(return_value={
-        "vram_path": "/test/vram.dmp",
-        "cgram_path": "/test/cgram.dmp",
-        "output_base": "/test/output",
-        "create_grayscale": True,
-        "create_metadata": True,
-        "oam_path": None
-    })
+    window.get_extraction_params = Mock(
+        return_value={
+            "vram_path": "/test/vram.dmp",
+            "cgram_path": "/test/cgram.dmp",
+            "output_base": "/test/output",
+            "create_grayscale": True,
+            "create_metadata": True,
+            "oam_path": None,
+        }
+    )
     window.extraction_complete = Mock()
     window.extraction_failed = Mock()
     window.status_bar = Mock()
@@ -128,8 +130,14 @@ def mock_worker():
     worker = Mock()
 
     # Create mock signals
-    for signal_name in ["progress", "preview_ready", "palettes_ready",
-                       "active_palettes_ready", "finished", "error"]:
+    for signal_name in [
+        "progress",
+        "preview_ready",
+        "palettes_ready",
+        "active_palettes_ready",
+        "finished",
+        "error",
+    ]:
         signal = Mock()
         signal.emit = Mock()
         signal.connect = Mock()

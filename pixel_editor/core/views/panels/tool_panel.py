@@ -5,7 +5,7 @@ Provides UI for selecting drawing tools
 
 # Third-party imports
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QButtonGroup, QGroupBox, QRadioButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QButtonGroup, QGroupBox, QHBoxLayout, QLabel, QRadioButton, QSpinBox, QVBoxLayout, QWidget
 
 
 class ToolPanel(QWidget):
@@ -13,6 +13,7 @@ class ToolPanel(QWidget):
 
     # Signals
     toolChanged = pyqtSignal(str)  # Emits tool name when changed
+    brushSizeChanged = pyqtSignal(int)  # Emits brush size when changed
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -54,12 +55,34 @@ class ToolPanel(QWidget):
         # Add to main layout
         layout.addWidget(tool_group)
 
+        # Brush size group box
+        brush_group = QGroupBox("Brush Size")
+        brush_layout = QHBoxLayout()
+
+        self.brush_size_label = QLabel("Size:")
+        self.brush_size_spinbox = QSpinBox()
+        self.brush_size_spinbox.setRange(1, 5)
+        self.brush_size_spinbox.setValue(1)
+        self.brush_size_spinbox.setToolTip("Brush size in pixels")
+        self.brush_size_spinbox.valueChanged.connect(self._on_brush_size_changed)
+
+        brush_layout.addWidget(self.brush_size_label)
+        brush_layout.addWidget(self.brush_size_spinbox)
+        brush_group.setLayout(brush_layout)
+
+        # Add to main layout
+        layout.addWidget(brush_group)
+
     def _on_tool_changed(self, button):
         """Handle tool selection change"""
         tool_map = {0: "pencil", 1: "fill", 2: "picker"}
         tool_id = self.tool_group.id(button)
         tool_name = tool_map.get(tool_id, "pencil")
         self.toolChanged.emit(tool_name)
+
+    def _on_brush_size_changed(self, size: int):
+        """Handle brush size change"""
+        self.brushSizeChanged.emit(size)
 
     def get_current_tool(self) -> str:
         """Get the currently selected tool name"""
@@ -79,3 +102,16 @@ class ToolPanel(QWidget):
             tool_buttons[tool_name].setChecked(True)
             # Emit the signal to notify controller
             self.toolChanged.emit(tool_name)
+
+    def get_brush_size(self) -> int:
+        """Get the current brush size"""
+        return self.brush_size_spinbox.value()
+
+    def set_brush_size(self, size: int):
+        """Set the brush size"""
+        self.brush_size_spinbox.setValue(size)
+
+    def update_brush_size_display(self):
+        """Update the brush size display (for external updates)"""
+        # This method can be called when brush size changes via keyboard shortcuts
+        pass

@@ -32,9 +32,13 @@ class PaletteColorWidget(QWidget):
             for y in range(0, self.height(), checker_size):
                 for x in range(0, self.width(), checker_size):
                     if (x // checker_size + y // checker_size) % 2:
-                        painter.fillRect(x, y, checker_size, checker_size, QColor(80, 80, 80))
+                        painter.fillRect(
+                            x, y, checker_size, checker_size, QColor(80, 80, 80)
+                        )
                     else:
-                        painter.fillRect(x, y, checker_size, checker_size, QColor(100, 100, 100))
+                        painter.fillRect(
+                            x, y, checker_size, checker_size, QColor(100, 100, 100)
+                        )
 
         # Draw color
         painter.fillRect(self.rect(), self.color)
@@ -44,7 +48,14 @@ class PaletteColorWidget(QWidget):
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
         # Draw index number
-        painter.setPen(QPen(Qt.GlobalColor.white if self.color.lightness() < 128 else Qt.GlobalColor.black, 1))
+        painter.setPen(
+            QPen(
+                Qt.GlobalColor.white
+                if self.color.lightness() < 128
+                else Qt.GlobalColor.black,
+                1,
+            )
+        )
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.index))
 
     def mousePressEvent(self, event: QMouseEvent):  # noqa: N802

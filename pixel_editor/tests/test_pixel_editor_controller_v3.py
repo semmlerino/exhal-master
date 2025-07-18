@@ -28,6 +28,11 @@ class TestPixelEditorController:
         controller.error_handler = MagicMock()
         controller.error.connect(controller.error_handler)
         return controller
+    
+    def _trigger_pending_updates(self, controller):
+        """Helper to trigger any pending batched updates"""
+        if controller._update_pending:
+            controller._emit_batched_update()
 
     @pytest.fixture
     def temp_dir(self):
@@ -35,6 +40,19 @@ class TestPixelEditorController:
         with tempfile.TemporaryDirectory() as tmpdir:
             yield tmpdir
 
+    # Basic initialization tests  
+    @pytest.mark.mock_gui
+    def test_initialization(self, controller):
+        """Test that controller initializes properly"""
+        assert controller is not None
+        assert controller.image_model is not None
+        assert controller.palette_model is not None
+        assert controller.project_model is not None
+        assert controller.tool_manager is not None
+        assert controller.file_manager is not None
+        assert controller.palette_manager is not None
+        assert controller.undo_manager is not None
+        
     # Tool operations tests
     def test_set_tool(self, controller):
         """Test setting different tools"""
@@ -73,6 +91,9 @@ class TestPixelEditorController:
 
         # Create new file
         controller.new_file(16, 16)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Check model state
         assert controller.image_model.width == 16
@@ -103,6 +124,7 @@ class TestPixelEditorController:
         with patch.object(controller.file_manager, "load_file") as mock_load:
             # Create a mock worker
             mock_worker = MagicMock()
+            mock_worker.file_path = test_path  # Set the file_path attribute
             mock_load.return_value = mock_worker
 
             # Open file
@@ -137,7 +159,7 @@ class TestPixelEditorController:
 
             # Verify worker was created
             mock_save.assert_called_once_with(
-                controller.image_model, controller.palette_model, save_path
+                controller.image_model, controller.palette_model, save_path, use_grayscale_palette=True
             )
             mock_worker.start.assert_called_once()
 
@@ -160,6 +182,9 @@ class TestPixelEditorController:
 
         # Handle result
         controller._handle_load_result(test_array, metadata)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Verify image loaded
         assert controller.image_model.width == 8
@@ -235,6 +260,9 @@ class TestPixelEditorController:
         # Update data
         new_data = np.ones((8, 8), dtype=np.uint8) * 3
         controller.update_image_data(new_data)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Verify update
         assert np.all(controller.image_model.data == 3)
@@ -263,6 +291,9 @@ class TestPixelEditorController:
 
         # Draw pixel
         controller.handle_canvas_press(3, 4)
+        
+        # Trigger any pending updates  
+        self._trigger_pending_updates(controller)
 
         # Verify pixel drawn
         assert controller.image_model.data[4, 3] == 5
@@ -276,6 +307,9 @@ class TestPixelEditorController:
 
         # Fill from corner
         controller.handle_canvas_press(0, 0)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Verify all pixels filled (they were all 0)
         assert np.all(controller.image_model.data == 7)
@@ -299,9 +333,18 @@ class TestPixelEditorController:
         controller.set_tool("pencil")
         controller.set_drawing_color(4)
 
+        # Start drawing with press
+        controller.handle_canvas_press(0, 0)
+        
         # Draw line
-        for x in range(4):
+        for x in range(1, 4):
             controller.handle_canvas_move(x, 0)
+            
+        # Release to finish drawing
+        controller.handle_canvas_release(3, 0)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Verify line drawn
         for x in range(4):
@@ -322,6 +365,9 @@ class TestPixelEditorController:
 
         # Fill inside box
         controller.handle_canvas_press(2, 2)
+        
+        # Trigger any pending updates
+        self._trigger_pending_updates(controller)
 
         # Verify only inside was filled
         assert controller.image_model.data[2, 2] == 5
@@ -347,6 +393,7 @@ class TestPixelEditorController:
         assert np.all(controller.image_model.data == 3)
 
     # Preview generation tests
+    @pytest.mark.gui
     def test_get_preview_pixmap_with_palette(self, controller, monkeypatch):
         """Test generating preview with palette applied"""
         controller.new_file(4, 4)
@@ -362,7 +409,7 @@ class TestPixelEditorController:
         mock_pixmap.height.return_value = 4
 
         monkeypatch.setattr(
-            "pixel_editor_controller_v3.QPixmap.fromImage", lambda img: mock_pixmap
+            "pixel_editor.core.pixel_editor_controller_v3.QPixmap.fromImage", lambda img: mock_pixmap
         )
 
         pixmap = controller.get_preview_pixmap(apply_palette=True)
@@ -371,6 +418,7 @@ class TestPixelEditorController:
         assert pixmap.width() == 4
         assert pixmap.height() == 4
 
+    @pytest.mark.gui
     def test_get_preview_pixmap_grayscale(self, controller, monkeypatch):
         """Test generating preview in grayscale mode"""
         controller.new_file(4, 4)
@@ -382,7 +430,7 @@ class TestPixelEditorController:
         mock_pixmap.height.return_value = 4
 
         monkeypatch.setattr(
-            "pixel_editor_controller_v3.QPixmap.fromImage", lambda img: mock_pixmap
+            "pixel_editor.core.pixel_editor_controller_v3.QPixmap.fromImage", lambda img: mock_pixmap
         )
 
         pixmap = controller.get_preview_pixmap(apply_palette=False)

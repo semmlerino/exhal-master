@@ -9,7 +9,7 @@ import os
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 from .pixel_editor_constants import DEFAULT_GRAYSCALE_PALETTE
 from .pixel_editor_exceptions import (
@@ -111,6 +111,8 @@ class ToolManager:
         }
         self.current_tool = ToolType.PENCIL
         self.current_color = 0
+        self.current_brush_size = 1  # Default to 1x1 brush
+        self.max_brush_size = 5      # Allow future expansion
 
     def set_tool(self, tool_type: Union[ToolType, str]) -> None:
         """Set the current tool (accepts ToolType enum or string)"""
@@ -157,6 +159,30 @@ class ToolManager:
     def set_color(self, color: int) -> None:
         """Set the current drawing color"""
         self.current_color = max(0, min(15, color))
+
+    def set_brush_size(self, size: int) -> None:
+        """Set brush size with validation"""
+        if 1 <= size <= self.max_brush_size:
+            self.current_brush_size = size
+            debug_log("BRUSH", f"Brush size changed to {size}")
+        else:
+            debug_log("BRUSH", f"Invalid brush size {size}, must be 1-{self.max_brush_size}")
+
+    def get_brush_size(self) -> int:
+        """Get current brush size"""
+        return self.current_brush_size
+
+    def get_brush_pixels(self, center_x: int, center_y: int) -> List[Tuple[int, int]]:
+        """Calculate pixels affected by brush at given position"""
+        pixels = []
+        size = self.current_brush_size
+        
+        # Use top-left positioning for consistency with pixel editor conventions
+        for dy in range(size):
+            for dx in range(size):
+                pixels.append((center_x + dx, center_y + dy))
+        
+        return pixels
 
     def set_color_picked_callback(self, callback: Callable[[int], None]) -> None:
         """Set callback for color picker tool"""

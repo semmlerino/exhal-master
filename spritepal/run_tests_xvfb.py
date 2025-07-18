@@ -4,6 +4,7 @@ Robust test runner for SpritePal with automatic environment detection and config
 Handles GUI testing across different platforms using pytest-xvfb.
 """
 
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -40,7 +41,7 @@ class TestRunner:
         try:
             with open("/proc/version") as f:
                 return "microsoft" in f.read().lower()
-        except (FileNotFoundError, OSError):
+        except OSError:
             return False
 
     def check_dependencies(self):
@@ -49,19 +50,13 @@ class TestRunner:
         missing_system = []
 
         # Check Python packages
-        try:
-            import pytest
-        except ImportError:
+        if importlib.util.find_spec("pytest") is None:
             missing_python.append("pytest")
 
-        try:
-            import pytestqt
-        except ImportError:
+        if importlib.util.find_spec("pytestqt") is None:
             missing_python.append("pytest-qt")
 
-        try:
-            import pytest_xvfb
-        except ImportError:
+        if importlib.util.find_spec("pytest_xvfb") is None:
             missing_python.append("pytest-xvfb")
 
         # Check system dependencies on Linux
@@ -92,13 +87,17 @@ class TestRunner:
         if sys.platform == "darwin":  # macOS
             # macOS doesn't have Xvfb, use offscreen for GUI tests
             if not any(arg.startswith("-m") for arg in args):
-                print("Note: macOS doesn't support Xvfb. GUI tests will use offscreen backend.")
+                print(
+                    "Note: macOS doesn't support Xvfb. GUI tests will use offscreen backend."
+                )
                 env["QT_QPA_PLATFORM"] = "offscreen"
 
         elif sys.platform == "win32":  # Windows
             # Windows: Use offscreen for headless testing
             if not self.has_display:
-                print("Note: Windows headless environment detected. GUI tests will use offscreen backend.")
+                print(
+                    "Note: Windows headless environment detected. GUI tests will use offscreen backend."
+                )
                 env["QT_QPA_PLATFORM"] = "offscreen"
                 if not any(arg.startswith("-m") for arg in args):
                     # Skip GUI tests on Windows without display
@@ -137,7 +136,9 @@ def main():
         print("  python run_tests_xvfb.py                    # Run all tests")
         print("  python run_tests_xvfb.py -m 'not gui'       # Run non-GUI tests only")
         print("  python run_tests_xvfb.py tests/test_extractor.py  # Run specific test")
-        print("  python run_tests_xvfb.py -k test_palette    # Run tests matching pattern")
+        print(
+            "  python run_tests_xvfb.py -k test_palette    # Run tests matching pattern"
+        )
         print("  python run_tests_xvfb.py --no-xvfb          # Disable Xvfb")
         print()
         print("Special options:")
@@ -149,13 +150,25 @@ def main():
     if "--install-deps" in args:
         if sys.platform.startswith("linux"):
             print("Installing system dependencies...")
-            subprocess.run([
-                "sudo", "apt-get", "install", "-y",
-                "xvfb", "libxkbcommon-x11-0", "libxcb-icccm4",
-                "libxcb-image0", "libxcb-keysyms1", "libxcb-randr0",
-                "libxcb-render-util0", "libxcb-xinerama0", "libxcb-xfixes0",
-                "x11-utils"
-            ], check=False)
+            subprocess.run(
+                [
+                    "sudo",
+                    "apt-get",
+                    "install",
+                    "-y",
+                    "xvfb",
+                    "libxkbcommon-x11-0",
+                    "libxcb-icccm4",
+                    "libxcb-image0",
+                    "libxcb-keysyms1",
+                    "libxcb-randr0",
+                    "libxcb-render-util0",
+                    "libxcb-xinerama0",
+                    "libxcb-xfixes0",
+                    "x11-utils",
+                ],
+                check=False,
+            )
         else:
             print("System dependency installation is only supported on Linux.")
         return 0

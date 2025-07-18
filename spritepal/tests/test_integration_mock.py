@@ -24,6 +24,7 @@ class TestExtractionWorkerMocked:
     @pytest.fixture
     def mock_signals(self):
         """Create mock signals that behave like Qt signals"""
+
         class MockSignal:
             def __init__(self):
                 self.callbacks = []
@@ -42,7 +43,7 @@ class TestExtractionWorkerMocked:
             "palettes_ready": MockSignal(),
             "active_palettes_ready": MockSignal(),
             "finished": MockSignal(),
-            "error": MockSignal()
+            "error": MockSignal(),
         }
 
     @pytest.fixture
@@ -71,14 +72,15 @@ class TestExtractionWorkerMocked:
             "output_base": str(tmp_path / "output"),
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
     @patch("spritepal.core.controller.QThread")
     @patch("spritepal.core.controller.pyqtSignal")
     @patch("spritepal.core.controller.QPixmap")
-    def test_worker_with_mocked_qt(self, mock_qpixmap, mock_signal, mock_qthread,
-                                   worker_params, mock_signals):
+    def test_worker_with_mocked_qt(
+        self, mock_qpixmap, mock_signal, mock_qthread, worker_params, mock_signals
+    ):
         """Test worker functionality with mocked Qt components"""
         # Configure mocks
         mock_signal.side_effect = lambda *args: Mock()
@@ -124,7 +126,7 @@ class TestExtractionWorkerMocked:
         assert any(f.endswith(".png") for f in call_args)
         assert any(f.endswith(".pal.json") for f in call_args)
 
-    @patch("spritepal.core.controller.QPixmap")
+    @patch("spritepal.utils.image_utils.QPixmap")
     def test_pixmap_creation_mocked(self, mock_qpixmap):
         """Test pixmap creation with mocked QPixmap"""
         from PIL import Image
@@ -162,14 +164,16 @@ class TestControllerMocked:
         """Test controller workflow with mocks"""
         # Create mock main window
         mock_main_window = Mock()
-        mock_main_window.get_extraction_params = Mock(return_value={
-            "vram_path": "/test/vram.dmp",
-            "cgram_path": "/test/cgram.dmp",
-            "output_base": "/test/output",
-            "create_grayscale": True,
-            "create_metadata": True,
-            "oam_path": None
-        })
+        mock_main_window.get_extraction_params = Mock(
+            return_value={
+                "vram_path": "/test/vram.dmp",
+                "cgram_path": "/test/cgram.dmp",
+                "output_base": "/test/output",
+                "create_grayscale": True,
+                "create_metadata": True,
+                "oam_path": None,
+            }
+        )
 
         # Create mock worker
         mock_worker = Mock()
@@ -214,8 +218,8 @@ class TestBusinessLogicOnly:
 
         # Add test palettes
         for i in range(256):
-            cgram_data[i*2] = i % 32
-            cgram_data[i*2 + 1] = (i // 32) % 32
+            cgram_data[i * 2] = i % 32
+            cgram_data[i * 2 + 1] = (i // 32) % 32
 
         # Save test files
         vram_path = tmp_path / "test.vram"

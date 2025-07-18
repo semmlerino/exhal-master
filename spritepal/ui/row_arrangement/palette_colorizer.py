@@ -21,6 +21,7 @@ class PaletteColorizer(QObject):
         self._palette_applied: bool = False
         self._selected_palette_index: int = 8  # Default to palette 8
         self._colorized_cache: Dict[Tuple[int, int], Image.Image] = {}  # (row_index, palette_index) -> Image
+        self._max_cache_size: int = 100  # Limit cache size to prevent memory issues
     
     def set_palettes(self, palettes_dict: Dict[int, List[Tuple[int, int, int]]]) -> None:
         """Set the available palettes for colorization
@@ -171,6 +172,7 @@ class PaletteColorizer(QObject):
             
             if colorized_image:
                 self._colorized_cache[cache_key] = colorized_image
+                self._enforce_cache_limit()
                 return colorized_image
         
         # Fallback to grayscale if palette application fails
@@ -203,3 +205,12 @@ class PaletteColorizer(QObject):
     def clear_cache(self) -> None:
         """Clear the colorized image cache"""
         self._colorized_cache.clear()
+    
+    def _enforce_cache_limit(self) -> None:
+        """Enforce maximum cache size to prevent memory issues"""
+        if len(self._colorized_cache) > self._max_cache_size:
+            # Remove oldest entries (simple LRU-like behavior)
+            # Convert to list and remove first items
+            items = list(self._colorized_cache.items())
+            for key, _ in items[:len(items) - self._max_cache_size]:
+                del self._colorized_cache[key]

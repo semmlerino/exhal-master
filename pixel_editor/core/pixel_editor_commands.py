@@ -16,9 +16,12 @@ from typing import TYPE_CHECKING, Any, Optional
 
 # Third-party imports
 import numpy as np
+from typing import Protocol
 
-if TYPE_CHECKING:
-    from .pixel_editor_widgets import PixelCanvas
+# Protocol definition
+class CanvasProtocol(Protocol):
+    """Protocol for objects that can be used with undo commands"""
+    image_data: Optional[np.ndarray]
 
 
 class UndoCommand(ABC):
@@ -35,19 +38,19 @@ class UndoCommand(ABC):
         self._compressed_data: Optional[bytes] = None
 
     @abstractmethod
-    def execute(self, canvas: "PixelCanvas") -> None:
+    def execute(self, canvas: "CanvasProtocol") -> None:
         """Apply this command to the canvas.
 
         Args:
-            canvas: The PixelCanvas instance to modify
+            canvas: The canvas-like object to modify
         """
 
     @abstractmethod
-    def unexecute(self, canvas: "PixelCanvas") -> None:
+    def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Revert this command on the canvas.
 
         Args:
-            canvas: The PixelCanvas instance to restore
+            canvas: The canvas-like object to restore
         """
 
     @abstractmethod
@@ -149,7 +152,7 @@ class DrawPixelCommand(UndoCommand):
         """Initialize parent class after dataclass initialization."""
         super().__init__()
 
-    def execute(self, canvas: "PixelCanvas") -> None:
+    def execute(self, canvas: "CanvasProtocol") -> None:
         """Apply pixel color change."""
         if (
             canvas.image_data is not None
@@ -158,7 +161,7 @@ class DrawPixelCommand(UndoCommand):
         ):
             canvas.image_data[self.y, self.x] = self.new_color
 
-    def unexecute(self, canvas: "PixelCanvas") -> None:
+    def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Restore original pixel color."""
         if (
             canvas.image_data is not None
@@ -217,7 +220,7 @@ class DrawLineCommand(UndoCommand):
         """Initialize parent class after dataclass initialization."""
         super().__init__()
 
-    def execute(self, canvas: "PixelCanvas") -> None:
+    def execute(self, canvas: "CanvasProtocol") -> None:
         """Apply new color to all line pixels."""
         if canvas.image_data is None:
             return
@@ -229,7 +232,7 @@ class DrawLineCommand(UndoCommand):
             ):
                 canvas.image_data[y, x] = self.new_color
 
-    def unexecute(self, canvas: "PixelCanvas") -> None:
+    def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Restore original colors for all line pixels."""
         if canvas.image_data is None:
             return
@@ -293,7 +296,7 @@ class FloodFillCommand(UndoCommand):
         """Initialize parent class after dataclass initialization."""
         super().__init__()
 
-    def execute(self, canvas: "PixelCanvas") -> None:
+    def execute(self, canvas: "CanvasProtocol") -> None:
         """Apply flood fill to affected region."""
         if canvas.image_data is None or self.old_data is None:
             return
@@ -312,7 +315,7 @@ class FloodFillCommand(UndoCommand):
                     if self.old_data[dy, dx] != 255:
                         canvas.image_data[py, px] = self.new_color
 
-    def unexecute(self, canvas: "PixelCanvas") -> None:
+    def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Restore original data in affected region."""
         if canvas.image_data is None or self.old_data is None:
             return
@@ -398,14 +401,14 @@ class BatchCommand(UndoCommand):
         """
         self.commands.append(command)
 
-    def execute(self, canvas: "PixelCanvas") -> None:
+    def execute(self, canvas: "CanvasProtocol") -> None:
         """Execute all commands in order."""
         for cmd in self.commands:
             if cmd.compressed:
                 cmd.decompress()
             cmd.execute(canvas)
 
-    def unexecute(self, canvas: "PixelCanvas") -> None:
+    def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Undo all commands in reverse order."""
         for cmd in reversed(self.commands):
             if cmd.compressed:
@@ -488,7 +491,7 @@ class UndoManager:
         self.max_commands: int = max_commands
         self.compression_age: int = compression_age
 
-    def execute_command(self, command: UndoCommand, canvas: "PixelCanvas") -> None:
+    def execute_command(self, command: UndoCommand, canvas: CanvasProtocol) -> None:
         """Execute a new command and add to history.
 
         Args:
@@ -514,7 +517,7 @@ class UndoManager:
         # Compress old commands
         self._compress_old_commands()
 
-    def undo(self, canvas: "PixelCanvas") -> bool:
+    def undo(self, canvas: CanvasProtocol) -> bool:
         """Undo the last command.
 
         Args:
@@ -535,7 +538,7 @@ class UndoManager:
             return True
         return False
 
-    def redo(self, canvas: "PixelCanvas") -> bool:
+    def redo(self, canvas: CanvasProtocol) -> bool:
         """Redo the next command.
 
         Args:
@@ -597,7 +600,7 @@ class UndoManager:
         return [cmd.to_dict() for cmd in self.command_stack]
 
     def load_history(
-        self, history: list[dict[str, Any]], canvas: "PixelCanvas"
+        self, history: list[dict[str, Any]], canvas: CanvasProtocol
     ) -> None:
         """Load command history from serialized data.
 

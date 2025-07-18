@@ -262,6 +262,80 @@ class TestKeyboardShortcuts:
         editor.keyPressEvent(event_g)
         assert grid_checkbox.isChecked() != grid_state_1
 
+    def test_brush_size_shortcut_1(self, editor):
+        """Test that '1' key sets brush size to 1"""
+        # Set initial brush size to something different
+        editor.controller.set_brush_size(2)
+        assert editor.controller.tool_manager.get_brush_size() == 2
+        
+        # Press '1' key
+        event = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_1, Qt.KeyboardModifier.NoModifier
+        )
+        editor.keyPressEvent(event)
+        
+        # Verify brush size changed to 1
+        assert editor.controller.tool_manager.get_brush_size() == 1
+        assert editor.tool_panel.get_brush_size() == 1
+
+    def test_brush_size_shortcut_2(self, editor):
+        """Test that '2' key sets brush size to 2"""
+        # Set initial brush size to 1
+        editor.controller.set_brush_size(1)
+        assert editor.controller.tool_manager.get_brush_size() == 1
+        
+        # Press '2' key
+        event = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.NoModifier
+        )
+        editor.keyPressEvent(event)
+        
+        # Verify brush size changed to 2
+        assert editor.controller.tool_manager.get_brush_size() == 2
+        assert editor.tool_panel.get_brush_size() == 2
+
+    def test_brush_size_shortcuts_with_modifiers(self, editor):
+        """Test that brush size shortcuts don't work with modifiers"""
+        # Set initial brush size
+        initial_size = editor.controller.tool_manager.get_brush_size()
+        
+        # Test 1 with Ctrl modifier - should not change brush size
+        event = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_1, Qt.KeyboardModifier.ControlModifier
+        )
+        editor.keyPressEvent(event)
+        assert editor.controller.tool_manager.get_brush_size() == initial_size
+        
+        # Test 2 with Shift modifier - should not change brush size
+        event = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.ShiftModifier
+        )
+        editor.keyPressEvent(event)
+        assert editor.controller.tool_manager.get_brush_size() == initial_size
+
+    def test_brush_size_shortcuts_sequence(self, editor):
+        """Test brush size shortcuts work in sequence"""
+        # Start with size 1
+        editor.controller.set_brush_size(1)
+        
+        # Press '2' to change to size 2
+        event_2 = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.NoModifier
+        )
+        editor.keyPressEvent(event_2)
+        assert editor.controller.tool_manager.get_brush_size() == 2
+        
+        # Press '1' to change back to size 1
+        event_1 = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_1, Qt.KeyboardModifier.NoModifier
+        )
+        editor.keyPressEvent(event_1)
+        assert editor.controller.tool_manager.get_brush_size() == 1
+        
+        # Press '2' again
+        editor.keyPressEvent(event_2)
+        assert editor.controller.tool_manager.get_brush_size() == 2
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

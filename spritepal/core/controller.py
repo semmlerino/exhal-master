@@ -15,14 +15,17 @@ from PyQt6.QtGui import QPixmap
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.injector import InjectionWorker
 from spritepal.core.palette_manager import PaletteManager
+from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
 from spritepal.utils.validation import validate_image_file
 from spritepal.utils.image_utils import pil_to_qpixmap
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
+    DEFAULT_TILES_PER_ROW,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
+    TILE_WIDTH,
 )
 
 
@@ -150,6 +153,7 @@ class ExtractionController(QObject):
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
         self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
+        self.main_window.arrange_grid_requested.connect(self.open_grid_arrangement)
         self.main_window.inject_requested.connect(self.start_injection)
         self.main_window.extraction_panel.offset_changed.connect(
             self.update_preview_with_offset
@@ -299,8 +303,8 @@ class ExtractionController(QObject):
             self.main_window.status_bar.showMessage("Sprite file not found")
             return
 
-        # Use default tiles per row (controller doesn't have direct access to extractor)
-        tiles_per_row = 16  # DEFAULT_TILES_PER_ROW
+        # Try to get tiles_per_row from sprite preview or use default
+        tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
         # Open row arrangement dialog
         dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
@@ -324,6 +328,71 @@ class ExtractionController(QObject):
                 )
             else:
                 self.main_window.status_bar.showMessage("Row arrangement cancelled")
+
+    def open_grid_arrangement(self, sprite_file: str) -> None:
+        """Open the grid arrangement dialog"""
+        if not os.path.exists(sprite_file):
+            self.main_window.status_bar.showMessage("Sprite file not found")
+            return
+        
+        # Try to get tiles_per_row from sprite preview or use default
+        tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
+        
+        # Open grid arrangement dialog
+        dialog = GridArrangementDialog(sprite_file, tiles_per_row, self.main_window)
+        
+        # Pass palette data from the main window's sprite preview if available
+        if hasattr(self.main_window, 'sprite_preview') and self.main_window.sprite_preview:
+            if hasattr(self.main_window.sprite_preview, 'get_palettes'):
+                palettes = self.main_window.sprite_preview.get_palettes()
+                if palettes:
+                    dialog.set_palettes(palettes)
+        
+        if dialog.exec():
+            # Get the arranged sprite path
+            arranged_path = dialog.get_arranged_path()
+            
+            if arranged_path and os.path.exists(arranged_path):
+                # Open the arranged sprite in the pixel editor
+                self.open_in_editor(arranged_path)
+                self.main_window.status_bar.showMessage(
+                    "Opened grid-arranged sprites in pixel editor"
+                )
+            else:
+                self.main_window.status_bar.showMessage("Grid arrangement cancelled")
+
+    def _get_tiles_per_row_from_sprite(self, sprite_file: str) -> int:
+        """Determine tiles per row from sprite file or main window state
+        
+        Args:
+            sprite_file: Path to sprite file
+            
+        Returns:
+            Number of tiles per row
+        """
+        # Try to get from main window's sprite preview first
+        if hasattr(self.main_window, 'sprite_preview') and self.main_window.sprite_preview:
+            try:
+                _, tiles_per_row = self.main_window.sprite_preview.get_tile_info()
+                if tiles_per_row > 0:
+                    return tiles_per_row
+            except (AttributeError, TypeError):
+                pass
+        
+        # Fallback: try to calculate from sprite dimensions
+        try:
+            from PIL import Image
+            with Image.open(sprite_file) as img:
+                # Calculate tiles per row based on sprite width
+                # Assume 8x8 pixel tiles (TILE_WIDTH)
+                calculated_tiles_per_row = img.width // TILE_WIDTH
+                if calculated_tiles_per_row > 0:
+                    return min(calculated_tiles_per_row, DEFAULT_TILES_PER_ROW)
+        except Exception:
+            pass
+        
+        # Ultimate fallback
+        return DEFAULT_TILES_PER_ROW
 
     def start_injection(self) -> None:
         """Start the injection process"""

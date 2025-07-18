@@ -31,7 +31,7 @@ from .pixel_editor_controller_v3 import PixelEditorController
 
 # Re-export for backward compatibility
 from .pixel_editor_utils import debug_color, debug_exception, debug_log
-from .pixel_editor_widgets import ZoomableScrollArea
+from .widgets import ZoomableScrollArea
 from .views.dialogs import PaletteSwitcherDialog, StartupDialog
 from .views.panels import (
     OptionsPanel,
@@ -126,6 +126,7 @@ class IndexedPixelEditor(QMainWindow):
         # Tool panel
         self.tool_panel = ToolPanel()
         self.tool_panel.toolChanged.connect(self.controller.set_tool)
+        self.tool_panel.brushSizeChanged.connect(self.controller.set_brush_size)
         left_layout.addWidget(self.tool_panel)
 
         # Palette panel
@@ -698,6 +699,20 @@ class IndexedPixelEditor(QMainWindow):
         ):
             # Redo
             self.redo()
+        elif (
+            event.key() == Qt.Key.Key_1
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
+            # Set brush size to 1
+            self.controller.set_brush_size(1)
+            self.tool_panel.set_brush_size(1)
+        elif (
+            event.key() == Qt.Key.Key_2
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
+            # Set brush size to 2
+            self.controller.set_brush_size(2)
+            self.tool_panel.set_brush_size(2)
         elif event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down):
             # Arrow key panning
             pan_delta = 20  # pixels to pan

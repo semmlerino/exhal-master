@@ -5,7 +5,7 @@ Settings manager for SpritePal application
 import json
 import os
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Optional
 
 
 class SettingsManager:
@@ -42,14 +42,18 @@ class SettingsManager:
                 "oam_path": "",
                 "output_name": "",
                 "create_grayscale": True,
-                "create_metadata": True
+                "create_metadata": True,
             },
             "ui": {
                 "window_width": 900,
                 "window_height": 600,
                 "window_x": -1,
-                "window_y": -1
-            }
+                "window_y": -1,
+            },
+            "paths": {
+                "default_dumps_dir": r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger",
+                "last_used_dir": "",
+            },
         }
 
     def save_settings(self) -> None:
@@ -117,14 +121,39 @@ class SettingsManager:
             "oam_path": "",
             "output_name": "",
             "create_grayscale": True,
-            "create_metadata": True
+            "create_metadata": True,
         }
         self.save_settings()
 
+    def get_default_directory(self) -> str:
+        """Get the default directory for file operations"""
+        # Try last used directory first
+        last_used = self.get("paths", "last_used_dir", "")
+        if last_used and os.path.exists(last_used):
+            return last_used
+        
+        # Fall back to default dumps directory
+        default_dir = self.get("paths", "default_dumps_dir", r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger")
+        if default_dir and os.path.exists(default_dir):
+            return default_dir
+        
+        # Final fallback to current directory
+        return str(Path.cwd())
+
+    def set_last_used_directory(self, directory: str) -> None:
+        """Set the last used directory"""
+        if directory and os.path.exists(directory):
+            self.set("paths", "last_used_dir", directory)
+            self.save_settings()
+
 
 # Global settings instance
+_settings_instance: Optional[SettingsManager] = None
+
+
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance"""
-    if not hasattr(get_settings_manager, "_instance"):
-        get_settings_manager._instance = SettingsManager()
-    return cast("SettingsManager", get_settings_manager._instance)
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = SettingsManager()
+    return _settings_instance

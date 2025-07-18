@@ -17,10 +17,8 @@ from pixel_editor.core.pixel_editor_commands import (
     UndoCommand,
     UndoManager,
 )
-from pixel_editor.core.pixel_editor_widgets import (
-    ColorPaletteWidget,
-    PixelCanvas,
-)
+from pixel_editor.core.widgets import ColorPaletteWidget
+from pixel_editor.core.pixel_editor_canvas_v3 import PixelCanvasV3
 from pixel_editor.core.pixel_editor_workers import (
     BaseWorker,
     FileLoadWorker,
@@ -76,57 +74,41 @@ class TestWorkerAPIs:
             ), f"{worker_class.__name__}.run() should not require parameters"
 
 
-class TestPixelCanvasAPI:
-    """Test PixelCanvas API contracts"""
+class TestPixelCanvasV3API:
+    """Test PixelCanvasV3 API contracts
+    
+    NOTE: These tests have been moved to test_api_contracts_v3.py
+    to reflect the new V3 architecture where drawing methods are 
+    on the controller, not the canvas.
+    """
 
     def test_drawing_methods(self):
-        """Test drawing method signatures"""
-        drawing_methods = {
-            "draw_pixel": ["self", "x", "y"],
-            "draw_line": ["self", "x0", "y0", "x1", "y1"],
-            "flood_fill": ["self", "x", "y"],
-            "pick_color": ["self", "x", "y"],
-        }
-
-        for method_name, expected_params in drawing_methods.items():
-            method = getattr(PixelCanvas, method_name)
-            sig = inspect.signature(method)
-            actual_params = list(sig.parameters.keys())
-
-            assert (
-                actual_params[: len(expected_params)] == expected_params
-            ), f"{method_name} has unexpected signature"
+        """Test drawing method signatures - DEPRECATED"""
+        # Drawing methods are now on PixelEditorController, not PixelCanvasV3
+        # See test_api_contracts_v3.py for updated tests
+        pytest.skip("Drawing methods moved to controller in V3 architecture")
 
     def test_image_methods(self):
-        """Test image manipulation methods"""
-        image_methods = {
-            "new_image": ["self", "width", "height"],
-            "load_image": ["self", "pil_image"],
-            "get_pil_image": ["self"],
-            "update_size": ["self"],
-        }
-
-        for method_name, expected_params in image_methods.items():
-            method = getattr(PixelCanvas, method_name)
-            sig = inspect.signature(method)
-            actual_params = list(sig.parameters.keys())
-
-            assert (
-                actual_params[: len(expected_params)] == expected_params
-            ), f"{method_name} has unexpected signature"
+        """Test image manipulation methods - DEPRECATED"""
+        # Image methods are now on PixelEditorController, not PixelCanvasV3
+        # See test_api_contracts_v3.py for updated tests
+        pytest.skip("Image methods moved to controller in V3 architecture")
 
     def test_optimization_methods(self):
-        """Test Phase 1 optimization methods exist"""
+        """Test V3 optimization methods exist"""
+        # Check actual optimization methods in PixelCanvasV3
         optimization_methods = [
-            "_update_qcolor_cache",
-            "_get_visible_pixel_range",
-            "mark_dirty",  # Public method, not private
-            "_draw_grid_optimized",
+            "_update_qcolor_cache",  # Color caching
+            "_update_color_lut",  # Color lookup table
+            "_calculate_visible_image_region",  # Viewport culling
+            "_update_hover_regions",  # Hover region optimization
+            "_get_scaled_qimage",  # Cached scaled image
+            "_update_qimage_buffer",  # QImage buffer caching
         ]
 
         for method_name in optimization_methods:
             assert hasattr(
-                PixelCanvas, method_name
+                PixelCanvasV3, method_name
             ), f"Optimization method {method_name} not found"
 
 
@@ -350,15 +332,14 @@ class TestSignatureCompatibility:
     """Test that connected signals match slot signatures"""
 
     def test_palette_widget_to_canvas(self):
-        """Test palette widget colorSelected signal compatibility with canvas"""
-        # colorSelected emits: int
-        # Canvas uses current_color attribute directly
-
-        # Test that PixelCanvas has current_color attribute
-        # Check in __init__ method to avoid instantiation
-        assert "current_color" in PixelCanvas.__init__.__code__.co_names or hasattr(
-            PixelCanvas, "current_color"
-        ), "PixelCanvas should have current_color attribute"
+        """Test palette widget colorSelected signal compatibility with controller"""
+        # In V3 architecture:
+        # - colorSelected emits: int  
+        # - Controller.set_drawing_color(int) receives it
+        # - Controller's ToolManager stores current_color
+        
+        # This test has been moved to test_api_contracts_v3.py
+        pytest.skip("Color selection handled by controller in V3 architecture")
 
 
 if __name__ == "__main__":

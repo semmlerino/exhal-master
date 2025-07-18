@@ -37,15 +37,20 @@ class TestExtractionWorkerHeadless:
         # Make signals callable
         mock_signal.return_value = MagicMock()
 
-        with patch.dict("sys.modules", {
-            "PyQt6.QtCore": MagicMock(QObject=mock_qobject, QThread=mock_qthread, pyqtSignal=mock_signal),
-            "PyQt6.QtGui": MagicMock(QPixmap=mock_qpixmap),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "PyQt6.QtCore": MagicMock(
+                    QObject=mock_qobject, QThread=mock_qthread, pyqtSignal=mock_signal
+                ),
+                "PyQt6.QtGui": MagicMock(QPixmap=mock_qpixmap),
+            },
+        ):
             yield {
                 "QObject": mock_qobject,
                 "QThread": mock_qthread,
                 "pyqtSignal": mock_signal,
-                "QPixmap": mock_qpixmap
+                "QPixmap": mock_qpixmap,
             }
 
     @pytest.fixture
@@ -56,13 +61,13 @@ class TestExtractionWorkerHeadless:
         # Add test tiles
         for i in range(5):
             for j in range(32):
-                vram_data[VRAM_SPRITE_OFFSET + i*32 + j] = (i * 32 + j) % 256
+                vram_data[VRAM_SPRITE_OFFSET + i * 32 + j] = (i * 32 + j) % 256
 
         cgram_data = bytearray(512)
         # Add test colors
         for i in range(256, 512, 2):
             cgram_data[i] = 0x1F
-            cgram_data[i+1] = 0x00
+            cgram_data[i + 1] = 0x00
 
         vram_path = tmp_path / "test.vram"
         cgram_path = tmp_path / "test.cgram"
@@ -76,7 +81,7 @@ class TestExtractionWorkerHeadless:
             "output_base": str(tmp_path / "output"),
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
     def test_worker_logic_without_qt(self, worker_params, mock_qt_imports):
@@ -88,7 +93,9 @@ class TestExtractionWorkerHeadless:
         test_img = Image.new("P", (128, 64), 0)
 
         # Patch the instance method on the worker's extractor
-        with patch.object(worker.extractor, "extract_sprites_grayscale", return_value=(test_img, 10)) as mock_extract:
+        with patch.object(
+            worker.extractor, "extract_sprites_grayscale", return_value=(test_img, 10)
+        ) as mock_extract:
             # Create proper mocks for signals
             progress_mock = Mock()
             progress_mock.emit = Mock()
@@ -137,7 +144,7 @@ class TestExtractionWorkerHeadless:
             "output_base": "/invalid/output",
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
         worker = ExtractionWorker(bad_params)
@@ -224,9 +231,10 @@ class TestWorkerBusinessLogic:
         # Create a test image
         test_img = Image.new("P", (128, 128), 0)
 
-        # Mock QPixmap
-        with patch("spritepal.core.controller.QPixmap") as mock_pixmap_class:
+        # Mock QPixmap in the correct location (image_utils.py)
+        with patch("spritepal.utils.image_utils.QPixmap") as mock_pixmap_class:
             mock_pixmap = Mock()
+            mock_pixmap.loadFromData.return_value = True
             mock_pixmap_class.return_value = mock_pixmap
 
             # Create worker

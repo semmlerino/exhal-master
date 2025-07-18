@@ -8,7 +8,7 @@ Handles all business logic and coordinates between models, managers, and views
 import json
 import os
 import traceback
-from typing import Optional
+from typing import List, Optional, Tuple
 
 # Third-party imports
 import numpy as np
@@ -29,7 +29,7 @@ from .pixel_editor_utils import debug_log
 
 
 class ImageModelAdapter:
-    """Adapter to make ImageModel work with undo commands that expect PixelCanvas"""
+    """Adapter to make ImageModel work with undo commands that expect canvas protocol"""
 
     def __init__(self, image_model):
         self.image_model = image_model
@@ -70,6 +70,9 @@ class PixelEditorController(QObject):
         self.file_manager = FileManager()
         self.palette_manager = PaletteManager()
         self.undo_manager = UndoManager()
+        
+        # Set up color picker callback
+        self.tool_manager.set_color_picked_callback(self.set_drawing_color)
 
         # Add default palette to manager
         self.palette_manager.add_palette(8, self.palette_model)
@@ -107,6 +110,11 @@ class PixelEditorController(QObject):
         self.tool_manager.set_tool(tool_name)
         debug_log("CONTROLLER", f"Tool changed to: {tool_name}")
         self.toolChanged.emit(tool_name)
+
+    def set_brush_size(self, size: int):
+        """Set the brush size"""
+        self.tool_manager.set_brush_size(size)
+        debug_log("CONTROLLER", f"Brush size set to: {size}")
 
     def set_drawing_color(self, color_index: int):
         """Set the current drawing color"""
@@ -262,13 +270,16 @@ class PixelEditorController(QObject):
 
     def _handle_load_result(self, image_array: np.ndarray, metadata: dict):
         """Handle successful file load"""
-        debug_log(
-            "CONTROLLER",
-            f"Handling load result: array shape={image_array.shape}",
-            "DEBUG",
-        )
-        debug_log("CONTROLLER", f"Metadata keys: {list(metadata.keys())}", "DEBUG")
         try:
+            if image_array is None:
+                raise ValueError("Invalid image data: None")
+                
+            debug_log(
+                "CONTROLLER",
+                f"Handling load result: array shape={image_array.shape}",
+                "DEBUG",
+            )
+            debug_log("CONTROLLER", f"Metadata keys: {list(metadata.keys())}", "DEBUG")
             # Create PIL image for model
             img = Image.fromarray(image_array, mode="P")
 
@@ -593,8 +604,22 @@ class PixelEditorController(QObject):
         return result
 
     # Drawing operations for Phase 3.3
+    def _filter_valid_pixels(self, pixels: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+        """Filter out pixels that are outside image bounds"""
+        if self.image_model.data is None:
+            return []
+            
+        valid_pixels = []
+        height, width = self.image_model.data.shape[:2]
+        
+        for px, py in pixels:
+            if 0 <= px < width and 0 <= py < height:
+                valid_pixels.append((px, py))
+        
+        return valid_pixels
+    
     def handle_canvas_press(self, x: int, y: int):
-        """Handle mouse press on canvas"""
+        """Handle mouse press on canvas with brush support"""
         if self.image_model.data is None:
             return
 
@@ -607,15 +632,24 @@ class PixelEditorController(QObject):
         tool_name = self.tool_manager.current_tool_name
 
         if tool_name == "pencil":
-            # For pencil, track pixel changes
-            old_color = self.image_model.get_color_at(x, y)
-            result = tool.on_press(
-                x, y, self.tool_manager.current_color, self.image_model
-            )
-            if result:
-                self._drawing_pixels.append(
-                    (x, y, old_color, self.tool_manager.current_color)
-                )
+            # Get affected pixels for current brush size
+            brush_pixels = self.tool_manager.get_brush_pixels(x, y)
+            
+            # Filter out pixels outside image bounds
+            valid_pixels = self._filter_valid_pixels(brush_pixels)
+            
+            # Draw each valid pixel in the brush area
+            for px, py in valid_pixels:
+                old_color = self.image_model.get_color_at(px, py)
+                new_color = self.tool_manager.current_color
+                
+                if old_color != new_color:
+                    # Update the pixel
+                    self.image_model.data[py, px] = new_color
+                    self._drawing_pixels.append((px, py, old_color, new_color))
+            
+            if self._drawing_pixels:
+                self.image_model.modified = True
                 self._request_update()
         elif tool_name == "fill":
             # For fill, we need to capture the state before filling
@@ -671,6 +705,7 @@ class PixelEditorController(QObject):
                         self.undo_manager.command_stack.pop(0)
                         self.undo_manager.current_index -= 1
 
+                    self.image_model.modified = True
                     self._request_update()
             self._is_drawing = False  # Fill is a single action
         elif tool_name == "picker":
@@ -681,23 +716,32 @@ class PixelEditorController(QObject):
             self._is_drawing = False
 
     def handle_canvas_move(self, x: int, y: int):
-        """Handle mouse move on canvas (for continuous drawing)"""
+        """Handle mouse move on canvas (for continuous drawing) with brush support"""
         if self.image_model.data is None or not self._is_drawing:
             return
 
         # Only pencil tool supports continuous drawing
         if self.tool_manager.current_tool_name == "pencil":
-            old_color = self.image_model.get_color_at(x, y)
-            tool = self.tool_manager.get_tool()
-            result = tool.on_move(
-                x, y, self.tool_manager.current_color, self.image_model
-            )
-
-            if result:
-                # Track this pixel change
-                self._drawing_pixels.append(
-                    (x, y, old_color, self.tool_manager.current_color)
-                )
+            # Get affected pixels for current brush size
+            brush_pixels = self.tool_manager.get_brush_pixels(x, y)
+            
+            # Filter out pixels outside image bounds
+            valid_pixels = self._filter_valid_pixels(brush_pixels)
+            
+            # Draw each valid pixel in the brush area
+            pixels_changed = False
+            for px, py in valid_pixels:
+                old_color = self.image_model.get_color_at(px, py)
+                new_color = self.tool_manager.current_color
+                
+                if old_color != new_color:
+                    # Update the pixel
+                    self.image_model.data[py, px] = new_color
+                    self._drawing_pixels.append((px, py, old_color, new_color))
+                    pixels_changed = True
+            
+            if pixels_changed:
+                self.image_model.modified = True
                 self._request_update()
 
     def handle_canvas_release(self, x: int, y: int):

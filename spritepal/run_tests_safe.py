@@ -27,7 +27,7 @@ class TestEnvironment:
         try:
             with open("/proc/version") as f:
                 return "microsoft" in f.read().lower()
-        except (FileNotFoundError, OSError):
+        except OSError:
             return False
 
     def get_strategy(self):
@@ -71,7 +71,8 @@ def run_tests_xvfb(args):
     xvfb_args = [
         "xvfb-run",
         "-a",  # Auto-select display number
-        "--server-args", "-screen 0 1280x1024x24",
+        "--server-args",
+        "-screen 0 1280x1024x24",
     ]
 
     env = os.environ.copy()
@@ -143,11 +144,11 @@ def main():
         return run_tests_xvfb(args)
     # In headless without Xvfb, provide helpful message
     if not env.has_xvfb and "-m" not in args and "not gui" not in " ".join(args):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("HEADLESS ENVIRONMENT DETECTED")
-        print("="*60)
+        print("=" * 60)
         install_xvfb_instructions()
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
     return run_tests_offscreen(args)
 
 

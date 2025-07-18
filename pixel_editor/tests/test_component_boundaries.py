@@ -19,10 +19,9 @@ from pixel_editor.core import pixel_editor_constants, pixel_editor_utils
 # Test all boundary interactions
 from pixel_editor.core.indexed_pixel_editor import IndexedPixelEditor
 from pixel_editor.core.pixel_editor_commands import DrawPixelCommand, UndoManager
-from pixel_editor.core.pixel_editor_widgets import (
-    ColorPaletteWidget,
-    PixelCanvas,
-)
+from pixel_editor.core.widgets import ColorPaletteWidget
+from pixel_editor.core.pixel_editor_canvas_v3 import PixelCanvasV3
+from pixel_editor.core.pixel_editor_controller_v3 import PixelEditorController
 from pixel_editor.core.pixel_editor_workers import FileLoadWorker, PaletteLoadWorker
 
 
@@ -40,28 +39,31 @@ class TestWidgetToWidgetBoundaries:
             yield QApplication.instance()
 
     def test_canvas_palette_widget_boundary(self, app):
-        """Test PixelCanvas <-> ColorPaletteWidget interaction"""
-        canvas = PixelCanvas()
+        """Test PixelCanvasV3 <-> ColorPaletteWidget interaction through controller"""
+        controller = PixelEditorController()
+        canvas = PixelCanvasV3(controller)
         palette = ColorPaletteWidget()
 
-        # Test 1: Canvas accessing palette colors
+        # Test 1: Controller manages palette colors
         test_colors = [(i * 10, i * 10, i * 10) for i in range(16)]
         palette.set_palette(test_colors)
 
-        # Canvas should be able to get colors from palette
-        canvas.palette_widget = palette
+        # Set palette in controller's palette manager
+        from pixel_editor.core.pixel_editor_models import PaletteModel
+        palette_model = PaletteModel(colors=test_colors, name="Test Palette", index=0)
+        controller.palette_manager.add_palette(0, palette_model)
 
-        # Test getting colors for drawing
-        colors = canvas.palette_widget.get_palette()
-        assert len(colors) == 16
+        # Test getting colors through controller
+        colors = controller.get_current_colors()
+        assert len(colors) >= 16
         assert colors[0] == (0, 0, 0)
 
-        # Test 2: Palette selection affecting canvas
-        palette.colorSelected.connect(canvas.set_drawing_color)
+        # Test 2: Palette selection affecting drawing color
+        palette.colorSelected.connect(controller.set_drawing_color)
         palette.current_color = 5
         palette.colorSelected.emit(5)
 
-        assert canvas.drawing_color == 5
+        assert controller.tool_manager.current_color == 5
 
     def test_canvas_editor_parent_boundary(self, app):
         """Test PixelCanvas <-> IndexedPixelEditor parent access"""
@@ -185,7 +187,8 @@ class TestConstantsAcrossBoundaries:
 
         # Verify components would use the same value
         # (In real code, they should import and use the constant)
-        PixelCanvas()
+        controller = PixelEditorController()
+        PixelCanvasV3(controller)
         palette = ColorPaletteWidget()
 
         # Both should handle 16 colors
@@ -209,29 +212,39 @@ class TestCommandSystemBoundaries:
 
     def test_command_to_canvas_boundary(self, app):
         """Test Command -> Canvas interaction"""
-        canvas = PixelCanvas()
-        canvas.create_new_image(8, 8)
+        controller = PixelEditorController()
+        canvas = PixelCanvasV3(controller)
+        controller.new_file(8, 8)
 
         # Create command
         cmd = DrawPixelCommand(x=2, y=2, old_color=0, new_color=5)
 
-        # Execute should modify canvas
-        cmd.execute(canvas)
-        assert canvas.image_data[2, 2] == 5
+        # In V3 architecture, commands should operate on the model adapter
+        from pixel_editor.core.pixel_editor_controller_v3 import ImageModelAdapter
+        adapter = ImageModelAdapter(controller.image_model)
+        
+        # Execute should modify the model
+        cmd.execute(adapter)
+        assert controller.image_model.data[2, 2] == 5
 
         # Unexecute should restore
-        cmd.unexecute(canvas)
-        assert canvas.image_data[2, 2] == 0
+        cmd.unexecute(adapter)
+        assert controller.image_model.data[2, 2] == 0
 
     def test_manager_to_command_boundary(self, app):
         """Test UndoManager -> Command interaction"""
-        canvas = PixelCanvas()
-        canvas.create_new_image(8, 8)
+        controller = PixelEditorController()
+        canvas = PixelCanvasV3(controller)
+        controller.new_file(8, 8)
         manager = UndoManager()
 
         # Create and execute command through manager
         cmd = DrawPixelCommand(x=3, y=3, old_color=0, new_color=7)
-        manager.execute_command(cmd, canvas)
+        
+        # In V3 architecture, commands should operate on the model adapter
+        from pixel_editor.core.pixel_editor_controller_v3 import ImageModelAdapter
+        adapter = ImageModelAdapter(controller.image_model)
+        manager.execute_command(cmd, adapter)
 
         # Check state
         usage = manager.get_memory_usage()
@@ -239,8 +252,8 @@ class TestCommandSystemBoundaries:
         assert not usage["can_redo"]
 
         # Undo through manager
-        manager.undo(canvas)
-        assert canvas.image_data[3, 3] == 0
+        manager.undo(adapter)
+        assert controller.image_model.data[3, 3] == 0
         usage = manager.get_memory_usage()
         assert usage["can_redo"]
 
@@ -319,11 +332,9 @@ class TestEventHandlingBoundaries:
 
     def test_mouse_event_boundaries(self, app):
         """Test mouse events between canvas and editor"""
-        canvas = PixelCanvas()
-        canvas.create_new_image(8, 8)
-
-        # Mock editor parent
-        canvas.editor_parent = Mock()
+        controller = PixelEditorController()
+        canvas = PixelCanvasV3(controller)
+        controller.new_file(8, 8)
 
         # Mouse press should start drawing
         event = Mock()

@@ -8,7 +8,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QGroupBox, QVBoxLayout, QWidget
 
 # Local imports
-from pixel_editor.core.pixel_editor_widgets import ColorPaletteWidget
+from pixel_editor.core.widgets import ColorPaletteWidget
 
 
 class PalettePanel(QWidget):

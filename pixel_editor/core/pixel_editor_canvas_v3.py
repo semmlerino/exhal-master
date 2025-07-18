@@ -8,6 +8,7 @@ Uses controller's models and managers instead of maintaining its own state
 from typing import Optional
 
 # Third-party imports
+import numpy as np
 from PyQt6.QtCore import QPoint, QPointF, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QWheelEvent
 from PyQt6.QtWidgets import QWidget
@@ -48,6 +49,10 @@ class PixelCanvasV3(QWidget):
         self._qcolor_cache = {}
         self._palette_version = 0
         self._cached_palette_version = -1
+        
+        # Vectorized rendering optimization
+        self._color_lut = None  # Lookup table for color index to RGB conversion
+        self._cached_lut_version = -1
 
         # QImage-based rendering optimization
         self._qimage_buffer = None  # QImage buffer for efficient rendering
@@ -81,7 +86,7 @@ class PixelCanvasV3(QWidget):
     def _on_palette_changed(self):
         """Handle palette change from controller"""
         self._palette_version += 1  # Force color cache update
-        self._invalidate_image_cache()
+        self._invalidate_color_cache()  # More efficient - only invalidate color cache
         self.update()
 
     def _on_tool_changed(self, tool_name: str):
@@ -153,7 +158,8 @@ class PixelCanvasV3(QWidget):
         """Toggle greyscale display mode"""
         self.greyscale_mode = greyscale
         self._palette_version += 1  # Force color cache update
-        self._invalidate_image_cache()
+        self._invalidate_color_cache()  # More efficient - only invalidate color cache
+        self._invalidate_scaled_cache()  # Also invalidate scaled cache for immediate update
         self.update()
 
     def _update_qcolor_cache(self):
@@ -185,6 +191,38 @@ class PixelCanvasV3(QWidget):
         self._qcolor_cache[-1] = QColor(255, 0, 255)
 
         self._cached_palette_version = self._palette_version
+        
+        # Invalidate LUT cache since palette changed
+        self._cached_lut_version = -1
+
+    def _update_color_lut(self):
+        """Create vectorized color lookup table for fast numpy operations"""
+        if self._cached_lut_version == self._palette_version:
+            return  # LUT is still valid
+        
+        # Update color cache first if needed
+        if self._cached_palette_version != self._palette_version:
+            self._update_qcolor_cache()
+        
+        # Create numpy array for color lookup (256 colors max, RGB format)
+        # Using 256 to handle any possible color index safely
+        self._color_lut = np.zeros((256, 3), dtype=np.uint8)
+        
+        # Fill lookup table with cached colors
+        for color_index, qcolor in self._qcolor_cache.items():
+            if color_index >= 0 and color_index < 256:
+                self._color_lut[color_index] = [qcolor.red(), qcolor.green(), qcolor.blue()]
+        
+        # Handle invalid indices with magenta
+        invalid_color = self._qcolor_cache.get(-1, QColor(255, 0, 255))
+        magenta = [invalid_color.red(), invalid_color.green(), invalid_color.blue()]
+        
+        # Fill unused slots with magenta
+        for i in range(16, 256):
+            if i not in self._qcolor_cache:
+                self._color_lut[i] = magenta
+        
+        self._cached_lut_version = self._palette_version
 
     def _invalidate_image_cache(self):
         """Invalidate QImage buffer cache"""
@@ -192,6 +230,15 @@ class PixelCanvasV3(QWidget):
         self._qimage_scaled = None
         self._cached_zoom = 0
         self._cached_image_version = -1
+        
+    def _invalidate_color_cache(self):
+        """Invalidate only color-related caches without affecting image data"""
+        self._cached_palette_version = -1
+        self._cached_lut_version = -1
+        # Only invalidate image buffer, not scaled cache if zoom hasn't changed
+        if self._qimage_buffer is not None:
+            self._qimage_buffer = None
+            self._cached_image_version = -1
 
     def _invalidate_scaled_cache(self):
         """Invalidate only the scaled image cache"""
@@ -199,7 +246,7 @@ class PixelCanvasV3(QWidget):
         self._cached_zoom = 0
 
     def _update_qimage_buffer(self):
-        """Update QImage buffer from current image data"""
+        """Update QImage buffer from current image data using vectorized numpy operations"""
         if (
             self._qimage_buffer is not None
             and self._cached_image_version == self._image_version
@@ -216,50 +263,101 @@ class PixelCanvasV3(QWidget):
 
         height, width = image_model.data.shape
 
-        # Update color cache if needed
-        if self._cached_palette_version != self._palette_version:
-            self._update_qcolor_cache()
+        # Update color lookup table if needed
+        self._update_color_lut()
 
-        # Create QImage buffer
-        self._qimage_buffer = QImage(width, height, QImage.Format.Format_RGB32)
+        # Create QImage buffer with alpha support
+        self._qimage_buffer = QImage(width, height, QImage.Format.Format_ARGB32)
 
-        # Fill the buffer with pixel data
-        for y in range(height):
-            for x in range(width):
-                color_index = image_model.data[y, x]
-                qcolor = self._qcolor_cache.get(color_index, self._qcolor_cache.get(-1))
-                if qcolor is not None:
-                    self._qimage_buffer.setPixel(x, y, qcolor.rgb())
-                else:
-                    # Fallback to magenta for invalid colors
-                    self._qimage_buffer.setPixel(x, y, QColor(255, 0, 255).rgb())
+        # Vectorized color conversion using numpy
+        # Clamp indices to valid range to prevent crashes
+        image_data = np.clip(image_model.data, 0, 255).astype(np.uint8)
+        
+        # Use vectorized lookup to convert entire image at once
+        rgb_data = self._color_lut[image_data]  # Shape: (height, width, 3)
+        
+        # Convert RGB to ARGB format for QImage (add alpha channel)
+        argb_data = np.zeros((height, width, 4), dtype=np.uint8)
+        argb_data[:, :, 0] = rgb_data[:, :, 2]  # Blue
+        argb_data[:, :, 1] = rgb_data[:, :, 1]  # Green  
+        argb_data[:, :, 2] = rgb_data[:, :, 0]  # Red
+        
+        # Handle transparency for index 0
+        mask = (image_data == 0)
+        argb_data[mask, 3] = 0  # Alpha = 0 (transparent)
+        argb_data[~mask, 3] = 255  # Alpha = 255 (opaque)
+        
+        # Copy data directly to QImage buffer for maximum speed
+        # QImage.Format_ARGB32 uses ARGB format in memory with alpha support
+        buffer_ptr = self._qimage_buffer.bits()
+        buffer_ptr.setsize(height * width * 4)  # 4 bytes per pixel
+        
+        # Convert to bytes and copy to QImage buffer
+        argb_bytes = argb_data.tobytes()
+        buffer_ptr[:len(argb_bytes)] = argb_bytes
 
         self._cached_image_version = self._image_version
 
     def _get_scaled_qimage(self):
-        """Get scaled QImage for current zoom level"""
+        """Get scaled QImage for current zoom level using optimized numpy scaling"""
         if self._qimage_scaled is not None and self._cached_zoom == self.zoom:
             return self._qimage_scaled
 
-        # Update base image buffer first
-        self._update_qimage_buffer()
-
-        if self._qimage_buffer is None:
+        if not self.controller.has_image():
             return None
 
-        # Create scaled version
-        scaled_width = self._qimage_buffer.width() * self.zoom
-        scaled_height = self._qimage_buffer.height() * self.zoom
+        image_model = self.controller.image_model
+        if image_model.data is None:
+            return None
 
-        self._qimage_scaled = self._qimage_buffer.scaled(
-            scaled_width,
-            scaled_height,
-            Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.FastTransformation,
-        )
+        # For better performance, scale the image data directly instead of QImage
+        height, width = image_model.data.shape
+        
+        # Update color lookup table if needed
+        self._update_color_lut()
+
+        # Use numpy for efficient nearest-neighbor scaling
+        scaled_data = self._scale_image_data_numpy(image_model.data, self.zoom)
+        scaled_height, scaled_width = scaled_data.shape
+
+        # Create scaled QImage directly from scaled data with alpha support
+        self._qimage_scaled = QImage(scaled_width, scaled_height, QImage.Format.Format_ARGB32)
+
+        # Vectorized color conversion for scaled image
+        image_data = np.clip(scaled_data, 0, 255).astype(np.uint8)
+        rgb_data = self._color_lut[image_data]
+        
+        # Convert to ARGB format
+        argb_data = np.zeros((scaled_height, scaled_width, 4), dtype=np.uint8)
+        argb_data[:, :, 0] = rgb_data[:, :, 2]  # Blue
+        argb_data[:, :, 1] = rgb_data[:, :, 1]  # Green  
+        argb_data[:, :, 2] = rgb_data[:, :, 0]  # Red
+        
+        # Handle transparency for index 0
+        mask = (image_data == 0)
+        argb_data[mask, 3] = 0  # Alpha = 0 (transparent)
+        argb_data[~mask, 3] = 255  # Alpha = 255 (opaque)
+        
+        # Copy to QImage buffer
+        buffer_ptr = self._qimage_scaled.bits()
+        buffer_ptr.setsize(scaled_height * scaled_width * 4)
+        argb_bytes = argb_data.tobytes()
+        buffer_ptr[:len(argb_bytes)] = argb_bytes
 
         self._cached_zoom = self.zoom
         return self._qimage_scaled
+    
+    def _scale_image_data_numpy(self, image_data, zoom):
+        """Efficient nearest-neighbor scaling using numpy"""
+        if zoom == 1:
+            return image_data
+        
+        # Use numpy's repeat function for efficient nearest-neighbor scaling
+        # This is much faster than Qt's scaling for pixel art
+        scaled_data = np.repeat(image_data, zoom, axis=0)  # Scale vertically
+        scaled_data = np.repeat(scaled_data, zoom, axis=1)  # Scale horizontally
+        
+        return scaled_data
 
     def _update_hover_regions(self, old_pos, new_pos):
         """Update only the regions affected by hover position change"""
@@ -269,28 +367,35 @@ class PixelCanvasV3(QWidget):
 
         # Calculate update regions
         regions_to_update = []
-
+        
+        # Get brush size to calculate full update area
+        brush_size = self.controller.tool_manager.get_brush_size()
+        
+        # Account for pen width in highlight drawing (1 pixel)
+        pen_width = 1
+        
         # Add old hover position to update list
         if old_pos is not None:
-            regions_to_update.append(
-                QRect(
-                    old_pos.x() * self.zoom,
-                    old_pos.y() * self.zoom,
-                    self.zoom,
-                    self.zoom,
-                )
+            # Calculate the full brush area that needs updating
+            # The brush extends from the cursor position by brush_size pixels
+            update_rect = QRect(
+                old_pos.x() * self.zoom - pen_width,
+                old_pos.y() * self.zoom - pen_width,
+                brush_size * self.zoom + pen_width * 2,
+                brush_size * self.zoom + pen_width * 2
             )
+            regions_to_update.append(update_rect)
 
         # Add new hover position to update list
         if new_pos is not None:
-            regions_to_update.append(
-                QRect(
-                    new_pos.x() * self.zoom,
-                    new_pos.y() * self.zoom,
-                    self.zoom,
-                    self.zoom,
-                )
+            # Calculate the full brush area that needs updating
+            update_rect = QRect(
+                new_pos.x() * self.zoom - pen_width,
+                new_pos.y() * self.zoom - pen_width,
+                brush_size * self.zoom + pen_width * 2,
+                brush_size * self.zoom + pen_width * 2
             )
+            regions_to_update.append(update_rect)
 
         # Apply pan offset to regions
         for rect in regions_to_update:
@@ -321,14 +426,22 @@ class PixelCanvasV3(QWidget):
                 )
 
     def paintEvent(self, event):
-        """Paint the canvas using optimized QImage rendering"""
+        """Paint the canvas using optimized viewport-based rendering"""
         if not self.controller.has_image():
             return
 
         painter = QPainter(self)
 
+        # Get the visible region for viewport-based rendering
+        visible_rect = event.rect()
+        
         # Apply pan offset
         painter.translate(self.pan_offset)
+
+        # Calculate the visible region in image coordinates
+        image_rect = self._calculate_visible_image_region(visible_rect)
+        if image_rect.isEmpty():
+            return
 
         # Get scaled QImage
         scaled_qimage = self._get_scaled_qimage()
@@ -338,41 +451,147 @@ class PixelCanvasV3(QWidget):
         width = scaled_qimage.width()
         height = scaled_qimage.height()
 
-        # Draw checkerboard background for transparency
-        self._draw_checkerboard(painter, width, height)
+        # Set clipping region for efficient rendering
+        painter.setClipRect(image_rect)
+
+        # Draw checkerboard background for transparency (only in visible region)
+        self._draw_checkerboard_viewport(painter, image_rect)
 
         # Enable composition mode for proper transparency
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
 
-        # Draw the entire image with a single call - this is the key optimization!
-        painter.drawImage(0, 0, scaled_qimage)
+        # Draw only the visible portion of the image
+        painter.drawImage(image_rect, scaled_qimage, image_rect)
 
-        # Draw grid if visible and zoomed in enough
+        # Draw grid if visible and zoomed in enough (only in visible region)
         if self.grid_visible and self.zoom >= 4:
-            painter.setPen(QPen(QColor(64, 64, 64), 1))
+            self._draw_grid_viewport(painter, image_rect)
 
-            # Get original image dimensions
-            image_width = width // self.zoom
-            image_height = height // self.zoom
-
-            # Vertical lines
-            for x in range(image_width + 1):
-                painter.drawLine(x * self.zoom, 0, x * self.zoom, height)
-
-            # Horizontal lines
-            for y in range(image_height + 1):
-                painter.drawLine(0, y * self.zoom, width, y * self.zoom)
-
-        # Draw hover highlight
+        # Draw hover highlight without clipping restrictions
         if self.hover_pos and not self.drawing:
-            x, y = self.hover_pos.x(), self.hover_pos.y()
-            image_width = width // self.zoom
-            image_height = height // self.zoom
+            painter.save()  # Save current painter state
+            painter.setClipping(False)  # Remove clipping for hover highlight
+            self._draw_hover_highlight(painter)
+            painter.restore()  # Restore painter state
 
-            if 0 <= x < image_width and 0 <= y < image_height:
-                painter.setPen(QPen(QColor(255, 255, 0), 2))
+    def _calculate_visible_image_region(self, widget_rect):
+        """Calculate the visible region in image coordinates"""
+        # Adjust for pan offset
+        adjusted_rect = QRect(
+            widget_rect.x() - int(self.pan_offset.x()),
+            widget_rect.y() - int(self.pan_offset.y()),
+            widget_rect.width(),
+            widget_rect.height()
+        )
+        
+        # Get image dimensions
+        if not self.controller.has_image():
+            return QRect()
+            
+        image_model = self.controller.image_model
+        if image_model.data is None:
+            return QRect()
+            
+        height, width = image_model.data.shape
+        scaled_width = width * self.zoom
+        scaled_height = height * self.zoom
+        
+        # Intersect with actual image bounds
+        image_bounds = QRect(0, 0, scaled_width, scaled_height)
+        visible_region = adjusted_rect.intersected(image_bounds)
+        
+        return visible_region
+
+    def _draw_checkerboard_viewport(self, painter, rect):
+        """Draw checkerboard background only in visible region"""
+        checker_size = 8
+        light_color = QColor(220, 220, 220)
+        dark_color = QColor(180, 180, 180)
+
+        # Calculate checker bounds within visible rect
+        start_x = (rect.x() // checker_size) * checker_size
+        start_y = (rect.y() // checker_size) * checker_size
+        end_x = rect.right() + checker_size
+        end_y = rect.bottom() + checker_size
+
+        for y in range(start_y, end_y, checker_size):
+            for x in range(start_x, end_x, checker_size):
+                # Skip if outside visible area
+                if x >= rect.right() or y >= rect.bottom():
+                    continue
+                if x + checker_size <= rect.x() or y + checker_size <= rect.y():
+                    continue
+                    
+                # Alternate colors in checkerboard pattern
+                if (x // checker_size + y // checker_size) % 2 == 0:
+                    color = light_color
+                else:
+                    color = dark_color
+
+                # Draw the checker square, clipped to visible area
+                checker_rect = QRect(x, y, checker_size, checker_size)
+                clipped_rect = checker_rect.intersected(rect)
+                painter.fillRect(clipped_rect, color)
+
+    def _draw_grid_viewport(self, painter, rect):
+        """Draw grid lines only in visible region using optimized batch drawing"""
+        painter.setPen(QPen(QColor(64, 64, 64), 1))
+
+        # Calculate grid bounds within visible rect
+        start_x = (rect.x() // self.zoom) * self.zoom
+        start_y = (rect.y() // self.zoom) * self.zoom
+        end_x = rect.right() + self.zoom
+        end_y = rect.bottom() + self.zoom
+
+        # Collect all grid lines for batch drawing using QLineF objects
+        lines = []
+        
+        # Vertical lines
+        for x in range(start_x, end_x, self.zoom):
+            if rect.x() <= x <= rect.right():
+                lines.append(QPointF(x, rect.y()))
+                lines.append(QPointF(x, rect.bottom()))
+        
+        # Horizontal lines  
+        for y in range(start_y, end_y, self.zoom):
+            if rect.y() <= y <= rect.bottom():
+                lines.append(QPointF(rect.x(), y))
+                lines.append(QPointF(rect.right(), y))
+        
+        # Draw all lines at once using QPainter.drawLines() for maximum efficiency
+        # This is much faster than individual drawLine() calls
+        if lines:
+            painter.drawLines(lines)
+
+    def _draw_hover_highlight(self, painter):
+        """Draw hover highlight with brush size preview"""
+        if not self.hover_pos:
+            return
+            
+        x, y = self.hover_pos.x(), self.hover_pos.y()
+        
+        # Get image dimensions
+        if not self.controller.has_image():
+            return
+            
+        image_model = self.controller.image_model
+        if image_model.data is None:
+            return
+            
+        height, width = image_model.data.shape
+        
+        # Get brush pixels from tool manager
+        brush_pixels = self.controller.tool_manager.get_brush_pixels(x, y)
+        
+        # Draw highlight for each pixel in the brush area
+        # Use a slightly thinner pen to avoid excessive overlap
+        painter.setPen(QPen(QColor(255, 255, 0), 1))
+        
+        for px, py in brush_pixels:
+            if 0 <= px < width and 0 <= py < height:
+                # Draw the pixel area (subtract 1 from width/height for correct Qt rectangle)
                 painter.drawRect(
-                    x * self.zoom, y * self.zoom, self.zoom - 1, self.zoom - 1
+                    px * self.zoom, py * self.zoom, self.zoom - 1, self.zoom - 1
                 )
 
     def mousePressEvent(self, event: QMouseEvent):

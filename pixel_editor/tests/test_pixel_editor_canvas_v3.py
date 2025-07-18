@@ -332,10 +332,21 @@ class TestPixelCanvasV3:
 
         canvas._update_qcolor_cache()
 
-        # Check greyscale colors
-        assert canvas._qcolor_cache[0] == QColor(0, 0, 0)
-        assert canvas._qcolor_cache[15] == QColor(255, 255, 255)
-        assert canvas._qcolor_cache[8] == QColor(136, 136, 136)  # (8 * 255) // 15
+        # Check greyscale colors - note that index 0 is transparent
+        assert canvas._qcolor_cache[0].red() == 0
+        assert canvas._qcolor_cache[0].green() == 0
+        assert canvas._qcolor_cache[0].blue() == 0
+        assert canvas._qcolor_cache[0].alpha() == 0  # Index 0 is transparent
+        
+        assert canvas._qcolor_cache[15].red() == 255
+        assert canvas._qcolor_cache[15].green() == 255
+        assert canvas._qcolor_cache[15].blue() == 255
+        assert canvas._qcolor_cache[15].alpha() == 255  # Index 15 is opaque
+        
+        assert canvas._qcolor_cache[8].red() == 136  # (8 * 255) // 15
+        assert canvas._qcolor_cache[8].green() == 136
+        assert canvas._qcolor_cache[8].blue() == 136
+        assert canvas._qcolor_cache[8].alpha() == 255  # Index 8 is opaque
 
     # Coordinate conversion tests
     def test_get_pixel_pos(self, canvas):
@@ -481,7 +492,10 @@ class TestCanvasPerformance:
         # Paint without palette change - cache should not be rebuilt
         with patch.object(large_canvas, "_update_qcolor_cache") as mock_update:
             with patch("pixel_editor.core.pixel_editor_canvas_v3.QPainter"):
-                large_canvas.paintEvent(None)
+                # Create mock event with rect method
+                mock_event = MagicMock()
+                mock_event.rect.return_value = large_canvas.rect()
+                large_canvas.paintEvent(mock_event)
 
         # Cache update should not have been called since palette didn't change
         mock_update.assert_not_called()
@@ -520,3 +534,179 @@ class TestCanvasPerformance:
 
         # Verify fill worked
         assert np.all(controller.image_model.data == 7)
+
+
+class TestCanvasTransparency:
+    """Test transparency handling in canvas rendering"""
+
+    @pytest.fixture
+    def canvas_with_transparency(self, qapp):
+        """Create canvas with test data that includes transparent pixels"""
+        controller = PixelEditorController()
+        controller.new_file(3, 3)
+        
+        # Set up test data with transparent pixels (index 0) and opaque pixels
+        test_data = np.array([
+            [0, 1, 2],  # Row 0: transparent, gray, darker gray
+            [3, 0, 4],  # Row 1: gray, transparent, gray
+            [5, 6, 0]   # Row 2: gray, gray, transparent
+        ], dtype=np.uint8)
+        
+        controller.image_model.data = test_data
+        controller.image_model.width = 3
+        controller.image_model.height = 3
+        
+        canvas = PixelCanvasV3(controller)
+        canvas.zoom = 10  # Larger zoom for testing
+        canvas._update_size()
+        return canvas
+
+    def test_qimage_format_supports_alpha(self, canvas_with_transparency):
+        """Test that QImage uses ARGB32 format which supports transparency"""
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check that QImage buffer exists and has correct format
+        assert canvas_with_transparency._qimage_buffer is not None
+        assert canvas_with_transparency._qimage_buffer.format() == canvas_with_transparency._qimage_buffer.Format.Format_ARGB32
+        assert canvas_with_transparency._qimage_buffer.hasAlphaChannel()
+
+    def test_transparent_pixels_have_zero_alpha(self, canvas_with_transparency):
+        """Test that pixels with color index 0 have alpha=0 (transparent)"""
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check pixels at positions where we placed transparent pixels (index 0)
+        transparent_positions = [(0, 0), (1, 1), (2, 2)]
+        
+        for x, y in transparent_positions:
+            pixel = canvas_with_transparency._qimage_buffer.pixel(x, y)
+            alpha = (pixel >> 24) & 0xFF
+            assert alpha == 0, f"Pixel at ({x}, {y}) should be transparent (alpha=0) but has alpha={alpha}"
+
+    def test_opaque_pixels_have_full_alpha(self, canvas_with_transparency):
+        """Test that pixels with non-zero color indices have alpha=255 (opaque)"""
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check pixels at positions where we placed opaque pixels (non-zero indices)
+        opaque_positions = [(1, 0), (2, 0), (0, 1), (2, 1), (0, 2), (1, 2)]
+        
+        for x, y in opaque_positions:
+            pixel = canvas_with_transparency._qimage_buffer.pixel(x, y)
+            alpha = (pixel >> 24) & 0xFF
+            assert alpha == 255, f"Pixel at ({x}, {y}) should be opaque (alpha=255) but has alpha={alpha}"
+
+    def test_transparency_in_grayscale_mode(self, canvas_with_transparency):
+        """Test that transparency works correctly in grayscale mode"""
+        # Set grayscale mode
+        canvas_with_transparency.set_greyscale_mode(True)
+        
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check that transparent pixels are still transparent in grayscale mode
+        pixel = canvas_with_transparency._qimage_buffer.pixel(0, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 0, f"Transparent pixel should remain transparent in grayscale mode"
+        
+        # Check that opaque pixels are still opaque in grayscale mode
+        pixel = canvas_with_transparency._qimage_buffer.pixel(1, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 255, f"Opaque pixel should remain opaque in grayscale mode"
+
+    def test_transparency_in_color_mode(self, canvas_with_transparency):
+        """Test that transparency works correctly in color mode"""
+        # Set color mode
+        canvas_with_transparency.set_greyscale_mode(False)
+        
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check that transparent pixels are still transparent in color mode
+        pixel = canvas_with_transparency._qimage_buffer.pixel(0, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 0, f"Transparent pixel should remain transparent in color mode"
+        
+        # Check that opaque pixels are still opaque in color mode
+        pixel = canvas_with_transparency._qimage_buffer.pixel(1, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 255, f"Opaque pixel should remain opaque in color mode"
+
+    def test_transparency_persists_after_zoom_change(self, canvas_with_transparency):
+        """Test that transparency is preserved when zoom level changes"""
+        # Set initial zoom and update
+        canvas_with_transparency.set_zoom(5)
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Check transparency at initial zoom
+        pixel = canvas_with_transparency._qimage_buffer.pixel(0, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 0, f"Transparent pixel should be transparent at zoom 5"
+        
+        # Change zoom and get scaled image
+        canvas_with_transparency.set_zoom(20)
+        scaled_image = canvas_with_transparency._get_scaled_qimage()
+        
+        # Check transparency in scaled image
+        assert scaled_image is not None
+        assert scaled_image.format() == scaled_image.Format.Format_ARGB32
+        assert scaled_image.hasAlphaChannel()
+        
+        # Check that transparent pixels are still transparent in scaled image
+        pixel = scaled_image.pixel(0, 0)
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 0, f"Transparent pixel should remain transparent after zoom change"
+
+    def test_color_cache_preserves_transparency(self, canvas_with_transparency):
+        """Test that the color cache correctly stores transparency information"""
+        # Update color cache
+        canvas_with_transparency._update_qcolor_cache()
+        
+        # Check that index 0 has alpha=0 in the color cache
+        color_0 = canvas_with_transparency._qcolor_cache[0]
+        assert color_0.alpha() == 0, f"Color cache index 0 should have alpha=0"
+        
+        # Check that other indices have alpha=255 in the color cache
+        for i in range(1, 16):
+            if i in canvas_with_transparency._qcolor_cache:
+                color = canvas_with_transparency._qcolor_cache[i]
+                assert color.alpha() == 255, f"Color cache index {i} should have alpha=255"
+
+    def test_transparency_mask_generation(self, canvas_with_transparency):
+        """Test that the transparency mask is correctly generated"""
+        # Get the image data
+        image_data = canvas_with_transparency.controller.image_model.data
+        
+        # Generate transparency mask
+        mask = (image_data == 0)
+        
+        # Check that mask correctly identifies transparent pixels
+        assert mask[0, 0] == True, "Pixel (0,0) should be identified as transparent"
+        assert mask[1, 1] == True, "Pixel (1,1) should be identified as transparent"
+        assert mask[2, 2] == True, "Pixel (2,2) should be identified as transparent"
+        
+        # Check that mask correctly identifies opaque pixels
+        assert mask[0, 1] == False, "Pixel (0,1) should be identified as opaque"
+        assert mask[1, 0] == False, "Pixel (1,0) should be identified as opaque"
+        assert mask[2, 1] == False, "Pixel (2,1) should be identified as opaque"
+
+    def test_transparency_regression_fix(self, canvas_with_transparency):
+        """Regression test for transparency issue - ensure RGB32 format bug doesn't return"""
+        # This test ensures that the transparency fix (using ARGB32 instead of RGB32) stays fixed
+        
+        # Force QImage buffer update
+        canvas_with_transparency._update_qimage_buffer()
+        
+        # Verify that we're using ARGB32 format (not RGB32)
+        qimage = canvas_with_transparency._qimage_buffer
+        assert qimage.format() == qimage.Format.Format_ARGB32, "QImage should use ARGB32 format, not RGB32"
+        
+        # Verify that transparency actually works
+        pixel = qimage.pixel(0, 0)  # Should be transparent
+        alpha = (pixel >> 24) & 0xFF
+        assert alpha == 0, "Transparent pixel should have alpha=0 (this was broken with RGB32 format)"
+        
+        # Also check scaled image format
+        scaled_image = canvas_with_transparency._get_scaled_qimage()
+        assert scaled_image.format() == scaled_image.Format.Format_ARGB32, "Scaled QImage should use ARGB32 format"

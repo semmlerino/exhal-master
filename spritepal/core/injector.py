@@ -80,12 +80,10 @@ class SpriteInjector:
                     f"Image dimensions must be multiples of 8 (found {width}x{height})",
                 )
 
-            # Check color count
-            palette = img.getpalette()
-            if palette and len(palette) > 48:  # 16 colors * 3 (RGB)
-                num_colors = len(palette) // 3
-                if num_colors > 16:
-                    return False, f"Image has too many colors ({num_colors}, max 16)"
+            # Check color count - count actual unique colors used
+            unique_colors = len(set(img.getdata()))
+            if unique_colors > 16:
+                return False, f"Image has too many colors ({unique_colors}, max 16)"
 
         except Exception as e:
             return False, f"Error validating sprite: {e!s}"

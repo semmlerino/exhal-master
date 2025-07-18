@@ -65,7 +65,7 @@ class TestEndToEndWorkflow:
         yield {
             "temp_dir": temp_dir,
             "vram_path": str(vram_path),
-            "cgram_path": str(cgram_path)
+            "cgram_path": str(cgram_path),
         }
 
         # Cleanup
@@ -79,8 +79,7 @@ class TestEndToEndWorkflow:
         extractor = SpriteExtractor()
         sprite_path = output_dir / "sprites.png"
         img, num_tiles = extractor.extract_sprites_grayscale(
-            sample_files["vram_path"],
-            str(sprite_path)
+            sample_files["vram_path"], str(sprite_path)
         )
 
         assert sprite_path.exists()
@@ -113,10 +112,7 @@ class TestEndToEndWorkflow:
         # Extract sprite
         extractor = SpriteExtractor()
         sprite_path = f"{output_base}.png"
-        extractor.extract_sprites_grayscale(
-            sample_files["vram_path"],
-            sprite_path
-        )
+        extractor.extract_sprites_grayscale(sample_files["vram_path"], sprite_path)
 
         # Extract all sprite palettes
         palette_manager = PaletteManager()
@@ -173,7 +169,7 @@ class TestExtractionWorker:
             "output_base": str(tmp_path / "output"),
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
     @pytest.mark.gui
@@ -216,7 +212,7 @@ class TestExtractionWorker:
             "output_base": "/invalid/output",
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
         worker = ExtractionWorker(bad_params)
@@ -241,7 +237,7 @@ class TestRealFilePatterns:
             "Kirby_VRAM.dmp",
             "game_vram_dump.dmp",
             "VideoRam_001.dmp",
-            "test_VRAM_backup.dmp"
+            "test_VRAM_backup.dmp",
         ]
 
         for filename in test_filenames:
@@ -265,7 +261,7 @@ class TestRealFilePatterns:
         # Add some sprite data
         for i in range(5):
             for j in range(32):
-                vram_data[VRAM_SPRITE_OFFSET + i*32 + j] = (i + j) % 256
+                vram_data[VRAM_SPRITE_OFFSET + i * 32 + j] = (i + j) % 256
 
         vram_path = tmp_path / "test_VRAM.dmp"
         cgram_path = tmp_path / "test_CGRAM.dmp"
@@ -348,7 +344,7 @@ class TestFullWorkflowIntegration:
         yield {
             "temp_dir": temp_dir,
             "vram_path": str(vram_path),
-            "cgram_path": str(cgram_path)
+            "cgram_path": str(cgram_path),
         }
 
         # Cleanup
@@ -378,21 +374,21 @@ class TestFullWorkflowIntegration:
 
         # On-screen sprite with palette 0
         oam_data[0] = 0x50  # X low
-        oam_data[1] = 50    # Y (on-screen)
+        oam_data[1] = 50  # Y (on-screen)
         oam_data[2] = 0x00  # Tile
         oam_data[3] = 0x00  # Attrs (palette 0)
 
         # On-screen sprite with palette 2
         oam_data[4] = 0x80  # X low
-        oam_data[5] = 100   # Y (on-screen)
+        oam_data[5] = 100  # Y (on-screen)
         oam_data[6] = 0x00  # Tile
         oam_data[7] = 0x02  # Attrs (palette 2)
 
         # Off-screen sprite with palette 1
         oam_data[8] = 0x00  # X low
-        oam_data[9] = 240   # Y (off-screen)
-        oam_data[10] = 0x00 # Tile
-        oam_data[11] = 0x01 # Attrs (palette 1)
+        oam_data[9] = 240  # Y (off-screen)
+        oam_data[10] = 0x00  # Tile
+        oam_data[11] = 0x01  # Attrs (palette 1)
 
         return bytes(oam_data)
 
@@ -420,11 +416,14 @@ class TestFullWorkflowIntegration:
             "palettes_ready": MockSignal(),
             "active_palettes_ready": MockSignal(),
             "finished": MockSignal(),
-            "error": MockSignal()
+            "error": MockSignal(),
         }
 
     @pytest.mark.integration
-    def test_complete_ui_controller_worker_integration(self, integration_sample_files, mock_main_window, mock_qt_signals):
+    @pytest.mark.gui
+    def test_complete_ui_controller_worker_integration(
+        self, integration_sample_files, mock_main_window, mock_qt_signals
+    ):
         """Test complete UI-Controller-Worker integration workflow"""
         from unittest.mock import Mock, patch
 
@@ -436,7 +435,7 @@ class TestFullWorkflowIntegration:
             "palette_updates": [],
             "active_palette_updates": [],
             "completion_calls": [],
-            "error_calls": []
+            "error_calls": [],
         }
 
         # Connect signal tracking
@@ -465,7 +464,9 @@ class TestFullWorkflowIntegration:
         mock_main_window.sprite_preview.set_preview = track_preview
         mock_main_window.sprite_preview.set_grayscale_image = track_preview_image
         mock_main_window.palette_preview.set_all_palettes = track_palette
-        mock_main_window.palette_preview.highlight_active_palettes = track_active_palettes
+        mock_main_window.palette_preview.highlight_active_palettes = (
+            track_active_palettes
+        )
         mock_main_window.extraction_complete = track_completion
         mock_main_window.extraction_failed = track_error
 
@@ -473,10 +474,12 @@ class TestFullWorkflowIntegration:
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": integration_sample_files["vram_path"],
             "cgram_path": integration_sample_files["cgram_path"],
-            "output_base": str(Path(integration_sample_files["temp_dir"]) / "test_integration"),
+            "output_base": str(
+                Path(integration_sample_files["temp_dir"]) / "test_integration"
+            ),
             "create_grayscale": True,
             "create_metadata": True,
-            "oam_path": None
+            "oam_path": None,
         }
 
         # Mock Qt components and create worker directly
@@ -486,7 +489,9 @@ class TestFullWorkflowIntegration:
             mock_qpixmap.return_value = mock_pixmap_instance
 
             # Create worker directly with mock signals
-            worker = ExtractionWorker(mock_main_window.get_extraction_params.return_value)
+            worker = ExtractionWorker(
+                mock_main_window.get_extraction_params.return_value
+            )
 
             # Replace worker signals with our mocks
             for signal_name, mock_signal in mock_qt_signals.items():
@@ -540,7 +545,10 @@ class TestFullWorkflowIntegration:
             assert Path(file_path).exists()
 
     @pytest.mark.integration
-    def test_error_recovery_and_cleanup_integration(self, mock_main_window, mock_qt_signals):
+    @pytest.mark.gui
+    def test_error_recovery_and_cleanup_integration(
+        self, mock_main_window, mock_qt_signals
+    ):
         """Test error recovery and system cleanup integration"""
         from unittest.mock import Mock, patch
 
@@ -555,7 +563,7 @@ class TestFullWorkflowIntegration:
             "output_base": "/invalid/output",
             "create_grayscale": True,
             "create_metadata": False,
-            "oam_path": None
+            "oam_path": None,
         }
 
         # Mock Qt components
@@ -607,7 +615,7 @@ class TestFullWorkflowIntegration:
                 "output_base": str(Path(temp_dir) / "recovery_test"),
                 "create_grayscale": True,
                 "create_metadata": False,
-                "oam_path": None
+                "oam_path": None,
             }
 
             # Mock Qt components
@@ -640,7 +648,10 @@ class TestFullWorkflowIntegration:
                 assert Path(file_path).exists()
 
     @pytest.mark.integration
-    def test_oam_analysis_integration_workflow(self, integration_sample_files, mock_main_window, oam_test_data, mock_qt_signals):
+    @pytest.mark.gui
+    def test_oam_analysis_integration_workflow(
+        self, integration_sample_files, mock_main_window, oam_test_data, mock_qt_signals
+    ):
         """Test complete OAM analysis integration workflow"""
         from unittest.mock import Mock, patch
 
@@ -650,7 +661,9 @@ class TestFullWorkflowIntegration:
 
         # Track active palette updates
         active_palette_calls = []
-        mock_main_window.palette_preview.highlight_active_palettes = active_palette_calls.append
+        mock_main_window.palette_preview.highlight_active_palettes = (
+            active_palette_calls.append
+        )
 
         # Set up extraction parameters with OAM
         mock_main_window.get_extraction_params.return_value = {
@@ -659,7 +672,7 @@ class TestFullWorkflowIntegration:
             "output_base": str(Path(integration_sample_files["temp_dir"]) / "oam_test"),
             "create_grayscale": True,
             "create_metadata": True,
-            "oam_path": str(oam_path)
+            "oam_path": str(oam_path),
         }
 
         # Track completion
@@ -673,7 +686,9 @@ class TestFullWorkflowIntegration:
             mock_qpixmap.return_value = mock_pixmap_instance
 
             # Create worker directly with OAM analysis parameters
-            worker = ExtractionWorker(mock_main_window.get_extraction_params.return_value)
+            worker = ExtractionWorker(
+                mock_main_window.get_extraction_params.return_value
+            )
 
             # Replace worker signals with our mocks
             for signal_name, mock_signal in mock_qt_signals.items():
@@ -683,7 +698,9 @@ class TestFullWorkflowIntegration:
             ExtractionController(mock_main_window)
 
             # Connect tracking
-            worker.active_palettes_ready.connect(lambda p: active_palette_calls.append(p))
+            worker.active_palettes_ready.connect(
+                lambda p: active_palette_calls.append(p)
+            )
             worker.finished.connect(lambda f: completion_calls.append(f))
 
             # Run worker directly
@@ -695,7 +712,7 @@ class TestFullWorkflowIntegration:
 
         # Should include palettes from on-screen sprites (0+8=8, 2+8=10)
         # Should exclude palette from off-screen sprite (1+8=9)
-        assert 8 in active_palettes   # palette 0 -> CGRAM 8 (on-screen)
+        assert 8 in active_palettes  # palette 0 -> CGRAM 8 (on-screen)
         assert 10 in active_palettes  # palette 2 -> CGRAM 10 (on-screen)
 
         # Verify extraction completed successfully

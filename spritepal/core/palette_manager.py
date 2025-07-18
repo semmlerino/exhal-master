@@ -12,6 +12,7 @@ from spritepal.utils.constants import (
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
 )
+from spritepal.utils.validation import validate_cgram_file, validate_oam_file
 
 
 class PaletteManager:
@@ -22,7 +23,12 @@ class PaletteManager:
         self.palettes: dict[int, list[list[int]]] = {}
 
     def load_cgram(self, cgram_path: str) -> None:
-        """Load CGRAM dump file"""
+        """Load CGRAM dump file with validation"""
+        # Validate file before loading
+        is_valid, error_msg = validate_cgram_file(cgram_path)
+        if not is_valid:
+            raise ValueError(f"Invalid CGRAM file: {error_msg}")
+            
         with open(cgram_path, "rb") as f:
             self.cgram_data = f.read()
 
@@ -46,10 +52,16 @@ class PaletteManager:
                     color_high = self.cgram_data[offset + 1]
                     snes_color = (color_high << 8) | color_low
 
-                    # Convert BGR555 to RGB888
-                    b = ((snes_color >> 10) & 0x1F) * 8
-                    g = ((snes_color >> 5) & 0x1F) * 8
-                    r = (snes_color & 0x1F) * 8
+                    # Convert BGR555 to RGB888 (proper 5-bit to 8-bit conversion)
+                    # Use bit shifting for accurate conversion: (value << 3) | (value >> 2)
+                    b = ((snes_color >> 10) & 0x1F)
+                    g = ((snes_color >> 5) & 0x1F)
+                    r = (snes_color & 0x1F)
+                    
+                    # Convert 5-bit to 8-bit values (0-31 to 0-255)
+                    b = (b << 3) | (b >> 2)
+                    g = (g << 3) | (g >> 2)
+                    r = (r << 3) | (r >> 2)
 
                     colors.append([r, g, b])
                 else:
@@ -69,12 +81,16 @@ class PaletteManager:
             if idx in self.palettes
         }
 
-    def create_palette_json(self, palette_index: int, output_path: str, companion_image: Optional[str] = None) -> str:
+    def create_palette_json(
+        self,
+        palette_index: int,
+        output_path: str,
+        companion_image: Optional[str] = None,
+    ) -> str:
         """Create a .pal.json file for a specific palette"""
         colors = self.get_palette(palette_index)
         palette_name, description = PALETTE_INFO.get(
-            palette_index,
-            (f"Palette {palette_index}", "Sprite palette")
+            palette_index, (f"Palette {palette_index}", "Sprite palette")
         )
 
         palette_data = {
@@ -84,18 +100,18 @@ class PaletteManager:
                 "name": palette_name,
                 "colors": colors,
                 "color_count": len(colors),
-                "format": "RGB888"
+                "format": "RGB888",
             },
             "usage_hints": {
                 "transparent_index": 0,
                 "typical_use": "sprite",
-                "extraction_mode": "grayscale_companion"
+                "extraction_mode": "grayscale_companion",
             },
             "editor_compatibility": {
                 "indexed_pixel_editor": True,
                 "supports_grayscale_mode": True,
-                "auto_loadable": True
-            }
+                "auto_loadable": True,
+            },
         }
 
         # Add source info if available
@@ -104,7 +120,7 @@ class PaletteManager:
                 "palette_index": palette_index,
                 "extraction_tool": "SpritePal",
                 "companion_image": companion_image,
-                "description": description
+                "description": description,
             }
 
         # Save file
@@ -113,26 +129,33 @@ class PaletteManager:
 
         return output_path
 
-    def create_metadata_json(self, output_base: str, palette_files: dict[int, str], 
-                           extraction_params: Optional[dict[str, Any]] = None) -> str:
+    def create_metadata_json(
+        self,
+        output_base: str,
+        palette_files: dict[int, str],
+        extraction_params: Optional[dict[str, Any]] = None,
+    ) -> str:
         """Create metadata.json for palette switching and reinsertion"""
         metadata: dict[str, Any] = {
             "format_version": "1.0",
             "description": "Sprite palettes extracted by SpritePal",
             "palettes": {},
             "default_palette": 8,
-            "palette_info": {}
+            "palette_info": {},
         }
-        
+
         # Add extraction parameters if provided
         if extraction_params:
-            from datetime import datetime
+            from datetime import datetime, timezone
+
             metadata["extraction"] = {
                 "vram_source": extraction_params.get("vram_source", ""),
                 "vram_offset": f"0x{extraction_params.get('vram_offset', 0):04X}",
                 "tile_count": extraction_params.get("tile_count", 0),
                 "extraction_size": extraction_params.get("extraction_size", 0),
-                "extraction_date": extraction_params.get("extraction_date", datetime.now().isoformat())
+                "extraction_date": extraction_params.get(
+                    "extraction_date", datetime.now(timezone.utc).isoformat()
+                ),
             }
 
         # Add palette references
@@ -141,7 +164,9 @@ class PaletteManager:
                 metadata["palettes"][str(pal_idx)] = Path(palette_files[pal_idx]).name
 
                 # Add palette info
-                _, description = PALETTE_INFO.get(pal_idx, (f"Palette {pal_idx}", "Sprite palette"))
+                _, description = PALETTE_INFO.get(
+                    pal_idx, (f"Palette {pal_idx}", "Sprite palette")
+                )
                 metadata["palette_info"][str(pal_idx)] = description
 
         # Save metadata file
@@ -156,6 +181,11 @@ class PaletteManager:
         active_palettes = set()
 
         try:
+            # Validate file before loading
+            is_valid, error_msg = validate_oam_file(oam_path)
+            if not is_valid:
+                raise ValueError(f"Invalid OAM file: {error_msg}")
+                
             with open(oam_path, "rb") as f:
                 oam_data = f.read()
 
