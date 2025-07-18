@@ -72,7 +72,7 @@ python pixel_editor/launch_pixel_editor.py
 - **Ctrl++** - Zoom in
 - **Ctrl+-** - Zoom out
 - **Ctrl+0** - Reset zoom to default (4x)
-- **Ctrl+Shift+0** - Zoom to fit window
+- **Ctrl+Shift+0** or **F** - Zoom to fit window
 - **Arrow Keys** - Pan the canvas
 - **Shift+Arrow Keys** - Pan the canvas faster
 - **Mouse Wheel** - Zoom in/out (focused on cursor position)

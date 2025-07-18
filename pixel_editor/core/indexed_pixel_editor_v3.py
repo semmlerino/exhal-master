@@ -380,34 +380,37 @@ class IndexedPixelEditor(QMainWindow):
 
     def _zoom_to_fit(self):
         """Zoom to fit the visible area"""
-        if self.canvas.parent():
-            viewport = self.canvas.parent().parent()  # ScrollArea's viewport
-            if viewport and self.controller.get_image_size():
-                # Calculate zoom to fit
-                img_width, img_height = self.controller.get_image_size()
-                viewport_width = viewport.width() - 20
-                viewport_height = viewport.height() - 20
-
-                zoom_x = viewport_width // img_width
-                zoom_y = viewport_height // img_height
-                optimal_zoom = max(1, min(zoom_x, zoom_y, 64))
-
-                # Reset pan offset to center the image
-                self.canvas.pan_offset = QPointF(0.0, 0.0)
-                
-                # Set zoom
-                self.options_panel.set_zoom(optimal_zoom)
-                
-                # Center the canvas in the scroll area
-                scroll_area = self.canvas.parent().parent()
-                if hasattr(scroll_area, 'horizontalScrollBar') and hasattr(scroll_area, 'verticalScrollBar'):
-                    # Center horizontally
-                    h_bar = scroll_area.horizontalScrollBar()
-                    h_bar.setValue((h_bar.maximum() + h_bar.minimum()) // 2)
-                    
-                    # Center vertically
-                    v_bar = scroll_area.verticalScrollBar()
-                    v_bar.setValue((v_bar.maximum() + v_bar.minimum()) // 2)
+        # Get image size first to validate we have an image
+        image_size = self.controller.get_image_size()
+        if not image_size:
+            return
+            
+        img_width, img_height = image_size
+        
+        # Get viewport with robust error checking
+        canvas_parent = self.canvas.parent()
+        if not canvas_parent:
+            return
+            
+        viewport = canvas_parent.parent()  # ScrollArea's viewport
+        if not viewport:
+            return
+            
+        # Calculate available viewport space (with padding)
+        viewport_width = max(1, viewport.width() - 20)
+        viewport_height = max(1, viewport.height() - 20)
+        
+        # Calculate zoom to fit using float division for precision
+        zoom_x = viewport_width / img_width
+        zoom_y = viewport_height / img_height
+        
+        # Round to nearest integer and clamp to valid range
+        optimal_zoom = max(1, min(round(min(zoom_x, zoom_y)), 64))
+        
+        # Let canvas handle centering properly by calling set_zoom
+        # The canvas's set_zoom method with center_on_canvas=True (default) 
+        # will handle proper centering without manual pan offset interference
+        self.options_panel.set_zoom(optimal_zoom)
 
     def _zoom_in(self):
         """Zoom in"""
@@ -687,6 +690,12 @@ class IndexedPixelEditor(QMainWindow):
             # Show palette switcher
             if self.controller.has_metadata_palettes():
                 self.show_palette_switcher()
+        elif (
+            event.key() == Qt.Key.Key_F
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+        ):
+            # Zoom to fit
+            self._zoom_to_fit()
         elif (
             event.key() == Qt.Key.Key_Z
             and event.modifiers() == Qt.KeyboardModifier.ControlModifier

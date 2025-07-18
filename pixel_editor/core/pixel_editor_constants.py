@@ -213,6 +213,7 @@ KEY_PALETTE_SWITCHER = "P"
 # Zoom shortcuts
 KEY_ZOOM_RESET = "Ctrl+0"
 KEY_ZOOM_FIT = "Ctrl+Shift+0"
+KEY_ZOOM_FIT_F = "F"
 
 # ============================================================================
 # UI STYLING
