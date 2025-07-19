@@ -18,14 +18,15 @@ from spritepal.core.controller import ExtractionController, ExtractionWorker
 
 class TestControllerImports:
     """Test that controller module imports work correctly"""
-    
+
     def test_controller_imports(self):
         """Test that all imports in controller module work without errors"""
         # This test will catch import-time errors like missing pil_to_qpixmap
         try:
-            import spritepal.core.controller
             # Force module reload to catch any import errors
             import importlib
+
+            import spritepal.core.controller
             importlib.reload(spritepal.core.controller)
         except ImportError as e:
             pytest.fail(f"Import error in controller module: {e}")
@@ -33,36 +34,36 @@ class TestControllerImports:
             pytest.fail(f"Name error in controller module: {e}")
         except Exception as e:
             pytest.fail(f"Unexpected error importing controller module: {e}")
-    
+
     def test_pil_to_qpixmap_import(self):
         """Test that pil_to_qpixmap function is available"""
         from spritepal.core.controller import ExtractionWorker
-        
+
         # Create a worker instance to test the method
         worker_params = {
             "vram_path": "/path/to/vram.dmp",
-            "cgram_path": "/path/to/cgram.dmp", 
+            "cgram_path": "/path/to/cgram.dmp",
             "output_base": "/path/to/output",
             "create_grayscale": True,
             "create_metadata": True,
         }
-        
+
         with (
             patch("spritepal.core.controller.SpriteExtractor"),
             patch("spritepal.core.controller.PaletteManager"),
         ):
             worker = ExtractionWorker(worker_params)
-            
+
             # Test that the method exists and can be called
-            assert hasattr(worker, '_create_pixmap_from_image')
-            
+            assert hasattr(worker, "_create_pixmap_from_image")
+
             # Test with a mock image - this should not raise NameError
             mock_image = Mock()
             mock_image.save = Mock()
-            
+
             with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
                 mock_pil_to_qpixmap.return_value = Mock()
-                result = worker._create_pixmap_from_image(mock_image)
+                worker._create_pixmap_from_image(mock_image)
                 mock_pil_to_qpixmap.assert_called_once_with(mock_image)
 
 
@@ -247,7 +248,7 @@ class TestExtractionController:
         """Test opening in editor when launcher is found"""
         # Mock validation to pass
         mock_validate.return_value = (True, "")
-        
+
         # Mock exists to return True for the first launcher path
         mock_exists.side_effect = lambda path: path.endswith("launch_pixel_editor.py")
         sprite_file = "/path/to/sprite.png"
@@ -260,7 +261,7 @@ class TestExtractionController:
         assert call_args[0] == sys.executable
         assert call_args[1].endswith("launch_pixel_editor.py")
         assert call_args[2] == os.path.abspath(sprite_file)
-        
+
         mock_main_window.status_bar.showMessage.assert_called_once_with(
             f"Opened {os.path.basename(sprite_file)} in pixel editor"
         )
@@ -274,7 +275,7 @@ class TestExtractionController:
         """Test opening in editor when launcher is in subdirectory"""
         # Mock validation to pass
         mock_validate.return_value = (True, "")
-        
+
         # Mock exists to return True for the second launcher path (in subdirectory)
         mock_exists.side_effect = lambda path: "pixel_editor/launch_pixel_editor.py" in path
         sprite_file = "/path/to/sprite.png"
@@ -297,7 +298,7 @@ class TestExtractionController:
         """Test opening in editor when launcher is in parent directory"""
         # Mock validation to pass
         mock_validate.return_value = (True, "")
-        
+
         # Mock exists to return True for the third launcher path (in parent directory)
         mock_exists.side_effect = lambda path: path.endswith("launch_pixel_editor.py") and "exhal-master" in path
         sprite_file = "/path/to/sprite.png"

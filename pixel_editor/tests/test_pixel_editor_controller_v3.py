@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from PIL import Image
+from PyQt6.QtWidgets import QApplication
 
 from pixel_editor.core.pixel_editor_controller_v3 import PixelEditorController
 from pixel_editor.core.pixel_editor_models import PaletteModel
@@ -21,7 +22,15 @@ class TestPixelEditorController:
     """Test the main controller class"""
 
     @pytest.fixture
-    def controller(self):
+    def app(self):
+        """Create QApplication for tests"""
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
+        return app
+
+    @pytest.fixture
+    def controller(self, app):
         """Create a controller instance for testing"""
         controller = PixelEditorController()
         # Connect basic signal handlers for testing

@@ -3,6 +3,7 @@ Core sprite extraction functionality
 """
 
 from typing import Optional
+
 from PIL import Image
 
 from spritepal.utils.constants import (
@@ -13,7 +14,7 @@ from spritepal.utils.constants import (
     VRAM_SPRITE_OFFSET,
     VRAM_SPRITE_SIZE,
 )
-from spritepal.utils.validation import validate_vram_file, validate_offset
+from spritepal.utils.validation import validate_offset, validate_vram_file
 
 
 class SpriteExtractor:
@@ -31,7 +32,7 @@ class SpriteExtractor:
         is_valid, error_msg = validate_vram_file(vram_path)
         if not is_valid:
             raise ValueError(f"Invalid VRAM file: {error_msg}")
-        
+
         with open(vram_path, "rb") as f:
             self.vram_data = f.read()
 
@@ -39,7 +40,7 @@ class SpriteExtractor:
         """Extract tiles from VRAM data"""
         if self.vram_data is None:
             raise ValueError("VRAM data not loaded. Call load_vram() first.")
-            
+
         if offset is None:
             offset = self.offset
         if size is None:
@@ -115,7 +116,7 @@ class SpriteExtractor:
 
         # Create image data as bytes for efficient processing
         img_data = bytearray(img_width * img_height)
-        
+
         # Place tiles directly into byte array
         for tile_idx, pixels in enumerate(tiles):
             tile_x = (tile_idx % tiles_per_row) * TILE_WIDTH
@@ -127,8 +128,8 @@ class SpriteExtractor:
                 img_data[row_offset:row_offset + TILE_WIDTH] = row
 
         # Create image from bytes
-        img = Image.frombytes('P', (img_width, img_height), bytes(img_data))
-        
+        img = Image.frombytes("P", (img_width, img_height), bytes(img_data))
+
         # Set grayscale palette
         grayscale_palette = []
         for i in range(256):

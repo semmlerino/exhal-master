@@ -157,6 +157,8 @@ class PixelEditorController(QObject):
         # Create adapter for the image model
         adapter = ImageModelAdapter(self.image_model)
         self.undo_manager.execute_command(command, adapter)
+        # Mark image as modified after executing command
+        self.image_model.modified = True
         self._request_update()
 
     # File operations

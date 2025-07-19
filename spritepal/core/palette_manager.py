@@ -3,6 +3,7 @@ Palette management for SpritePal
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -28,7 +29,7 @@ class PaletteManager:
         is_valid, error_msg = validate_cgram_file(cgram_path)
         if not is_valid:
             raise ValueError(f"Invalid CGRAM file: {error_msg}")
-            
+
         with open(cgram_path, "rb") as f:
             self.cgram_data = f.read()
 
@@ -57,7 +58,7 @@ class PaletteManager:
                     b = ((snes_color >> 10) & 0x1F)
                     g = ((snes_color >> 5) & 0x1F)
                     r = (snes_color & 0x1F)
-                    
+
                     # Convert 5-bit to 8-bit values (0-31 to 0-255)
                     b = (b << 3) | (b >> 2)
                     g = (g << 3) | (g >> 2)
@@ -146,17 +147,37 @@ class PaletteManager:
 
         # Add extraction parameters if provided
         if extraction_params:
-            from datetime import datetime, timezone
-
-            metadata["extraction"] = {
-                "vram_source": extraction_params.get("vram_source", ""),
-                "vram_offset": f"0x{extraction_params.get('vram_offset', 0):04X}",
-                "tile_count": extraction_params.get("tile_count", 0),
-                "extraction_size": extraction_params.get("extraction_size", 0),
-                "extraction_date": extraction_params.get(
-                    "extraction_date", datetime.now(timezone.utc).isoformat()
-                ),
-            }
+            # Check if this is ROM extraction or VRAM extraction
+            source_type = extraction_params.get("source_type", "vram")
+            
+            if source_type == "rom":
+                # ROM extraction metadata
+                metadata["extraction"] = {
+                    "source_type": "rom",
+                    "rom_source": extraction_params.get("rom_source", ""),
+                    "rom_offset": extraction_params.get("rom_offset", "0x0"),
+                    "sprite_name": extraction_params.get("sprite_name", ""),
+                    "compressed_size": extraction_params.get("compressed_size", 0),
+                    "tile_count": extraction_params.get("tile_count", 0),
+                    "extraction_size": extraction_params.get("extraction_size", 0),
+                    "rom_title": extraction_params.get("rom_title", ""),
+                    "rom_checksum": extraction_params.get("rom_checksum", ""),
+                    "extraction_date": extraction_params.get(
+                        "extraction_date", datetime.now(timezone.utc).isoformat()
+                    ),
+                }
+            else:
+                # VRAM extraction metadata (existing format)
+                metadata["extraction"] = {
+                    "source_type": "vram",
+                    "vram_source": extraction_params.get("vram_source", ""),
+                    "vram_offset": f"0x{extraction_params.get('vram_offset', 0):04X}",
+                    "tile_count": extraction_params.get("tile_count", 0),
+                    "extraction_size": extraction_params.get("extraction_size", 0),
+                    "extraction_date": extraction_params.get(
+                        "extraction_date", datetime.now(timezone.utc).isoformat()
+                    ),
+                }
 
         # Add palette references
         for pal_idx in range(SPRITE_PALETTE_START, SPRITE_PALETTE_END):
@@ -185,7 +206,7 @@ class PaletteManager:
             is_valid, error_msg = validate_oam_file(oam_path)
             if not is_valid:
                 raise ValueError(f"Invalid OAM file: {error_msg}")
-                
+
             with open(oam_path, "rb") as f:
                 oam_data = f.read()
 

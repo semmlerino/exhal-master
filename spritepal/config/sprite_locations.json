@@ -1,0 +1,146 @@
+{
+  "format_version": "1.0",
+  "description": "Known sprite locations for various SNES ROMs",
+  "games": {
+    "KIRBY SUPER STAR": {
+      "checksums": {
+        "USA": "0x8A5C",
+        "Japan": "0x7F4C",
+        "Europe": "0x8B5C"
+      },
+      "palettes": {
+        "offset": "0x288000",
+        "description": "Sprite palette data location",
+        "size": 512,
+        "format": "bgr555"
+      },
+      "sprites": {
+        "kirby_normal": {
+          "offset": "0x0C8000",
+          "description": "Kirby's normal form sprites",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_beam": {
+          "offset": "0x0C8800",
+          "description": "Kirby with Beam ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_stone": {
+          "offset": "0x0C9000",
+          "description": "Kirby with Stone ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_cutter": {
+          "offset": "0x0C9800",
+          "description": "Kirby with Cutter ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_fire": {
+          "offset": "0x0CA000",
+          "description": "Kirby with Fire ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_ice": {
+          "offset": "0x0CA800",
+          "description": "Kirby with Ice ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_sword": {
+          "offset": "0x0CB000",
+          "description": "Kirby with Sword ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_fighter": {
+          "offset": "0x0CB800",
+          "description": "Kirby with Fighter ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_hammer": {
+          "offset": "0x0CC000",
+          "description": "Kirby with Hammer ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_wheel": {
+          "offset": "0x0CC800",
+          "description": "Kirby with Wheel ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_parasol": {
+          "offset": "0x0CD000",
+          "description": "Kirby with Parasol ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_ninja": {
+          "offset": "0x0CD800",
+          "description": "Kirby with Ninja ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "kirby_bomb": {
+          "offset": "0x0CE000",
+          "description": "Kirby with Bomb ability",
+          "compressed": true,
+          "estimated_size": 8192,
+          "palette_indices": [8, 9, 10, 11]
+        },
+        "enemies_common": {
+          "offset": "0x0D0000",
+          "description": "Common enemy sprites",
+          "compressed": true,
+          "estimated_size": 16384,
+          "palette_indices": [12, 13, 14, 15]
+        },
+        "bosses_1": {
+          "offset": "0x0D8000",
+          "description": "Boss sprites set 1",
+          "compressed": true,
+          "estimated_size": 32768,
+          "palette_indices": [12, 13, 14, 15]
+        },
+        "helpers": {
+          "offset": "0x0E0000",
+          "description": "Helper character sprites",
+          "compressed": true,
+          "estimated_size": 16384,
+          "palette_indices": [8, 9, 10, 11, 12, 13, 14, 15]
+        }
+      }
+    },
+    "KIRBY'S DREAM LAND 3": {
+      "checksums": {
+        "USA": "0x1234"
+      },
+      "sprites": {
+        "kirby_normal": {
+          "offset": "0x108000",
+          "description": "Kirby's normal form sprites",
+          "compressed": true,
+          "estimated_size": 8192
+        }
+      }
+    }
+  }
+}

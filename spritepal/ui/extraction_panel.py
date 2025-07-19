@@ -4,7 +4,6 @@ Extraction panel with drag & drop zones for dump files
 
 import os
 from pathlib import Path
-from typing import List
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPainter, QPen
@@ -119,7 +118,7 @@ class DropZone(QWidget):
         """Browse for file"""
         settings = get_settings_manager()
         default_dir = settings.get_default_directory()
-        
+
         file_filter = f"{self.file_type} Files (*.dmp);;All Files (*)"
         filename, _ = QFileDialog.getOpenFileName(
             self, f"Select {self.file_type} File", default_dir, file_filter
@@ -316,11 +315,11 @@ class ExtractionPanel(QGroupBox):
             if file_path.exists() and not drop_zone.has_file():
                 drop_zone.set_file(str(file_path))
 
-    def _find_files_for_type(self, directory: Path, patterns: List[str], drop_zone: DropZone) -> bool:
+    def _find_files_for_type(self, directory: Path, patterns: list[str], drop_zone: DropZone) -> bool:
         """Helper method to find and set files for a specific dump type"""
         if drop_zone.has_file():
             return False
-        
+
         for pattern in patterns:
             files = list(directory.glob(pattern))
             if files:
@@ -331,38 +330,38 @@ class ExtractionPanel(QGroupBox):
     def _auto_detect_files(self) -> None:
         """Auto-detect dump files in default directory (Mesen2 Debugger first, then current directory)"""
         settings = get_settings_manager()
-        
+
         # Define file type configurations
         file_configs = [
             (["*VRAM*.dmp", "*VideoRam*.dmp"], self.vram_drop),
             (["*CGRAM*.dmp", "*CgRam*.dmp"], self.cgram_drop),
             (["*OAM*.dmp", "*SpriteRam*.dmp"], self.oam_drop),
         ]
-        
+
         found_any = False
-        
+
         # Try directories in order: default (Mesen2), last used, current
         directories_to_try = [
             settings.get("paths", "default_dumps_dir", ""),
             settings.get("paths", "last_used_dir", ""),
             str(Path.cwd()),
         ]
-        
+
         for directory_str in directories_to_try:
             if not directory_str or not os.path.exists(directory_str):
                 continue
-                
+
             directory = Path(directory_str)
-            
+
             # Try to find files in this directory
             for patterns, drop_zone in file_configs:
                 if self._find_files_for_type(directory, patterns, drop_zone):
                     found_any = True
-            
+
             # If we found any files in this directory, stop searching
             if found_any:
                 break
-        
+
         if found_any:
             self.files_changed.emit()
             self._check_extraction_ready()

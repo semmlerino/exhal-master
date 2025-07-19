@@ -380,7 +380,11 @@ class IndexedPixelEditor(QMainWindow):
 
     def _zoom_to_fit(self):
         """Zoom to fit the visible area"""
-        # Get image size first to validate we have an image
+        # First check if we have an image loaded
+        if not self.controller.has_image():
+            return
+            
+        # Get image size to validate dimensions
         image_size = self.controller.get_image_size()
         if not image_size:
             return
@@ -407,10 +411,37 @@ class IndexedPixelEditor(QMainWindow):
         # Round to nearest integer and clamp to valid range
         optimal_zoom = max(1, min(round(min(zoom_x, zoom_y)), 64))
         
-        # Let canvas handle centering properly by calling set_zoom
-        # The canvas's set_zoom method with center_on_canvas=True (default) 
-        # will handle proper centering without manual pan offset interference
-        self.options_panel.set_zoom(optimal_zoom)
+        # Bypass normal zoom workflow to avoid problematic centering
+        # Call canvas.set_zoom directly with center_on_canvas=False
+        self.canvas.set_zoom(optimal_zoom, center_on_canvas=False)
+        
+        # Calculate proper pan offset to center the entire image in viewport
+        canvas_width = self.canvas.width()
+        canvas_height = self.canvas.height()
+        
+        # Calculate the size of the image at the new zoom level
+        scaled_img_width = img_width * optimal_zoom
+        scaled_img_height = img_height * optimal_zoom
+        
+        # Calculate pan offset to center the image in the canvas
+        pan_x = (canvas_width - scaled_img_width) / 2
+        pan_y = (canvas_height - scaled_img_height) / 2
+        
+        # Set the pan offset directly on the canvas
+        self.canvas.pan_offset = QPointF(pan_x, pan_y)
+        
+        # Update the options panel slider without triggering signals
+        # Block signals temporarily to avoid triggering _on_zoom_changed
+        self.options_panel.zoom_slider.blockSignals(True)
+        self.options_panel.zoom_slider.setValue(optimal_zoom)
+        self.options_panel.zoom_label.setText(f"{optimal_zoom}x")
+        self.options_panel.zoom_slider.blockSignals(False)
+        
+        # Update the zoom label in the main window
+        self._update_zoom_label(optimal_zoom)
+        
+        # Trigger canvas update to reflect the changes
+        self.canvas.update()
 
     def _zoom_in(self):
         """Zoom in"""

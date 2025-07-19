@@ -68,9 +68,9 @@ class SpriteInjector:
         try:
             img = Image.open(sprite_path)
 
-            # Check if indexed color mode
-            if img.mode != "P":
-                return False, f"Image must be in indexed color mode (found {img.mode})"
+            # Check if indexed or grayscale mode
+            if img.mode not in ["P", "L"]:
+                return False, f"Image must be in indexed (P) or grayscale (L) mode (found {img.mode})"
 
             # Check dimensions are multiples of 8
             width, height = img.size
@@ -80,10 +80,18 @@ class SpriteInjector:
                     f"Image dimensions must be multiples of 8 (found {width}x{height})",
                 )
 
-            # Check color count - count actual unique colors used
-            unique_colors = len(set(img.getdata()))
-            if unique_colors > 16:
-                return False, f"Image has too many colors ({unique_colors}, max 16)"
+            # Check color count based on mode
+            if img.mode == "P":
+                # Indexed mode - count actual unique colors used
+                unique_colors = len(set(img.getdata()))
+                if unique_colors > 16:
+                    return False, f"Image has too many colors ({unique_colors}, max 16)"
+            elif img.mode == "L":
+                # Grayscale mode - verify values are valid (0-255)
+                pixels = list(img.getdata())
+                max_val = max(pixels) if pixels else 0
+                if max_val > 255:
+                    return False, f"Invalid grayscale values (max: {max_val})"
 
         except Exception as e:
             return False, f"Error validating sprite: {e!s}"
@@ -95,16 +103,24 @@ class SpriteInjector:
         """Convert PNG to SNES 4bpp tile data"""
         img = Image.open(png_path)
 
-        # Ensure indexed color mode
-        if img.mode != "P":
+        # Handle different image modes
+        if img.mode == "L":
+            # Grayscale mode - likely from ROM extraction
+            # Convert grayscale values back to palette indices
+            pixels = list(img.getdata())
+            # Divide by 17 to get original 4-bit indices (0-15)
+            pixels = [min(15, p // 17) for p in pixels]
+        elif img.mode == "P":
+            # Already indexed - use as-is
+            pixels = list(img.getdata())
+        else:
+            # Convert to indexed mode
             img = img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16)  # type: ignore
+            pixels = list(img.getdata())
 
         width, height = img.size
         tiles_x = width // TILE_WIDTH
         tiles_y = height // TILE_HEIGHT
-
-        # Convert to raw pixel data
-        pixels = list(img.getdata())
 
         # Process tiles
         output_data = bytearray()

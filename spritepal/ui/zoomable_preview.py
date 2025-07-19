@@ -3,7 +3,7 @@ Zoomable sprite preview widget for SpritePal
 """
 
 import io
-from typing import Optional, Any, Dict, List, Tuple
+from typing import Any, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import (
@@ -51,10 +51,10 @@ class ZoomablePreviewWidget(QWidget):
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         # Set size policy to expand and fill available space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        
+
         self.setStyleSheet("""
             ZoomablePreviewWidget {
                 background-color: #1e1e1e;
@@ -336,19 +336,19 @@ class PreviewPanel(QWidget):
         super().__init__()
         self._grayscale_image = None
         self._colorized_image = None
-        
+
         # Initialize colorizer component
         self.colorizer = PaletteColorizer()
-        
+
         # Connect colorizer signals
         self.colorizer.palette_mode_changed.connect(self._on_colorizer_palette_mode_changed)
         self.colorizer.palette_index_changed.connect(self._on_colorizer_palette_index_changed)
-        
+
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         # Set size policy to expand and fill available space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        
+
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -408,9 +408,9 @@ class PreviewPanel(QWidget):
         # Only toggle if the state differs from colorizer
         if checked != self.colorizer.is_palette_mode():
             self.colorizer.toggle_palette_mode()
-        
+
         self.palette_selector.setEnabled(checked)
-        
+
         if checked and self._grayscale_image and self.colorizer.has_palettes():
             self._apply_current_palette()
         elif not checked:
@@ -547,13 +547,13 @@ class PreviewPanel(QWidget):
             self.palette_toggle.setChecked(not self.palette_toggle.isChecked())
         else:
             super().keyPressEvent(event)
-    
+
     def _on_colorizer_palette_mode_changed(self, enabled: bool) -> None:
         """Handle palette mode change from colorizer"""
         # Update UI to reflect colorizer state
         self.palette_toggle.setChecked(enabled)
         self.palette_selector.setEnabled(enabled)
-    
+
     def _on_colorizer_palette_index_changed(self, index: int) -> None:
         """Handle palette index change from colorizer"""
         # Update selector to match colorizer state
@@ -566,10 +566,10 @@ class PreviewPanel(QWidget):
         """Handle mouse press to ensure focus"""
         self.setFocus()
         super().mousePressEvent(event)
-    
-    def get_palettes(self) -> Dict[int, List[Tuple[int, int, int]]]:
+
+    def get_palettes(self) -> dict[int, list[tuple[int, int, int]]]:
         """Get the current palette data
-        
+
         Returns:
             Dictionary mapping palette index to RGB color lists
         """

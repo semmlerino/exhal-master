@@ -3,7 +3,7 @@ Main window for SpritePal application
 """
 
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QCloseEvent
@@ -21,12 +21,14 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QStatusBar,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from spritepal.core.controller import ExtractionController
 from spritepal.ui.extraction_panel import ExtractionPanel
+from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
 from spritepal.ui.palette_preview import PalettePreviewWidget
 from spritepal.ui.zoomable_preview import PreviewPanel
 from spritepal.utils.settings_manager import get_settings_manager
@@ -45,7 +47,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self._output_path = ""
-        self._extracted_files: List[str] = []
+        self._extracted_files: list[str] = []
         self.settings = get_settings_manager()
 
         self._setup_ui()
@@ -78,9 +80,18 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Input files group
+        # Create tab widget for extraction methods
+        self.extraction_tabs = QTabWidget()
+        
+        # VRAM extraction tab
         self.extraction_panel = ExtractionPanel()
-        left_layout.addWidget(self.extraction_panel)
+        self.extraction_tabs.addTab(self.extraction_panel, "VRAM Extraction")
+        
+        # ROM extraction tab
+        self.rom_extraction_panel = ROMExtractionPanel()
+        self.extraction_tabs.addTab(self.rom_extraction_panel, "ROM Extraction")
+        
+        left_layout.addWidget(self.extraction_tabs)
 
         # Output settings group
         output_group = QGroupBox("Output Settings")
@@ -244,7 +255,7 @@ class MainWindow(QMainWindow):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         # Create vertical splitter for right panel
         right_splitter = QSplitter(Qt.Orientation.Vertical)
         right_layout.addWidget(right_splitter)
@@ -275,12 +286,12 @@ class MainWindow(QMainWindow):
 
         palette_group.setLayout(palette_layout)
         right_splitter.addWidget(palette_group)
-        
+
         # Configure right splitter
         right_splitter.setSizes([400, 200])  # Initial sizes
         right_splitter.setStretchFactor(0, 1)  # Preview panel stretches
         right_splitter.setStretchFactor(1, 0)  # Palette panel doesn't stretch
-        
+
         # Set minimum sizes for right panel components
         preview_group.setMinimumHeight(200)
         palette_group.setMinimumHeight(150)
@@ -288,12 +299,12 @@ class MainWindow(QMainWindow):
         # Add panels to main splitter
         main_splitter.addWidget(left_panel)
         main_splitter.addWidget(right_panel)
-        
+
         # Configure main splitter
         main_splitter.setSizes([400, 500])  # Initial sizes
         main_splitter.setStretchFactor(0, 0)  # Left panel doesn't stretch
         main_splitter.setStretchFactor(1, 1)  # Right panel stretches
-        
+
         # Set minimum sizes for panels
         left_panel.setMinimumWidth(300)
         right_panel.setMinimumWidth(300)
@@ -342,7 +353,14 @@ class MainWindow(QMainWindow):
 
         # Connect extraction panel signals
         self.extraction_panel.files_changed.connect(self._on_files_changed)
-        self.extraction_panel.extraction_ready.connect(self._on_extraction_ready)
+        self.extraction_panel.extraction_ready.connect(self._on_vram_extraction_ready)
+        
+        # Connect ROM extraction panel signals
+        self.rom_extraction_panel.files_changed.connect(self._on_rom_files_changed)
+        self.rom_extraction_panel.extraction_ready.connect(self._on_rom_extraction_ready)
+        
+        # Connect tab change signal
+        self.extraction_tabs.currentChanged.connect(self._on_extraction_tab_changed)
 
     def _on_files_changed(self) -> None:
         """Handle when input files change"""
@@ -364,20 +382,46 @@ class MainWindow(QMainWindow):
         # Save session data when files change
         self._save_session()
 
-    def _on_extraction_ready(self, ready: bool) -> None:
-        """Handle extraction ready state change"""
-        self.extract_button.setEnabled(ready)
-        if ready:
-            self.status_bar.showMessage("Ready to extract sprites")
+    def _on_vram_extraction_ready(self, ready: bool) -> None:
+        """Handle VRAM extraction ready state change"""
+        # Only enable if VRAM tab is active
+        if self.extraction_tabs.currentIndex() == 0:
+            self.extract_button.setEnabled(ready)
+            
+    def _on_rom_extraction_ready(self, ready: bool) -> None:
+        """Handle ROM extraction ready state change"""
+        # Only enable if ROM tab is active
+        if self.extraction_tabs.currentIndex() == 1:
+            self.extract_button.setEnabled(ready)
+            
+    def _on_rom_files_changed(self) -> None:
+        """Handle when ROM extraction files change"""
+        # ROM extraction handles its own output naming
+        pass
+        
+    def _on_extraction_tab_changed(self, index: int) -> None:
+        """Handle tab change between VRAM and ROM extraction"""
+        if index == 0:
+            # VRAM extraction tab
+            ready = self.extraction_panel.has_vram() and self.extraction_panel.has_cgram()
+            self.extract_button.setEnabled(ready)
+            # Show output settings for VRAM
+            self.output_name_edit.setVisible(True)
+            self.browse_button.setVisible(True)
         else:
-            self.status_bar.showMessage("Please load VRAM and CGRAM files")
+            # ROM extraction tab
+            params = self.rom_extraction_panel.get_extraction_params()
+            self.extract_button.setEnabled(params is not None)
+            # Hide output settings for ROM (it has its own)
+            self.output_name_edit.setVisible(False)
+            self.browse_button.setVisible(False)
 
     def _browse_output(self) -> None:
         """Browse for output location"""
         # Use the default directory for output as well
         default_dir = self.settings.get_default_directory()
         suggested_path = str(Path(default_dir) / (self.output_name_edit.text() + ".png"))
-        
+
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save Sprites As",
@@ -389,26 +433,37 @@ class MainWindow(QMainWindow):
             # Update output name without extension
             base_name = Path(filename).stem
             self.output_name_edit.setText(base_name)
-            
+
             # Update last used directory
             self.settings.set_last_used_directory(str(Path(filename).parent))
 
     def _on_extract_clicked(self) -> None:
         """Handle extract button click"""
-        if not self.output_name_edit.text():
-            QMessageBox.warning(
-                self,
-                "Output Name Required",
-                "Please enter a name for the output files.",
-            )
-            return
+        # Check which tab is active
+        if self.extraction_tabs.currentIndex() == 0:
+            # VRAM extraction
+            if not self.output_name_edit.text():
+                QMessageBox.warning(
+                    self,
+                    "Output Name Required",
+                    "Please enter a name for the output files.",
+                )
+                return
 
-        self._output_path = self.output_name_edit.text()
-        self.status_bar.showMessage("Extracting sprites...")
-        self.extract_button.setEnabled(False)
+            self._output_path = self.output_name_edit.text()
+            self.status_bar.showMessage("Extracting sprites from VRAM...")
+            self.extract_button.setEnabled(False)
 
-        # Emit signal for controller to handle extraction
-        self.extract_requested.emit()
+            # Emit signal for controller to handle extraction
+            self.extract_requested.emit()
+        else:
+            # ROM extraction
+            params = self.rom_extraction_panel.get_extraction_params()
+            if params:
+                self._output_path = params["output_base"]
+                self.status_bar.showMessage("Extracting sprites from ROM...")
+                self.extract_button.setEnabled(False)
+                self.controller.start_rom_extraction(params)
 
     def _on_open_editor_clicked(self) -> None:
         """Handle open in editor button click"""
@@ -464,7 +519,7 @@ class MainWindow(QMainWindow):
             "<p>Part of the Kirby Super Star sprite editing toolkit.</p>",
         )
 
-    def get_extraction_params(self) -> Dict[str, Any]:
+    def get_extraction_params(self) -> dict[str, Any]:
         """Get extraction parameters from UI"""
         return {
             "vram_path": self.extraction_panel.get_vram_path(),
@@ -476,7 +531,7 @@ class MainWindow(QMainWindow):
             "create_metadata": self.metadata_check.isChecked(),
         }
 
-    def extraction_complete(self, extracted_files: List[str]) -> None:
+    def extraction_complete(self, extracted_files: list[str]) -> None:
         """Called when extraction is complete"""
         self._extracted_files = extracted_files
         self.extract_button.setEnabled(True)

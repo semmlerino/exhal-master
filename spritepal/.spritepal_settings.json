@@ -1,19 +1,28 @@
 {
   "session": {
-    "vram_path": "",
-    "cgram_path": "",
-    "oam_path": "",
-    "output_name": "",
+    "vram_path": "C:/Users/gabri/OneDrive/Dokumente/Mesen2/Debugger/Scene1.VRAM.dmp",
+    "cgram_path": "C:\\Users\\gabri\\OneDrive\\Dokumente\\Mesen2\\Debugger\\CGRAM.dmp",
+    "oam_path": "C:\\Users\\gabri\\OneDrive\\Dokumente\\Mesen2\\Debugger\\Scene1.OAM.dmp",
+    "output_name": "scene1_sprites_editor",
     "create_grayscale": true,
     "create_metadata": true
   },
   "ui": {
-    "window_width": 1350,
-    "window_height": 825,
-    "window_x": 95,
-    "window_y": 404
+    "window_width": 900,
+    "window_height": 600,
+    "window_x": 0,
+    "window_y": 0
   },
   "paths": {
-    "last_used_dir": "/tmp/tmp1kf2xpmk"
+    "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master"
+  },
+  "test": {
+    "key": "new_value"
+  },
+  "rom_injection": {
+    "last_input_rom": "/path/to/test.sfc",
+    "last_sprite_location": "Kirby Sprite (0x123456)",
+    "last_custom_offset": "0x123456",
+    "fast_compression": true
   }
 }

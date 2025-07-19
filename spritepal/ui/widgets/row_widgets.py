@@ -8,14 +8,14 @@ from typing import Optional
 from PIL import Image
 from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QListWidget, QListWidgetItem, QWidget
+from PyQt6.QtWidgets import QListWidget, QWidget
 
 
 class RowPreviewWidget(QWidget):
     """Enhanced widget displaying a thumbnail preview of a sprite row"""
 
     def __init__(
-        self, row_index: int, row_image: Image.Image, tiles_per_row: int, 
+        self, row_index: int, row_image: Image.Image, tiles_per_row: int,
         is_selected: bool = False, parent: Optional[QWidget] = None
     ):
         super().__init__(parent)
@@ -27,7 +27,7 @@ class RowPreviewWidget(QWidget):
         self.setFixedHeight(85)  # Increased height for much better visibility
         self.setMinimumWidth(350)  # Slightly wider for better layout
         self.setMouseTracking(True)
-    
+
     def update_image(self, new_image: Image.Image) -> None:
         """Update the row image for display"""
         self.row_image = new_image

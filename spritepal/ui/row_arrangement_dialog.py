@@ -42,13 +42,13 @@ class RowArrangementDialog(QDialog):
         self.output_path = None
         self.tile_width = None  # Will be calculated based on image width
         self.tile_height = None  # Will be calculated based on tile width
-        
+
         # Initialize components
         self.image_processor = RowImageProcessor()
         self.arrangement_manager = ArrangementManager()
         self.colorizer = PaletteColorizer()
         self.preview_generator = PreviewGenerator(self.colorizer)
-        
+
         # Connect signals
         self.arrangement_manager.arrangement_changed.connect(self._on_arrangement_changed)
         self.colorizer.palette_mode_changed.connect(self._on_palette_mode_changed)
@@ -70,7 +70,7 @@ class RowArrangementDialog(QDialog):
             self.original_image, self.tile_rows = self.image_processor.process_sprite_sheet(
                 self.sprite_path, self.tiles_per_row
             )
-            
+
             # Get tile dimensions from processor
             self.tile_width = self.image_processor.tile_width
             self.tile_height = self.image_processor.tile_height
@@ -311,7 +311,7 @@ class RowArrangementDialog(QDialog):
     def _add_all_rows(self):
         """Add all rows to arrangement"""
         row_indices = [row_data["index"] for row_data in self.tile_rows]
-        added_count = self.arrangement_manager.add_multiple_rows(row_indices)
+        self.arrangement_manager.add_multiple_rows(row_indices)
         self._refresh_ui()
         self._update_status(f"Added all rows to arrangement ({self.arrangement_manager.get_arranged_count()} total)")
 
@@ -319,9 +319,9 @@ class RowArrangementDialog(QDialog):
         """Add selected rows to arrangement"""
         selected_items = self.available_list.selectedItems()
         row_indices = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
-        
+
         added_count = self.arrangement_manager.add_multiple_rows(row_indices)
-        
+
         if added_count > 0:
             self._refresh_ui()
             self._update_status(f"Added {added_count} selected rows to arrangement")
@@ -330,9 +330,9 @@ class RowArrangementDialog(QDialog):
         """Remove selected rows from arrangement"""
         selected_items = self.arranged_list.selectedItems()
         row_indices = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
-        
+
         removed_count = self.arrangement_manager.remove_multiple_rows(row_indices)
-        
+
         if removed_count > 0:
             self._refresh_ui()
             self._update_status(
@@ -427,7 +427,7 @@ class RowArrangementDialog(QDialog):
                 colorized = self.preview_generator.apply_palette_to_full_image(self.original_image)
                 if colorized:
                     display_image = colorized
-            
+
             # Convert to QPixmap
             if display_image.mode == "RGBA":
                 # For RGBA images, use appropriate format
@@ -473,7 +473,7 @@ class RowArrangementDialog(QDialog):
         arranged_indices = self.arrangement_manager.get_arranged_indices()
         if not arranged_indices:
             return None
-        
+
         # Use preview generator to create arranged image
         return self.preview_generator.create_arranged_image(
             self.original_image,
@@ -509,7 +509,7 @@ class RowArrangementDialog(QDialog):
     def _update_status(self, message):
         """Update the status bar message"""
         self.status_bar.showMessage(message)
-    
+
     def _update_existing_row_images(self):
         """Update the display images of existing row widgets without repopulating lists"""
         # Update available rows list
@@ -521,7 +521,7 @@ class RowArrangementDialog(QDialog):
                 # Get the appropriate display image (grayscale or colorized)
                 display_image = self._get_display_image_for_row(row_index)
                 widget.update_image(display_image)
-        
+
         # Update arranged rows list
         for i in range(self.arranged_list.count()):
             item = self.arranged_list.item(i)
@@ -531,50 +531,47 @@ class RowArrangementDialog(QDialog):
                 # Get the appropriate display image (grayscale or colorized)
                 display_image = self._get_display_image_for_row(row_index)
                 widget.update_image(display_image)
-    
+
     def _update_panel_titles(self):
         """Update panel titles with item counts"""
         arranged_count = self.arrangement_manager.get_arranged_count()
         available_count = len(self.tile_rows) - arranged_count
-        
+
         self.left_panel.setTitle(f"Available Rows ({available_count})")
         self.right_panel.setTitle(f"Arranged Rows ({arranged_count})")
 
     def get_arranged_path(self):
         """Get the path to the arranged sprite sheet"""
         return self.output_path
-    
+
     def _on_arrangement_changed(self):
         """Handle arrangement change signal from manager"""
         # Already handled by individual add/remove methods
-        pass
-    
+
     def _on_palette_mode_changed(self, enabled):
         """Handle palette mode change signal"""
         # Already handled in toggle_palette_application
-        pass
-    
+
     def _on_palette_index_changed(self, index):
         """Handle palette index change signal"""
         # Already handled in _cycle_palette
-        pass
-    
+
     def set_palettes(self, palettes_dict):
         """Set the available palettes for colorization"""
         self.colorizer.set_palettes(palettes_dict)
-        
+
         # Update display if palette is currently applied
         if self.colorizer.is_palette_mode():
             self._refresh_ui()
-    
+
     def toggle_palette_application(self):
         """Toggle between grayscale and colorized display"""
         palette_enabled = self.colorizer.toggle_palette_mode()
-        
+
         # Update displays without resetting scroll position
         self._update_existing_row_images()
         self._update_preview()
-        
+
         # Update window title and status message
         if palette_enabled:
             palette_idx = self.colorizer.get_selected_palette_index()
@@ -583,26 +580,26 @@ class RowArrangementDialog(QDialog):
         else:
             self.setWindowTitle("Arrange Sprite Rows - Grayscale")
             self._update_status("Grayscale mode: Original sprite colors | Press C to toggle palette")
-    
+
     def _get_display_image_for_row(self, row_index):
         """Get the appropriate display image for a row (grayscale or colorized)"""
         if row_index >= len(self.tile_rows):
             return None
-        
+
         row_data = self.tile_rows[row_index]
         grayscale_image = row_data["image"]
-        
+
         # Use colorizer to get display image
         return self.colorizer.get_display_image(row_index, grayscale_image)
-    
+
     def _cycle_palette(self):
         """Cycle through available palettes (8-15)"""
         new_palette_idx = self.colorizer.cycle_palette()
-        
+
         # Update displays without resetting scroll position
         self._update_existing_row_images()
         self._update_preview()
-        
+
         # Update status and title
         self.setWindowTitle(f"Arrange Sprite Rows - Palette {new_palette_idx}")
         self._update_status(f"Palette mode: Palette {new_palette_idx} applied | Press C to toggle, P to cycle")

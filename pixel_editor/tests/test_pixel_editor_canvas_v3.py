@@ -46,6 +46,10 @@ class TestPixelCanvasV3:
         controller.image_model.width = 8
         controller.image_model.height = 8
 
+        # Setup tool manager mock
+        controller.tool_manager = MagicMock()
+        controller.tool_manager.get_brush_size.return_value = 1
+
         return controller
 
     @pytest.fixture
@@ -262,10 +266,13 @@ class TestPixelCanvasV3:
         zoom_requested_spy = MagicMock()
         canvas.zoomRequested.connect(zoom_requested_spy)
 
+        # Store original zoom level
+        original_zoom = canvas.zoom
+
         # Create wheel event with positive delta
         event = MagicMock(spec=QWheelEvent)
         event.angleDelta.return_value.y.return_value = 120
-        event.modifiers.return_value = Qt.KeyboardModifier.ControlModifier
+        event.position.return_value = QPointF(50, 50)  # Add position for cursor-focused zooming
 
         canvas.wheelEvent(event)
         event.accept.assert_called()
@@ -273,7 +280,7 @@ class TestPixelCanvasV3:
         # Should request zoom in
         zoom_requested_spy.assert_called_once()
         requested_zoom = zoom_requested_spy.call_args[0][0]
-        assert requested_zoom > canvas.zoom
+        assert requested_zoom > original_zoom
 
     def test_wheel_zoom_out(self, canvas):
         """Test zooming out with mouse wheel"""

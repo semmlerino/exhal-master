@@ -288,32 +288,30 @@ class FloodFillCommand(UndoCommand):
     to minimize memory usage for large filled areas.
     """
 
+    x: int = 0
+    y: int = 0
+    old_color: int = 0
+    new_color: int = 0
     affected_region: tuple[int, int, int, int] = (0, 0, 0, 0)  # x, y, width, height
     old_data: Optional[np.ndarray] = None  # Only the affected region
-    new_color: int = 0
+    _fill_executed: bool = False
 
     def __post_init__(self) -> None:
         """Initialize parent class after dataclass initialization."""
         super().__init__()
 
     def execute(self, canvas: "CanvasProtocol") -> None:
-        """Apply flood fill to affected region."""
-        if canvas.image_data is None or self.old_data is None:
+        """Apply flood fill operation."""
+        if canvas.image_data is None:
             return
 
-        x, y, w, h = self.affected_region
-
-        # Fill the region with new color where old data was affected
-        for dy in range(h):
-            for dx in range(w):
-                px, py = x + dx, y + dy
-                if (
-                    0 <= px < canvas.image_data.shape[1]
-                    and 0 <= py < canvas.image_data.shape[0]
-                ):
-                    # Use 255 as sentinel for "not affected"
-                    if self.old_data[dy, dx] != 255:
-                        canvas.image_data[py, px] = self.new_color
+        if not self._fill_executed:
+            # First execution - perform the actual flood fill
+            self._perform_flood_fill(canvas)
+            self._fill_executed = True
+        else:
+            # Re-execution - apply stored changes
+            self._apply_stored_changes(canvas)
 
     def unexecute(self, canvas: "CanvasProtocol") -> None:
         """Restore original data in affected region."""
@@ -331,6 +329,95 @@ class FloodFillCommand(UndoCommand):
                     and 0 <= py < canvas.image_data.shape[0]
                 ) and self.old_data[dy, dx] != 255:
                     canvas.image_data[py, px] = self.old_data[dy, dx]
+    
+    def _perform_flood_fill(self, canvas: "CanvasProtocol") -> None:
+        """Perform the actual flood fill operation."""
+        if canvas.image_data is None:
+            return
+            
+        # Check if we're trying to fill with the same color
+        if self.old_color == self.new_color:
+            return
+            
+        # Check bounds
+        if (self.x < 0 or self.x >= canvas.image_data.shape[1] or 
+            self.y < 0 or self.y >= canvas.image_data.shape[0]):
+            return
+            
+        # Check if the starting pixel is already the target color
+        if canvas.image_data[self.y, self.x] != self.old_color:
+            return
+            
+        # Find all connected pixels of the same color
+        filled_pixels = self._flood_fill_pixels(canvas, self.x, self.y, self.old_color)
+        
+        if not filled_pixels:
+            return
+            
+        # Calculate bounding box
+        min_x = min(px for px, py in filled_pixels)
+        max_x = max(px for px, py in filled_pixels)
+        min_y = min(py for px, py in filled_pixels)
+        max_y = max(py for px, py in filled_pixels)
+        
+        # Store affected region
+        self.affected_region = (min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
+        
+        # Store old data for undo
+        w, h = max_x - min_x + 1, max_y - min_y + 1
+        self.old_data = np.full((h, w), 255, dtype=np.uint8)  # 255 = sentinel
+        
+        # Fill pixels and store old data
+        for px, py in filled_pixels:
+            canvas.image_data[py, px] = self.new_color
+            self.old_data[py - min_y, px - min_x] = self.old_color
+            
+    def _apply_stored_changes(self, canvas: "CanvasProtocol") -> None:
+        """Apply stored changes (for redo)."""
+        if canvas.image_data is None or self.old_data is None:
+            return
+            
+        x, y, w, h = self.affected_region
+        
+        # Apply new color where old data was stored
+        for dy in range(h):
+            for dx in range(w):
+                px, py = x + dx, y + dy
+                if (
+                    0 <= px < canvas.image_data.shape[1]
+                    and 0 <= py < canvas.image_data.shape[0]
+                ) and self.old_data[dy, dx] != 255:
+                    canvas.image_data[py, px] = self.new_color
+    
+    def _flood_fill_pixels(self, canvas: "CanvasProtocol", start_x: int, start_y: int, target_color: int) -> list[tuple[int, int]]:
+        """Find all connected pixels of the target color using flood fill algorithm."""
+        if canvas.image_data is None:
+            return []
+            
+        filled = []
+        stack = [(start_x, start_y)]
+        visited = set()
+        
+        while stack:
+            x, y = stack.pop()
+            
+            if (x, y) in visited:
+                continue
+                
+            if (x < 0 or x >= canvas.image_data.shape[1] or 
+                y < 0 or y >= canvas.image_data.shape[0]):
+                continue
+                
+            if canvas.image_data[y, x] != target_color:
+                continue
+                
+            visited.add((x, y))
+            filled.append((x, y))
+            
+            # Add adjacent pixels
+            stack.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+            
+        return filled
 
     def get_memory_size(self) -> int:
         """Calculate memory usage."""
@@ -342,19 +429,19 @@ class FloodFillCommand(UndoCommand):
 
     def _get_compress_data(
         self,
-    ) -> tuple[tuple[int, int, int, int], Optional[np.ndarray], int]:
+    ) -> tuple[int, int, int, int, tuple[int, int, int, int], Optional[np.ndarray], bool]:
         """Get flood fill data for compression."""
-        return (self.affected_region, self.old_data, self.new_color)
+        return (self.x, self.y, self.old_color, self.new_color, self.affected_region, self.old_data, self._fill_executed)
 
     def _clear_uncompressed_data(self) -> None:
         """Clear numpy array after compression."""
         self.old_data = None
 
     def _restore_from_compressed(
-        self, data: tuple[tuple[int, int, int, int], Optional[np.ndarray], int]
+        self, data: tuple[int, int, int, int, tuple[int, int, int, int], Optional[np.ndarray], bool]
     ) -> None:
         """Restore flood fill data from compressed format."""
-        self.affected_region, self.old_data, self.new_color = data
+        self.x, self.y, self.old_color, self.new_color, self.affected_region, self.old_data, self._fill_executed = data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FloodFillCommand":
@@ -366,13 +453,17 @@ class FloodFillCommand(UndoCommand):
         if data["compressed"]:
             cmd._compressed_data = bytes.fromhex(data["compressed_data"])
         else:
-            region, old_data_list, new_color = data["data"]
+            x, y, old_color, new_color, region, old_data_list, fill_executed = data["data"]
+            cmd.x = x
+            cmd.y = y
+            cmd.old_color = old_color
+            cmd.new_color = new_color
             cmd.affected_region = tuple(region)
+            cmd._fill_executed = fill_executed
             if old_data_list is not None:
                 # Reconstruct numpy array from list
-                x, y, w, h = cmd.affected_region
+                rx, ry, w, h = cmd.affected_region
                 cmd.old_data = np.array(old_data_list, dtype=np.uint8).reshape((h, w))
-            cmd.new_color = new_color
 
         return cmd
 

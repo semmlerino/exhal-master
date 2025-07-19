@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional
 
 # Security constants
 MAX_VRAM_SIZE = 65536  # 64KB - standard SNES VRAM size
@@ -12,48 +12,48 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for PNG files
 MAX_JSON_SIZE = 1 * 1024 * 1024    # 1MB for JSON files
 
 # Allowed file extensions
-VRAM_EXTENSIONS = {'.dmp', '.bin', '.vram'}
-CGRAM_EXTENSIONS = {'.dmp', '.bin', '.cgram', '.pal'}
-OAM_EXTENSIONS = {'.dmp', '.bin', '.oam'}
-IMAGE_EXTENSIONS = {'.png'}
-JSON_EXTENSIONS = {'.json'}
+VRAM_EXTENSIONS = {".dmp", ".bin", ".vram"}
+CGRAM_EXTENSIONS = {".dmp", ".bin", ".cgram", ".pal"}
+OAM_EXTENSIONS = {".dmp", ".bin", ".oam"}
+IMAGE_EXTENSIONS = {".png"}
+JSON_EXTENSIONS = {".json"}
 
 
-def validate_file_path(file_path: str, allowed_extensions: Optional[Set[str]] = None,
+def validate_file_path(file_path: str, allowed_extensions: Optional[set[str]] = None,
                       max_size: Optional[int] = None, base_dir: Optional[str] = None) -> tuple[bool, str]:
     """
     Validate a file path for security and constraints.
-    
+
     Args:
         file_path: Path to validate
         allowed_extensions: Set of allowed file extensions (with dots)
         max_size: Maximum allowed file size in bytes
         base_dir: If provided, ensure file is within this directory
-        
+
     Returns:
         Tuple of (is_valid, error_message)
     """
     try:
         path = Path(file_path).resolve()
-        
+
         # Check if file exists
         if not path.exists():
             return True, ""  # Non-existent files are OK, will be handled by caller
-            
+
         # Check if it's a file (not directory)
         if not path.is_file():
             return False, f"Path is not a file: {file_path}"
-        
+
         # Check extension if specified
         if allowed_extensions and path.suffix.lower() not in allowed_extensions:
             return False, f"Invalid file extension: {path.suffix}. Allowed: {allowed_extensions}"
-        
+
         # Check file size if specified
         if max_size is not None:
             file_size = path.stat().st_size
             if file_size > max_size:
                 return False, f"File too large: {file_size} bytes (max: {max_size})"
-        
+
         # Check if within base directory if specified
         if base_dir:
             base = Path(base_dir).resolve()
@@ -61,11 +61,11 @@ def validate_file_path(file_path: str, allowed_extensions: Optional[Set[str]] = 
                 path.relative_to(base)
             except ValueError:
                 return False, f"File is outside allowed directory: {base_dir}"
-        
+
         return True, ""
-        
+
     except Exception as e:
-        return False, f"Path validation error: {str(e)}"
+        return False, f"Path validation error: {e!s}"
 
 
 def validate_vram_file(file_path: str) -> tuple[bool, str]:
@@ -118,17 +118,17 @@ def sanitize_filename(filename: str) -> str:
     """
     # Remove directory separators
     filename = os.path.basename(filename)
-    
+
     # Remove potentially dangerous characters
     invalid_chars = '<>:"|?*\x00'
     for char in invalid_chars:
-        filename = filename.replace(char, '_')
-    
+        filename = filename.replace(char, "_")
+
     # Remove leading/trailing dots and spaces
-    filename = filename.strip('. ')
-    
+    filename = filename.strip(". ")
+
     # Ensure filename is not empty
     if not filename:
-        filename = 'unnamed'
-    
+        filename = "unnamed"
+
     return filename

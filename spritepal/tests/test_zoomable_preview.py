@@ -182,7 +182,7 @@ class TestPreviewPanel:
         """Test panel initialization"""
         assert panel._grayscale_image is None
         assert panel._colorized_image is None
-        assert hasattr(panel, 'colorizer')
+        assert hasattr(panel, "colorizer")
         assert panel.colorizer is not None
         assert panel.palette_toggle.isChecked() is False
         assert panel.palette_selector.isEnabled() is False
@@ -270,7 +270,7 @@ class TestPreviewPanel:
         """Test transparency for palette index 0"""
         # Create image with palette index 0
         test_image = Image.new("P", (4, 4), 0)
-        
+
         panel.set_palettes(test_palettes)
         result = panel.colorizer.apply_palette_to_image(test_image, test_palettes[8])
 
@@ -367,14 +367,14 @@ class TestPreviewPanel:
 
         # Should set focus
         panel.setFocus.assert_called_once()
-    
+
     def test_get_palettes_public_api(self, panel, test_palettes):
         """Test the public get_palettes API"""
         # Initially empty
         assert panel.get_palettes() == {}
-        
+
         # Set palettes
         panel.set_palettes(test_palettes)
-        
+
         # Should return the palettes
         assert panel.get_palettes() == test_palettes

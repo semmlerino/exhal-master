@@ -46,7 +46,7 @@ class TestSpriteExtractor:
 
     def test_load_vram(self, extractor, sample_vram_data):
         """Test loading VRAM data from file"""
-        with tempfile.NamedTemporaryFile(suffix='.dmp', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".dmp", delete=False) as f:
             f.write(sample_vram_data)
             f.flush()
 

@@ -375,7 +375,7 @@ class TestPaletteManager:
         def error_callback(msg):
             nonlocal error_called
             error_called = True
-            assert "Palette file not found" in msg
+            assert "File not found during load palette" in msg
 
         palette_manager.error_callback = error_callback
         worker = palette_manager.load_palette_file("/does/not/exist.pal")

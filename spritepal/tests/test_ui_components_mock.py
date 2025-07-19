@@ -144,7 +144,7 @@ class TestPreviewPanelLogic:
         # Initialize attributes
         panel._grayscale_image = None
         panel._colorized_image = None
-        
+
         # Mock colorizer
         panel.colorizer = Mock()
         panel.colorizer.set_palettes = Mock()
@@ -222,13 +222,13 @@ class TestPreviewPanelLogic:
 
         # Mock colorizer with apply_palette_to_image method
         panel.colorizer = Mock()
-        
+
         # Create test image and palette
         test_image = Image.new("L", (4, 4), 0)
         test_palette = [[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]] + [
             [0, 0, 0]
         ] * 12
-        
+
         # Create expected result
         expected_result = Image.new("RGBA", (4, 4))
         expected_pixels = expected_result.load()
@@ -236,7 +236,7 @@ class TestPreviewPanelLogic:
         for y in range(4):
             for x in range(4):
                 expected_pixels[x, y] = (0, 0, 0, 0)
-        
+
         panel.colorizer.apply_palette_to_image = Mock(return_value=expected_result)
 
         # Apply palette through colorizer
@@ -259,7 +259,7 @@ class TestPreviewPanelLogic:
         panel = PreviewPanel.__new__(PreviewPanel)
         panel._grayscale_image = Image.new("L", (32, 32), 128)
         panel._colorized_image = None
-        
+
         # Mock colorizer
         panel.colorizer = Mock()
         panel.colorizer.get_display_image = Mock(return_value=Image.new("RGBA", (32, 32)))
@@ -280,24 +280,24 @@ class TestPreviewPanelLogic:
         # Verify update_pixmap was called (not set_preview)
         panel.preview.update_pixmap.assert_called_once()
         assert not panel.preview.set_preview.called  # Should not reset view
-    
+
     def test_get_palettes_public_api(self):
         """Test the public get_palettes API"""
-        
+
         # Create a mock panel
         panel = PreviewPanel.__new__(PreviewPanel)
-        
+
         # Mock colorizer
         test_palettes = {8: [[255, 0, 0], [0, 255, 0]], 9: [[0, 0, 255], [255, 255, 0]]}
         panel.colorizer = Mock()
         panel.colorizer.get_palettes = Mock(return_value=test_palettes)
-        
+
         # Test get_palettes
         result = panel.get_palettes()
-        
+
         assert result == test_palettes
         panel.colorizer.get_palettes.assert_called_once()
-        
+
         # Test with no colorizer
         panel.colorizer = None
         result = panel.get_palettes()
@@ -309,43 +309,43 @@ class TestRowArrangementDialogLogic:
 
     def test_scroll_position_preserved_on_palette_toggle(self):
         """Test that scroll position is preserved when toggling palette application"""
-        
+
         # Import the dialog class
         from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
-        
+
         # Create a minimal test of the behavioral difference
         # We test that the new implementation calls the right methods, not the old ones
-        
+
         # Create dialog instance without calling __init__
         dialog = RowArrangementDialog.__new__(RowArrangementDialog)
-        
+
         # Mock the colorizer component
         dialog.colorizer = Mock()
         dialog.colorizer.toggle_palette_mode.return_value = True  # Palette enabled
         dialog.colorizer.get_selected_palette_index.return_value = 8
-        
+
         # Mock the methods that should be called by the new implementation
         dialog.setWindowTitle = Mock()
         dialog._update_status = Mock()
         dialog._update_existing_row_images = Mock()
         dialog._update_preview = Mock()
-        
+
         # Mock the methods that would be called by the old implementation (these should NOT be called)
         dialog._refresh_ui = Mock()
-        
+
         # Call toggle_palette_application
         dialog.toggle_palette_application()
-        
+
         # Verify the colorizer was toggled
         assert dialog.colorizer.toggle_palette_mode.called
-        
+
         # Verify that the new implementation methods were called
         assert dialog._update_existing_row_images.called
         assert dialog._update_preview.called
-        
+
         # Verify that the old implementation method was NOT called
         assert not dialog._refresh_ui.called
-        
+
         # Verify UI was updated with palette information
         assert dialog.setWindowTitle.called
         assert dialog._update_status.called

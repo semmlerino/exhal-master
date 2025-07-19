@@ -97,6 +97,11 @@ SpritePal is a PyQt6 application for extracting SNES sprites from memory dumps w
 - `COLORS_PER_PALETTE`: 16
 - `BYTES_PER_TILE`: 32 (4bpp format)
 
+### HAL Compression Tools
+- **Location**: Pre-built HAL tools (exhal/inhal) are available in `../archive/obsolete_test_images/ultrathink/`
+- **Status**: Tools are automatically discovered and working for ROM injection functionality
+- **Usage**: Integrated into SpritePal's ROM injection workflow for compressed sprite data
+
 ### Session Persistence
 Settings saved to `.spritepal_settings.json` include:
 - Last loaded file paths
