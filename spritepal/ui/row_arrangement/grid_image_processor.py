@@ -3,9 +3,10 @@ Grid-based image processing for flexible sprite extraction
 """
 
 import os
-from typing import Optional
 
 from PIL import Image
+
+from spritepal.utils.exceptions import TileError
 
 from .grid_arrangement_manager import TileGroup, TilePosition
 from .image_processor import RowImageProcessor
@@ -19,9 +20,11 @@ class GridImageProcessor(RowImageProcessor):
         self.tiles: dict[TilePosition, Image.Image] = {}
         self.grid_rows = 0
         self.grid_cols = 0
-        self.original_image: Optional[Image.Image] = None
+        self.original_image: Image.Image | None = None
 
-    def extract_tiles_as_grid(self, image: Image.Image, tiles_per_row: int) -> dict[TilePosition, Image.Image]:
+    def extract_tiles_as_grid(
+        self, image: Image.Image, tiles_per_row: int
+    ) -> dict[TilePosition, Image.Image]:
         """Extract individual tiles from sprite sheet into a grid structure
 
         Args:
@@ -47,7 +50,9 @@ class GridImageProcessor(RowImageProcessor):
 
         # Validate tile dimensions
         if self.tile_width <= 0 or self.tile_height <= 0:
-            raise ValueError(f"Invalid tile dimensions: {self.tile_width}x{self.tile_height}")
+            raise ValueError(
+                f"Invalid tile dimensions: {self.tile_width}x{self.tile_height}"
+            )
 
         self.tiles.clear()
 
@@ -57,7 +62,9 @@ class GridImageProcessor(RowImageProcessor):
 
         # Validate grid dimensions
         if self.grid_cols <= 0 or self.grid_rows <= 0:
-            raise ValueError(f"Invalid grid dimensions: {self.grid_cols}x{self.grid_rows}")
+            raise ValueError(
+                f"Invalid grid dimensions: {self.grid_cols}x{self.grid_rows}"
+            )
 
         # Extract each tile
         for row in range(self.grid_rows):
@@ -74,7 +81,7 @@ class GridImageProcessor(RowImageProcessor):
 
         return self.tiles
 
-    def get_tile(self, position: TilePosition) -> Optional[Image.Image]:
+    def get_tile(self, position: TilePosition) -> Image.Image | None:
         """Get a specific tile by position
 
         Args:
@@ -117,7 +124,9 @@ class GridImageProcessor(RowImageProcessor):
                 row_tiles.append((position, self.tiles[position]))
         return row_tiles
 
-    def get_tile_group(self, group: TileGroup) -> list[tuple[TilePosition, Image.Image]]:
+    def get_tile_group(
+        self, group: TileGroup
+    ) -> list[tuple[TilePosition, Image.Image]]:
         """Get all tiles in a group
 
         Args:
@@ -132,8 +141,11 @@ class GridImageProcessor(RowImageProcessor):
                 group_tiles.append((position, self.tiles[position]))
         return group_tiles
 
-    def create_image_from_tiles(self, tiles: list[tuple[TilePosition, Image.Image]],
-                               arrangement_width: Optional[int] = None) -> Image.Image:
+    def create_image_from_tiles(
+        self,
+        tiles: list[tuple[TilePosition, Image.Image]],
+        arrangement_width: int | None = None,
+    ) -> Image.Image:
         """Create a single image from a list of tiles
 
         Args:
@@ -170,7 +182,7 @@ class GridImageProcessor(RowImageProcessor):
 
         return output
 
-    def create_column_strip(self, col_index: int) -> Optional[Image.Image]:
+    def create_column_strip(self, col_index: int) -> Image.Image | None:
         """Create a vertical strip image from a column
 
         Args:
@@ -195,7 +207,7 @@ class GridImageProcessor(RowImageProcessor):
 
         return strip
 
-    def create_row_strip(self, row_index: int) -> Optional[Image.Image]:
+    def create_row_strip(self, row_index: int) -> Image.Image | None:
         """Create a horizontal strip image from a row
 
         Args:
@@ -220,7 +232,9 @@ class GridImageProcessor(RowImageProcessor):
 
         return strip
 
-    def create_group_image(self, group: TileGroup, preserve_layout: bool = True) -> Optional[Image.Image]:
+    def create_group_image(
+        self, group: TileGroup, preserve_layout: bool = True
+    ) -> Image.Image | None:
         """Create an image from a tile group
 
         Args:
@@ -259,7 +273,9 @@ class GridImageProcessor(RowImageProcessor):
 
         return output
 
-    def process_sprite_sheet_as_grid(self, sprite_path: str, tiles_per_row: int) -> tuple[Image.Image, dict[TilePosition, Image.Image]]:
+    def process_sprite_sheet_as_grid(
+        self, sprite_path: str, tiles_per_row: int
+    ) -> tuple[Image.Image, dict[TilePosition, Image.Image]]:
         """Complete sprite processing pipeline for grid-based extraction
 
         Args:
@@ -294,4 +310,4 @@ class GridImageProcessor(RowImageProcessor):
             # Clean up on error
             self.original_image = None
             self.tiles.clear()
-            raise Exception(f"Error processing sprite sheet: {e}") from e
+            raise TileError(f"Error processing sprite sheet: {e}") from e

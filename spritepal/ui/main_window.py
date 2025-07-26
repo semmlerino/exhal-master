@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtGui import QAction, QCloseEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -26,12 +26,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.core.controller import ExtractionController
+from spritepal.core.managers import get_session_manager
+from spritepal.ui.dialogs import UserErrorDialog
 from spritepal.ui.extraction_panel import ExtractionPanel
-from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
 from spritepal.ui.palette_preview import PalettePreviewWidget
+from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
 from spritepal.ui.zoomable_preview import PreviewPanel
-from spritepal.utils.settings_manager import get_settings_manager
 
 
 class MainWindow(QMainWindow):
@@ -48,17 +48,22 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._output_path = ""
         self._extracted_files: list[str] = []
-        self.settings = get_settings_manager()
+        self.session_manager = get_session_manager()
 
         self._setup_ui()
         self._create_menus()
         self._connect_signals()
 
-        # Create controller
+        # Create controller (lazy import to avoid circular dependency)
+        from spritepal.core.controller import ExtractionController  # noqa: PLC0415
         self.controller = ExtractionController(self)
 
         # Restore session after UI is set up
         self._restore_session()
+
+        # Update initial UI state
+        self._update_output_info_label()
+        self._on_extraction_mode_changed(self.extraction_panel.mode_combo.currentIndex())
 
     def _setup_ui(self) -> None:
         """Initialize the user interface"""
@@ -82,15 +87,18 @@ class MainWindow(QMainWindow):
 
         # Create tab widget for extraction methods
         self.extraction_tabs = QTabWidget()
-        
+
+        # ROM extraction tab (first tab, selected by default)
+        self.rom_extraction_panel = ROMExtractionPanel()
+        self.extraction_tabs.addTab(self.rom_extraction_panel, "ROM Extraction")
+
         # VRAM extraction tab
         self.extraction_panel = ExtractionPanel()
         self.extraction_tabs.addTab(self.extraction_panel, "VRAM Extraction")
-        
-        # ROM extraction tab
-        self.rom_extraction_panel = ROMExtractionPanel()
-        self.extraction_tabs.addTab(self.rom_extraction_panel, "ROM Extraction")
-        
+
+        # Add tab navigation shortcuts
+        self.extraction_tabs.setToolTip("Switch tabs with Ctrl+Tab/Ctrl+Shift+Tab")
+
         left_layout.addWidget(self.extraction_tabs)
 
         # Output settings group
@@ -123,6 +131,11 @@ class MainWindow(QMainWindow):
         )
         output_layout.addWidget(self.metadata_check)
 
+        # Output files info label
+        self.output_info_label = QLabel("Files to create: Loading...")
+        self.output_info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px 0;")
+        output_layout.addWidget(self.output_info_label)
+
         output_group.setLayout(output_layout)
         left_layout.addWidget(output_group)
 
@@ -133,7 +146,10 @@ class MainWindow(QMainWindow):
 
         self.extract_button = QPushButton("Extract for Editing")
         self.extract_button.setMinimumHeight(35)
-        self.extract_button.setStyleSheet("""
+        self.extract_button.setShortcut(QKeySequence("Ctrl+E"))
+        self.extract_button.setToolTip("Extract sprites for editing (Ctrl+E)")
+        self.extract_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #0078d4;
                 color: white;
@@ -150,13 +166,17 @@ class MainWindow(QMainWindow):
                 background-color: #555;
                 color: #999;
             }
-        """)
+        """
+        )
         button_layout.addWidget(self.extract_button, 0, 0)
 
         self.open_editor_button = QPushButton("Open in Editor")
         self.open_editor_button.setMinimumHeight(35)
         self.open_editor_button.setEnabled(False)
-        self.open_editor_button.setStyleSheet("""
+        self.open_editor_button.setShortcut(QKeySequence("Ctrl+O"))
+        self.open_editor_button.setToolTip("Open extracted sprites in pixel editor (Ctrl+O)")
+        self.open_editor_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #107c41;
                 color: white;
@@ -173,14 +193,17 @@ class MainWindow(QMainWindow):
                 background-color: #555;
                 color: #999;
             }
-        """)
+        """
+        )
         button_layout.addWidget(self.open_editor_button, 0, 1)
 
         self.arrange_rows_button = QPushButton("Arrange Rows")
         self.arrange_rows_button.setMinimumHeight(35)
         self.arrange_rows_button.setEnabled(False)
-        self.arrange_rows_button.setToolTip("Arrange sprite rows for easier editing")
-        self.arrange_rows_button.setStyleSheet("""
+        self.arrange_rows_button.setShortcut(QKeySequence("Ctrl+R"))
+        self.arrange_rows_button.setToolTip("Arrange sprite rows for easier editing (Ctrl+R)")
+        self.arrange_rows_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #c7672a;
                 color: white;
@@ -197,14 +220,19 @@ class MainWindow(QMainWindow):
                 background-color: #555;
                 color: #999;
             }
-        """)
+        """
+        )
         button_layout.addWidget(self.arrange_rows_button, 1, 0)
 
         self.arrange_grid_button = QPushButton("Grid Arrange")
         self.arrange_grid_button.setMinimumHeight(35)
         self.arrange_grid_button.setEnabled(False)
-        self.arrange_grid_button.setToolTip("Arrange sprites using flexible grid (rows/columns/tiles)")
-        self.arrange_grid_button.setStyleSheet("""
+        self.arrange_grid_button.setShortcut(QKeySequence("Ctrl+G"))
+        self.arrange_grid_button.setToolTip(
+            "Arrange sprites using flexible grid (rows/columns/tiles) (Ctrl+G)"
+        )
+        self.arrange_grid_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #2a67c7;
                 color: white;
@@ -221,14 +249,17 @@ class MainWindow(QMainWindow):
                 background-color: #555;
                 color: #999;
             }
-        """)
+        """
+        )
         button_layout.addWidget(self.arrange_grid_button, 1, 1)
 
         self.inject_button = QPushButton("Inject")
         self.inject_button.setMinimumHeight(35)
         self.inject_button.setEnabled(False)
-        self.inject_button.setToolTip("Inject edited sprite back into VRAM or ROM")
-        self.inject_button.setStyleSheet("""
+        self.inject_button.setShortcut(QKeySequence("Ctrl+I"))
+        self.inject_button.setToolTip("Inject edited sprite back into VRAM or ROM (Ctrl+I)")
+        self.inject_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #744da9;
                 color: white;
@@ -245,7 +276,8 @@ class MainWindow(QMainWindow):
                 background-color: #555;
                 color: #999;
             }
-        """)
+        """
+        )
         button_layout.addWidget(self.inject_button, 2, 0, 1, 2)  # Span both columns
 
         left_layout.addLayout(button_layout)
@@ -265,13 +297,17 @@ class MainWindow(QMainWindow):
         preview_layout = QVBoxLayout()
 
         self.sprite_preview = PreviewPanel()
-        preview_layout.addWidget(self.sprite_preview, 1)  # Give stretch factor to expand
+        preview_layout.addWidget(
+            self.sprite_preview, 1
+        )  # Give stretch factor to expand
 
         # Preview info
         self.preview_info = QLabel("No sprites loaded")
         self.preview_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_info.setStyleSheet("color: #999; padding: 5px;")
-        self.preview_info.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        self.preview_info.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
         preview_layout.addWidget(self.preview_info, 0)  # No stretch factor
 
         preview_group.setLayout(preview_layout)
@@ -317,6 +353,8 @@ class MainWindow(QMainWindow):
     def _create_menus(self) -> None:
         """Create application menus"""
         menubar = self.menuBar()
+        if not menubar:
+            return
 
         # File menu
         file_menu = menubar.addMenu("File")
@@ -325,23 +363,33 @@ class MainWindow(QMainWindow):
         new_action = QAction("New Extraction", self)
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(self._new_extraction)
-        file_menu.addAction(new_action)
-
-        file_menu.addSeparator()
+        if file_menu:
+            file_menu.addAction(new_action)
+            file_menu.addSeparator()
 
         # Exit
         exit_action = QAction("Exit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        if file_menu:
+            file_menu.addAction(exit_action)
 
         # Help menu
         help_menu = menubar.addMenu("Help")
 
+        # Keyboard shortcuts
+        shortcuts_action = QAction("Keyboard Shortcuts", self)
+        shortcuts_action.setShortcut("F1")
+        shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
+        if help_menu:
+            help_menu.addAction(shortcuts_action)
+            help_menu.addSeparator()
+
         # About
         about_action = QAction("About SpritePal", self)
         about_action.triggered.connect(self._show_about)
-        help_menu.addAction(about_action)
+        if help_menu:
+            help_menu.addAction(about_action)
 
     def _connect_signals(self) -> None:
         """Connect internal signals"""
@@ -354,13 +402,26 @@ class MainWindow(QMainWindow):
         # Connect extraction panel signals
         self.extraction_panel.files_changed.connect(self._on_files_changed)
         self.extraction_panel.extraction_ready.connect(self._on_vram_extraction_ready)
-        
+        self.extraction_panel.mode_changed.connect(self._on_extraction_mode_changed)
+
         # Connect ROM extraction panel signals
         self.rom_extraction_panel.files_changed.connect(self._on_rom_files_changed)
-        self.rom_extraction_panel.extraction_ready.connect(self._on_rom_extraction_ready)
-        
+        self.rom_extraction_panel.extraction_ready.connect(
+            self._on_rom_extraction_ready
+        )
+        self.rom_extraction_panel.output_name_changed.connect(
+            self._on_rom_output_name_changed
+        )
+
         # Connect tab change signal
         self.extraction_tabs.currentChanged.connect(self._on_extraction_tab_changed)
+
+        # Connect checkbox signals
+        self.grayscale_check.toggled.connect(lambda: self._update_output_info_label())
+        self.metadata_check.toggled.connect(lambda: self._update_output_info_label())
+
+        # Connect output name change to sync with ROM panel
+        self.output_name_edit.textChanged.connect(self._on_output_name_changed)
 
     def _on_files_changed(self) -> None:
         """Handle when input files change"""
@@ -385,42 +446,140 @@ class MainWindow(QMainWindow):
     def _on_vram_extraction_ready(self, ready: bool) -> None:
         """Handle VRAM extraction ready state change"""
         # Only enable if VRAM tab is active
-        if self.extraction_tabs.currentIndex() == 0:
+        if self.extraction_tabs.currentIndex() == 1:
             self.extract_button.setEnabled(ready)
-            
+
+    def _on_extraction_mode_changed(self, mode_index: int) -> None:
+        """Handle extraction mode change"""
+        # Update checkboxes based on mode
+        is_grayscale_mode = mode_index == 1
+
+        # Disable palette-related options in grayscale mode
+        self.grayscale_check.setEnabled(not is_grayscale_mode)
+        self.metadata_check.setEnabled(not is_grayscale_mode)
+
+        # Update tooltips to explain why they're disabled
+        if is_grayscale_mode:
+            self.grayscale_check.setToolTip(
+                "Not applicable in Grayscale Only mode - no palette files will be created"
+            )
+            self.metadata_check.setToolTip(
+                "Not applicable in Grayscale Only mode - no metadata file will be created"
+            )
+        else:
+            self.grayscale_check.setToolTip(
+                "Extract sprites in grayscale with separate .pal.json files"
+            )
+            self.metadata_check.setToolTip(
+                "Create .metadata.json file for easy palette switching in editor"
+            )
+
+        # Update output info label
+        self._update_output_info_label()
+
+    def _update_output_info_label(self) -> None:
+        """Update the label showing which files will be created"""
+        # Check if we're in VRAM extraction tab
+        if self.extraction_tabs.currentIndex() != 1:
+            return
+
+        is_grayscale_mode = self.extraction_panel.is_grayscale_mode()
+
+        if is_grayscale_mode:
+            self.output_info_label.setText("Files to create: grayscale PNG only")
+        else:
+            files = ["PNG"]
+            if self.grayscale_check.isChecked():
+                files.append("8 palette files (.pal.json)")
+            if self.metadata_check.isChecked():
+                files.append("metadata.json")
+
+            self.output_info_label.setText(f"Files to create: {', '.join(files)}")
+
     def _on_rom_extraction_ready(self, ready: bool) -> None:
         """Handle ROM extraction ready state change"""
         # Only enable if ROM tab is active
-        if self.extraction_tabs.currentIndex() == 1:
+        if self.extraction_tabs.currentIndex() == 0:
             self.extract_button.setEnabled(ready)
-            
+
     def _on_rom_files_changed(self) -> None:
         """Handle when ROM extraction files change"""
         # ROM extraction handles its own output naming
-        pass
-        
+
+    def _on_output_name_changed(self, text: str) -> None:
+        """Handle output name change to sync with active panel"""
+        # If ROM extraction tab is active, update its output name
+        if self.extraction_tabs.currentIndex() == 0:
+            # Temporarily disconnect to avoid infinite loop
+            self.rom_extraction_panel.output_name_changed.disconnect()
+            self.rom_extraction_panel.output_name_widget.set_output_name(text)
+            self.rom_extraction_panel.output_name_changed.connect(
+                self._on_rom_output_name_changed
+            )
+
+    def _on_rom_output_name_changed(self, text: str) -> None:
+        """Handle ROM panel output name change"""
+        # Update main output field without triggering sync back
+        self.output_name_edit.textChanged.disconnect()
+        self.output_name_edit.setText(text)
+        self.output_name_edit.textChanged.connect(self._on_output_name_changed)
+
     def _on_extraction_tab_changed(self, index: int) -> None:
         """Handle tab change between VRAM and ROM extraction"""
         if index == 0:
-            # VRAM extraction tab
-            ready = self.extraction_panel.has_vram() and self.extraction_panel.has_cgram()
-            self.extract_button.setEnabled(ready)
-            # Show output settings for VRAM
-            self.output_name_edit.setVisible(True)
-            self.browse_button.setVisible(True)
-        else:
             # ROM extraction tab
             params = self.rom_extraction_panel.get_extraction_params()
             self.extract_button.setEnabled(params is not None)
-            # Hide output settings for ROM (it has its own)
-            self.output_name_edit.setVisible(False)
-            self.browse_button.setVisible(False)
+
+            # Sync output name from ROM panel to main output field
+            if params and params.get("output_base"):
+                self.output_name_edit.setText(params["output_base"])
+
+            # Update output info label for ROM mode
+            self.output_info_label.setText("Files to create: PNG, palette files (.pal.json), metadata.json")
+
+            # Keep output settings visible but update label
+            parent = self.output_name_edit.parent()
+            if parent:
+                output_group = parent.parent()
+                if output_group and isinstance(output_group, QGroupBox):
+                    output_group.setTitle("Output Settings (Shared)")
+        else:
+            # VRAM extraction tab
+            # Check extraction readiness based on mode
+            if self.extraction_panel.is_grayscale_mode():
+                ready = self.extraction_panel.has_vram()
+            else:
+                ready = (
+                    self.extraction_panel.has_vram() and self.extraction_panel.has_cgram()
+                )
+            self.extract_button.setEnabled(ready)
+
+            # Update output info label
+            self._update_output_info_label()
+
+            # Update checkbox states based on mode
+            self._on_extraction_mode_changed(self.extraction_panel.mode_combo.currentIndex())
+
+            # Reset group title
+            parent = self.output_name_edit.parent()
+            if parent:
+                output_group = parent.parent()
+                if output_group and isinstance(output_group, QGroupBox):
+                    output_group.setTitle("Output Settings")
 
     def _browse_output(self) -> None:
         """Browse for output location"""
-        # Use the default directory for output as well
-        default_dir = self.settings.get_default_directory()
-        suggested_path = str(Path(default_dir) / (self.output_name_edit.text() + ".png"))
+        # Get current directory from session
+        current_files = self.extraction_panel.get_session_data()
+        if current_files.get("vram_path"):
+            default_dir = str(Path(current_files["vram_path"]).parent)
+        else:
+            default_dir = str(Path.cwd())
+
+        suggested_path = str(
+            Path(default_dir) / (self.output_name_edit.text() + ".png")
+        )
 
         filename, _ = QFileDialog.getSaveFileName(
             self,
@@ -434,36 +593,36 @@ class MainWindow(QMainWindow):
             base_name = Path(filename).stem
             self.output_name_edit.setText(base_name)
 
-            # Update last used directory
-            self.settings.set_last_used_directory(str(Path(filename).parent))
-
     def _on_extract_clicked(self) -> None:
         """Handle extract button click"""
+        # Validate output name first (for both modes)
+        if not self.output_name_edit.text():
+            QMessageBox.warning(
+                self,
+                "Output Name Required",
+                "Please enter a name for the output files.",
+            )
+            return
+
         # Check which tab is active
         if self.extraction_tabs.currentIndex() == 0:
+            # ROM extraction
+            params = self.rom_extraction_panel.get_extraction_params()
+            if params:
+                # Use the shared output name
+                params["output_base"] = self.output_name_edit.text()
+                self._output_path = params["output_base"]
+                self.status_bar.showMessage("Extracting sprites from ROM...")
+                self.extract_button.setEnabled(False)
+                self.controller.start_rom_extraction(params)
+        else:
             # VRAM extraction
-            if not self.output_name_edit.text():
-                QMessageBox.warning(
-                    self,
-                    "Output Name Required",
-                    "Please enter a name for the output files.",
-                )
-                return
-
             self._output_path = self.output_name_edit.text()
             self.status_bar.showMessage("Extracting sprites from VRAM...")
             self.extract_button.setEnabled(False)
 
             # Emit signal for controller to handle extraction
             self.extract_requested.emit()
-        else:
-            # ROM extraction
-            params = self.rom_extraction_panel.get_extraction_params()
-            if params:
-                self._output_path = params["output_base"]
-                self.status_bar.showMessage("Extracting sprites from ROM...")
-                self.extract_button.setEnabled(False)
-                self.controller.start_rom_extraction(params)
 
     def _on_open_editor_clicked(self) -> None:
         """Handle open in editor button click"""
@@ -504,7 +663,7 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Ready to extract sprites")
 
         # Clear session data
-        self.settings.clear_session()
+        self.session_manager.clear_session()
 
     def _show_about(self) -> None:
         """Show about dialog"""
@@ -519,16 +678,63 @@ class MainWindow(QMainWindow):
             "<p>Part of the Kirby Super Star sprite editing toolkit.</p>",
         )
 
+    def _show_keyboard_shortcuts(self) -> None:
+        """Show keyboard shortcuts dialog"""
+        shortcuts_text = """
+        <h3>Main Actions</h3>
+        <table>
+        <tr><td><b>Ctrl+E / F5</b></td><td>Extract sprites</td></tr>
+        <tr><td><b>Ctrl+O</b></td><td>Open in editor</td></tr>
+        <tr><td><b>Ctrl+R</b></td><td>Arrange rows</td></tr>
+        <tr><td><b>Ctrl+G</b></td><td>Grid arrange</td></tr>
+        <tr><td><b>Ctrl+I</b></td><td>Inject sprites</td></tr>
+        <tr><td><b>Ctrl+N</b></td><td>New extraction</td></tr>
+        <tr><td><b>Ctrl+Q</b></td><td>Exit application</td></tr>
+        </table>
+
+        <h3>Navigation</h3>
+        <table>
+        <tr><td><b>Ctrl+Tab</b></td><td>Next tab</td></tr>
+        <tr><td><b>Ctrl+Shift+Tab</b></td><td>Previous tab</td></tr>
+        <tr><td><b>Alt+N</b></td><td>Focus output name field</td></tr>
+        <tr><td><b>F1</b></td><td>Show this help</td></tr>
+        </table>
+
+        <h3>ROM Manual Offset Mode</h3>
+        <table>
+        <tr><td><b>Alt+Left</b></td><td>Find previous sprite</td></tr>
+        <tr><td><b>Alt+Right</b></td><td>Find next sprite</td></tr>
+        <tr><td><b>Page Up</b></td><td>Jump backward 64KB</td></tr>
+        <tr><td><b>Page Down</b></td><td>Jump forward 64KB</td></tr>
+        </table>
+
+        <h3>Preview Window</h3>
+        <table>
+        <tr><td><b>G</b></td><td>Toggle grid</td></tr>
+        <tr><td><b>F</b></td><td>Zoom to fit</td></tr>
+        <tr><td><b>Ctrl+0</b></td><td>Reset zoom to 4x</td></tr>
+        <tr><td><b>C</b></td><td>Toggle palette</td></tr>
+        <tr><td><b>Mouse Wheel</b></td><td>Zoom in/out</td></tr>
+        </table>
+        """
+
+        QMessageBox.information(
+            self,
+            "Keyboard Shortcuts",
+            shortcuts_text
+        )
+
     def get_extraction_params(self) -> dict[str, Any]:
         """Get extraction parameters from UI"""
         return {
             "vram_path": self.extraction_panel.get_vram_path(),
-            "cgram_path": self.extraction_panel.get_cgram_path(),
+            "cgram_path": self.extraction_panel.get_cgram_path() if not self.extraction_panel.is_grayscale_mode() else "",
             "oam_path": self.extraction_panel.get_oam_path(),
             "vram_offset": self.extraction_panel.get_vram_offset(),
             "output_base": self._output_path,
             "create_grayscale": self.grayscale_check.isChecked(),
             "create_metadata": self.metadata_check.isChecked(),
+            "grayscale_mode": self.extraction_panel.is_grayscale_mode(),
         }
 
     def extraction_complete(self, extracted_files: list[str]) -> None:
@@ -552,19 +758,34 @@ class MainWindow(QMainWindow):
         """Called when extraction fails"""
         self.extract_button.setEnabled(True)
         self.status_bar.showMessage("Extraction failed")
-        QMessageBox.critical(
-            self, "Extraction Failed", f"Failed to extract sprites:\n\n{error_message}"
+
+        UserErrorDialog.show_error(
+            self,
+            error_message,
+            error_message  # Pass full error as technical details
         )
 
     def _restore_session(self) -> None:
         """Restore the previous session"""
-        if self.settings.has_valid_session():
+        # Validate file paths
+        session_data = self.session_manager.get_session_data()
+        validated_paths = {}
+
+        for key in ["vram_path", "cgram_path", "oam_path"]:
+            path = session_data.get(key, "")
+            if path and Path(path).exists():
+                validated_paths[key] = path
+            else:
+                validated_paths[key] = ""
+
+        # Check if there's a valid session to restore
+        has_valid_session = bool(validated_paths.get("vram_path") or validated_paths.get("cgram_path"))
+
+        if has_valid_session:
             # Restore file paths
-            validated_paths = self.settings.validate_file_paths()
             self.extraction_panel.restore_session_files(validated_paths)
 
             # Restore output settings
-            session_data = self.settings.get_session_data()
             if session_data.get("output_name"):
                 self.output_name_edit.setText(session_data["output_name"])
 
@@ -572,12 +793,12 @@ class MainWindow(QMainWindow):
             self.metadata_check.setChecked(session_data.get("create_metadata", True))
 
             # Restore window size/position
-            ui_data = self.settings.get_ui_data()
-            if ui_data.get("window_width", 0) > 0:
-                self.resize(ui_data["window_width"], ui_data["window_height"])
+            window_geometry = self.session_manager.get_window_geometry()
+            if window_geometry["width"] > 0:
+                self.resize(window_geometry["width"], window_geometry["height"])
 
-            if ui_data.get("window_x", -1) >= 0:
-                self.move(ui_data["window_x"], ui_data["window_y"])
+            if window_geometry["x"] >= 0:
+                self.move(window_geometry["x"], window_geometry["y"])
 
             self.status_bar.showMessage("Previous session restored")
 
@@ -596,18 +817,59 @@ class MainWindow(QMainWindow):
         )
 
         # Save session data
-        self.settings.save_session_data(session_data)
+        self.session_manager.update_session_data(session_data)
 
         # Save UI settings
-        ui_data = {
-            "window_width": self.width(),
-            "window_height": self.height(),
-            "window_x": self.x(),
-            "window_y": self.y(),
+        window_geometry = {
+            "width": self.width(),
+            "height": self.height(),
+            "x": self.x(),
+            "y": self.y(),
         }
-        self.settings.save_ui_data(ui_data)
+        self.session_manager.update_window_state(window_geometry)
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+        # Save the session to disk
+        self.session_manager.save_session()
+
+    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
         """Handle window close event"""
         self._save_session()
-        super().closeEvent(event)
+        if a0:
+            super().closeEvent(a0)
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        """Handle keyboard shortcuts"""
+        # Tab navigation
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            if event.key() == Qt.Key.Key_Tab:
+                # Ctrl+Tab: Next tab
+                current = self.extraction_tabs.currentIndex()
+                next_tab = (current + 1) % self.extraction_tabs.count()
+                self.extraction_tabs.setCurrentIndex(next_tab)
+                event.accept()
+                return
+        elif event.modifiers() == (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+            if event.key() == Qt.Key.Key_Backtab:
+                # Ctrl+Shift+Tab: Previous tab
+                current = self.extraction_tabs.currentIndex()
+                prev_tab = (current - 1) % self.extraction_tabs.count()
+                self.extraction_tabs.setCurrentIndex(prev_tab)
+                event.accept()
+                return
+
+        # F5 as alternative to Extract
+        if event.key() == Qt.Key.Key_F5 and self.extract_button.isEnabled():
+            self._on_extract_clicked()
+            event.accept()
+            return
+
+        # Focus shortcuts
+        if event.modifiers() == Qt.KeyboardModifier.AltModifier:
+            if event.key() == Qt.Key.Key_N:
+                # Alt+N: Focus output name field
+                self.output_name_edit.setFocus()
+                self.output_name_edit.selectAll()
+                event.accept()
+                return
+
+        super().keyPressEvent(event)

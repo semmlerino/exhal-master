@@ -2,8 +2,9 @@
 Image processing for sprite row extraction
 """
 
-
 from PIL import Image
+
+from spritepal.utils.exceptions import FileFormatError
 
 
 class RowImageProcessor:
@@ -40,9 +41,11 @@ class RowImageProcessor:
             return image
 
         except Exception as e:
-            raise Exception(f"Error loading sprite: {e}") from e
+            raise FileFormatError(f"Error loading sprite: {e}") from e
 
-    def calculate_tile_dimensions(self, image: Image.Image, tiles_per_row: int) -> tuple[int, int]:
+    def calculate_tile_dimensions(
+        self, image: Image.Image, tiles_per_row: int
+    ) -> tuple[int, int]:
         """Calculate tile dimensions based on image width and tiles per row
 
         Args:
@@ -91,15 +94,19 @@ class RowImageProcessor:
             # Crop row
             row_image = image.crop((0, y_start, image_width, y_end))
 
-            tile_rows.append({
-                "index": row_idx,
-                "image": row_image,
-                "tiles": image_width // self.tile_width,
-            })
+            tile_rows.append(
+                {
+                    "index": row_idx,
+                    "image": row_image,
+                    "tiles": image_width // self.tile_width,
+                }
+            )
 
         return tile_rows
 
-    def process_sprite_sheet(self, sprite_path: str, tiles_per_row: int) -> tuple[Image.Image, list[dict]]:
+    def process_sprite_sheet(
+        self, sprite_path: str, tiles_per_row: int
+    ) -> tuple[Image.Image, list[dict]]:
         """Complete sprite processing pipeline
 
         Args:
