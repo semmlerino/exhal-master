@@ -2,21 +2,25 @@
 Row-related widgets for SpritePal row arrangement dialog
 """
 
-import io
-from typing import Optional
 
 from PIL import Image
 from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QDrag, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QDrag, QPainter, QPen
 from PyQt6.QtWidgets import QListWidget, QWidget
+
+from spritepal.utils.image_utils import pil_to_qpixmap
 
 
 class RowPreviewWidget(QWidget):
     """Enhanced widget displaying a thumbnail preview of a sprite row"""
 
     def __init__(
-        self, row_index: int, row_image: Image.Image, tiles_per_row: int,
-        is_selected: bool = False, parent: Optional[QWidget] = None
+        self,
+        row_index: int,
+        row_image: Image.Image,
+        tiles_per_row: int,
+        is_selected: bool = False,
+        parent: QWidget | None = None,
     ):
         super().__init__(parent)
         self.row_index = row_index
@@ -33,7 +37,7 @@ class RowPreviewWidget(QWidget):
         self.row_image = new_image
         self.update()
 
-    def paintEvent(self, event) -> None:  # noqa: N802
+    def paintEvent(self, a0) -> None:  # noqa: N802
         """Paint the row thumbnail with enhanced visuals"""
         painter = QPainter(self)
 
@@ -47,7 +51,9 @@ class RowPreviewWidget(QWidget):
 
         # Draw prominent selection border
         if self.is_selected:
-            painter.setPen(QPen(QColor(70, 140, 200), 4))  # Thicker blue selection border
+            painter.setPen(
+                QPen(QColor(70, 140, 200), 4)
+            )  # Thicker blue selection border
             painter.drawRect(self.rect().adjusted(1, 1, -2, -2))
         elif self.is_hovered:
             painter.setPen(QPen(QColor(100, 100, 100), 2))  # More visible hover border
@@ -101,21 +107,17 @@ class RowPreviewWidget(QWidget):
                 # For other modes, convert to grayscale
                 scaled_image = scaled_image.convert("L")
 
-            # Convert to QPixmap using BytesIO to avoid stride issues
-            buffer = io.BytesIO()
-            scaled_image.save(buffer, format="PNG")
-            buffer.seek(0)
+            # Convert to QPixmap using enhanced utility function
+            pixmap = pil_to_qpixmap(scaled_image)
 
-            pixmap = QPixmap()
-            pixmap.loadFromData(buffer.read())
+            if pixmap:
+                # Draw scaled thumbnail centered in the well
+                draw_x = image_well_rect.x() + 1
+                draw_y = image_well_rect.y() + 1
+                painter.drawPixmap(draw_x, draw_y, pixmap)
 
-            # Draw scaled thumbnail centered in the well
-            draw_x = image_well_rect.x() + 1
-            draw_y = image_well_rect.y() + 1
-            painter.drawPixmap(draw_x, draw_y, pixmap)
-
-            # Update image end position for label placement
-            image_end_x = draw_x + pixmap.width() + 10
+                # Update image end position for label placement
+                image_end_x = draw_x + pixmap.width() + 10
 
         # Draw row label with better formatting
         painter.setPen(QColor(220, 220, 220))
@@ -144,7 +146,7 @@ class RowPreviewWidget(QWidget):
         self.is_hovered = True
         self.update()
 
-    def leaveEvent(self, event) -> None:  # noqa: N802
+    def leaveEvent(self, a0) -> None:  # noqa: N802
         """Handle mouse leave"""
         self.is_hovered = False
         self.update()
@@ -169,46 +171,54 @@ class DragDropListWidget(QListWidget):
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
 
-    def dragEnterEvent(self, event) -> None:  # noqa: N802
+    def dragEnterEvent(self, e) -> None:  # noqa: N802
         """Handle drag enter"""
-        if event.mimeData().hasText() and self.accept_external_drops:
-            event.acceptProposedAction()
-        else:
-            super().dragEnterEvent(event)
+        if e:
+            mime_data = e.mimeData()
+            if mime_data and mime_data.hasText() and self.accept_external_drops:
+                e.acceptProposedAction()
+            else:
+                super().dragEnterEvent(e)
 
-    def dragMoveEvent(self, event) -> None:  # noqa: N802
+    def dragMoveEvent(self, e) -> None:  # noqa: N802
         """Handle drag move"""
-        if event.mimeData().hasText() and self.accept_external_drops:
-            event.acceptProposedAction()
-        else:
-            super().dragMoveEvent(event)
+        if e:
+            mime_data = e.mimeData()
+            if mime_data and mime_data.hasText() and self.accept_external_drops:
+                e.acceptProposedAction()
+            else:
+                super().dragMoveEvent(e)
 
     def dropEvent(self, event) -> None:  # noqa: N802
         """Handle drop events"""
-        if event.mimeData().hasText() and self.accept_external_drops:
-            # Handle external drop
-            try:
-                row_index = int(event.mimeData().text())
-                self.external_drop.emit(row_index)
-                event.acceptProposedAction()
-            except ValueError:
-                pass
-        else:
-            # Handle internal reordering
-            super().dropEvent(event)
-            self.item_dropped.emit(0, 0)  # Signal for refresh
+        if event:
+            mime_data = event.mimeData()
+            if mime_data and mime_data.hasText() and self.accept_external_drops:
+                # Handle external drop
+                try:
+                    text = mime_data.text()
+                    if text:
+                        row_index = int(text)
+                        self.external_drop.emit(row_index)
+                        event.acceptProposedAction()
+                except ValueError:
+                    pass
+            else:
+                # Handle internal reordering
+                super().dropEvent(event)
+                self.item_dropped.emit(0, 0)  # Signal for refresh
 
-    def startDrag(self, supportedActions) -> None:  # noqa: N802
+    def startDrag(self, supported_actions) -> None:  # noqa: N802
         """Start drag operation"""
         item = self.currentItem()
         if item:
             drag = QDrag(self)
-            mimeData = QMimeData()
+            mime_data = QMimeData()
 
             # Store the row index for external drops
             row_data = item.data(Qt.ItemDataRole.UserRole)
             if row_data is not None:
-                mimeData.setText(str(row_data))
+                mime_data.setText(str(row_data))
 
-            drag.setMimeData(mimeData)
+            drag.setMimeData(mime_data)
             drag.exec(Qt.DropAction.MoveAction)

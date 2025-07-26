@@ -5,7 +5,7 @@ Settings manager for SpritePal application
 import json
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class SettingsManager:
@@ -70,7 +70,7 @@ class SettingsManager:
                 json.dump(self._settings, f, indent=2)
         except OSError as e:
             print(f"Warning: Could not save settings: {e}")
-    
+
     def save(self) -> None:
         """Save settings to file (alias for save_settings)"""
         self.save_settings()
@@ -78,7 +78,7 @@ class SettingsManager:
     def get(self, category: str, key: str, default: Any = None) -> Any:
         """Get a setting value"""
         return self._settings.get(category, {}).get(key, default)
-    
+
     def get_value(self, category: str, key: str, default: Any = None) -> Any:
         """Get a setting value (alias for get method)"""
         return self.get(category, key, default)
@@ -88,7 +88,7 @@ class SettingsManager:
         if category not in self._settings:
             self._settings[category] = {}
         self._settings[category][key] = value
-    
+
     def set_value(self, category: str, key: str, value: Any) -> None:
         """Set a setting value (alias for set method)"""
         self.set(category, key, value)
@@ -152,7 +152,13 @@ class SettingsManager:
             return last_used
 
         # Fall back to default dumps directory
-        default_dir = str(self.get("paths", "default_dumps_dir", r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger"))
+        default_dir = str(
+            self.get(
+                "paths",
+                "default_dumps_dir",
+                r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger",
+            )
+        )
         if default_dir and os.path.exists(default_dir):
             return default_dir
 
@@ -166,13 +172,8 @@ class SettingsManager:
             self.save_settings()
 
 
-# Global settings instance
-_settings_instance: Optional[SettingsManager] = None
-
-
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance"""
-    global _settings_instance
-    if _settings_instance is None:
-        _settings_instance = SettingsManager()
-    return _settings_instance
+    if not hasattr(get_settings_manager, '_instance'):
+        get_settings_manager._instance = SettingsManager()
+    return get_settings_manager._instance
