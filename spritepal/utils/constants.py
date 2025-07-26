@@ -54,7 +54,7 @@ SETTINGS_NS_INJECTION = "injection"  # Legacy namespace - to be removed
 
 # Session settings keys
 SETTINGS_KEY_VRAM_PATH = "vram_path"
-SETTINGS_KEY_CGRAM_PATH = "cgram_path" 
+SETTINGS_KEY_CGRAM_PATH = "cgram_path"
 SETTINGS_KEY_OAM_PATH = "oam_path"
 SETTINGS_KEY_OUTPUT_BASE = "output_base"
 SETTINGS_KEY_CREATE_GRAYSCALE = "create_grayscale"

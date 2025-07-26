@@ -5,7 +5,6 @@ Flexible sprite arrangement supporting rows, columns, and custom tile groups
 
 import os
 from enum import Enum
-from typing import Optional
 
 from PIL import Image
 from PyQt6.QtCore import QPointF, Qt, pyqtSignal
@@ -21,6 +20,7 @@ from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
     QDialogButtonBox,
+    QGraphicsLineItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsView,
@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -49,6 +50,7 @@ from .row_arrangement.grid_preview_generator import GridPreviewGenerator
 
 class SelectionMode(Enum):
     """Selection modes for grid interaction"""
+
     TILE = "tile"
     ROW = "row"
     COLUMN = "column"
@@ -73,7 +75,7 @@ class GridGraphicsView(QGraphicsView):
 
         self.selection_mode = SelectionMode.TILE
         self.selecting = False
-        self.selection_start: Optional[TilePosition] = None
+        self.selection_start: TilePosition | None = None
         self.current_selection: set[TilePosition] = set()
 
         # Zoom and pan state
@@ -84,9 +86,9 @@ class GridGraphicsView(QGraphicsView):
         self.last_pan_point = None
 
         # Visual elements
-        self.grid_lines: list[QGraphicsRectItem] = []
+        self.grid_lines: list[QGraphicsLineItem] = []
         self.selection_rects: dict[TilePosition, QGraphicsRectItem] = {}
-        self.hover_rect: Optional[QGraphicsRectItem] = None
+        self.hover_rect: QGraphicsRectItem | None = None
 
         # Colors
         self.grid_color = QColor(128, 128, 128, 64)
@@ -103,7 +105,9 @@ class GridGraphicsView(QGraphicsView):
         self.setMouseTracking(True)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
-    def set_grid_dimensions(self, cols: int, rows: int, tile_width: int, tile_height: int):
+    def set_grid_dimensions(
+        self, cols: int, rows: int, tile_width: int, tile_height: int
+    ):
         """Set the grid dimensions"""
         self.grid_cols = cols
         self.grid_rows = rows
@@ -119,24 +123,30 @@ class GridGraphicsView(QGraphicsView):
     def clear_selection(self):
         """Clear current selection"""
         self.current_selection.clear()
-        for rect in self.selection_rects.values():
-            self.scene().removeItem(rect)
+        scene = self.scene()
+        if scene:
+            for rect in self.selection_rects.values():
+                scene.removeItem(rect)
         self.selection_rects.clear()
 
-    def highlight_arranged_tiles(self, tiles: list[TilePosition], color: Optional[QColor] = None):
+    def highlight_arranged_tiles(
+        self, tiles: list[TilePosition], color: QColor | None = None
+    ):
         """Highlight arranged tiles"""
         if color is None:
             color = self.arranged_color
 
-        for tile_pos in tiles:
-            if tile_pos not in self.selection_rects:
-                rect = self._create_tile_rect(tile_pos, color)
-                self.scene().addItem(rect)
-                self.selection_rects[tile_pos] = rect
+        scene = self.scene()
+        if scene:
+            for tile_pos in tiles:
+                if tile_pos not in self.selection_rects:
+                    rect = self._create_tile_rect(tile_pos, color)
+                    scene.addItem(rect)
+                    self.selection_rects[tile_pos] = rect
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # noqa: N802
         """Handle mouse press"""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event and event.button() == Qt.MouseButton.LeftButton:
             # Check if we should pan instead of select
             if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
                 self.is_panning = True
@@ -161,7 +171,7 @@ class GridGraphicsView(QGraphicsView):
                         self.current_selection = {tile_pos}
 
                     self._update_selection_display()
-        elif event.button() == Qt.MouseButton.MiddleButton:
+        elif event and event.button() == Qt.MouseButton.MiddleButton:
             # Middle mouse button for panning
             self.is_panning = True
             self.last_pan_point = event.pos()
@@ -169,15 +179,19 @@ class GridGraphicsView(QGraphicsView):
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # noqa: N802
         """Handle mouse move"""
-        if self.is_panning and self.last_pan_point:
+        if event and self.is_panning and self.last_pan_point is not None:
             # Pan the view
             delta = event.pos() - self.last_pan_point
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+            h_bar = self.horizontalScrollBar()
+            v_bar = self.verticalScrollBar()
+            if h_bar:
+                h_bar.setValue(h_bar.value() - delta.x())
+            if v_bar:
+                v_bar.setValue(v_bar.value() - delta.y())
             self.last_pan_point = event.pos()
-        else:
+        elif event:
             pos = self.mapToScene(event.pos())
             tile_pos = self._pos_to_tile(pos)
 
@@ -186,15 +200,15 @@ class GridGraphicsView(QGraphicsView):
                 self._update_hover(tile_pos)
 
             # Update rectangle selection
-            if self.selecting and self.selection_mode == SelectionMode.RECTANGLE:
-                if tile_pos and self._is_valid_tile(tile_pos) and self.selection_start:
-                    self._update_rectangle_selection(self.selection_start, tile_pos)
+            if (self.selecting and self.selection_mode == SelectionMode.RECTANGLE and
+                tile_pos and self._is_valid_tile(tile_pos) and self.selection_start):
+                self._update_rectangle_selection(self.selection_start, tile_pos)
 
         super().mouseMoveEvent(event)
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event):  # noqa: N802
         """Handle mouse wheel for zooming"""
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        if event and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Zoom with Ctrl+Wheel
             zoom_factor = 1.15 if event.angleDelta().y() > 0 else 1.0 / 1.15
             self._zoom_at_point(event.position().toPoint(), zoom_factor)
@@ -202,18 +216,27 @@ class GridGraphicsView(QGraphicsView):
             # Default scroll behavior
             super().wheelEvent(event)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event):  # noqa: N802
         """Handle keyboard shortcuts for zoom"""
-        if event.key() == Qt.Key.Key_F:
+        if event and event.key() == Qt.Key.Key_F:
             # F: Zoom to fit
             self.zoom_to_fit()
-        elif event.key() == Qt.Key.Key_0 and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif event and (
+            event.key() == Qt.Key.Key_0
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             # Ctrl+0: Reset zoom
             self.reset_zoom()
-        elif event.key() == Qt.Key.Key_Plus and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif event and (
+            event.key() == Qt.Key.Key_Plus
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             # Ctrl++: Zoom in
             self.zoom_in()
-        elif event.key() == Qt.Key.Key_Minus and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        elif event and (
+            event.key() == Qt.Key.Key_Minus
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
             # Ctrl+-: Zoom out
             self.zoom_out()
         else:
@@ -240,21 +263,29 @@ class GridGraphicsView(QGraphicsView):
             # Adjust view to keep the point under cursor
             new_viewport_pos = self.mapFromScene(scene_pos)
             delta = point_as_qpoint - new_viewport_pos
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+            h_bar = self.horizontalScrollBar()
+            v_bar = self.verticalScrollBar()
+            if h_bar:
+                h_bar.setValue(h_bar.value() - delta.x())
+            if v_bar:
+                v_bar.setValue(v_bar.value() - delta.y())
 
             # Emit zoom change signal
             self.zoom_changed.emit(self.zoom_level)
 
     def zoom_in(self):
         """Zoom in by a fixed factor"""
-        center = self.viewport().rect().center()
-        self._zoom_at_point(center, 1.25)
+        viewport = self.viewport()
+        if viewport:
+            center = viewport.rect().center()
+            self._zoom_at_point(center, 1.25)
 
     def zoom_out(self):
         """Zoom out by a fixed factor"""
-        center = self.viewport().rect().center()
-        self._zoom_at_point(center, 0.8)
+        viewport = self.viewport()
+        if viewport:
+            center = viewport.rect().center()
+            self._zoom_at_point(center, 0.8)
 
     def zoom_to_fit(self):
         """Zoom to fit the scene content"""
@@ -264,7 +295,11 @@ class GridGraphicsView(QGraphicsView):
             self.zoom_level = 1.0
 
             # Fit the scene in view
-            self.fitInView(self.scene().itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            scene = self.scene()
+            if scene:
+                self.fitInView(
+                    scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio
+                )
 
             # Calculate the actual zoom level
             transform = self.transform()
@@ -285,9 +320,9 @@ class GridGraphicsView(QGraphicsView):
         """Get current zoom level"""
         return self.zoom_level
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # noqa: N802
         """Handle mouse release"""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event and event.button() == Qt.MouseButton.LeftButton:
             if self.is_panning:
                 self.is_panning = False
                 self.last_pan_point = None
@@ -297,14 +332,14 @@ class GridGraphicsView(QGraphicsView):
                 if self.current_selection:
                     self.tiles_selected.emit(list(self.current_selection))
                     self.selection_completed.emit()
-        elif event.button() == Qt.MouseButton.MiddleButton and self.is_panning:
+        elif event and event.button() == Qt.MouseButton.MiddleButton and self.is_panning:
             self.is_panning = False
             self.last_pan_point = None
             self.setCursor(Qt.CursorShape.CrossCursor)
 
         super().mouseReleaseEvent(event)
 
-    def _pos_to_tile(self, pos: QPointF) -> Optional[TilePosition]:
+    def _pos_to_tile(self, pos: QPointF) -> TilePosition | None:
         """Convert scene position to tile position"""
         if pos.x() < 0 or pos.y() < 0:
             return None
@@ -316,10 +351,11 @@ class GridGraphicsView(QGraphicsView):
 
     def _is_valid_tile(self, tile_pos: TilePosition) -> bool:
         """Check if tile position is valid"""
-        return (0 <= tile_pos.row < self.grid_rows and
-                0 <= tile_pos.col < self.grid_cols)
+        return 0 <= tile_pos.row < self.grid_rows and 0 <= tile_pos.col < self.grid_cols
 
-    def _create_tile_rect(self, tile_pos: TilePosition, color: QColor) -> QGraphicsRectItem:
+    def _create_tile_rect(
+        self, tile_pos: TilePosition, color: QColor
+    ) -> QGraphicsRectItem:
         """Create a rectangle for a tile"""
         x = tile_pos.col * self.tile_width
         y = tile_pos.row * self.tile_height
@@ -332,12 +368,14 @@ class GridGraphicsView(QGraphicsView):
     def _update_grid_lines(self):
         """Update grid line display"""
         # Clear existing grid lines
-        for line in self.grid_lines:
-            if line.scene():
-                self.scene().removeItem(line)
+        scene = self.scene()
+        if scene:
+            for line in self.grid_lines:
+                if line.scene():
+                    scene.removeItem(line)
         self.grid_lines.clear()
 
-        if not self.scene():
+        if not scene:
             return
 
         pen = QPen(self.grid_color, 1)
@@ -345,14 +383,16 @@ class GridGraphicsView(QGraphicsView):
         # Vertical lines
         for col in range(self.grid_cols + 1):
             x = col * self.tile_width
-            line = self.scene().addLine(x, 0, x, self.grid_rows * self.tile_height, pen)
-            self.grid_lines.append(line)
+            line = scene.addLine(x, 0, x, self.grid_rows * self.tile_height, pen)
+            if line:
+                self.grid_lines.append(line)
 
         # Horizontal lines
         for row in range(self.grid_rows + 1):
             y = row * self.tile_height
-            line = self.scene().addLine(0, y, self.grid_cols * self.tile_width, y, pen)
-            self.grid_lines.append(line)
+            line = scene.addLine(0, y, self.grid_cols * self.tile_width, y, pen)
+            if line:
+                self.grid_lines.append(line)
 
     def _select_row(self, row: int):
         """Select an entire row"""
@@ -383,28 +423,32 @@ class GridGraphicsView(QGraphicsView):
     def _update_selection_display(self):
         """Update visual display of selection"""
         # Clear existing selection rects
-        for rect in self.selection_rects.values():
-            if rect.scene():
-                self.scene().removeItem(rect)
+        scene = self.scene()
+        if scene:
+            for rect in self.selection_rects.values():
+                if rect.scene():
+                    scene.removeItem(rect)
         self.selection_rects.clear()
 
         # Add new selection rects
-        for tile_pos in self.current_selection:
-            rect = self._create_tile_rect(tile_pos, self.selection_color)
-            self.scene().addItem(rect)
-            self.selection_rects[tile_pos] = rect
+        if scene:
+            for tile_pos in self.current_selection:
+                rect = self._create_tile_rect(tile_pos, self.selection_color)
+                scene.addItem(rect)
+                self.selection_rects[tile_pos] = rect
 
     def _update_hover(self, tile_pos: TilePosition):
         """Update hover display"""
+        scene = self.scene()
         if self.hover_rect:
-            if self.hover_rect.scene():
-                self.scene().removeItem(self.hover_rect)
+            if self.hover_rect.scene() and scene:
+                scene.removeItem(self.hover_rect)
             self.hover_rect = None
 
-        if tile_pos not in self.current_selection:
+        if tile_pos not in self.current_selection and scene:
             self.hover_rect = self._create_tile_rect(tile_pos, self.hover_color)
             self.hover_rect.setZValue(0.5)  # Below selection
-            self.scene().addItem(self.hover_rect)
+            scene.addItem(self.hover_rect)
 
 
 class GridArrangementDialog(QDialog):
@@ -423,15 +467,13 @@ class GridArrangementDialog(QDialog):
 
         # Load and process sprite
         try:
-            self.original_image, self.tiles = self.processor.process_sprite_sheet_as_grid(
-                sprite_path, tiles_per_row
+            self.original_image, self.tiles = (
+                self.processor.process_sprite_sheet_as_grid(sprite_path, tiles_per_row)
             )
         except Exception as e:
             # Show error dialog and close
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.critical(
-                parent, "Error Loading Sprite",
-                f"Failed to load sprite file:\n{e!s}"
+                parent, "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
             )
             # Set up minimal state to prevent crashes
             self.original_image = None
@@ -446,7 +488,9 @@ class GridArrangementDialog(QDialog):
         )
 
         # Connect signals
-        self.arrangement_manager.arrangement_changed.connect(self._on_arrangement_changed)
+        self.arrangement_manager.arrangement_changed.connect(
+            self._on_arrangement_changed
+        )
         self.colorizer.palette_mode_changed.connect(self._on_palette_mode_changed)
 
         # Set up UI
@@ -458,7 +502,9 @@ class GridArrangementDialog(QDialog):
         # Initial update (only if we have valid data)
         if self.original_image is not None:
             self._update_displays()
-            self._update_status("Select tiles, rows, or columns to arrange. Ctrl+Wheel or F to zoom.")
+            self._update_status(
+                "Select tiles, rows, or columns to arrange. Ctrl+Wheel or F to zoom."
+            )
         else:
             self._update_status("Error: Unable to load sprite file")
 
@@ -504,8 +550,10 @@ class GridArrangementDialog(QDialog):
             pixmap = self._create_pixmap_from_image(self.original_image)
             self.pixmap_item = self.scene.addPixmap(pixmap)
             self.grid_view.set_grid_dimensions(
-                self.processor.grid_cols, self.processor.grid_rows,
-                self.processor.tile_width, self.processor.tile_height
+                self.processor.grid_cols,
+                self.processor.grid_rows,
+                self.processor.tile_width,
+                self.processor.tile_height,
             )
         else:
             # Create placeholder for error state
@@ -547,7 +595,7 @@ class GridArrangementDialog(QDialog):
         actions_layout.addWidget(QLabel("|"))
 
         # Zoom controls
-        self.zoom_out_btn = QPushButton("−")
+        self.zoom_out_btn = QPushButton("-")
         self.zoom_out_btn.clicked.connect(self.grid_view.zoom_out)
         self.zoom_out_btn.setMaximumWidth(30)
         actions_layout.addWidget(self.zoom_out_btn)
@@ -691,7 +739,9 @@ class GridArrangementDialog(QDialog):
 
         # Create group
         group = self.arrangement_manager.create_group_from_selection(
-            selection, group_id, f"Custom Group {len(self.arrangement_manager.get_groups()) + 1}"
+            selection,
+            group_id,
+            f"Custom Group {len(self.arrangement_manager.get_groups()) + 1}",
         )
 
         if group:
@@ -757,9 +807,10 @@ class GridArrangementDialog(QDialog):
             pixmap = self._create_pixmap_from_image(arranged_image)
             # Scale for preview
             scaled = pixmap.scaled(
-                pixmap.width() * 2, pixmap.height() * 2,
+                pixmap.width() * 2,
+                pixmap.height() * 2,
                 Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.FastTransformation
+                Qt.TransformationMode.FastTransformation,
             )
             self.preview_label.setPixmap(scaled)
         else:
@@ -770,32 +821,47 @@ class GridArrangementDialog(QDialog):
         """Convert PIL Image to QPixmap"""
         if image.mode == "RGBA":
             qimage = QImage(
-                image.tobytes(), image.width, image.height,
-                image.width * 4, QImage.Format.Format_RGBA8888
+                image.tobytes(),
+                image.width,
+                image.height,
+                image.width * 4,
+                QImage.Format.Format_RGBA8888,
             )
         elif image.mode == "RGB":
             qimage = QImage(
-                image.tobytes(), image.width, image.height,
-                image.width * 3, QImage.Format.Format_RGB888
+                image.tobytes(),
+                image.width,
+                image.height,
+                image.width * 3,
+                QImage.Format.Format_RGB888,
             )
         elif image.mode == "L":
             qimage = QImage(
-                image.tobytes(), image.width, image.height,
-                image.width, QImage.Format.Format_Grayscale8
+                image.tobytes(),
+                image.width,
+                image.height,
+                image.width,
+                QImage.Format.Format_Grayscale8,
             )
         elif image.mode == "P":
             # Convert palette mode to RGB
             rgb_image = image.convert("RGB")
             qimage = QImage(
-                rgb_image.tobytes(), rgb_image.width, rgb_image.height,
-                rgb_image.width * 3, QImage.Format.Format_RGB888
+                rgb_image.tobytes(),
+                rgb_image.width,
+                rgb_image.height,
+                rgb_image.width * 3,
+                QImage.Format.Format_RGB888,
             )
         else:
             # Fallback conversion
             rgb_image = image.convert("RGB")
             qimage = QImage(
-                rgb_image.tobytes(), rgb_image.width, rgb_image.height,
-                rgb_image.width * 3, QImage.Format.Format_RGB888
+                rgb_image.tobytes(),
+                rgb_image.width,
+                rgb_image.height,
+                rgb_image.width * 3,
+                QImage.Format.Format_RGB888,
             )
 
         return QPixmap.fromImage(qimage)
@@ -834,8 +900,9 @@ class GridArrangementDialog(QDialog):
 
         except Exception as e:
             self._update_status(f"Export failed: {e!s}")
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Export Error", f"Failed to export arrangement:\n{e!s}")
+            QMessageBox.warning(
+                self, "Export Error", f"Failed to export arrangement:\n{e!s}"
+            )
 
     def _update_status(self, message: str):
         """Update status bar message"""
@@ -851,42 +918,42 @@ class GridArrangementDialog(QDialog):
         """Handle zoom level change"""
         self._update_zoom_level_display()
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, a0: QKeyEvent | None):  # noqa: N802
         """Handle keyboard shortcuts"""
-        if event.key() == Qt.Key.Key_G:
+        if a0 and a0.key() == Qt.Key.Key_G:
             # Toggle grid (already handled by view)
             pass
-        elif event.key() == Qt.Key.Key_C:
+        elif a0 and a0.key() == Qt.Key.Key_C:
             # Toggle palette
             self.colorizer.toggle_palette_mode()
-        elif event.key() == Qt.Key.Key_P and self.colorizer.is_palette_mode():
+        elif a0 and a0.key() == Qt.Key.Key_P and self.colorizer.is_palette_mode():
             # Cycle palette
             self.colorizer.cycle_palette()
-        elif event.key() == Qt.Key.Key_Delete:
+        elif a0 and a0.key() == Qt.Key.Key_Delete:
             # Remove selection
             self._remove_selection()
-        elif event.key() == Qt.Key.Key_Escape:
+        elif a0 and a0.key() == Qt.Key.Key_Escape:
             # Clear selection
             self.grid_view.clear_selection()
-        else:
+        elif a0:
             # Let the grid view handle zoom shortcuts
-            self.grid_view.keyPressEvent(event)
+            self.grid_view.keyPressEvent(a0)
             self._update_zoom_level_display()
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def set_palettes(self, palettes_dict: dict):
         """Set available palettes for colorization"""
         self.colorizer.set_palettes(palettes_dict)
         self._update_displays()
 
-    def get_arranged_path(self) -> Optional[str]:
+    def get_arranged_path(self) -> str | None:
         """Get the path to the exported arrangement"""
         return self.output_path
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, a0) -> None:  # noqa: N802
         """Handle dialog close event with proper cleanup"""
         self._cleanup_resources()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def _cleanup_resources(self) -> None:
         """Clean up resources to prevent memory leaks"""

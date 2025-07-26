@@ -5,13 +5,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development Environment
+
+#### Virtual Environment Setup
 ```bash
 # Set up virtual environment (from exhal-master directory)
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Linux/macOS
+# OR
+venv\Scripts\activate     # Windows
+
+# Install dependencies
 pip install PyQt6 Pillow pytest pytest-qt
 
-# Run SpritePal
+# Verify virtual environment is active
+which python              # Should show venv/bin/python (Linux/macOS)
+# OR
+where python              # Should show venv\Scripts\python.exe (Windows)
+```
+
+#### Running Commands
+**IMPORTANT**: Always activate the virtual environment before running any commands:
+```bash
+# Activate venv first
+source venv/bin/activate  # Linux/macOS
+# OR  
+venv\Scripts\activate     # Windows
+
+# Then run SpritePal
 python launch_spritepal.py
 
 # Run tests (from spritepal directory)
@@ -23,6 +43,11 @@ pytest -k "test_palette"                 # Run tests matching keyword
 # Linting
 ruff check .                             # Check for linting issues
 ruff check . --fix --unsafe-fixes        # Auto-fix linting issues
+```
+
+#### Deactivating Virtual Environment
+```bash
+deactivate                               # Return to system Python
 ```
 
 ### Type Checking

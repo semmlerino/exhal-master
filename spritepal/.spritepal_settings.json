@@ -1,26 +1,27 @@
 {
   "session": {
-    "vram_path": "C:/Users/gabri/OneDrive/Dokumente/Mesen2/Debugger/Scene1.VRAM.dmp",
-    "cgram_path": "C:\\Users\\gabri\\OneDrive\\Dokumente\\Mesen2\\Debugger\\CGRAM.dmp",
-    "oam_path": "C:\\Users\\gabri\\OneDrive\\Dokumente\\Mesen2\\Debugger\\Scene1.OAM.dmp",
-    "output_name": "scene1_sprites_editor",
+    "vram_path": "",
+    "cgram_path": "",
+    "oam_path": "",
+    "extraction_mode": 0,
+    "output_name": "",
     "create_grayscale": true,
     "create_metadata": true
   },
   "ui": {
-    "window_width": 900,
-    "window_height": 600,
-    "window_x": 0,
-    "window_y": 0
+    "window_width": 1138,
+    "window_height": 711,
+    "window_x": 75,
+    "window_y": 253
   },
   "paths": {
-    "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master"
+    "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal"
   },
   "test": {
     "key": "new_value"
   },
   "rom_injection": {
-    "last_input_rom": "/path/to/test.sfc",
+    "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
     "last_sprite_location": "Kirby Sprite (0x123456)",
     "last_custom_offset": "0x123456",
     "fast_compression": true

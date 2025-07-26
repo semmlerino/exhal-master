@@ -16,14 +16,16 @@ class SpritePreviewWidget(QWidget):
         self._tile_count = 0
         self._tiles_per_row = 0
         self.setMinimumSize(QSize(256, 256))
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             SpritePreviewWidget {
                 background-color: #1e1e1e;
                 border: 1px solid #555;
             }
-        """)
+        """
+        )
 
-    def paintEvent(self, event):  # noqa: N802
+    def paintEvent(self, a0):  # noqa: N802
         """Paint the preview"""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))

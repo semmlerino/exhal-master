@@ -249,7 +249,9 @@ class TestPreviewPanel:
     ):
         """Test applying palette to grayscale image through colorizer"""
         panel.set_palettes(test_palettes)
-        result = panel.colorizer.apply_palette_to_image(test_grayscale_image, test_palettes[8])
+        result = panel.colorizer.apply_palette_to_image(
+            test_grayscale_image, test_palettes[8]
+        )
 
         assert result is not None
         assert result.mode == "RGBA"
@@ -260,7 +262,9 @@ class TestPreviewPanel:
     ):
         """Test applying palette to palette mode image through colorizer"""
         panel.set_palettes(test_palettes)
-        result = panel.colorizer.apply_palette_to_image(test_palette_image, test_palettes[8])
+        result = panel.colorizer.apply_palette_to_image(
+            test_palette_image, test_palettes[8]
+        )
 
         assert result is not None
         assert result.mode == "RGBA"

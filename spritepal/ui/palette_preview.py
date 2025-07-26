@@ -2,6 +2,7 @@
 Palette preview widget for SpritePal
 """
 
+
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
@@ -20,7 +21,7 @@ class PaletteColorWidget(QWidget):
         self.setToolTip(f"Color {index}: RGB({color[0]}, {color[1]}, {color[2]})")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-    def paintEvent(self, event):  # noqa: N802
+    def paintEvent(self, a0):  # noqa: N802
         """Paint the color swatch"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -50,17 +51,19 @@ class PaletteColorWidget(QWidget):
         # Draw index number
         painter.setPen(
             QPen(
-                Qt.GlobalColor.white
-                if self.color.lightness() < 128
-                else Qt.GlobalColor.black,
+                (
+                    Qt.GlobalColor.white
+                    if self.color.lightness() < 128
+                    else Qt.GlobalColor.black
+                ),
                 1,
             )
         )
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.index))
 
-    def mousePressEvent(self, event: QMouseEvent):  # noqa: N802
+    def mousePressEvent(self, a0: QMouseEvent | None):  # noqa: N802
         """Handle mouse press"""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if a0 and a0.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.index)
 
     def set_color(self, color):
@@ -79,14 +82,16 @@ class PaletteWidget(QFrame):
         self.name = name
         self.colors = []
         self.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             PaletteWidget {
                 background-color: #2b2b2b;
                 border: 1px solid #555;
                 border-radius: 4px;
                 padding: 4px;
             }
-        """)
+        """
+        )
 
         # Layout
         layout = QGridLayout()
@@ -179,23 +184,27 @@ class PalettePreviewWidget(QWidget):
         if palette_index in self.palette_widgets:
             widget = self.palette_widgets[palette_index]
             if highlight:
-                widget.setStyleSheet("""
+                widget.setStyleSheet(
+                    """
                     PaletteWidget {
                         background-color: #2b2b2b;
                         border: 2px solid #0078d4;
                         border-radius: 4px;
                         padding: 4px;
                     }
-                """)
+                """
+                )
             else:
-                widget.setStyleSheet("""
+                widget.setStyleSheet(
+                    """
                     PaletteWidget {
                         background-color: #2b2b2b;
                         border: 1px solid #555;
                         border-radius: 4px;
                         padding: 4px;
                     }
-                """)
+                """
+                )
 
     def highlight_active_palettes(self, active_indices):
         """Highlight multiple active palettes"""

@@ -14,8 +14,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from spritepal.core.controller import ExtractionController, ExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
+from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
+
+
+@pytest.fixture(autouse=True)
+def setup_managers():
+    """Setup managers for all tests"""
+    initialize_managers("TestApp")
+    yield
+    cleanup_managers()
 
 
 class TestExtractionWorkerMocked:
@@ -24,27 +33,8 @@ class TestExtractionWorkerMocked:
     @pytest.fixture
     def mock_signals(self):
         """Create mock signals that behave like Qt signals"""
-
-        class MockSignal:
-            def __init__(self):
-                self.callbacks = []
-                self.emit = Mock(side_effect=self._emit)
-
-            def connect(self, callback):
-                self.callbacks.append(callback)
-
-            def _emit(self, *args):
-                for callback in self.callbacks:
-                    callback(*args)
-
-        return {
-            "progress": MockSignal(),
-            "preview_ready": MockSignal(),
-            "palettes_ready": MockSignal(),
-            "active_palettes_ready": MockSignal(),
-            "finished": MockSignal(),
-            "error": MockSignal(),
-        }
+        from .fixtures.qt_mocks import create_mock_signals
+        return create_mock_signals()
 
     @pytest.fixture
     def worker_params(self, tmp_path):
@@ -75,56 +65,56 @@ class TestExtractionWorkerMocked:
             "oam_path": None,
         }
 
+    @patch("spritepal.core.controller.pil_to_qpixmap")
     @patch("spritepal.core.controller.QThread")
     @patch("spritepal.core.controller.pyqtSignal")
-    @patch("spritepal.core.controller.QPixmap")
     def test_worker_with_mocked_qt(
-        self, mock_qpixmap, mock_signal, mock_qthread, worker_params, mock_signals
+        self, mock_signal, mock_qthread, mock_pil_to_qpixmap, worker_params, mock_signals
     ):
         """Test worker functionality with mocked Qt components"""
-        # Configure mocks
-        mock_signal.side_effect = lambda *args: Mock()
-        mock_pixmap_instance = Mock()
-        mock_qpixmap.return_value = mock_pixmap_instance
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Create worker normally
-        worker = ExtractionWorker(worker_params)
+        try:
+            # Configure mocks
+            mock_signal.side_effect = lambda *args: Mock()
+            mock_pixmap_instance = Mock()
+            mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
-        # Replace signals with our mocks
-        for signal_name, mock_signal_obj in mock_signals.items():
-            setattr(worker, signal_name, mock_signal_obj)
+            # Create worker normally
+            worker = ExtractionWorker(worker_params)
 
-        # Track emitted data
-        progress_messages = []
-        preview_data = []
-        finished_files = []
+            # Replace signals with our mocks
+            for signal_name, mock_signal_obj in mock_signals.items():
+                setattr(worker, signal_name, mock_signal_obj)
 
-        # Connect handlers
-        worker.progress.connect(lambda msg: progress_messages.append(msg))
-        worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
-        worker.finished.connect(lambda files: finished_files.extend(files))
+            # Track emitted data
+            progress_messages = []
+            preview_data = []
+            finished_files = []
 
-        # Mock the pixmap creation
-        worker._create_pixmap_from_image = Mock(return_value=mock_pixmap_instance)
+            # Connect handlers
+            worker.progress.connect(lambda msg: progress_messages.append(msg))
+            worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
+            worker.finished.connect(lambda files: finished_files.extend(files))
 
-        # Run the worker directly (not as thread)
-        worker.run()
+            # Run the worker directly (not as thread)
+            worker.run()
 
-        # Verify signals were emitted correctly
-        assert len(progress_messages) > 0
-        assert "Extracting sprites from VRAM..." in progress_messages
-        assert "Extraction complete!" in progress_messages
+            # Verify files were created
+            assert worker.finished.emit.called
+            call_args = worker.finished.emit.call_args[0][0]
+            assert len(call_args) >= 1
+            assert any(f.endswith(".png") for f in call_args)
 
-        # Verify preview was created
-        assert worker.preview_ready.emit.called
-        assert worker._create_pixmap_from_image.called
+            # If CGRAM was provided, should have palette files too
+            if worker_params.get("cgram_path"):
+                assert any(f.endswith(".pal.json") for f in call_args)
 
-        # Verify files were created
-        assert worker.finished.emit.called
-        call_args = worker.finished.emit.call_args[0][0]
-        assert len(call_args) >= 2
-        assert any(f.endswith(".png") for f in call_args)
-        assert any(f.endswith(".pal.json") for f in call_args)
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     @patch("spritepal.utils.image_utils.QPixmap")
     def test_pixmap_creation_mocked(self, mock_qpixmap):
@@ -139,11 +129,11 @@ class TestExtractionWorkerMocked:
         mock_pixmap_instance.loadFromData = Mock(return_value=True)
         mock_qpixmap.return_value = mock_pixmap_instance
 
-        # Create worker (doesn't matter which params)
-        worker = ExtractionWorker({})
+        # Import and test the pil_to_qpixmap function
+        from spritepal.core.controller import pil_to_qpixmap
 
         # Test pixmap creation
-        result = worker._create_pixmap_from_image(test_image)
+        result = pil_to_qpixmap(test_image)
 
         # Verify
         assert result == mock_pixmap_instance

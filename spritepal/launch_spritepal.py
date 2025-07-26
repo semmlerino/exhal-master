@@ -14,7 +14,31 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 
+from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.ui.main_window import MainWindow
+from spritepal.utils.logging_config import get_logger, setup_logging
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Global exception handler to log unhandled exceptions"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Allow KeyboardInterrupt to work normally
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    # Get logger (setup_logging should have been called by now)
+    logger = get_logger("global_exception_handler")
+
+    # Log the unhandled exception
+    logger.critical("Unhandled exception occurred!", exc_info=(exc_type, exc_value, exc_traceback))
+    logger.critical(f"Exception type: {exc_type.__name__}")
+    logger.critical(f"Exception value: {exc_value}")
+    logger.critical("=" * 80)
+    logger.critical("CRASH DETECTED - Application will likely terminate")
+    logger.critical("=" * 80)
+
+    # Call the default handler to maintain normal behavior
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
 class SpritePalApp(QApplication):
@@ -81,7 +105,8 @@ class SpritePalApp(QApplication):
         self.setPalette(dark_palette)
 
         # Set application-wide stylesheet for additional styling
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QToolTip {
                 color: white;
                 background-color: #2b2b2b;
@@ -199,7 +224,8 @@ class SpritePalApp(QApplication):
                 background-color: #007acc;
                 color: white;
             }
-        """)
+        """
+        )
 
     def show(self):
         """Show the main window"""
@@ -208,14 +234,36 @@ class SpritePalApp(QApplication):
 
 def main():
     """Main entry point"""
-    # Create application
-    app = SpritePalApp(sys.argv)
+    # Initialize logging (will use SPRITEPAL_DEBUG env var if set)
+    logger = setup_logging()
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Platform: {sys.platform}")
 
-    # Show main window
-    app.show()
+    # Install global exception handler to catch unhandled crashes
+    sys.excepthook = handle_exception
+    logger.info("Global exception handler installed")
 
-    # Run event loop
-    sys.exit(app.exec())
+    # Initialize managers
+    logger.info("Initializing managers...")
+    initialize_managers("SpritePal")
+    logger.info("Managers initialized successfully")
+
+    try:
+        # Create application
+        app = SpritePalApp(sys.argv)
+
+        # Show main window
+        app.show()
+
+        # Run event loop
+        result = app.exec()
+    finally:
+        # Cleanup managers on exit
+        logger.info("Cleaning up managers...")
+        cleanup_managers()
+        logger.info("Managers cleaned up")
+
+    sys.exit(result)
 
 
 if __name__ == "__main__":

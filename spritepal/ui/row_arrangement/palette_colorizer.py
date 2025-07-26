@@ -2,7 +2,6 @@
 Palette colorization for sprite images with caching
 """
 
-from typing import Optional
 
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -20,10 +19,14 @@ class PaletteColorizer(QObject):
         self._current_palettes: dict[int, list[tuple[int, int, int]]] = {}
         self._palette_applied: bool = False
         self._selected_palette_index: int = 8  # Default to palette 8
-        self._colorized_cache: dict[tuple[int, int], Image.Image] = {}  # (row_index, palette_index) -> Image
+        self._colorized_cache: dict[tuple[int, int], Image.Image] = (
+            {}
+        )  # (row_index, palette_index) -> Image
         self._max_cache_size: int = 100  # Limit cache size to prevent memory issues
 
-    def set_palettes(self, palettes_dict: dict[int, list[tuple[int, int, int]]]) -> None:
+    def set_palettes(
+        self, palettes_dict: dict[int, list[tuple[int, int, int]]]
+    ) -> None:
         """Set the available palettes for colorization
 
         Args:
@@ -91,8 +94,9 @@ class PaletteColorizer(QObject):
 
         return self._selected_palette_index
 
-    def apply_palette_to_image(self, grayscale_image: Image.Image,
-                              palette_colors: list[tuple[int, int, int]]) -> Optional[Image.Image]:
+    def apply_palette_to_image(
+        self, grayscale_image: Image.Image, palette_colors: list[tuple[int, int, int]]
+    ) -> Image.Image | None:
         """Apply a palette to a grayscale image with transparency support
 
         Args:
@@ -144,7 +148,9 @@ class PaletteColorizer(QObject):
             print(f"Error applying palette: {e}")
             return None
 
-    def get_display_image(self, row_index: int, grayscale_image: Image.Image) -> Image.Image:
+    def get_display_image(
+        self, row_index: int, grayscale_image: Image.Image
+    ) -> Image.Image:
         """Get the appropriate display image for a row (grayscale or colorized)
 
         Args:
@@ -166,8 +172,7 @@ class PaletteColorizer(QObject):
         # Apply palette and cache the result
         if self._selected_palette_index in self._current_palettes:
             colorized_image = self.apply_palette_to_image(
-                grayscale_image,
-                self._current_palettes[self._selected_palette_index]
+                grayscale_image, self._current_palettes[self._selected_palette_index]
             )
 
             if colorized_image:
@@ -212,5 +217,5 @@ class PaletteColorizer(QObject):
             # Remove oldest entries (simple LRU-like behavior)
             # Convert to list and remove first items
             items = list(self._colorized_cache.items())
-            for key, _ in items[:len(items) - self._max_cache_size]:
+            for key, _ in items[: len(items) - self._max_cache_size]:
                 del self._colorized_cache[key]

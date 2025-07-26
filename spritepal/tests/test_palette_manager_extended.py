@@ -209,13 +209,13 @@ class TestPaletteManagerExtended:
         palette_manager._extract_palettes()
 
         # Try to write to invalid path
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="No such file or directory"):
             palette_manager.create_palette_json(8, "/invalid/path/file.json")
 
     def test_metadata_json_with_io_error(self, palette_manager):
         """Test metadata JSON creation with I/O error"""
         # Try to write to invalid path
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="No such file or directory"):
             palette_manager.create_metadata_json("/invalid/path/file", {})
 
     def test_get_palette_boundary_conditions(self, palette_manager, sample_cgram_data):

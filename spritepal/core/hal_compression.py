@@ -6,13 +6,16 @@ Interfaces with exhal/inhal C tools for ROM sprite injection.
 import builtins
 import contextlib
 import os
+import platform
 import re
 import shutil
 import subprocess
 import tempfile
-from typing import Optional
 
 from spritepal.utils.constants import DATA_SIZE
+from spritepal.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class HALCompressionError(Exception):
@@ -22,7 +25,9 @@ class HALCompressionError(Exception):
 class HALCompressor:
     """Handles HAL compression/decompression for ROM injection"""
 
-    def __init__(self, exhal_path: Optional[str] = None, inhal_path: Optional[str] = None):
+    def __init__(
+        self, exhal_path: str | None = None, inhal_path: str | None = None
+    ):
         """
         Initialize HAL compressor.
 
@@ -30,20 +35,27 @@ class HALCompressor:
             exhal_path: Path to exhal executable (decompressor)
             inhal_path: Path to inhal executable (compressor)
         """
+        logger.info("Initializing HAL compressor")
         # Try to find tools in various locations
-        self.exhal_path = self._find_tool("exhal", exhal_path)
-        self.inhal_path = self._find_tool("inhal", inhal_path)
+        self.exhal_path: str = self._find_tool("exhal", exhal_path)
+        self.inhal_path: str = self._find_tool("inhal", inhal_path)
+        logger.info(f"HAL compressor initialized with exhal={self.exhal_path}, inhal={self.inhal_path}")
 
-    def _find_tool(self, tool_name: str, provided_path: Optional[str] = None) -> str:
+    def _find_tool(self, tool_name: str, provided_path: str | None = None) -> str:
         """Find HAL compression tool executable"""
-        if provided_path and os.path.isfile(provided_path):
-            return provided_path
+        logger.info(f"Searching for {tool_name} tool")
+
+        if provided_path:
+            logger.debug(f"Checking provided path: {provided_path}")
+            if os.path.isfile(provided_path):
+                logger.info(f"Using provided {tool_name} at: {provided_path}")
+                return provided_path
+            logger.warning(f"Provided path does not exist: {provided_path}")
 
         # Platform-specific executable suffix
-        import platform
         exe_suffix = ".exe" if platform.system() == "Windows" else ""
         tool_with_suffix = f"{tool_name}{exe_suffix}"
-        
+
         # Search locations
         search_paths = [
             # Compiled tools directory (preferred)
@@ -59,18 +71,29 @@ class HALCompressor:
             f"../{tool_name}",
             f"../../{tool_name}",
             # System PATH
-            tool_name
+            tool_name,
         ]
 
-        for path in search_paths:
+        logger.debug(f"Searching {len(search_paths)} locations for {tool_name}")
+        for i, path in enumerate(search_paths, 1):
             full_path = os.path.abspath(path)
             if os.path.isfile(full_path):
+                logger.info(f"Found {tool_name} at location {i}/{len(search_paths)}: {full_path}")
+                # Check if file is executable
+                if not os.access(full_path, os.X_OK):
+                    logger.warning(f"Found {tool_name} but it may not be executable: {full_path}")
                 return full_path
+            logger.debug(f"Location {i}/{len(search_paths)}: Not found at {full_path}")
 
-        raise HALCompressionError(f"Could not find {tool_name} executable. "
-                                f"Please run 'python compile_hal_tools.py' to build for your platform.")
+        logger.error(f"Could not find {tool_name} executable in any search path")
+        raise HALCompressionError(
+            f"Could not find {tool_name} executable. "
+            f"Please run 'python compile_hal_tools.py' to build for your platform."
+        )
 
-    def decompress_from_rom(self, rom_path: str, offset: int, output_path: Optional[str] = None) -> bytes:
+    def decompress_from_rom(
+        self, rom_path: str, offset: int, output_path: str | None = None
+    ) -> bytes:
         """
         Decompress data from ROM at specified offset.
 
@@ -82,6 +105,7 @@ class HALCompressor:
         Returns:
             Decompressed data as bytes
         """
+        logger.info(f"Decompressing from ROM: {rom_path} at offset 0x{offset:X}")
         # Create temporary output file if not specified
         if output_path is None:
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
@@ -90,15 +114,26 @@ class HALCompressor:
         try:
             # Run exhal: exhal romfile offset outfile
             cmd = [self.exhal_path, rom_path, f"0x{offset:X}", output_path]
+            logger.debug(f"Running command: {' '.join(cmd)}")
+
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+            logger.debug(f"Command completed with return code: {result.returncode}")
+
+            if result.stdout:
+                logger.debug(f"stdout: {result.stdout.strip()}")
+            if result.stderr:
+                logger.debug(f"stderr: {result.stderr.strip()}")
 
             if result.returncode != 0:
+                logger.error(f"Decompression failed with return code {result.returncode}")
                 raise HALCompressionError(f"Decompression failed: {result.stderr}")
 
             # Read decompressed data
             with open(output_path, "rb") as f:
-                return f.read()
+                data = f.read()
 
+            logger.info(f"Successfully decompressed {len(data)} bytes from ROM offset 0x{offset:X}")
+            return data
 
         finally:
             # Clean up temp file if we created one
@@ -106,7 +141,9 @@ class HALCompressor:
                 with contextlib.suppress(builtins.BaseException):
                     os.unlink(output_path)
 
-    def compress_to_file(self, input_data: bytes, output_path: str, fast: bool = False) -> int:
+    def compress_to_file(
+        self, input_data: bytes, output_path: str, fast: bool = False
+    ) -> int:
         """
         Compress data to a file.
 
@@ -118,9 +155,14 @@ class HALCompressor:
         Returns:
             Size of compressed data
         """
+        logger.info(f"Compressing {len(input_data)} bytes to file: {output_path}")
+
         # Check size limit
         if len(input_data) > DATA_SIZE:
-            raise HALCompressionError(f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})")
+            logger.error(f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})")
+            raise HALCompressionError(
+                f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})"
+            )
 
         # Write input to temp file
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
@@ -132,23 +174,41 @@ class HALCompressor:
             cmd = [self.inhal_path]
             if fast:
                 cmd.append("-fast")
+                logger.debug("Using fast compression mode")
             cmd.extend(["-n", tmp_path, output_path])
 
+            logger.debug(f"Running command: {' '.join(cmd)}")
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+            logger.debug(f"Command completed with return code: {result.returncode}")
+
+            if result.stdout:
+                logger.debug(f"stdout: {result.stdout.strip()}")
+            if result.stderr:
+                logger.debug(f"stderr: {result.stderr.strip()}")
 
             if result.returncode != 0:
+                logger.error(f"Compression failed with return code {result.returncode}: {result.stderr}")
                 raise HALCompressionError(f"Compression failed: {result.stderr}")
 
             # Get compressed size
-            return os.path.getsize(output_path)
+            compressed_size = os.path.getsize(output_path)
+            compression_ratio = (len(input_data) - compressed_size) / len(input_data) * 100
+            logger.info(f"Compressed to {compressed_size} bytes ({compression_ratio:.1f}% reduction)")
+            return compressed_size
 
         finally:
             # Clean up temp file
             with contextlib.suppress(builtins.BaseException):
                 os.unlink(tmp_path)
 
-    def compress_to_rom(self, input_data: bytes, rom_path: str, offset: int,
-                       output_rom_path: Optional[str] = None, fast: bool = False) -> tuple[bool, str]:
+    def compress_to_rom(
+        self,
+        input_data: bytes,
+        rom_path: str,
+        offset: int,
+        output_rom_path: str | None = None,
+        fast: bool = False,
+    ) -> tuple[bool, str]:
         """
         Compress data and inject into ROM at specified offset.
 
@@ -162,15 +222,23 @@ class HALCompressor:
         Returns:
             Tuple of (success, message)
         """
+        logger.info(f"Compressing {len(input_data)} bytes to ROM: {rom_path} at offset 0x{offset:X}")
+
         # Check size limit
         if len(input_data) > DATA_SIZE:
-            return False, f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})"
+            logger.error(f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})")
+            return (
+                False,
+                f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})",
+            )
 
         # If no output path, modify in place
         if output_rom_path is None:
             output_rom_path = rom_path
+            logger.debug("Modifying ROM in place")
         else:
             # Copy ROM to output path first
+            logger.debug(f"Copying ROM to output path: {output_rom_path}")
             shutil.copy2(rom_path, output_rom_path)
 
         # Write input to temp file
@@ -183,11 +251,20 @@ class HALCompressor:
             cmd = [self.inhal_path]
             if fast:
                 cmd.append("-fast")
+                logger.debug("Using fast compression mode")
             cmd.extend([tmp_path, output_rom_path, f"0x{offset:X}"])
 
+            logger.debug(f"Running command: {' '.join(cmd)}")
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+            logger.debug(f"Command completed with return code: {result.returncode}")
+
+            if result.stdout:
+                logger.debug(f"stdout: {result.stdout.strip()}")
+            if result.stderr:
+                logger.debug(f"stderr: {result.stderr.strip()}")
 
             if result.returncode != 0:
+                logger.error(f"ROM injection failed with return code {result.returncode}")
                 return False, f"ROM injection failed: {result.stderr}"
 
             # Extract size info from output if available
@@ -198,7 +275,11 @@ class HALCompressor:
                 if match:
                     compressed_size = match.group(1)
 
-            return True, f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}"
+            logger.info(f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}")
+            return (
+                True,
+                f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}",
+            )
 
         finally:
             # Clean up temp file
@@ -207,30 +288,48 @@ class HALCompressor:
 
     def test_tools(self) -> tuple[bool, str]:
         """Test if HAL compression tools are available and working"""
-        import platform
-        
+        logger.info("Testing HAL compression tools")
         try:
             # Test exhal
-            result = subprocess.run([self.exhal_path], check=False, capture_output=True, text=True)
+            logger.debug(f"Testing exhal at: {self.exhal_path}")
+            result = subprocess.run(
+                [self.exhal_path], check=False, capture_output=True, text=True
+            )
             # Check both stdout and stderr for tool output
             output = (result.stdout + result.stderr).lower()
             if "exhal" not in output and "usage" not in output:
+                logger.error(f"exhal tool not working correctly. Output: {output[:100]}")
                 return False, "exhal tool not working correctly"
 
             # Test inhal
-            result = subprocess.run([self.inhal_path], check=False, capture_output=True, text=True)
+            logger.debug(f"Testing inhal at: {self.inhal_path}")
+            result = subprocess.run(
+                [self.inhal_path], check=False, capture_output=True, text=True
+            )
             # Check both stdout and stderr for tool output
             output = (result.stdout + result.stderr).lower()
             if "inhal" not in output and "usage" not in output:
+                logger.error(f"inhal tool not working correctly. Output: {output[:100]}")
                 return False, "inhal tool not working correctly"
 
-            return True, "HAL compression tools are working correctly"
-
         except FileNotFoundError:
-            return False, f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}"
+            logger.exception("HAL tools not found")
+            return (
+                False,
+                f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}",
+            )
         except OSError as e:
-            if platform.system() == "Windows" and e.winerror == 193:
-                return False, f"Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows"
+            if platform.system() == "Windows" and hasattr(e, "winerror") and getattr(e, "winerror", None) == 193:
+                logger.exception("Wrong platform binaries detected")
+                return (
+                    False,
+                    "Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows",
+                )
+            logger.exception("OS error testing tools")
             return False, f"Error testing tools: {e!s}"
         except Exception as e:
+            logger.exception("Unexpected error testing tools")
             return False, f"Error testing tools: {e!s}"
+        else:
+            logger.info("HAL compression tools are working correctly")
+            return True, "HAL compression tools are working correctly"

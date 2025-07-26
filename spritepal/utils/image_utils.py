@@ -1,16 +1,16 @@
 """Image utility functions for SpritePal"""
 
 import io
-import logging
-from typing import Optional
 
 from PIL import Image
 from PyQt6.QtGui import QPixmap
 
-logger = logging.getLogger(__name__)
+from spritepal.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
-def pil_to_qpixmap(pil_image: Image.Image) -> Optional[QPixmap]:
+def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
     """
     Convert PIL image to QPixmap with proper error handling.
 
@@ -21,29 +21,58 @@ def pil_to_qpixmap(pil_image: Image.Image) -> Optional[QPixmap]:
         QPixmap object or None if conversion fails
     """
     if not pil_image:
+        logger.debug("pil_to_qpixmap called with None image")
         return None
 
     try:
+        # Log image details for debugging
+        logger.debug(f"Converting PIL image: size={pil_image.size}, mode={pil_image.mode}, format={pil_image.format}")
+
         # Convert PIL image to QPixmap through bytes buffer
         buffer = io.BytesIO()
         pil_image.save(buffer, format="PNG")
+        buffer_size = buffer.tell()
         buffer.seek(0)
 
+        logger.debug(f"PIL image saved to buffer: {buffer_size} bytes")
+
         pixmap = QPixmap()
-        if pixmap.loadFromData(buffer.read()):
+        buffer_data = buffer.read()
+
+        # Check if buffer data looks valid
+        if len(buffer_data) < 8:
+            logger.error(f"Buffer data too small: {len(buffer_data)} bytes")
+            return None
+
+        # Check PNG header
+        if not buffer_data.startswith(b"\x89PNG\r\n\x1a\n"):
+            logger.error(f"Buffer data doesn't start with PNG header. First 16 bytes: {buffer_data[:16]}")
+            return None
+
+        logger.debug(f"Loading {len(buffer_data)} bytes into QPixmap")
+        if pixmap.loadFromData(buffer_data):
+            logger.debug(f"Successfully created QPixmap: {pixmap.size().width()}x{pixmap.size().height()}")
             return pixmap
-        logger.error("Failed to load pixmap from buffer data")
+        logger.error(f"QPixmap.loadFromData() failed. Data size: {len(buffer_data)} bytes")
+        logger.error(f"PNG header check: {buffer_data[:16].hex() if len(buffer_data) >= 16 else 'too short'}")
         return None
 
-    except Exception as e:
-        logger.exception(f"Failed to convert PIL to QPixmap: {e}")
+    except Exception:
+        logger.exception(
+            "Failed to convert PIL to QPixmap. PIL image details: size=%s, mode=%s",
+            getattr(pil_image, "size", "unknown"),
+            getattr(pil_image, "mode", "unknown")
+        )
         return None
 
 
-def create_checkerboard_pattern(width: int, height: int,
-                              tile_size: int = 8,
-                              color1: tuple[int, int, int] = (200, 200, 200),
-                              color2: tuple[int, int, int] = (255, 255, 255)) -> Image.Image:
+def create_checkerboard_pattern(
+    width: int,
+    height: int,
+    tile_size: int = 8,
+    color1: tuple[int, int, int] = (200, 200, 200),
+    color2: tuple[int, int, int] = (255, 255, 255),
+) -> Image.Image:
     """
     Create a checkerboard pattern image.
 

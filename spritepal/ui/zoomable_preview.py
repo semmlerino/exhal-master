@@ -2,8 +2,7 @@
 Zoomable sprite preview widget for SpritePal
 """
 
-import io
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
 from PyQt6.QtGui import (
@@ -25,6 +24,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from spritepal.utils.image_utils import pil_to_qpixmap
 
 from .row_arrangement.palette_colorizer import PaletteColorizer
 
@@ -55,14 +56,16 @@ class ZoomablePreviewWidget(QWidget):
         # Set size policy to expand and fill available space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             ZoomablePreviewWidget {
                 background-color: #1e1e1e;
                 border: 1px solid #555;
             }
-        """)
+        """
+        )
 
-    def paintEvent(self, event: Any) -> None:  # noqa: N802
+    def paintEvent(self, a0: Any) -> None:  # noqa: N802
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))
@@ -173,16 +176,16 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
-    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:  # noqa: N802
         """Handle mouse wheel for zooming"""
-        if not self._pixmap:
+        if not self._pixmap or not a0:
             return
 
         # Get mouse position in widget coordinates
-        mouse_pos = event.position()
+        mouse_pos = a0.position()
 
         # Calculate zoom factor
-        zoom_factor = 1.1 if event.angleDelta().y() > 0 else 0.9
+        zoom_factor = 1.1 if a0.angleDelta().y() > 0 else 0.9
         new_zoom = self._zoom * zoom_factor
 
         # Clamp zoom
@@ -233,53 +236,55 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
         """Handle mouse press for panning"""
-        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
+        if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = True
-            self._last_mouse_pos = event.position()
+            self._last_mouse_pos = a0.position()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
-        elif event.button() == Qt.MouseButton.RightButton:
+        elif a0 and a0.button() == Qt.MouseButton.RightButton:
             # Right click to reset view
             self.reset_view()
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
         """Handle mouse release"""
-        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
+        if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
         """Handle mouse move for panning"""
-        if self._is_panning and self._last_mouse_pos:
-            delta = event.position() - self._last_mouse_pos
+        if a0 and self._is_panning and self._last_mouse_pos is not None:
+            delta = a0.position() - self._last_mouse_pos
             self._pan_offset += delta
-            self._last_mouse_pos = event.position()
+            self._last_mouse_pos = a0.position()
             self.update()
 
-    def keyPressEvent(self, event: Any) -> None:  # noqa: N802
+    def keyPressEvent(self, a0: Any) -> None:  # noqa: N802
         """Handle keyboard input"""
-        if event.key() == Qt.Key.Key_G:
+        if a0.key() == Qt.Key.Key_G:
             self._grid_visible = not self._grid_visible
             self.update()
-        elif event.key() == Qt.Key.Key_F:
+        elif a0.key() == Qt.Key.Key_F:
             # F: Zoom to fit
             self.zoom_to_fit()
-        elif event.key() == Qt.Key.Key_0:
-            if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+        elif a0.key() == Qt.Key.Key_0:
+            if a0.modifiers() == Qt.KeyboardModifier.ControlModifier:
                 # Ctrl+0: Reset zoom to default (4x zoom for pixel art)
                 self._zoom = 4.0
                 self._pan_offset = QPointF(0, 0)
                 self.update()
-            elif event.modifiers() == (
+            elif a0.modifiers() == (
                 Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
             ):
                 # Ctrl+Shift+0: Zoom to fit
                 self.zoom_to_fit()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
-    def set_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
+    def set_preview(
+        self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0
+    ) -> None:
         """Set the preview pixmap"""
         self._pixmap = pixmap
         self._tile_count = tile_count
@@ -341,8 +346,12 @@ class PreviewPanel(QWidget):
         self.colorizer = PaletteColorizer()
 
         # Connect colorizer signals
-        self.colorizer.palette_mode_changed.connect(self._on_colorizer_palette_mode_changed)
-        self.colorizer.palette_index_changed.connect(self._on_colorizer_palette_index_changed)
+        self.colorizer.palette_mode_changed.connect(
+            self._on_colorizer_palette_mode_changed
+        )
+        self.colorizer.palette_index_changed.connect(
+            self._on_colorizer_palette_index_changed
+        )
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -435,7 +444,9 @@ class PreviewPanel(QWidget):
             return
 
         # Get colorized image from colorizer
-        self._colorized_image = self.colorizer.get_display_image(0, self._grayscale_image)
+        self._colorized_image = self.colorizer.get_display_image(
+            0, self._grayscale_image
+        )
 
         # Update preview with colorized image
         if self._colorized_image:
@@ -476,11 +487,15 @@ class PreviewPanel(QWidget):
             pixmap = self._pil_to_pixmap(rgba_image)
             self.preview.update_pixmap(pixmap)
 
-    def set_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
+    def set_preview(
+        self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0
+    ) -> None:
         """Set the preview pixmap"""
         self.preview.set_preview(pixmap, tile_count, tiles_per_row)
 
-    def update_preview(self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0) -> None:
+    def update_preview(
+        self, pixmap: Any, tile_count: int = 0, tiles_per_row: int = 0
+    ) -> None:
         """Update the preview pixmap without resetting view (for real-time updates)"""
         self.preview.update_pixmap(pixmap)
         # Update tile info if provided
@@ -519,34 +534,17 @@ class PreviewPanel(QWidget):
         if self.palette_toggle.isChecked() and has_data:
             self._apply_current_palette()
 
+    def _pil_to_pixmap(self, pil_image: Any) -> Any | None:
+        """Convert PIL image to QPixmap using enhanced utility function"""
+        return pil_to_qpixmap(pil_image)
 
-    def _pil_to_pixmap(self, pil_image: Any) -> Optional[Any]:
-        """Convert PIL image to QPixmap"""
-        if not pil_image:
-            return None
-
-        try:
-            # Save to bytes
-            buffer = io.BytesIO()
-            pil_image.save(buffer, format="PNG")
-            buffer.seek(0)
-
-            # Create QPixmap
-            pixmap = QPixmap()
-            pixmap.loadFromData(buffer.read())
-        except Exception as e:
-            print(f"Error converting PIL to QPixmap: {e}")
-            return None
-        else:
-            return pixmap
-
-    def keyPressEvent(self, event: Any) -> None:  # noqa: N802
+    def keyPressEvent(self, a0: Any) -> None:  # noqa: N802
         """Handle keyboard input"""
-        if event.key() == Qt.Key.Key_C:
+        if a0.key() == Qt.Key.Key_C:
             # Toggle palette application
             self.palette_toggle.setChecked(not self.palette_toggle.isChecked())
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def _on_colorizer_palette_mode_changed(self, enabled: bool) -> None:
         """Handle palette mode change from colorizer"""
@@ -562,10 +560,10 @@ class PreviewPanel(QWidget):
                 self.palette_selector.setCurrentIndex(i)
                 break
 
-    def mousePressEvent(self, event: Any) -> None:  # noqa: N802
+    def mousePressEvent(self, a0: Any) -> None:  # noqa: N802
         """Handle mouse press to ensure focus"""
         self.setFocus()
-        super().mousePressEvent(event)
+        super().mousePressEvent(a0)
 
     def get_palettes(self) -> dict[int, list[tuple[int, int, int]]]:
         """Get the current palette data

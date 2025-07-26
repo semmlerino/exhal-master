@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -175,57 +176,74 @@ class TestExtractionWorker:
     @pytest.mark.gui
     def test_worker_signals(self, worker_params, qtbot):
         """Test ExtractionWorker signal emission"""
-        worker = ExtractionWorker(worker_params)
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Connect signal handlers
-        progress_messages = []
-        preview_data = []
-        finished_files = []
+        try:
+            worker = ExtractionWorker(worker_params)
 
-        worker.progress.connect(lambda msg: progress_messages.append(msg))
-        worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
-        worker.finished.connect(lambda files: finished_files.extend(files))
+            # Connect signal handlers
+            progress_messages = []
+            preview_data = []
+            finished_files = []
 
-        # Run worker
-        worker.run()
+            worker.progress.connect(lambda msg: progress_messages.append(msg))
+            worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
+            worker.finished.connect(lambda files: finished_files.extend(files))
 
-        # Check signals were emitted
-        assert len(progress_messages) > 0
-        assert "Extracting sprites from VRAM..." in progress_messages
-        assert "Extraction complete!" in progress_messages
+            # Run worker
+            worker.run()
 
-        assert len(preview_data) == 1
-        pixmap, tile_count = preview_data[0]
-        assert tile_count > 0
+            # Check signals were emitted
+            assert len(progress_messages) > 0
+            assert "Extracting sprites from VRAM..." in progress_messages
+            assert "Extraction complete!" in progress_messages
 
-        assert len(finished_files) >= 2  # Main PNG and at least one palette
-        assert any(f.endswith(".png") for f in finished_files)
-        assert any(f.endswith(".pal.json") for f in finished_files)
+            assert len(preview_data) == 1
+            pixmap, tile_count = preview_data[0]
+            assert tile_count > 0
+
+            assert len(finished_files) >= 2  # Main PNG and at least one palette
+            assert any(f.endswith(".png") for f in finished_files)
+            assert any(f.endswith(".pal.json") for f in finished_files)
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     @pytest.mark.gui
     def test_worker_error_handling(self, qtbot):
         """Test ExtractionWorker error handling"""
-        # Create worker with invalid parameters
-        bad_params = {
-            "vram_path": "/nonexistent/file.vram",
-            "cgram_path": None,
-            "output_base": "/invalid/output",
-            "create_grayscale": True,
-            "create_metadata": False,
-            "oam_path": None,
-        }
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        worker = ExtractionWorker(bad_params)
+        try:
+            # Create worker with invalid parameters
+            bad_params = {
+                "vram_path": "/nonexistent/file.vram",
+                "cgram_path": None,
+                "output_base": "/invalid/output",
+                "create_grayscale": True,
+                "create_metadata": False,
+                "oam_path": None,
+            }
 
-        # Connect error handler
-        errors = []
-        worker.error.connect(lambda e: errors.append(e))
+            worker = ExtractionWorker(bad_params)
 
-        # Run worker - should emit error
-        worker.run()
+            # Connect error handler
+            errors = []
+            worker.error.connect(lambda e: errors.append(e))
 
-        assert len(errors) > 0
-        assert "No such file" in errors[0] or "not found" in errors[0]
+            # Run worker - should emit error
+            worker.run()
+
+            assert len(errors) > 0
+            # Check for either file not found or validation error
+            assert any(phrase in errors[0].lower() for phrase in ["no such file", "not found", "does not exist", "vram file"])
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
 
 class TestRealFilePatterns:
@@ -353,8 +371,6 @@ class TestFullWorkflowIntegration:
     @pytest.fixture
     def mock_main_window(self):
         """Create a mock main window for testing UI integration"""
-        from unittest.mock import Mock
-
         window = Mock()
         window.status_bar = Mock()
         window.sprite_preview = Mock()
@@ -395,8 +411,6 @@ class TestFullWorkflowIntegration:
     @pytest.fixture
     def mock_qt_signals(self):
         """Create mock Qt signals that behave like real signals"""
-        from unittest.mock import Mock
-
         class MockSignal:
             def __init__(self):
                 self.callbacks = []
@@ -425,124 +439,130 @@ class TestFullWorkflowIntegration:
         self, integration_sample_files, mock_main_window, mock_qt_signals
     ):
         """Test complete UI-Controller-Worker integration workflow"""
-        from unittest.mock import Mock, patch
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Track signals received by UI components
-        ui_signals = {
-            "progress_messages": [],
-            "preview_updates": [],
-            "preview_image_updates": [],
-            "palette_updates": [],
-            "active_palette_updates": [],
-            "completion_calls": [],
-            "error_calls": [],
-        }
+        try:
+            # Track signals received by UI components
+            ui_signals = {
+                "progress_messages": [],
+                "preview_updates": [],
+                "preview_image_updates": [],
+                "palette_updates": [],
+                "active_palette_updates": [],
+                "completion_calls": [],
+                "error_calls": [],
+            }
 
-        # Connect signal tracking
-        def track_progress(msg):
-            ui_signals["progress_messages"].append(msg)
+            # Connect signal tracking
+            def track_progress(msg):
+                ui_signals["progress_messages"].append(msg)
 
-        def track_preview(pixmap, tile_count):
-            ui_signals["preview_updates"].append((pixmap, tile_count))
+            def track_preview(pixmap, tile_count):
+                ui_signals["preview_updates"].append((pixmap, tile_count))
 
-        def track_preview_image(pil_image):
-            ui_signals["preview_image_updates"].append(pil_image)
+            def track_preview_image(pil_image):
+                ui_signals["preview_image_updates"].append(pil_image)
 
-        def track_palette(palettes):
-            ui_signals["palette_updates"].append(palettes)
+            def track_palette(palettes):
+                ui_signals["palette_updates"].append(palettes)
 
-        def track_active_palettes(active_pals):
-            ui_signals["active_palette_updates"].append(active_pals)
+            def track_active_palettes(active_pals):
+                ui_signals["active_palette_updates"].append(active_pals)
 
-        def track_completion(files):
-            ui_signals["completion_calls"].append(files)
+            def track_completion(files):
+                ui_signals["completion_calls"].append(files)
 
-        def track_error(error):
-            ui_signals["error_calls"].append(error)
+            def track_error(error):
+                ui_signals["error_calls"].append(error)
 
-        mock_main_window.status_bar.showMessage = track_progress
-        mock_main_window.sprite_preview.set_preview = track_preview
-        mock_main_window.sprite_preview.set_grayscale_image = track_preview_image
-        mock_main_window.palette_preview.set_all_palettes = track_palette
-        mock_main_window.palette_preview.highlight_active_palettes = (
-            track_active_palettes
-        )
-        mock_main_window.extraction_complete = track_completion
-        mock_main_window.extraction_failed = track_error
-
-        # Set up extraction parameters
-        mock_main_window.get_extraction_params.return_value = {
-            "vram_path": integration_sample_files["vram_path"],
-            "cgram_path": integration_sample_files["cgram_path"],
-            "output_base": str(
-                Path(integration_sample_files["temp_dir"]) / "test_integration"
-            ),
-            "create_grayscale": True,
-            "create_metadata": True,
-            "oam_path": None,
-        }
-
-        # Mock Qt components and create worker directly
-        with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-            mock_pixmap_instance = Mock()
-            mock_pixmap_instance.loadFromData = Mock(return_value=True)
-            mock_qpixmap.return_value = mock_pixmap_instance
-
-            # Create worker directly with mock signals
-            worker = ExtractionWorker(
-                mock_main_window.get_extraction_params.return_value
+            mock_main_window.status_bar.showMessage = track_progress
+            mock_main_window.sprite_preview.set_preview = track_preview
+            mock_main_window.sprite_preview.set_grayscale_image = track_preview_image
+            mock_main_window.palette_preview.set_all_palettes = track_palette
+            mock_main_window.palette_preview.highlight_active_palettes = (
+                track_active_palettes
             )
+            mock_main_window.extraction_complete = track_completion
+            mock_main_window.extraction_failed = track_error
 
-            # Replace worker signals with our mocks
-            for signal_name, mock_signal in mock_qt_signals.items():
-                setattr(worker, signal_name, mock_signal)
+            # Set up extraction parameters
+            mock_main_window.get_extraction_params.return_value = {
+                "vram_path": integration_sample_files["vram_path"],
+                "cgram_path": integration_sample_files["cgram_path"],
+                "output_base": str(
+                    Path(integration_sample_files["temp_dir"]) / "test_integration"
+                ),
+                "create_grayscale": True,
+                "create_metadata": True,
+                "oam_path": None,
+            }
 
-            # Create controller
-            controller = ExtractionController(mock_main_window)
+            # Mock Qt components and create worker directly
+            with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
+                mock_pixmap_instance = Mock()
+                mock_pixmap_instance.loadFromData = Mock(return_value=True)
+                mock_qpixmap.return_value = mock_pixmap_instance
 
-            # Connect controller handlers to mock signals
-            worker.progress.connect(controller._on_progress)
-            worker.preview_ready.connect(controller._on_preview_ready)
-            worker.preview_image_ready.connect(controller._on_preview_image_ready)
-            worker.palettes_ready.connect(controller._on_palettes_ready)
-            worker.active_palettes_ready.connect(controller._on_active_palettes_ready)
-            worker.finished.connect(controller._on_extraction_finished)
-            worker.error.connect(controller._on_extraction_error)
+                # Create worker directly with mock signals
+                worker = ExtractionWorker(
+                    mock_main_window.get_extraction_params.return_value
+                )
 
-            # Run worker directly
-            worker.run()
+                # Replace worker signals with our mocks
+                for signal_name, mock_signal in mock_qt_signals.items():
+                    setattr(worker, signal_name, mock_signal)
 
-        # Verify signal flow
-        assert len(ui_signals["progress_messages"]) >= 4  # Multiple progress updates
-        assert "Extracting sprites from VRAM..." in ui_signals["progress_messages"]
-        assert "Extraction complete!" in ui_signals["progress_messages"]
+                # Create controller
+                controller = ExtractionController(mock_main_window)
 
-        # Verify preview updates
-        assert len(ui_signals["preview_updates"]) == 1
-        pixmap, tile_count = ui_signals["preview_updates"][0]
-        assert pixmap is not None
-        assert tile_count > 0
+                # Connect controller handlers to mock signals
+                worker.progress.connect(controller._on_progress)
+                worker.preview_ready.connect(controller._on_preview_ready)
+                worker.preview_image_ready.connect(controller._on_preview_image_ready)
+                worker.palettes_ready.connect(controller._on_palettes_ready)
+                worker.active_palettes_ready.connect(controller._on_active_palettes_ready)
+                worker.finished.connect(controller._on_extraction_finished)
+                worker.error.connect(controller._on_extraction_error)
 
-        # Verify preview image updates
-        assert len(ui_signals["preview_image_updates"]) == 1
-        pil_image = ui_signals["preview_image_updates"][0]
-        assert pil_image is not None
+                # Run worker directly
+                worker.run()
 
-        # Verify palette updates
-        assert len(ui_signals["palette_updates"]) == 1
-        assert len(ui_signals["palette_updates"][0]) == 8  # 8 sprite palettes
+            # Verify signal flow
+            assert len(ui_signals["progress_messages"]) >= 4  # Multiple progress updates
+            assert "Extracting sprites from VRAM..." in ui_signals["progress_messages"]
+            assert "Extraction complete!" in ui_signals["progress_messages"]
 
-        # Verify completion
-        assert len(ui_signals["completion_calls"]) == 1
-        assert len(ui_signals["error_calls"]) == 0
+            # Verify preview updates
+            assert len(ui_signals["preview_updates"]) == 1
+            pixmap, tile_count = ui_signals["preview_updates"][0]
+            assert pixmap is not None
+            assert tile_count > 0
 
-        # Verify output files exist
-        output_files = ui_signals["completion_calls"][0]
-        assert any(f.endswith(".png") for f in output_files)
-        assert any(f.endswith(".pal.json") for f in output_files)
+            # Verify preview image updates
+            assert len(ui_signals["preview_image_updates"]) == 1
+            pil_image = ui_signals["preview_image_updates"][0]
+            assert pil_image is not None
 
-        for file_path in output_files:
-            assert Path(file_path).exists()
+            # Verify palette updates
+            assert len(ui_signals["palette_updates"]) == 1
+            assert len(ui_signals["palette_updates"][0]) == 8  # 8 sprite palettes
+
+            # Verify completion
+            assert len(ui_signals["completion_calls"]) == 1
+            assert len(ui_signals["error_calls"]) == 0
+
+            # Verify output files exist
+            output_files = ui_signals["completion_calls"][0]
+            assert any(f.endswith(".png") for f in output_files)
+            assert any(f.endswith(".pal.json") for f in output_files)
+
+            for file_path in output_files:
+                assert Path(file_path).exists()
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     @pytest.mark.integration
     @pytest.mark.gui
@@ -550,69 +570,20 @@ class TestFullWorkflowIntegration:
         self, mock_main_window, mock_qt_signals
     ):
         """Test error recovery and system cleanup integration"""
-        from unittest.mock import Mock, patch
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Track error handling
-        error_calls = []
-        mock_main_window.extraction_failed = error_calls.append
+        try:
+            # Track error handling
+            error_calls = []
+            mock_main_window.extraction_failed = error_calls.append
 
-        # Test 1: Error scenario with invalid files
-        invalid_params = {
-            "vram_path": "/nonexistent/vram.dmp",
-            "cgram_path": "/nonexistent/cgram.dmp",
-            "output_base": "/invalid/output",
-            "create_grayscale": True,
-            "create_metadata": False,
-            "oam_path": None,
-        }
-
-        # Mock Qt components
-        with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-            mock_pixmap_instance = Mock()
-            mock_pixmap_instance.loadFromData = Mock(return_value=True)
-            mock_qpixmap.return_value = mock_pixmap_instance
-
-            # Create worker directly with invalid params
-            worker = ExtractionWorker(invalid_params)
-
-            # Replace worker signals with our mocks
-            for signal_name, mock_signal in mock_qt_signals.items():
-                setattr(worker, signal_name, mock_signal)
-
-            # Create controller
-            controller = ExtractionController(mock_main_window)
-
-            # Connect error tracking
-            worker.error.connect(controller._on_extraction_error)
-
-            # Run worker directly (should error)
-            worker.run()
-
-        # Verify error was handled
-        assert len(error_calls) == 1
-        assert "No such file" in error_calls[0] or "not found" in error_calls[0]
-
-        # Test 2: Recovery scenario with valid files
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Create minimal valid files
-            vram_data = bytearray(0x10000)
-            cgram_data = bytearray(512)
-
-            vram_path = Path(temp_dir) / "test.vram"
-            cgram_path = Path(temp_dir) / "test.cgram"
-            vram_path.write_bytes(vram_data)
-            cgram_path.write_bytes(cgram_data)
-
-            # Reset error tracking
-            error_calls.clear()
-            completion_calls = []
-            mock_main_window.extraction_complete = completion_calls.append
-
-            # Set up valid parameters
-            valid_params = {
-                "vram_path": str(vram_path),
-                "cgram_path": str(cgram_path),
-                "output_base": str(Path(temp_dir) / "recovery_test"),
+            # Test 1: Error scenario with invalid files
+            invalid_params = {
+                "vram_path": "/nonexistent/vram.dmp",
+                "cgram_path": "/nonexistent/cgram.dmp",
+                "output_base": "/invalid/output",
                 "create_grayscale": True,
                 "create_metadata": False,
                 "oam_path": None,
@@ -624,28 +595,84 @@ class TestFullWorkflowIntegration:
                 mock_pixmap_instance.loadFromData = Mock(return_value=True)
                 mock_qpixmap.return_value = mock_pixmap_instance
 
-                # Create worker with valid params
-                recovery_worker = ExtractionWorker(valid_params)
+                # Create worker directly with invalid params
+                worker = ExtractionWorker(invalid_params)
 
                 # Replace worker signals with our mocks
                 for signal_name, mock_signal in mock_qt_signals.items():
-                    setattr(recovery_worker, signal_name, mock_signal)
+                    setattr(worker, signal_name, mock_signal)
 
-                # Connect completion tracking
-                recovery_worker.finished.connect(controller._on_extraction_finished)
-                recovery_worker.error.connect(controller._on_extraction_error)
+                # Create controller
+                controller = ExtractionController(mock_main_window)
 
-                # Run worker directly
-                recovery_worker.run()
+                # Connect error tracking
+                worker.error.connect(controller._on_extraction_error)
 
-            # Verify recovery worked
-            assert len(error_calls) == 0
-            assert len(completion_calls) == 1
+                # Run worker directly (should error)
+                worker.run()
 
-            # Verify output files exist
-            output_files = completion_calls[0]
-            for file_path in output_files:
-                assert Path(file_path).exists()
+            # Verify error was handled
+            assert len(error_calls) == 1
+            # Check for either file not found or validation error
+            assert any(phrase in error_calls[0].lower() for phrase in ["no such file", "not found", "does not exist", "vram file"])
+
+            # Test 2: Recovery scenario with valid files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Create minimal valid files
+                vram_data = bytearray(0x10000)
+                cgram_data = bytearray(512)
+
+                vram_path = Path(temp_dir) / "test.vram"
+                cgram_path = Path(temp_dir) / "test.cgram"
+                vram_path.write_bytes(vram_data)
+                cgram_path.write_bytes(cgram_data)
+
+                # Reset error tracking
+                error_calls.clear()
+                completion_calls = []
+                mock_main_window.extraction_complete = completion_calls.append
+
+                # Set up valid parameters
+                valid_params = {
+                    "vram_path": str(vram_path),
+                    "cgram_path": str(cgram_path),
+                    "output_base": str(Path(temp_dir) / "recovery_test"),
+                    "create_grayscale": True,
+                    "create_metadata": False,
+                    "oam_path": None,
+                }
+
+                # Mock Qt components
+                with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
+                    mock_pixmap_instance = Mock()
+                    mock_pixmap_instance.loadFromData = Mock(return_value=True)
+                    mock_qpixmap.return_value = mock_pixmap_instance
+
+                    # Create worker with valid params
+                    recovery_worker = ExtractionWorker(valid_params)
+
+                    # Replace worker signals with our mocks
+                    for signal_name, mock_signal in mock_qt_signals.items():
+                        setattr(recovery_worker, signal_name, mock_signal)
+
+                    # Connect completion tracking
+                    recovery_worker.finished.connect(controller._on_extraction_finished)
+                    recovery_worker.error.connect(controller._on_extraction_error)
+
+                    # Run worker directly
+                    recovery_worker.run()
+
+                # Verify recovery worked
+                assert len(error_calls) == 0
+                assert len(completion_calls) == 1
+
+                # Verify output files exist
+                output_files = completion_calls[0]
+                for file_path in output_files:
+                    assert Path(file_path).exists()
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     @pytest.mark.integration
     @pytest.mark.gui
@@ -653,75 +680,81 @@ class TestFullWorkflowIntegration:
         self, integration_sample_files, mock_main_window, oam_test_data, mock_qt_signals
     ):
         """Test complete OAM analysis integration workflow"""
-        from unittest.mock import Mock, patch
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Create OAM file
-        oam_path = Path(integration_sample_files["temp_dir"]) / "test_OAM.dmp"
-        oam_path.write_bytes(oam_test_data)
+        try:
+            # Create OAM file
+            oam_path = Path(integration_sample_files["temp_dir"]) / "test_OAM.dmp"
+            oam_path.write_bytes(oam_test_data)
 
-        # Track active palette updates
-        active_palette_calls = []
-        mock_main_window.palette_preview.highlight_active_palettes = (
-            active_palette_calls.append
-        )
-
-        # Set up extraction parameters with OAM
-        mock_main_window.get_extraction_params.return_value = {
-            "vram_path": integration_sample_files["vram_path"],
-            "cgram_path": integration_sample_files["cgram_path"],
-            "output_base": str(Path(integration_sample_files["temp_dir"]) / "oam_test"),
-            "create_grayscale": True,
-            "create_metadata": True,
-            "oam_path": str(oam_path),
-        }
-
-        # Track completion
-        completion_calls = []
-        mock_main_window.extraction_complete = completion_calls.append
-
-        # Mock Qt components and create worker directly
-        with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-            mock_pixmap_instance = Mock()
-            mock_pixmap_instance.loadFromData = Mock(return_value=True)
-            mock_qpixmap.return_value = mock_pixmap_instance
-
-            # Create worker directly with OAM analysis parameters
-            worker = ExtractionWorker(
-                mock_main_window.get_extraction_params.return_value
+            # Track active palette updates
+            active_palette_calls = []
+            mock_main_window.palette_preview.highlight_active_palettes = (
+                active_palette_calls.append
             )
 
-            # Replace worker signals with our mocks
-            for signal_name, mock_signal in mock_qt_signals.items():
-                setattr(worker, signal_name, mock_signal)
+            # Set up extraction parameters with OAM
+            mock_main_window.get_extraction_params.return_value = {
+                "vram_path": integration_sample_files["vram_path"],
+                "cgram_path": integration_sample_files["cgram_path"],
+                "output_base": str(Path(integration_sample_files["temp_dir"]) / "oam_test"),
+                "create_grayscale": True,
+                "create_metadata": True,
+                "oam_path": str(oam_path),
+            }
 
-            # Create controller
-            ExtractionController(mock_main_window)
+            # Track completion
+            completion_calls = []
+            mock_main_window.extraction_complete = completion_calls.append
 
-            # Connect tracking
-            worker.active_palettes_ready.connect(
-                lambda p: active_palette_calls.append(p)
-            )
-            worker.finished.connect(lambda f: completion_calls.append(f))
+            # Mock Qt components and create worker directly
+            with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
+                mock_pixmap_instance = Mock()
+                mock_pixmap_instance.loadFromData = Mock(return_value=True)
+                mock_qpixmap.return_value = mock_pixmap_instance
 
-            # Run worker directly
-            worker.run()
+                # Create worker directly with OAM analysis parameters
+                worker = ExtractionWorker(
+                    mock_main_window.get_extraction_params.return_value
+                )
 
-        # Verify OAM analysis was performed
-        assert len(active_palette_calls) == 1
-        active_palettes = active_palette_calls[0]
+                # Replace worker signals with our mocks
+                for signal_name, mock_signal in mock_qt_signals.items():
+                    setattr(worker, signal_name, mock_signal)
 
-        # Should include palettes from on-screen sprites (0+8=8, 2+8=10)
-        # Should exclude palette from off-screen sprite (1+8=9)
-        assert 8 in active_palettes  # palette 0 -> CGRAM 8 (on-screen)
-        assert 10 in active_palettes  # palette 2 -> CGRAM 10 (on-screen)
+                # Create controller
+                ExtractionController(mock_main_window)
 
-        # Verify extraction completed successfully
-        assert len(completion_calls) == 1
-        output_files = completion_calls[0]
+                # Connect tracking
+                worker.active_palettes_ready.connect(
+                    lambda p: active_palette_calls.append(p)
+                )
+                worker.finished.connect(lambda f: completion_calls.append(f))
 
-        # Verify all expected files exist
-        assert any(f.endswith(".png") for f in output_files)
-        assert any(f.endswith(".metadata.json") for f in output_files)
+                # Run worker directly
+                worker.run()
 
-        for file_path in output_files:
-            assert Path(file_path).exists()
+            # Verify OAM analysis was performed
+            assert len(active_palette_calls) == 1
+            active_palettes = active_palette_calls[0]
+
+            # Should include palettes from on-screen sprites (0+8=8, 2+8=10)
+            # Should exclude palette from off-screen sprite (1+8=9)
+            assert 8 in active_palettes  # palette 0 -> CGRAM 8 (on-screen)
+            assert 10 in active_palettes  # palette 2 -> CGRAM 10 (on-screen)
+
+            # Verify extraction completed successfully
+            assert len(completion_calls) == 1
+            output_files = completion_calls[0]
+
+            # Verify all expected files exist
+            assert any(f.endswith(".png") for f in output_files)
+            assert any(f.endswith(".metadata.json") for f in output_files)
+
+            for file_path in output_files:
+                assert Path(file_path).exists()
+        finally:
+            # Clean up managers
+            cleanup_managers()

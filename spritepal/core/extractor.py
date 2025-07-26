@@ -2,7 +2,6 @@
 Core sprite extraction functionality
 """
 
-from typing import Optional
 
 from PIL import Image
 
@@ -14,54 +13,81 @@ from spritepal.utils.constants import (
     VRAM_SPRITE_OFFSET,
     VRAM_SPRITE_SIZE,
 )
+from spritepal.utils.logging_config import get_logger
 from spritepal.utils.validation import validate_offset, validate_vram_file
+
+logger = get_logger(__name__)
 
 
 class SpriteExtractor:
     """Handles sprite extraction from VRAM dumps"""
 
     def __init__(self) -> None:
-        self.vram_data: Optional[bytes] = None
+        self.vram_data: bytes | None = None
         self.offset = VRAM_SPRITE_OFFSET
         self.size = VRAM_SPRITE_SIZE
         self.tiles_per_row = DEFAULT_TILES_PER_ROW
+        logger.debug(f"SpriteExtractor initialized: offset=0x{self.offset:04X}, size={self.size}, tiles_per_row={self.tiles_per_row}")
 
     def load_vram(self, vram_path: str) -> None:
         """Load VRAM dump file with validation"""
+        logger.info(f"Loading VRAM file: {vram_path}")
+
         # Validate file before loading
         is_valid, error_msg = validate_vram_file(vram_path)
         if not is_valid:
+            logger.error(f"VRAM validation failed: {error_msg}")
             raise ValueError(f"Invalid VRAM file: {error_msg}")
+        logger.debug("VRAM file validation passed")
 
         with open(vram_path, "rb") as f:
             self.vram_data = f.read()
 
-    def extract_tiles(self, offset: Optional[int] = None, size: Optional[int] = None) -> tuple[list[list[list[int]]], int]:
+        expected_size = 65536  # 64KB
+        if len(self.vram_data) == expected_size:
+            logger.info(f"Loaded standard 64KB VRAM dump from {vram_path}")
+        else:
+            logger.warning(f"Loaded non-standard VRAM dump: {len(self.vram_data)} bytes (expected {expected_size} bytes)")
+
+    def extract_tiles(
+        self, offset: int | None = None, size: int | None = None
+    ) -> tuple[list[list[list[int]]], int]:
         """Extract tiles from VRAM data"""
         if self.vram_data is None:
+            logger.error("Attempted to extract tiles without loading VRAM data")
             raise ValueError("VRAM data not loaded. Call load_vram() first.")
 
         if offset is None:
             offset = self.offset
+            logger.debug(f"Using default offset: 0x{offset:04X}")
         if size is None:
             size = self.size
+            logger.debug(f"Using default size: {size} bytes")
+
+        logger.info(f"Extracting tiles from offset 0x{offset:04X}, size: {size} bytes")
 
         # Validate offset
         is_valid, error_msg = validate_offset(offset, len(self.vram_data))
         if not is_valid:
+            logger.error(f"Invalid extraction offset: {error_msg}")
             raise ValueError(f"Invalid offset: {error_msg}")
 
         # Read sprite data from offset
         if offset + size > len(self.vram_data):
+            old_size = size
             size = len(self.vram_data) - offset
+            logger.warning(f"Adjusted extraction size from {old_size} to {size} bytes to fit VRAM bounds")
 
         sprite_data = self.vram_data[offset : offset + size]
 
         # Calculate number of tiles
         num_tiles = len(sprite_data) // BYTES_PER_TILE
+        logger.info(f"Extracting {num_tiles} tiles from {len(sprite_data)} bytes of sprite data")
 
         # Extract each tile
         tiles = []
+        log_interval = 100  # Log progress every 100 tiles
+
         for tile_idx in range(num_tiles):
             tile_offset = tile_idx * BYTES_PER_TILE
             tile_data = sprite_data[tile_offset : tile_offset + BYTES_PER_TILE]
@@ -70,10 +96,18 @@ class SpriteExtractor:
             pixels = self._decode_4bpp_tile(tile_data)
             tiles.append(pixels)
 
+            # Log progress at intervals
+            if (tile_idx + 1) % log_interval == 0:
+                logger.debug(f"Extracted {tile_idx + 1}/{num_tiles} tiles")
+
+        logger.info(f"Successfully extracted {num_tiles} tiles")
         return tiles, num_tiles
 
     def _decode_4bpp_tile(self, tile_data: bytes) -> list[list[int]]:
         """Decode a 4bpp SNES tile to pixel indices"""
+        if len(tile_data) < BYTES_PER_TILE:
+            logger.warning(f"Tile data is incomplete: {len(tile_data)} bytes (expected {BYTES_PER_TILE})")
+
         pixels = []
 
         # 4bpp SNES format: 32 bytes per 8x8 tile
@@ -102,7 +136,9 @@ class SpriteExtractor:
 
         return pixels
 
-    def create_grayscale_image(self, tiles: list[list[list[int]]], tiles_per_row: Optional[int] = None) -> Image.Image:
+    def create_grayscale_image(
+        self, tiles: list[list[list[int]]], tiles_per_row: int | None = None
+    ) -> Image.Image:
         """Create a grayscale image from tiles"""
         if tiles_per_row is None:
             tiles_per_row = self.tiles_per_row
@@ -114,10 +150,14 @@ class SpriteExtractor:
         img_width = tiles_per_row * TILE_WIDTH
         img_height = rows * TILE_HEIGHT
 
+        logger.info(f"Creating grayscale image: {img_width}x{img_height} pixels ({num_tiles} tiles in {rows} rows, {tiles_per_row} tiles/row)")
+
         # Create image data as bytes for efficient processing
         img_data = bytearray(img_width * img_height)
 
         # Place tiles directly into byte array
+        log_interval = 500  # Log progress every 500 tiles for performance
+
         for tile_idx, pixels in enumerate(tiles):
             tile_x = (tile_idx % tiles_per_row) * TILE_WIDTH
             tile_y = (tile_idx // tiles_per_row) * TILE_HEIGHT
@@ -125,7 +165,10 @@ class SpriteExtractor:
             for y, row in enumerate(pixels):
                 row_offset = (tile_y + y) * img_width + tile_x
                 # Copy entire row at once
-                img_data[row_offset:row_offset + TILE_WIDTH] = row
+                img_data[row_offset : row_offset + TILE_WIDTH] = row
+
+            if (tile_idx + 1) % log_interval == 0:
+                logger.debug(f"Placed {tile_idx + 1}/{num_tiles} tiles into image")
 
         # Create image from bytes
         img = Image.frombytes("P", (img_width, img_height), bytes(img_data))
@@ -136,13 +179,24 @@ class SpriteExtractor:
             gray = (i * 255) // 15 if i < 16 else 0
             grayscale_palette.extend([gray, gray, gray])
         img.putpalette(grayscale_palette)
+        logger.debug("Applied grayscale palette (16 shades mapped to 0-255)")
 
+        logger.info(f"Grayscale image created successfully: {img_width}x{img_height} pixels, mode={img.mode}")
         return img
 
     def extract_sprites_grayscale(
-        self, vram_path: str, output_path: str, offset: Optional[int] = None, size: Optional[int] = None, tiles_per_row: Optional[int] = None
+        self,
+        vram_path: str,
+        output_path: str,
+        offset: int | None = None,
+        size: int | None = None,
+        tiles_per_row: int | None = None,
     ) -> tuple[Image.Image, int]:
         """Extract sprites as grayscale image"""
+        logger.info("=" * 60)
+        logger.info(f"Starting sprite extraction: {vram_path} -> {output_path}")
+        logger.debug(f"Parameters: offset={offset}, size={size}, tiles_per_row={tiles_per_row}")
+
         # Load VRAM
         self.load_vram(vram_path)
 
@@ -154,11 +208,21 @@ class SpriteExtractor:
 
         # Save
         img.save(output_path)
+        logger.info(f"Saved grayscale sprite image to {output_path} ({img.size[0]}x{img.size[1]} pixels, {num_tiles} tiles)")
+        logger.info("=" * 60)
 
         return img, num_tiles
 
-    def get_preview_image(self, vram_path: str, offset: Optional[int] = None, size: Optional[int] = None, max_tiles: int = 64) -> tuple[Image.Image, int]:
+    def get_preview_image(
+        self,
+        vram_path: str,
+        offset: int | None = None,
+        size: int | None = None,
+        max_tiles: int = 64,
+    ) -> tuple[Image.Image, int]:
         """Get a preview image of the sprites"""
+        logger.debug(f"Generating preview image with max {max_tiles} tiles")
+
         # Load VRAM
         self.load_vram(vram_path)
 
@@ -167,12 +231,15 @@ class SpriteExtractor:
 
         # Limit tiles for preview
         if len(tiles) > max_tiles:
+            logger.debug(f"Limiting preview to {max_tiles} tiles (from {len(tiles)})")
             tiles = tiles[:max_tiles]
 
         # Use smaller grid for preview
         preview_tiles_per_row = min(8, self.tiles_per_row)
+        logger.debug(f"Using {preview_tiles_per_row} tiles per row for preview")
 
         # Create preview image
         img = self.create_grayscale_image(tiles, preview_tiles_per_row)
+        logger.debug(f"Preview image created: {img.size[0]}x{img.size[1]} pixels")
 
         return img, num_tiles

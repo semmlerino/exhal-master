@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from spritepal.core.controller import ExtractionController
+from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.utils.settings_manager import SettingsManager, get_settings_manager
 
 
@@ -17,9 +18,11 @@ class TestSettingsIntegration:
     @pytest.fixture
     def temp_settings_dir(self):
         """Create temporary directory for settings"""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("pathlib.Path.cwd", return_value=Path(tmpdir)):
-                yield tmpdir
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            patch("pathlib.Path.cwd", return_value=Path(tmpdir)),
+        ):
+            yield tmpdir
 
     @pytest.fixture
     def mock_main_window(self):
@@ -66,6 +69,7 @@ class TestSettingsIntegration:
         """Test controller interaction with settings manager"""
         # Reset global instance to ensure it uses temp directory
         import spritepal.utils.settings_manager
+
         spritepal.utils.settings_manager._settings_instance = None
 
         settings = get_settings_manager()
@@ -75,13 +79,20 @@ class TestSettingsIntegration:
         settings.set("session", "last_tile_count", 64)
         settings.save_settings()
 
-        # Create controller
-        ExtractionController(mock_main_window)
+        # Initialize managers before creating controller
+        initialize_managers("TestApp")
 
-        # Controller should be able to access settings
-        # (In real implementation, controller would use settings)
-        last_offset = settings.get("session", "last_extraction_offset", 0)
-        assert last_offset == 0xC000
+        try:
+            # Create controller
+            ExtractionController(mock_main_window)
+
+            # Controller should be able to access settings
+            # (In real implementation, controller would use settings)
+            last_offset = settings.get("session", "last_extraction_offset", 0)
+            assert last_offset == 0xC000
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     def test_window_geometry_persistence(self, temp_settings_dir):
         """Test UI geometry settings persistence"""
@@ -95,7 +106,7 @@ class TestSettingsIntegration:
             "width": 1200,
             "height": 800,
             "maximized": False,
-            "splitter_sizes": [300, 900]
+            "splitter_sizes": [300, 900],
         }
 
         for key, value in window_state.items():
@@ -154,7 +165,7 @@ class TestSettingsIntegration:
             "preserve_transparency": True,
             "compression_level": 6,
             "palette_format": "rgb888",
-            "include_unused_palettes": False
+            "include_unused_palettes": False,
         }
 
         for key, value in prefs.items():
@@ -178,7 +189,7 @@ class TestSettingsIntegration:
             "preview_background": "#2b2b2b",
             "grid_color": "#555555",
             "selection_color": "#4a90e2",
-            "transparency_pattern": "checkerboard"
+            "transparency_pattern": "checkerboard",
         }
 
         settings.set("appearance", "color_scheme", color_scheme)
@@ -194,7 +205,7 @@ class TestSettingsIntegration:
         old_settings = {
             "vram_path": "/old/path.dmp",
             "window_width": 800,
-            "window_height": 600
+            "window_height": 600,
         }
 
         settings_file = Path(temp_settings_dir) / ".spritepal_settings.json"
@@ -276,7 +287,7 @@ class TestSettingsIntegration:
         export_data = {
             "session": settings.get_session_data(),
             "extraction": settings._settings.get("extraction", {}),
-            "appearance": settings._settings.get("appearance", {})
+            "appearance": settings._settings.get("appearance", {}),
         }
 
         # Clear settings

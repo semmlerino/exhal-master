@@ -175,7 +175,9 @@ class TestGridArrangementIntegration:
             generator = GridPreviewGenerator()
 
             # Process sprite file
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 2)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 2
+            )
 
             # Verify file was processed
             assert original_image is not None
@@ -196,7 +198,9 @@ class TestGridArrangementIntegration:
             )
 
             # Verify export
-            expected_path = os.path.join(temp_dir, "test_sprite_test_arrangement_arranged.png")
+            expected_path = os.path.join(
+                temp_dir, "test_sprite_test_arrangement_arranged.png"
+            )
             assert exported_path == expected_path
 
     def test_workflow_error_handling(self):
@@ -220,7 +224,7 @@ class TestGridArrangementIntegration:
         assert preview.size == (1, 1)
 
         # Test invalid grid dimensions
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid.*dimensions"):
             GridArrangementManager(0, 2)
 
     def test_workflow_arrangement_order_consistency(self):
@@ -287,8 +291,8 @@ class TestGridArrangementIntegration:
         processor.extract_tiles_as_grid(sprite_sheet, 3)
 
         # Add overlapping arrangements
-        manager.add_row(1)      # Row 1: (1,0), (1,1), (1,2)
-        manager.add_column(1)   # Column 1: (0,1), (1,1), (2,1) - overlaps at (1,1)
+        manager.add_row(1)  # Row 1: (1,0), (1,1), (1,2)
+        manager.add_column(1)  # Column 1: (0,1), (1,1), (2,1) - overlaps at (1,1)
 
         # Verify overlapping arrangement
         assert manager.get_arranged_count() == 5  # 3 from row + 2 new from column
@@ -332,7 +336,12 @@ class TestGridArrangementIntegration:
         manager.add_column(9)
 
         # Create large group
-        group_tiles = [TilePosition(4, 4), TilePosition(4, 5), TilePosition(5, 4), TilePosition(5, 5)]
+        group_tiles = [
+            TilePosition(4, 4),
+            TilePosition(4, 5),
+            TilePosition(5, 4),
+            TilePosition(5, 5),
+        ]
         group = TileGroup("center_group", group_tiles, 2, 2)
         manager.add_group(group)
 

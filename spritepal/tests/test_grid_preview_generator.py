@@ -77,7 +77,9 @@ class TestGridPreviewGenerator:
 
         # Mock the spacing method
         expected_result = Image.new("L", (8, 8))
-        generator._create_arranged_image_with_spacing = Mock(return_value=expected_result)
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=expected_result
+        )
 
         result = generator.create_grid_arranged_image(processor, manager)
 
@@ -105,7 +107,9 @@ class TestGridPreviewGenerator:
 
         # Mock the spacing method
         expected_result = Image.new("L", (16, 8))
-        generator._create_arranged_image_with_spacing = Mock(return_value=expected_result)
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=expected_result
+        )
 
         result = generator.create_grid_arranged_image(processor, manager)
 
@@ -133,7 +137,9 @@ class TestGridPreviewGenerator:
 
         # Mock the spacing method
         expected_result = Image.new("L", (8, 16))
-        generator._create_arranged_image_with_spacing = Mock(return_value=expected_result)
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=expected_result
+        )
 
         result = generator.create_grid_arranged_image(processor, manager)
 
@@ -148,7 +154,9 @@ class TestGridPreviewGenerator:
         manager = Mock(spec=GridArrangementManager)
 
         # Mock group arrangement
-        manager.get_arrangement_order.return_value = [(ArrangementType.GROUP, "test_group")]
+        manager.get_arrangement_order.return_value = [
+            (ArrangementType.GROUP, "test_group")
+        ]
 
         # Mock group
         group = TileGroup("test_group", [TilePosition(0, 0), TilePosition(0, 1)], 2, 1)
@@ -165,7 +173,9 @@ class TestGridPreviewGenerator:
 
         # Mock the spacing method
         expected_result = Image.new("L", (16, 8))
-        generator._create_arranged_image_with_spacing = Mock(return_value=expected_result)
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=expected_result
+        )
 
         result = generator.create_grid_arranged_image(processor, manager)
 
@@ -183,7 +193,7 @@ class TestGridPreviewGenerator:
         manager.get_arrangement_order.return_value = [
             (ArrangementType.TILE, "0,0"),
             (ArrangementType.ROW, "1"),
-            (ArrangementType.COLUMN, "2")
+            (ArrangementType.COLUMN, "2"),
         ]
 
         # Mock tile
@@ -204,7 +214,9 @@ class TestGridPreviewGenerator:
 
         # Mock the spacing method
         expected_result = Image.new("L", (24, 8))
-        generator._create_arranged_image_with_spacing = Mock(return_value=expected_result)
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=expected_result
+        )
 
         result = generator.create_grid_arranged_image(processor, manager)
 
@@ -466,7 +478,9 @@ class TestGridPreviewGenerator:
         # Mock the save method
         arranged_image.save = Mock()
 
-        result = generator.export_grid_arrangement("/path/to/sprite.png", arranged_image)
+        result = generator.export_grid_arrangement(
+            "/path/to/sprite.png", arranged_image
+        )
 
         assert result == "/path/to/sprite_grid_arranged.png"
         arranged_image.save.assert_called_once_with("/path/to/sprite_grid_arranged.png")
@@ -486,7 +500,7 @@ class TestGridPreviewGenerator:
         # Mock manager data
         manager.get_arrangement_order.return_value = [
             (ArrangementType.TILE, "0,0"),
-            (ArrangementType.ROW, "1")
+            (ArrangementType.ROW, "1"),
         ]
 
         group = TileGroup("test_group", [TilePosition(0, 0)], 1, 1, "Test Group")
@@ -588,7 +602,9 @@ class TestGridPreviewGenerator:
         processor.get_tile.return_value = tile_image
 
         # Mock the spacing method
-        generator._create_arranged_image_with_spacing = Mock(return_value=Image.new("L", (8, 8)))
+        generator._create_arranged_image_with_spacing = Mock(
+            return_value=Image.new("L", (8, 8))
+        )
 
         generator.create_grid_arranged_image(processor, manager)
 

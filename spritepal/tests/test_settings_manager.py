@@ -56,7 +56,7 @@ class TestSettingsManager:
         # Create settings file
         settings_data = {
             "session": {"vram_path": "/test/vram.dmp"},
-            "ui": {"window_width": 1000}
+            "ui": {"window_width": 1000},
         }
         settings_file = Path(temp_dir) / ".testapp_settings.json"
         with open(settings_file, "w") as f:
@@ -136,7 +136,7 @@ class TestSettingsManager:
         new_session = {
             "vram_path": "/new/vram.dmp",
             "cgram_path": "/new/cgram.dmp",
-            "output_name": "output"
+            "output_name": "output",
         }
 
         settings_manager.save_session_data(new_session)
@@ -159,7 +159,7 @@ class TestSettingsManager:
             "window_width": 1024,
             "window_height": 768,
             "window_x": 100,
-            "window_y": 100
+            "window_y": 100,
         }
 
         settings_manager.save_ui_data(new_ui)
@@ -220,6 +220,7 @@ class TestGlobalSettingsInstance:
         """Test that get_settings_manager returns singleton"""
         # Reset global instance
         import spritepal.utils.settings_manager
+
         spritepal.utils.settings_manager._settings_instance = None
 
         # Get instance twice
@@ -232,6 +233,7 @@ class TestGlobalSettingsInstance:
     def test_get_settings_manager_preserves_state(self):
         """Test that singleton preserves state"""
         import spritepal.utils.settings_manager
+
         spritepal.utils.settings_manager._settings_instance = None
 
         manager1 = get_settings_manager()

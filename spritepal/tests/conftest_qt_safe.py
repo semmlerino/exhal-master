@@ -9,6 +9,22 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+# Import qt_mocks to avoid PLC0415 errors in fixtures
+try:
+    from .fixtures.qt_mocks import (
+        create_mock_extraction_worker,
+        create_mock_main_window,
+        create_mock_signals,
+    )
+except ImportError:
+    # Fallback for tests that run without fixtures directory
+    def create_mock_main_window():
+        return Mock()
+    def create_mock_extraction_worker():
+        return Mock()
+    def create_mock_signals():
+        return Mock()
+
 # Detect if we're in a problematic headless environment
 IS_HEADLESS = (
     not os.environ.get("DISPLAY")
@@ -101,48 +117,16 @@ def safe_qtbot(qtbot):
 @pytest.fixture
 def mock_main_window():
     """Mock main window for testing without Qt"""
-    window = Mock()
-    window.extract_requested = Mock()
-    window.open_in_editor_requested = Mock()
-    window.get_extraction_params = Mock(
-        return_value={
-            "vram_path": "/test/vram.dmp",
-            "cgram_path": "/test/cgram.dmp",
-            "output_base": "/test/output",
-            "create_grayscale": True,
-            "create_metadata": True,
-            "oam_path": None,
-        }
-    )
-    window.extraction_complete = Mock()
-    window.extraction_failed = Mock()
-    window.status_bar = Mock()
-    window.status_bar.showMessage = Mock()
-    window.sprite_preview = Mock()
-    window.palette_preview = Mock()
-    window.preview_info = Mock()
-    return window
+    return create_mock_main_window()
 
 
 @pytest.fixture
 def mock_worker():
     """Mock extraction worker for testing without Qt"""
-    worker = Mock()
+    return create_mock_extraction_worker()
 
-    # Create mock signals
-    for signal_name in [
-        "progress",
-        "preview_ready",
-        "palettes_ready",
-        "active_palettes_ready",
-        "finished",
-        "error",
-    ]:
-        signal = Mock()
-        signal.emit = Mock()
-        signal.connect = Mock()
-        setattr(worker, signal_name, signal)
 
-    worker.start = Mock()
-    worker.run = Mock()
-    return worker
+@pytest.fixture
+def mock_qt_signals():
+    """Provide a standard set of mock Qt signals for testing"""
+    return create_mock_signals()

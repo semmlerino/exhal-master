@@ -3,7 +3,6 @@ Preview generation for arranged sprite rows
 """
 
 import os
-from typing import Optional
 
 from PIL import Image
 
@@ -13,7 +12,7 @@ from .palette_colorizer import PaletteColorizer
 class PreviewGenerator:
     """Generates preview images for sprite row arrangements"""
 
-    def __init__(self, colorizer: Optional[PaletteColorizer] = None):
+    def __init__(self, colorizer: PaletteColorizer | None = None):
         """Initialize preview generator
 
         Args:
@@ -21,9 +20,14 @@ class PreviewGenerator:
         """
         self.colorizer = colorizer
 
-    def create_arranged_image(self, original_image: Image.Image, tile_rows: list[dict],
-                            arranged_indices: list[int], tile_height: int,
-                            row_spacing_ratio: float = 0.75) -> Optional[Image.Image]:
+    def create_arranged_image(
+        self,
+        original_image: Image.Image,
+        tile_rows: list[dict],
+        arranged_indices: list[int],
+        tile_height: int,
+        row_spacing_ratio: float = 0.75,
+    ) -> Image.Image | None:
         """Create image with arranged rows
 
         Args:
@@ -70,7 +74,9 @@ class PreviewGenerator:
 
                 # Get the appropriate display image (grayscale or colorized)
                 if self.colorizer:
-                    row_image = self.colorizer.get_display_image(row_idx, grayscale_image)
+                    row_image = self.colorizer.get_display_image(
+                        row_idx, grayscale_image
+                    )
                 else:
                     row_image = grayscale_image
 
@@ -91,7 +97,7 @@ class PreviewGenerator:
 
         return arranged
 
-    def apply_palette_to_full_image(self, image: Image.Image) -> Optional[Image.Image]:
+    def apply_palette_to_full_image(self, image: Image.Image) -> Image.Image | None:
         """Apply current palette to a full image (for original preview)
 
         Args:
@@ -106,8 +112,9 @@ class PreviewGenerator:
         # Use a special index (-1) to indicate full image colorization
         return self.colorizer.get_display_image(-1, image)
 
-    def export_arranged_image(self, sprite_path: str, arranged_image: Image.Image,
-                            num_rows: int) -> str:
+    def export_arranged_image(
+        self, sprite_path: str, arranged_image: Image.Image, num_rows: int
+    ) -> str:
         """Export the arranged sprite sheet to a file
 
         Args:
@@ -127,7 +134,9 @@ class PreviewGenerator:
 
         return output_path
 
-    def generate_output_filename(self, sprite_path: str, suffix: str = "_arranged") -> str:
+    def generate_output_filename(
+        self, sprite_path: str, suffix: str = "_arranged"
+    ) -> str:
         """Generate output filename based on input path
 
         Args:

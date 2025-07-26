@@ -29,7 +29,7 @@ class TestPaletteColorizerEnhanced:
         test_palettes = {
             8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)],
             9: [(0, 0, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)],
-            10: [(0, 0, 0), (128, 128, 128), (192, 192, 192), (255, 255, 255)]
+            10: [(0, 0, 0), (128, 128, 128), (192, 192, 192), (255, 255, 255)],
         }
 
         # Set palettes
@@ -46,7 +46,12 @@ class TestPaletteColorizerEnhanced:
         # Verify palette data
         assert palettes[8] == [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
         assert palettes[9] == [(0, 0, 0), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
-        assert palettes[10] == [(0, 0, 0), (128, 128, 128), (192, 192, 192), (255, 255, 255)]
+        assert palettes[10] == [
+            (0, 0, 0),
+            (128, 128, 128),
+            (192, 192, 192),
+            (255, 255, 255),
+        ]
 
     def test_palette_mode_toggle(self):
         """Test palette mode toggling"""
@@ -108,7 +113,7 @@ class TestPaletteColorizerEnhanced:
         test_palettes = {
             8: [(0, 0, 0), (255, 0, 0)],
             10: [(0, 0, 0), (0, 255, 0)],
-            12: [(0, 0, 0), (0, 0, 255)]
+            12: [(0, 0, 0), (0, 0, 255)],
         }
         colorizer.set_palettes(test_palettes)
 
@@ -137,10 +142,7 @@ class TestPaletteColorizerEnhanced:
         colorizer = PaletteColorizer()
 
         # Set up palettes
-        test_palettes = {
-            9: [(0, 0, 0), (255, 0, 0)],
-            11: [(0, 0, 0), (0, 255, 0)]
-        }
+        test_palettes = {9: [(0, 0, 0), (255, 0, 0)], 11: [(0, 0, 0), (0, 255, 0)]}
         colorizer.set_palettes(test_palettes)
 
         # Set current palette to unavailable index
@@ -160,17 +162,17 @@ class TestPaletteColorizerEnhanced:
         pixels = test_image.load()
 
         # Set pixel values to map to different palette indices
-        pixels[0, 0] = 0   # Index 0 - should be transparent
+        pixels[0, 0] = 0  # Index 0 - should be transparent
         pixels[1, 0] = 16  # Index 1
         pixels[2, 0] = 32  # Index 2
         pixels[3, 0] = 48  # Index 3
 
         # Create test palette
         test_palette = [
-            (0, 0, 0),        # Index 0 - transparent
-            (255, 0, 0),      # Index 1 - red
-            (0, 255, 0),      # Index 2 - green
-            (0, 0, 255)       # Index 3 - blue
+            (0, 0, 0),  # Index 0 - transparent
+            (255, 0, 0),  # Index 1 - red
+            (0, 255, 0),  # Index 2 - green
+            (0, 0, 255),  # Index 3 - blue
         ]
 
         # Apply palette
@@ -182,7 +184,7 @@ class TestPaletteColorizerEnhanced:
         assert result.size == (4, 4)
 
         # Check pixel colors
-        assert result.getpixel((0, 0)) == (0, 0, 0, 0)      # Transparent
+        assert result.getpixel((0, 0)) == (0, 0, 0, 0)  # Transparent
         assert result.getpixel((1, 0)) == (255, 0, 0, 255)  # Red
         assert result.getpixel((2, 0)) == (0, 255, 0, 255)  # Green
         assert result.getpixel((3, 0)) == (0, 0, 255, 255)  # Blue
@@ -203,10 +205,10 @@ class TestPaletteColorizerEnhanced:
 
         # Create test palette
         test_palette = [
-            (0, 0, 0),        # Index 0 - transparent
-            (255, 128, 0),    # Index 1 - orange
-            (128, 0, 255),    # Index 2 - purple
-            (0, 255, 255)     # Index 3 - cyan
+            (0, 0, 0),  # Index 0 - transparent
+            (255, 128, 0),  # Index 1 - orange
+            (128, 0, 255),  # Index 2 - purple
+            (0, 255, 255),  # Index 3 - cyan
         ]
 
         # Apply palette
@@ -218,7 +220,7 @@ class TestPaletteColorizerEnhanced:
         assert result.size == (4, 4)
 
         # Check pixel colors
-        assert result.getpixel((0, 0)) == (0, 0, 0, 0)        # Transparent
+        assert result.getpixel((0, 0)) == (0, 0, 0, 0)  # Transparent
         assert result.getpixel((1, 0)) == (255, 128, 0, 255)  # Orange
         assert result.getpixel((2, 0)) == (128, 0, 255, 255)  # Purple
         assert result.getpixel((3, 0)) == (0, 255, 255, 255)  # Cyan
@@ -252,9 +254,9 @@ class TestPaletteColorizerEnhanced:
 
         # Create small palette
         test_palette = [
-            (0, 0, 0),    # Index 0
+            (0, 0, 0),  # Index 0
             (255, 0, 0),  # Index 1
-            (0, 255, 0)   # Index 2
+            (0, 255, 0),  # Index 2
         ]
 
         # Apply palette
@@ -275,9 +277,7 @@ class TestPaletteColorizerEnhanced:
         test_image = Image.new("L", (4, 4))
 
         # Set up palettes
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]}
         colorizer.set_palettes(test_palettes)
 
         # Ensure palette mode is off
@@ -299,9 +299,7 @@ class TestPaletteColorizerEnhanced:
         pixels[0, 0] = 16  # Index 1
 
         # Set up palettes
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]}
         colorizer.set_palettes(test_palettes)
 
         # Enable palette mode
@@ -326,9 +324,7 @@ class TestPaletteColorizerEnhanced:
         pixels[0, 0] = 16  # Index 1
 
         # Set up palettes
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)]}
         colorizer.set_palettes(test_palettes)
 
         # Enable palette mode
@@ -356,7 +352,7 @@ class TestPaletteColorizerEnhanced:
         # Set up palettes
         test_palettes = {
             8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255)],
-            9: [(0, 0, 0), (0, 255, 0), (255, 0, 0), (0, 0, 255)]
+            9: [(0, 0, 0), (0, 255, 0), (255, 0, 0), (0, 0, 255)],
         }
         colorizer.set_palettes(test_palettes)
 
@@ -386,9 +382,7 @@ class TestPaletteColorizerEnhanced:
         test_image = Image.new("L", (4, 4))
 
         # Set up palettes
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)]}
         colorizer.set_palettes(test_palettes)
 
         # Enable palette mode with non-existent palette
@@ -411,9 +405,7 @@ class TestPaletteColorizerEnhanced:
 
         # Create test setup
         test_image = Image.new("L", (4, 4))
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)]}
         colorizer.set_palettes(test_palettes)
         colorizer.toggle_palette_mode()
 
@@ -435,9 +427,7 @@ class TestPaletteColorizerEnhanced:
 
         # Create test setup
         test_image = Image.new("L", (4, 4))
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)]}
         colorizer.set_palettes(test_palettes)
         colorizer.toggle_palette_mode()
 
@@ -454,9 +444,7 @@ class TestPaletteColorizerEnhanced:
 
         # Create test setup
         test_image = Image.new("L", (4, 4))
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)]}
         colorizer.set_palettes(test_palettes)
         colorizer.toggle_palette_mode()
 
@@ -466,9 +454,7 @@ class TestPaletteColorizerEnhanced:
         assert len(colorizer._colorized_cache) == 2
 
         # Change palettes
-        new_palettes = {
-            9: [(0, 0, 0), (0, 255, 0)]
-        }
+        new_palettes = {9: [(0, 0, 0), (0, 255, 0)]}
         colorizer.set_palettes(new_palettes)
 
         # Cache should be cleared
@@ -480,9 +466,7 @@ class TestPaletteColorizerEnhanced:
 
         # Create test setup
         test_image = Image.new("L", (4, 4))
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)]}
         colorizer.set_palettes(test_palettes)
         colorizer.toggle_palette_mode()
 
@@ -513,10 +497,7 @@ class TestPaletteColorizerEnhanced:
         colorizer.palette_index_changed.emit.assert_called_once_with(10)
 
         # Test cycling signal
-        test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0)],
-            9: [(0, 0, 0), (0, 255, 0)]
-        }
+        test_palettes = {8: [(0, 0, 0), (255, 0, 0)], 9: [(0, 0, 0), (0, 255, 0)]}
         colorizer.set_palettes(test_palettes)
         colorizer.set_selected_palette(8)
         colorizer.palette_index_changed.reset_mock()
@@ -538,12 +519,36 @@ class TestPaletteColorizerEnhanced:
 
         # Set up multiple palettes
         test_palettes = {
-            8: [(0, 0, 0), (255, 0, 0), (0, 255, 0), (0, 0, 255),
-                (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)],
-            9: [(0, 0, 0), (128, 0, 0), (0, 128, 0), (0, 0, 128),
-                (128, 128, 0), (128, 0, 128), (0, 128, 128), (128, 128, 128)],
-            10: [(0, 0, 0), (64, 64, 64), (128, 128, 128), (192, 192, 192),
-                 (255, 255, 255), (255, 128, 128), (128, 255, 128), (128, 128, 255)]
+            8: [
+                (0, 0, 0),
+                (255, 0, 0),
+                (0, 255, 0),
+                (0, 0, 255),
+                (255, 255, 0),
+                (255, 0, 255),
+                (0, 255, 255),
+                (255, 255, 255),
+            ],
+            9: [
+                (0, 0, 0),
+                (128, 0, 0),
+                (0, 128, 0),
+                (0, 0, 128),
+                (128, 128, 0),
+                (128, 0, 128),
+                (0, 128, 128),
+                (128, 128, 128),
+            ],
+            10: [
+                (0, 0, 0),
+                (64, 64, 64),
+                (128, 128, 128),
+                (192, 192, 192),
+                (255, 255, 255),
+                (255, 128, 128),
+                (128, 255, 128),
+                (128, 128, 255),
+            ],
         }
         colorizer.set_palettes(test_palettes)
 

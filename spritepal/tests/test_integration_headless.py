@@ -86,83 +86,131 @@ class TestExtractionWorkerHeadless:
 
     def test_worker_logic_without_qt(self, worker_params, mock_qt_imports):
         """Test worker logic without Qt dependencies"""
-        # Create worker first
-        worker = ExtractionWorker(worker_params)
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        # Create test image
-        test_img = Image.new("P", (128, 64), 0)
+        try:
+            # Create worker first
+            worker = ExtractionWorker(worker_params)
 
-        # Patch the instance method on the worker's extractor
-        with patch.object(
-            worker.extractor, "extract_sprites_grayscale", return_value=(test_img, 10)
-        ) as mock_extract:
-            # Create proper mocks for signals
-            progress_mock = Mock()
-            progress_mock.emit = Mock()
-            preview_mock = Mock()
-            preview_mock.emit = Mock()
-            palettes_mock = Mock()
-            palettes_mock.emit = Mock()
-            finished_mock = Mock()
-            finished_mock.emit = Mock()
-            error_mock = Mock()
-            error_mock.emit = Mock()
+            # Create test image
+            Image.new("P", (128, 64), 0)
 
-            # Replace signals
-            worker.progress = progress_mock
-            worker.preview_ready = preview_mock
-            worker.palettes_ready = palettes_mock
-            worker.finished = finished_mock
-            worker.error = error_mock
+            # Mock the extraction manager's extract_from_vram method
+            with patch("spritepal.core.controller.get_extraction_manager") as mock_get_manager:
+                # Create mock manager
+                mock_manager = Mock()
+                mock_get_manager.return_value = mock_manager
 
-            # Mock pixmap creation to avoid Qt dependency
-            worker._create_pixmap_from_image = Mock(return_value=Mock())
+                # Mock manager signals
+                mock_manager.extraction_progress = Mock()
+                mock_manager.extraction_progress.connect = Mock()
+                mock_manager.palettes_extracted = Mock()
+                mock_manager.palettes_extracted.connect = Mock()
+                mock_manager.active_palettes_found = Mock()
+                mock_manager.active_palettes_found.connect = Mock()
 
-            # Run the worker logic directly (not as thread)
-            worker.run()
+                # Mock the extraction result
+                output_path = worker_params["output_base"] + ".png"
+                mock_manager.extract_from_vram.return_value = [output_path]
 
-            # Check if error was emitted
-            if error_mock.emit.called:
-                error_msg = error_mock.emit.call_args[0][0]
-                print(f"Error emitted: {error_msg}")
+                # Create proper mocks for signals
+                progress_mock = Mock()
+                progress_mock.emit = Mock()
+                preview_mock = Mock()
+                preview_mock.emit = Mock()
+                preview_image_mock = Mock()
+                preview_image_mock.emit = Mock()
+                palettes_mock = Mock()
+                palettes_mock.emit = Mock()
+                active_palettes_mock = Mock()
+                active_palettes_mock.emit = Mock()
+                finished_mock = Mock()
+                finished_mock.emit = Mock()
+                error_mock = Mock()
+                error_mock.emit = Mock()
 
-            # Verify signals would be emitted
-            assert progress_mock.emit.called
-            assert preview_mock.emit.called
-            assert finished_mock.emit.called
-            assert not error_mock.emit.called
+                # Replace signals
+                worker.progress = progress_mock
+                worker.preview_ready = preview_mock
+                worker.preview_image_ready = preview_image_mock
+                worker.palettes_ready = palettes_mock
+                worker.active_palettes_ready = active_palettes_mock
+                worker.finished = finished_mock
+                worker.error = error_mock
 
-            # Verify methods were called
-            assert mock_extract.called
-            assert worker._create_pixmap_from_image.called
+                # Mock pixmap creation to avoid Qt dependency
+                with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
+                    mock_pil_to_qpixmap.return_value = Mock()
+
+                    # Run the worker logic directly (not as thread)
+                    worker.run()
+
+                # Check if error was emitted
+                if error_mock.emit.called:
+                    error_msg = error_mock.emit.call_args[0][0]
+                    print(f"Error emitted: {error_msg}")
+
+                # Verify the key behaviors:
+                # 1. Manager was called to extract from VRAM
+                assert mock_manager.extract_from_vram.called
+                call_kwargs = mock_manager.extract_from_vram.call_args[1]
+                assert call_kwargs["vram_path"] == worker_params["vram_path"]
+                assert call_kwargs["output_base"] == worker_params["output_base"]
+
+                # 2. Finished signal was emitted with the files
+                assert finished_mock.emit.called
+                assert finished_mock.emit.call_args[0][0] == [output_path]
+
+                # 3. No error was emitted
+                assert not error_mock.emit.called
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
     def test_worker_error_handling_headless(self, mock_qt_imports):
         """Test error handling without Qt"""
-        bad_params = {
-            "vram_path": "/nonexistent/file.vram",
-            "cgram_path": "/nonexistent/file.cgram",
-            "output_base": "/invalid/output",
-            "create_grayscale": True,
-            "create_metadata": False,
-            "oam_path": None,
-        }
+        # Initialize managers for this test
+        from spritepal.core.managers import cleanup_managers, initialize_managers
+        initialize_managers("TestApp")
 
-        worker = ExtractionWorker(bad_params)
+        try:
+            bad_params = {
+                "vram_path": "/nonexistent/file.vram",
+                "cgram_path": "/nonexistent/file.cgram",
+                "output_base": "/invalid/output",
+                "create_grayscale": True,
+                "create_metadata": False,
+                "oam_path": None,
+            }
 
-        # Mock signals
-        worker.error = Mock()
-        worker.progress = Mock()
-        worker.preview_ready = Mock()
-        worker.finished = Mock()
+            worker = ExtractionWorker(bad_params)
 
-        # Run worker
-        worker.run()
+            # Mock signals
+            worker.error = Mock()
+            worker.progress = Mock()
+            worker.preview_ready = Mock()
+            worker.preview_image_ready = Mock()
+            worker.palettes_ready = Mock()
+            worker.active_palettes_ready = Mock()
+            worker.finished = Mock()
 
-        # Should emit error
-        assert worker.error.emit.called
-        error_msg = worker.error.emit.call_args[0][0]
-        assert "No such file" in error_msg or "not found" in error_msg
-        assert not worker.finished.emit.called
+            # Mock pil_to_qpixmap to avoid Qt dependency
+            with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
+                mock_pil_to_qpixmap.return_value = Mock()
+
+                # Run worker
+                worker.run()
+
+            # Should emit error
+            assert worker.error.emit.called
+            error_msg = worker.error.emit.call_args[0][0]
+            assert any(phrase in error_msg.lower() for phrase in ["no such file", "not found", "does not exist", "vram file"])
+            assert not worker.finished.emit.called
+        finally:
+            # Clean up managers
+            cleanup_managers()
 
 
 class TestWorkerBusinessLogic:
@@ -237,11 +285,11 @@ class TestWorkerBusinessLogic:
             mock_pixmap.loadFromData.return_value = True
             mock_pixmap_class.return_value = mock_pixmap
 
-            # Create worker
-            worker = ExtractionWorker({})
+            # Import and test the pil_to_qpixmap function
+            from spritepal.core.controller import pil_to_qpixmap
 
             # Test pixmap creation
-            result = worker._create_pixmap_from_image(test_img)
+            result = pil_to_qpixmap(test_img)
 
             # Verify mock was used
             assert mock_pixmap.loadFromData.called

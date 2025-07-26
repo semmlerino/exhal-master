@@ -50,7 +50,9 @@ class RowArrangementDialog(QDialog):
         self.preview_generator = PreviewGenerator(self.colorizer)
 
         # Connect signals
-        self.arrangement_manager.arrangement_changed.connect(self._on_arrangement_changed)
+        self.arrangement_manager.arrangement_changed.connect(
+            self._on_arrangement_changed
+        )
         self.colorizer.palette_mode_changed.connect(self._on_palette_mode_changed)
         self.colorizer.palette_index_changed.connect(self._on_palette_index_changed)
 
@@ -61,14 +63,18 @@ class RowArrangementDialog(QDialog):
         self._load_sprite_data()
         self._setup_ui()
         self._update_panel_titles()
-        self._update_status("Drag rows from left to right to arrange them | Press C to toggle palette, P to cycle palettes")
+        self._update_status(
+            "Drag rows from left to right to arrange them | Press C to toggle palette, P to cycle palettes"
+        )
 
     def _load_sprite_data(self):
         """Load sprite image and extract rows"""
         try:
             # Use image processor to load and extract rows
-            self.original_image, self.tile_rows = self.image_processor.process_sprite_sheet(
-                self.sprite_path, self.tiles_per_row
+            self.original_image, self.tile_rows = (
+                self.image_processor.process_sprite_sheet(
+                    self.sprite_path, self.tiles_per_row
+                )
             )
 
             # Get tile dimensions from processor
@@ -85,7 +91,8 @@ class RowArrangementDialog(QDialog):
         # Create main vertical splitter for resizable layout
         main_splitter = QSplitter(Qt.Orientation.Vertical)
         main_splitter.setHandleWidth(8)
-        main_splitter.setStyleSheet("""
+        main_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background-color: #555;
                 border: 1px solid #666;
@@ -93,12 +100,14 @@ class RowArrangementDialog(QDialog):
             QSplitter::handle:hover {
                 background-color: #666;
             }
-        """)
+        """
+        )
 
         # Create horizontal splitter for main content (Available/Arranged panels)
         content_splitter = QSplitter(Qt.Orientation.Horizontal)
         content_splitter.setHandleWidth(8)
-        content_splitter.setStyleSheet("""
+        content_splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background-color: #555;
                 border: 1px solid #666;
@@ -106,11 +115,14 @@ class RowArrangementDialog(QDialog):
             QSplitter::handle:hover {
                 background-color: #666;
             }
-        """)
+        """
+        )
 
         # Left panel - Available rows
         self.left_panel = QGroupBox("Available Rows")
-        self.left_panel.setMinimumWidth(380)  # Increased to accommodate wider thumbnails
+        self.left_panel.setMinimumWidth(
+            380
+        )  # Increased to accommodate wider thumbnails
         left_layout = QVBoxLayout(self.left_panel)
 
         # Available rows list
@@ -141,7 +153,9 @@ class RowArrangementDialog(QDialog):
 
         # Right panel - Arranged rows
         self.right_panel = QGroupBox("Arranged Rows")
-        self.right_panel.setMinimumWidth(380)  # Increased to accommodate wider thumbnails
+        self.right_panel.setMinimumWidth(
+            380
+        )  # Increased to accommodate wider thumbnails
         right_layout = QVBoxLayout(self.right_panel)
 
         # Arranged rows list
@@ -298,7 +312,9 @@ class RowArrangementDialog(QDialog):
 
         if self.arrangement_manager.add_row(row_index):
             self._refresh_ui()
-            self._update_status(f"Added row {row_index} to arrangement ({self.arrangement_manager.get_arranged_count()} total)")
+            self._update_status(
+                f"Added row {row_index} to arrangement ({self.arrangement_manager.get_arranged_count()} total)"
+            )
 
     def _remove_row_from_arrangement(self, item):
         """Remove a row from the arrangement"""
@@ -306,14 +322,18 @@ class RowArrangementDialog(QDialog):
             row_index = item.data(Qt.ItemDataRole.UserRole)
             if self.arrangement_manager.remove_row(row_index):
                 self._refresh_ui()
-                self._update_status(f"Removed row {row_index} from arrangement ({self.arrangement_manager.get_arranged_count()} remaining)")
+                self._update_status(
+                    f"Removed row {row_index} from arrangement ({self.arrangement_manager.get_arranged_count()} remaining)"
+                )
 
     def _add_all_rows(self):
         """Add all rows to arrangement"""
         row_indices = [row_data["index"] for row_data in self.tile_rows]
         self.arrangement_manager.add_multiple_rows(row_indices)
         self._refresh_ui()
-        self._update_status(f"Added all rows to arrangement ({self.arrangement_manager.get_arranged_count()} total)")
+        self._update_status(
+            f"Added all rows to arrangement ({self.arrangement_manager.get_arranged_count()} total)"
+        )
 
     def _add_selected_rows(self):
         """Add selected rows to arrangement"""
@@ -424,7 +444,9 @@ class RowArrangementDialog(QDialog):
             # Apply palette to original image if enabled
             display_image = self.original_image
             if self.colorizer.is_palette_mode():
-                colorized = self.preview_generator.apply_palette_to_full_image(self.original_image)
+                colorized = self.preview_generator.apply_palette_to_full_image(
+                    self.original_image
+                )
                 if colorized:
                     display_image = colorized
 
@@ -476,10 +498,7 @@ class RowArrangementDialog(QDialog):
 
         # Use preview generator to create arranged image
         return self.preview_generator.create_arranged_image(
-            self.original_image,
-            self.tile_rows,
-            arranged_indices,
-            self.tile_height
+            self.original_image, self.tile_rows, arranged_indices, self.tile_height
         )
 
     def _export_arranged(self):
@@ -495,7 +514,7 @@ class RowArrangementDialog(QDialog):
             self.output_path = self.preview_generator.export_arranged_image(
                 self.sprite_path,
                 arranged_image,
-                self.arrangement_manager.get_arranged_count()
+                self.arrangement_manager.get_arranged_count(),
             )
 
             self._update_status(
@@ -576,10 +595,14 @@ class RowArrangementDialog(QDialog):
         if palette_enabled:
             palette_idx = self.colorizer.get_selected_palette_index()
             self.setWindowTitle(f"Arrange Sprite Rows - Palette {palette_idx}")
-            self._update_status(f"Palette mode: Palette {palette_idx} applied | Press C to toggle, P to cycle")
+            self._update_status(
+                f"Palette mode: Palette {palette_idx} applied | Press C to toggle, P to cycle"
+            )
         else:
             self.setWindowTitle("Arrange Sprite Rows - Grayscale")
-            self._update_status("Grayscale mode: Original sprite colors | Press C to toggle palette")
+            self._update_status(
+                "Grayscale mode: Original sprite colors | Press C to toggle palette"
+            )
 
     def _get_display_image_for_row(self, row_index):
         """Get the appropriate display image for a row (grayscale or colorized)"""
@@ -602,27 +625,29 @@ class RowArrangementDialog(QDialog):
 
         # Update status and title
         self.setWindowTitle(f"Arrange Sprite Rows - Palette {new_palette_idx}")
-        self._update_status(f"Palette mode: Palette {new_palette_idx} applied | Press C to toggle, P to cycle")
+        self._update_status(
+            f"Palette mode: Palette {new_palette_idx} applied | Press C to toggle, P to cycle"
+        )
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, a0):  # noqa: N802
         """Handle keyboard shortcuts"""
-        if event.key() == Qt.Key.Key_Delete:
+        if a0 and a0.key() == Qt.Key.Key_Delete:
             # Delete selected rows from arrangement
             self._remove_selected_rows()
-        elif (
-            event.key() == Qt.Key.Key_A
-            and event.modifiers() == Qt.KeyboardModifier.ControlModifier
+        elif a0 and (
+            a0.key() == Qt.Key.Key_A
+            and a0.modifiers() == Qt.KeyboardModifier.ControlModifier
         ):
             # Ctrl+A: Add all rows
             self._add_all_rows()
-        elif event.key() == Qt.Key.Key_Escape:
+        elif a0 and a0.key() == Qt.Key.Key_Escape:
             # Escape: Clear arrangement
             self._clear_arrangement()
-        elif event.key() == Qt.Key.Key_C:
+        elif a0 and a0.key() == Qt.Key.Key_C:
             # C: Toggle palette application
             self.toggle_palette_application()
-        elif event.key() == Qt.Key.Key_P and self.colorizer.is_palette_mode():
+        elif a0 and a0.key() == Qt.Key.Key_P and self.colorizer.is_palette_mode():
             # P: Cycle through palettes (only when palette mode is active)
             self._cycle_palette()
-        else:
-            super().keyPressEvent(event)
+        elif a0:
+            super().keyPressEvent(a0)

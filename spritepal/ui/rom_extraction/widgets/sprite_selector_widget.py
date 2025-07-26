@@ -1,0 +1,152 @@
+"""Sprite selector widget for ROM extraction"""
+
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+
+from .base_widget import BaseExtractionWidget
+
+# UI Spacing Constants (matching main panel)
+SPACING_SMALL = 6
+SPACING_MEDIUM = 10
+SPACING_LARGE = 16
+SPACING_XLARGE = 20
+BUTTON_MIN_HEIGHT = 32
+COMBO_MIN_WIDTH = 200
+BUTTON_MAX_WIDTH = 150
+LABEL_MIN_WIDTH = 120
+
+
+class SpriteSelectorWidget(BaseExtractionWidget):
+    """Widget for selecting sprites from ROM"""
+
+    # Signals
+    sprite_changed = pyqtSignal(int)  # Emitted when sprite selection changes
+    find_sprites_clicked = pyqtSignal()  # Emitted when find sprites button clicked
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Initialize the user interface"""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Sprite location selection
+        sprite_group = self._create_group_box("Sprite Selection")
+        sprite_layout = QVBoxLayout()
+        sprite_layout.setSpacing(SPACING_MEDIUM)
+        sprite_layout.setContentsMargins(SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM)
+
+        # Sprite selection row
+        sprite_row = QHBoxLayout()
+        sprite_row.setSpacing(SPACING_MEDIUM)
+
+        sprite_label = QLabel("Sprite:")
+        sprite_label.setMinimumWidth(60)
+        sprite_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        sprite_row.addWidget(sprite_label)
+
+        self.sprite_combo = QComboBox()
+        self.sprite_combo.setMinimumWidth(300)
+        self.sprite_combo.addItem("Select ROM file first...", None)
+        self.sprite_combo.setEnabled(False)
+        self.sprite_combo.currentIndexChanged.connect(self._on_sprite_changed)
+        sprite_row.addWidget(self.sprite_combo, 1)
+
+        sprite_layout.addLayout(sprite_row)
+
+        # Offset and Find button row
+        offset_row = QHBoxLayout()
+        offset_row.setSpacing(SPACING_MEDIUM)
+
+        offset_label = QLabel("Offset:")
+        offset_label.setMinimumWidth(60)
+        offset_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        offset_row.addWidget(offset_label)
+
+        self.offset_label = QLabel("--")
+        self.offset_label.setStyleSheet("font-family: monospace; color: #0078d4; font-size: 14px;")
+        self.offset_label.setMinimumWidth(100)
+        offset_row.addWidget(self.offset_label)
+
+        offset_row.addStretch()
+
+        # Find Sprites button
+        self.find_sprites_btn = QPushButton("Find Sprites")
+        self.find_sprites_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
+        self.find_sprites_btn.setFixedWidth(BUTTON_MAX_WIDTH)
+        self.find_sprites_btn.setToolTip("Scan ROM for valid sprite offsets")
+        self.find_sprites_btn.clicked.connect(self.find_sprites_clicked.emit)
+        self.find_sprites_btn.setEnabled(False)
+        offset_row.addWidget(self.find_sprites_btn)
+
+        sprite_layout.addLayout(offset_row)
+        sprite_group.setLayout(sprite_layout)
+
+        layout.addWidget(sprite_group)
+        self.setLayout(layout)
+
+    def _on_sprite_changed(self, index: int):
+        """Handle internal sprite change"""
+        self.sprite_changed.emit(index)
+
+    def clear(self):
+        """Clear sprite selection"""
+        self.sprite_combo.clear()
+        self.sprite_combo.addItem("Select ROM file first...", None)
+        self.sprite_combo.setEnabled(False)
+        self.offset_label.setText("--")
+        self.find_sprites_btn.setEnabled(False)
+
+    def add_sprite(self, name: str, data):
+        """Add a sprite to the combo box"""
+        self.sprite_combo.addItem(name, data)
+
+    def insert_separator(self, index: int):
+        """Insert a separator at the given index"""
+        self.sprite_combo.insertSeparator(index)
+
+    def set_enabled(self, enabled: bool):
+        """Enable/disable the sprite combo"""
+        self.sprite_combo.setEnabled(enabled)
+
+    def get_current_index(self) -> int:
+        """Get current selection index"""
+        return self.sprite_combo.currentIndex()
+
+    def get_current_data(self):
+        """Get data for current selection"""
+        return self.sprite_combo.currentData()
+
+    def set_current_index(self, index: int):
+        """Set current selection index"""
+        self.sprite_combo.setCurrentIndex(index)
+
+    def count(self) -> int:
+        """Get number of items"""
+        return self.sprite_combo.count()
+
+    def item_data(self, index: int):
+        """Get data at specific index"""
+        return self.sprite_combo.itemData(index)
+
+    def item_text(self, index: int) -> str:
+        """Get text at specific index"""
+        return self.sprite_combo.itemText(index)
+
+    def set_offset_text(self, text: str):
+        """Update the offset label"""
+        self.offset_label.setText(text)
+
+    def set_find_button_enabled(self, enabled: bool):
+        """Enable/disable find sprites button"""
+        self.find_sprites_btn.setEnabled(enabled)
+
+    def set_find_button_text(self, text: str):
+        """Update find sprites button text"""
+        self.find_sprites_btn.setText(text)
+
+    def set_find_button_tooltip(self, tooltip: str):
+        """Update find sprites button tooltip"""
+        self.find_sprites_btn.setToolTip(tooltip)

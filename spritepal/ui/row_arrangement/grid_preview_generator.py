@@ -3,7 +3,7 @@ Grid-based preview generation for flexible sprite arrangements
 """
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from PIL import Image, ImageDraw
 
@@ -20,22 +20,30 @@ from .preview_generator import PreviewGenerator
 class GridPreviewGenerator(PreviewGenerator):
     """Extended preview generator with grid-based arrangement support"""
 
-    def __init__(self, colorizer: Optional[PaletteColorizer] = None):
+    def __init__(self, colorizer: PaletteColorizer | None = None):
         super().__init__(colorizer)
         self.grid_color = (128, 128, 128, 128)  # Semi-transparent gray for grid lines
-        self.selection_color = (255, 255, 0, 64)  # Semi-transparent yellow for selection
+        self.selection_color = (
+            255,
+            255,
+            0,
+            64,
+        )  # Semi-transparent yellow for selection
         self.group_colors = [  # Different colors for different groups
-            (255, 0, 0, 64),    # Red
-            (0, 255, 0, 64),    # Green
-            (0, 0, 255, 64),    # Blue
+            (255, 0, 0, 64),  # Red
+            (0, 255, 0, 64),  # Green
+            (0, 0, 255, 64),  # Blue
             (255, 128, 0, 64),  # Orange
             (128, 0, 255, 64),  # Purple
             (0, 255, 255, 64),  # Cyan
         ]
 
-    def create_grid_arranged_image(self, processor: GridImageProcessor,
-                                 manager: GridArrangementManager,
-                                 spacing: int = 0) -> Optional[Image.Image]:
+    def create_grid_arranged_image(
+        self,
+        processor: GridImageProcessor,
+        manager: GridArrangementManager,
+        spacing: int = 0,
+    ) -> Image.Image | None:
         """Create image from grid arrangement
 
         Args:
@@ -88,15 +96,21 @@ class GridPreviewGenerator(PreviewGenerator):
         # For now, use a default width that creates a reasonable layout
         default_width = min(16, processor.grid_cols)  # Max 16 tiles wide
         return self._create_arranged_image_with_spacing(
-            arranged_tiles, processor.tile_width, processor.tile_height,
-            default_width, spacing
+            arranged_tiles,
+            processor.tile_width,
+            processor.tile_height,
+            default_width,
+            spacing,
         )
 
-    def create_grid_preview_with_overlay(self, processor: GridImageProcessor,
-                                       manager: GridArrangementManager,
-                                       show_grid: bool = True,
-                                       show_selection: bool = True,
-                                       selected_tiles: Optional[list[TilePosition]] = None) -> Image.Image:
+    def create_grid_preview_with_overlay(
+        self,
+        processor: GridImageProcessor,
+        manager: GridArrangementManager,
+        show_grid: bool = True,
+        show_selection: bool = True,
+        selected_tiles: list[TilePosition] | None = None,
+    ) -> Image.Image:
         """Create a preview of the original sprite sheet with grid overlay and selections
 
         Args:
@@ -132,8 +146,13 @@ class GridPreviewGenerator(PreviewGenerator):
 
         # Draw grid lines if enabled
         if show_grid:
-            self._draw_grid(draw, processor.tile_width, processor.tile_height,
-                          processor.grid_cols, processor.grid_rows)
+            self._draw_grid(
+                draw,
+                processor.tile_width,
+                processor.tile_height,
+                processor.grid_cols,
+                processor.grid_rows,
+            )
 
         # Highlight arranged tiles
         if show_selection:
@@ -141,33 +160,50 @@ class GridPreviewGenerator(PreviewGenerator):
             groups = manager.get_groups()
 
             # Draw group highlights first (under individual tiles)
-            color_index = 0
-            for group in groups.values():
+            for color_index, group in enumerate(groups.values()):
                 color = self.group_colors[color_index % len(self.group_colors)]
                 for tile_pos in group.tiles:
-                    self._highlight_tile(draw, tile_pos, processor.tile_width,
-                                       processor.tile_height, color)
-                color_index += 1
+                    self._highlight_tile(
+                        draw,
+                        tile_pos,
+                        processor.tile_width,
+                        processor.tile_height,
+                        color,
+                    )
 
             # Draw individual tile highlights
             for tile_pos in arranged_tiles:
                 if not manager.get_tile_group(tile_pos):  # Not part of a group
-                    self._highlight_tile(draw, tile_pos, processor.tile_width,
-                                       processor.tile_height, self.selection_color)
+                    self._highlight_tile(
+                        draw,
+                        tile_pos,
+                        processor.tile_width,
+                        processor.tile_height,
+                        self.selection_color,
+                    )
 
         # Highlight additional selected tiles
         if selected_tiles:
             for tile_pos in selected_tiles:
-                self._highlight_tile(draw, tile_pos, processor.tile_width,
-                                   processor.tile_height, (0, 255, 255, 64))
+                self._highlight_tile(
+                    draw,
+                    tile_pos,
+                    processor.tile_width,
+                    processor.tile_height,
+                    (0, 255, 255, 64),
+                )
 
         # Composite overlay onto preview
         return Image.alpha_composite(preview, overlay)
 
-
-    def _create_arranged_image_with_spacing(self, tiles: list[tuple[TilePosition, Image.Image]],
-                                          tile_width: int, tile_height: int,
-                                          tiles_per_row: int, spacing: int) -> Image.Image:
+    def _create_arranged_image_with_spacing(
+        self,
+        tiles: list[tuple[TilePosition, Image.Image]],
+        tile_width: int,
+        tile_height: int,
+        tiles_per_row: int,
+        spacing: int,
+    ) -> Image.Image:
         """Create arranged image with optional spacing between tiles"""
         if not tiles:
             return Image.new("L", (1, 1))
@@ -210,8 +246,14 @@ class GridPreviewGenerator(PreviewGenerator):
 
         return output
 
-    def _draw_grid(self, draw: ImageDraw.Draw, tile_width: int, tile_height: int,
-                   cols: int, rows: int) -> None:
+    def _draw_grid(
+        self,
+        draw: ImageDraw.Draw,
+        tile_width: int,
+        tile_height: int,
+        cols: int,
+        rows: int,
+    ) -> None:
         """Draw grid lines on the image"""
         width = cols * tile_width
         height = rows * tile_height
@@ -226,15 +268,25 @@ class GridPreviewGenerator(PreviewGenerator):
             y = row * tile_height
             draw.line([(0, y), (width, y)], fill=self.grid_color, width=1)
 
-    def _highlight_tile(self, draw: ImageDraw.Draw, position: TilePosition,
-                       tile_width: int, tile_height: int, color: tuple[int, int, int, int]) -> None:
+    def _highlight_tile(
+        self,
+        draw: ImageDraw.Draw,
+        position: TilePosition,
+        tile_width: int,
+        tile_height: int,
+        color: tuple[int, int, int, int],
+    ) -> None:
         """Highlight a single tile"""
         x = position.col * tile_width
         y = position.row * tile_height
         draw.rectangle([x, y, x + tile_width, y + tile_height], fill=color)
 
-    def export_grid_arrangement(self, sprite_path: str, arranged_image: Image.Image,
-                              arrangement_type: str = "grid") -> str:
+    def export_grid_arrangement(
+        self,
+        sprite_path: str,
+        arranged_image: Image.Image,
+        arrangement_type: str = "grid",
+    ) -> str:
         """Export grid-arranged sprite sheet
 
         Args:
@@ -251,8 +303,9 @@ class GridPreviewGenerator(PreviewGenerator):
         arranged_image.save(output_path)
         return output_path
 
-    def create_arrangement_preview_data(self, manager: GridArrangementManager,
-                                      processor: GridImageProcessor) -> dict[str, Any]:
+    def create_arrangement_preview_data(
+        self, manager: GridArrangementManager, processor: GridImageProcessor
+    ) -> dict[str, Any]:
         """Create data structure describing the arrangement for saving/loading
 
         Args:
@@ -267,7 +320,7 @@ class GridPreviewGenerator(PreviewGenerator):
                 "rows": processor.grid_rows,
                 "cols": processor.grid_cols,
                 "tile_width": processor.tile_width,
-                "tile_height": processor.tile_height
+                "tile_height": processor.tile_height,
             },
             "arrangement_order": [
                 {"type": arr_type.value, "key": key}
@@ -279,9 +332,9 @@ class GridPreviewGenerator(PreviewGenerator):
                     "name": group.name,
                     "width": group.width,
                     "height": group.height,
-                    "tiles": [{"row": t.row, "col": t.col} for t in group.tiles]
+                    "tiles": [{"row": t.row, "col": t.col} for t in group.tiles],
                 }
                 for group in manager.get_groups().values()
             ],
-            "total_tiles": manager.get_arranged_count()
+            "total_tiles": manager.get_arranged_count(),
         }

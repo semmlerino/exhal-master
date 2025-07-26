@@ -2,12 +2,14 @@
 Test zoom functionality in grid arrangement dialog
 """
 
+import os
+import sys
 from unittest.mock import Mock
 
 import pytest
 from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QKeyEvent, QMouseEvent
-from PyQt6.QtWidgets import QApplication, QGraphicsScene
+from PyQt6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
 
 from spritepal.ui.grid_arrangement_dialog import GridGraphicsView, SelectionMode
 from spritepal.ui.row_arrangement.grid_arrangement_manager import TilePosition
@@ -20,20 +22,18 @@ class TestGridGraphicsViewZoom:
     def setup_method(self):
         """Setup test fixtures"""
         # Skip if we're in a headless environment that can't support Qt widgets
-        import os
-        import sys
-        
+
         # Check for headless environment indicators
         is_headless = (
-            not os.environ.get('DISPLAY') or 
-            os.environ.get('CI') or
-            'microsoft' in os.uname().release.lower() or
-            sys.platform.startswith('linux') and not os.environ.get('DISPLAY')
+            not os.environ.get("DISPLAY")
+            or os.environ.get("CI")
+            or "microsoft" in os.uname().release.lower()
+            or (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
         )
-        
+
         if is_headless:
             pytest.skip("GUI tests skipped in headless environment")
-        
+
         # Try to create QApplication and handle any failures
         try:
             if not QApplication.instance():
@@ -109,7 +109,7 @@ class TestGridGraphicsViewZoom:
     def test_zoom_to_fit(self):
         """Test zoom to fit functionality"""
         # Add a simple item to the scene for testing
-        from PyQt6.QtWidgets import QGraphicsRectItem
+
         rect_item = QGraphicsRectItem(0, 0, 100, 100)
         self.scene.addItem(rect_item)
 
@@ -146,7 +146,7 @@ class TestGridGraphicsViewZoom:
     def test_wheel_event_zoom(self):
         """Test wheel event zoom functionality"""
         # Test _zoom_at_point method directly since wheel event is complex to construct
-        from PyQt6.QtCore import QPointF
+
         initial_zoom = self.view.zoom_level
 
         # Test zoom in at a specific point
@@ -165,25 +165,37 @@ class TestGridGraphicsViewZoom:
     def test_keyboard_shortcuts(self):
         """Test keyboard shortcuts for zoom"""
         # Test F key (zoom to fit)
-        f_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_F, Qt.KeyboardModifier.NoModifier)
+        f_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_F, Qt.KeyboardModifier.NoModifier
+        )
         self.view.keyPressEvent(f_event)
         # Should call zoom_to_fit - we can't easily test this without mocking
 
         # Test Ctrl+0 (reset zoom)
         initial_zoom = self.view.zoom_level = 2.0
-        ctrl_0_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_0, Qt.KeyboardModifier.ControlModifier)
+        ctrl_0_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_0, Qt.KeyboardModifier.ControlModifier
+        )
         self.view.keyPressEvent(ctrl_0_event)
         assert self.view.zoom_level == 1.0
 
         # Test Ctrl+Plus (zoom in)
         initial_zoom = self.view.zoom_level
-        ctrl_plus_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Plus, Qt.KeyboardModifier.ControlModifier)
+        ctrl_plus_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress,
+            Qt.Key.Key_Plus,
+            Qt.KeyboardModifier.ControlModifier,
+        )
         self.view.keyPressEvent(ctrl_plus_event)
         assert self.view.zoom_level > initial_zoom
 
         # Test Ctrl+Minus (zoom out)
         initial_zoom = self.view.zoom_level
-        ctrl_minus_event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Minus, Qt.KeyboardModifier.ControlModifier)
+        ctrl_minus_event = QKeyEvent(
+            QKeyEvent.Type.KeyPress,
+            Qt.Key.Key_Minus,
+            Qt.KeyboardModifier.ControlModifier,
+        )
         self.view.keyPressEvent(ctrl_minus_event)
         assert self.view.zoom_level < initial_zoom
 
@@ -194,13 +206,13 @@ class TestGridGraphicsViewZoom:
         assert self.view.last_pan_point is None
 
         # Create real mouse press event with Ctrl modifier
-        from PyQt6.QtCore import QPointF
+
         press_event = QMouseEvent(
             QMouseEvent.Type.MouseButtonPress,
             QPointF(50, 50),
             Qt.MouseButton.LeftButton,
             Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.ControlModifier
+            Qt.KeyboardModifier.ControlModifier,
         )
 
         # Start panning
@@ -216,7 +228,7 @@ class TestGridGraphicsViewZoom:
             QPointF(50, 50),
             Qt.MouseButton.LeftButton,
             Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.ControlModifier
+            Qt.KeyboardModifier.ControlModifier,
         )
 
         # Test mouse release
@@ -238,13 +250,13 @@ class TestGridGraphicsViewZoom:
             self.view.zoom_level = zoom_level
 
             # Create real mouse event
-            from PyQt6.QtCore import QPointF
+
             click_event = QMouseEvent(
                 QMouseEvent.Type.MouseButtonPress,
                 QPointF(16, 16),  # Click at position that should be tile (2, 2)
                 Qt.MouseButton.LeftButton,
                 Qt.MouseButton.LeftButton,
-                Qt.KeyboardModifier.NoModifier
+                Qt.KeyboardModifier.NoModifier,
             )
 
             # Test tile selection - this will test the coordinate conversion
@@ -260,7 +272,7 @@ class TestGridGraphicsViewZoom:
 
         # Test positions at different zoom levels
         test_positions = [
-            QPointF(8, 8),    # Should be tile (1, 1)
+            QPointF(8, 8),  # Should be tile (1, 1)
             QPointF(16, 16),  # Should be tile (2, 2)
             QPointF(24, 24),  # Should be tile (3, 3)
         ]
@@ -292,20 +304,18 @@ class TestGridArrangementDialogZoomIntegration:
     def setup_method(self):
         """Setup test fixtures"""
         # Skip if we're in a headless environment that can't support Qt widgets
-        import os
-        import sys
-        
+
         # Check for headless environment indicators
         is_headless = (
-            not os.environ.get('DISPLAY') or 
-            os.environ.get('CI') or
-            'microsoft' in os.uname().release.lower() or
-            sys.platform.startswith('linux') and not os.environ.get('DISPLAY')
+            not os.environ.get("DISPLAY")
+            or os.environ.get("CI")
+            or "microsoft" in os.uname().release.lower()
+            or (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
         )
-        
+
         if is_headless:
             pytest.skip("GUI tests skipped in headless environment")
-        
+
         # Try to create QApplication and handle any failures
         try:
             if not QApplication.instance():
@@ -358,11 +368,11 @@ class TestGridArrangementDialogZoomIntegrationHeadless:
         """Test that zoom interface exists on GridGraphicsView class"""
         # Test that all zoom methods exist as attributes on the class
         assert hasattr(GridGraphicsView, "zoom_in")
-        assert hasattr(GridGraphicsView, "zoom_out") 
+        assert hasattr(GridGraphicsView, "zoom_out")
         assert hasattr(GridGraphicsView, "zoom_to_fit")
         assert hasattr(GridGraphicsView, "reset_zoom")
         assert hasattr(GridGraphicsView, "get_zoom_level")
-        
+
         # Test that they are callable
         assert callable(GridGraphicsView.zoom_in)
         assert callable(GridGraphicsView.zoom_out)

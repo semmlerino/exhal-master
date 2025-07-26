@@ -4,7 +4,7 @@ Handles reinsertion of edited sprites back into VRAM
 """
 
 import json
-from typing import Optional
+from typing import Any
 
 from PIL import Image
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -14,6 +14,9 @@ from spritepal.utils.constants import (
     TILE_WIDTH,
     VRAM_SPRITE_OFFSET,
 )
+from spritepal.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def encode_4bpp_tile(tile_pixels: list[int]) -> bytes:
@@ -22,7 +25,10 @@ def encode_4bpp_tile(tile_pixels: list[int]) -> bytes:
     Adapted from sprite_editor/tile_utils.py
     """
     if len(tile_pixels) != 64:
+        logger.error(f"Invalid tile size: expected 64 pixels, got {len(tile_pixels)}")
         raise ValueError(f"Expected 64 pixels, got {len(tile_pixels)}")
+
+    logger.debug("Encoding 8x8 tile to 4bpp format")
 
     output = bytearray(32)
 
@@ -53,28 +59,42 @@ class SpriteInjector:
     """Handles sprite injection back to VRAM"""
 
     def __init__(self) -> None:
-        self.metadata: Optional[dict] = None
-        self.sprite_path: Optional[str] = None
-        self.vram_data: Optional[bytearray] = None
+        self.metadata: dict[str, Any] | None = None
+        self.sprite_path: str | None = None
+        self.vram_data: bytearray | None = None
+        logger.debug("SpriteInjector initialized")
 
-    def load_metadata(self, metadata_path: str) -> dict:
+    def load_metadata(self, metadata_path: str) -> dict[str, Any]:
         """Load extraction metadata from JSON file"""
+        logger.debug(f"Loading metadata from {metadata_path}")
         with open(metadata_path) as f:
             self.metadata = json.load(f)
+        if self.metadata:
+            logger.info(f"Loaded metadata with {len(self.metadata)} entries")
+        else:
+            logger.warning("Loaded empty metadata")
+            self.metadata = {}
         return self.metadata
 
     def validate_sprite(self, sprite_path: str) -> tuple[bool, str]:
         """Validate sprite file format and dimensions"""
+        logger.debug(f"Validating sprite: {sprite_path}")
         try:
             img = Image.open(sprite_path)
+            logger.debug(f"Sprite info: {img.size} pixels, mode={img.mode}")
 
             # Check if indexed or grayscale mode
             if img.mode not in ["P", "L"]:
-                return False, f"Image must be in indexed (P) or grayscale (L) mode (found {img.mode})"
+                logger.error(f"Invalid image mode: {img.mode}, expected P (indexed) or L (grayscale)")
+                return (
+                    False,
+                    f"Image must be in indexed (P) or grayscale (L) mode (found {img.mode})",
+                )
 
             # Check dimensions are multiples of 8
             width, height = img.size
             if width % 8 != 0 or height % 8 != 0:
+                logger.error(f"Invalid dimensions: {width}x{height} (not multiples of 8)")
                 return (
                     False,
                     f"Image dimensions must be multiples of 8 (found {width}x{height})",
@@ -84,23 +104,31 @@ class SpriteInjector:
             if img.mode == "P":
                 # Indexed mode - count actual unique colors used
                 unique_colors = len(set(img.getdata()))
+                logger.debug(f"Indexed mode with {unique_colors} unique colors")
                 if unique_colors > 16:
+                    logger.error(f"Too many colors: {unique_colors} (max 16)")
                     return False, f"Image has too many colors ({unique_colors}, max 16)"
+                logger.debug(f"Palette validation passed: {unique_colors} colors <= 16")
             elif img.mode == "L":
                 # Grayscale mode - verify values are valid (0-255)
                 pixels = list(img.getdata())
                 max_val = max(pixels) if pixels else 0
                 if max_val > 255:
+                    logger.error(f"Invalid grayscale value: {max_val}")
                     return False, f"Invalid grayscale values (max: {max_val})"
+                logger.debug(f"Grayscale validation passed: max value {max_val} <= 255")
 
         except Exception as e:
+            logger.exception("Sprite validation failed")
             return False, f"Error validating sprite: {e!s}"
         else:
             self.sprite_path = sprite_path
+            logger.info(f"Sprite validation successful: {width}x{height}, mode={img.mode}")
             return True, "Sprite validation successful"
 
     def convert_png_to_4bpp(self, png_path: str) -> bytes:
         """Convert PNG to SNES 4bpp tile data"""
+        logger.info(f"Converting PNG to 4bpp: {png_path}")
         img = Image.open(png_path)
 
         # Handle different image modes
@@ -108,22 +136,30 @@ class SpriteInjector:
             # Grayscale mode - likely from ROM extraction
             # Convert grayscale values back to palette indices
             pixels = list(img.getdata())
+            original_max = max(pixels) if pixels else 0
             # Divide by 17 to get original 4-bit indices (0-15)
             pixels = [min(15, p // 17) for p in pixels]
+            logger.debug(f"Converting grayscale to palette indices: max grayscale={original_max}, max index={max(pixels) if pixels else 0}")
         elif img.mode == "P":
             # Already indexed - use as-is
             pixels = list(img.getdata())
+            max_index = max(pixels) if pixels else 0
+            logger.debug(f"Using indexed palette directly: max index={max_index}")
         else:
             # Convert to indexed mode
-            img = img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16)  # type: ignore
+            logger.warning(f"Converting {img.mode} to indexed mode - may lose color information")
+            img = img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16)  # type: ignore[attr-defined]
             pixels = list(img.getdata())
 
         width, height = img.size
         tiles_x = width // TILE_WIDTH
         tiles_y = height // TILE_HEIGHT
+        total_tiles = tiles_x * tiles_y
+        logger.debug(f"Processing {total_tiles} tiles ({tiles_x}x{tiles_y})")
 
         # Process tiles
         output_data = bytearray()
+        processed_tiles = 0
 
         for tile_y in range(tiles_y):
             for tile_x in range(tiles_x):
@@ -143,7 +179,12 @@ class SpriteInjector:
                 # Encode tile
                 tile_data = encode_4bpp_tile(tile_pixels)
                 output_data.extend(tile_data)
+                processed_tiles += 1
 
+                if processed_tiles % 100 == 0:
+                    logger.debug(f"Processed {processed_tiles}/{total_tiles} tiles")
+
+        logger.info(f"Converted {total_tiles} tiles to {len(output_data)} bytes of 4bpp tile data")
         return bytes(output_data)
 
     def inject_sprite(
@@ -151,37 +192,52 @@ class SpriteInjector:
         sprite_path: str,
         vram_path: str,
         output_path: str,
-        offset: Optional[int] = None,
+        offset: int | None = None,
     ) -> tuple[bool, str]:
         """Inject sprite into VRAM at specified offset"""
+        logger.info(f"Starting sprite injection: {sprite_path} -> {output_path}")
         try:
             # Use offset from metadata if not provided
             if offset is None and self.metadata and "extraction" in self.metadata:
                 offset_str = self.metadata["extraction"].get("vram_offset", "0xC000")
                 offset = int(offset_str, 16)
+                logger.info(f"Using offset from metadata: 0x{offset:04X}")
             elif offset is None:
                 offset = VRAM_SPRITE_OFFSET
+                logger.info(f"Using default offset: 0x{offset:04X}")
+            else:
+                logger.info(f"Using provided offset: 0x{offset:04X}")
 
             # Convert PNG to 4bpp
             tile_data = self.convert_png_to_4bpp(sprite_path)
 
             # Read original VRAM
+            logger.debug(f"Loading VRAM from {vram_path}")
             with open(vram_path, "rb") as f:
                 self.vram_data = bytearray(f.read())
+            logger.debug(f"Loaded {len(self.vram_data)} bytes of VRAM data")
 
             # Validate offset
             if offset + len(tile_data) > len(self.vram_data):
+                logger.error(f"Tile data would exceed VRAM bounds: offset=0x{offset:04X}, size={len(tile_data)}, VRAM size={len(self.vram_data)}")
                 return (
                     False,
                     f"Tile data ({len(tile_data)} bytes) would exceed VRAM size at offset 0x{offset:04X}",
                 )
 
             # Inject tile data
+            logger.info(f"Injecting {len(tile_data)} bytes at offset 0x{offset:04X}")
+            original_data = self.vram_data[offset : offset + len(tile_data)]
             self.vram_data[offset : offset + len(tile_data)] = tile_data
+
+            # Log details about the injection
+            bytes_changed = sum(1 for i in range(len(tile_data)) if original_data[i] != tile_data[i])
+            logger.debug(f"Modified {bytes_changed}/{len(tile_data)} bytes in VRAM")
 
             # Write modified VRAM
             with open(output_path, "wb") as f:
                 f.write(self.vram_data)
+            logger.info(f"Successfully wrote modified VRAM to {output_path}")
 
             return (
                 True,
@@ -189,9 +245,10 @@ class SpriteInjector:
             )
 
         except Exception as e:
+            logger.exception("Sprite injection failed")
             return False, f"Error injecting sprite: {e!s}"
 
-    def get_extraction_info(self) -> Optional[dict]:
+    def get_extraction_info(self) -> dict[str, Any] | None:
         """Get extraction information from metadata"""
         if self.metadata and "extraction" in self.metadata:
             extraction_info = self.metadata["extraction"]
@@ -202,8 +259,8 @@ class SpriteInjector:
 class InjectionWorker(QThread):
     """Worker thread for sprite injection process"""
 
-    progress = pyqtSignal(str)  # status message
-    finished = pyqtSignal(bool, str)  # success, message
+    progress: pyqtSignal = pyqtSignal(str)  # status message
+    finished: pyqtSignal = pyqtSignal(bool, str)  # success, message
 
     def __init__(
         self,
@@ -211,28 +268,32 @@ class InjectionWorker(QThread):
         vram_input: str,
         vram_output: str,
         offset: int,
-        metadata_path: Optional[str] = None,
+        metadata_path: str | None = None,
     ):
         super().__init__()
-        self.sprite_path = sprite_path
-        self.vram_input = vram_input
-        self.vram_output = vram_output
-        self.offset = offset
-        self.metadata_path = metadata_path
-        self.injector = SpriteInjector()
+        self.sprite_path: str = sprite_path
+        self.vram_input: str = vram_input
+        self.vram_output: str = vram_output
+        self.offset: int = offset
+        self.metadata_path: str | None = metadata_path
+        self.injector: SpriteInjector = SpriteInjector()
 
     def run(self) -> None:
         """Run the injection process"""
+        logger.info(f"Starting injection worker: sprite={self.sprite_path}, vram_in={self.vram_input}, vram_out={self.vram_output}")
         try:
             # Load metadata if available
             if self.metadata_path:
                 self.progress.emit("Loading metadata...")
+                logger.debug(f"Loading metadata from {self.metadata_path}")
                 self.injector.load_metadata(self.metadata_path)
 
             # Validate sprite
             self.progress.emit("Validating sprite file...")
+            logger.debug(f"Validating sprite: {self.sprite_path}")
             valid, message = self.injector.validate_sprite(self.sprite_path)
             if not valid:
+                logger.error(f"Sprite validation failed: {message}")
                 self.finished.emit(False, message)
                 return
 
@@ -246,8 +307,12 @@ class InjectionWorker(QThread):
 
             if success:
                 self.progress.emit("Injection complete!")
+                logger.info(f"Injection completed successfully: {message}")
+            else:
+                logger.error(f"Injection failed: {message}")
 
             self.finished.emit(success, message)
 
         except Exception as e:
+            logger.exception("Injection worker encountered unexpected error")
             self.finished.emit(False, f"Unexpected error: {e!s}")

@@ -18,10 +18,7 @@ from PyQt6.QtWidgets import QMessageBox
 if TYPE_CHECKING:
     from PyQt6.QtGui import QPixmap
 
-    from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-    from spritepal.ui.injection_dialog import InjectionDialog
     from spritepal.ui.main_window import MainWindow
-    from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
 
 from spritepal.core.injector import InjectionWorker
 from spritepal.core.managers import (
@@ -326,7 +323,9 @@ class ExtractionController(QObject):
             tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
             # Open row arrangement dialog
-            from spritepal.ui.row_arrangement_dialog import RowArrangementDialog  # noqa: PLC0415
+            from spritepal.ui.row_arrangement_dialog import (
+                RowArrangementDialog,
+            )
             dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
 
             # Pass palette data from the main window's sprite preview if available
@@ -372,7 +371,9 @@ class ExtractionController(QObject):
         tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
         # Open grid arrangement dialog
-        from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog  # noqa: PLC0415
+        from spritepal.ui.grid_arrangement_dialog import (
+            GridArrangementDialog,
+        )
         dialog = GridArrangementDialog(sprite_file, tiles_per_row, self.main_window)
 
         # Pass palette data from the main window's sprite preview if available

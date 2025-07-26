@@ -56,7 +56,9 @@ class TestInjectionWorkflowIntegration:
             f.write(data)
         return cgram_path
 
-    def test_extract_modify_inject_workflow(self, temp_workspace, test_vram, test_cgram):
+    def test_extract_modify_inject_workflow(
+        self, temp_workspace, test_vram, test_cgram
+    ):
         """Test full workflow: extract sprite, modify it, inject back"""
         # Step 1: Extract sprites
         extractor = SpriteExtractor()
@@ -64,8 +66,7 @@ class TestInjectionWorkflowIntegration:
 
         # Use the correct method for extraction
         img, num_tiles = extractor.extract_sprites_grayscale(
-            vram_path=test_vram,
-            output_path=output_path
+            vram_path=test_vram, output_path=output_path
         )
 
         assert num_tiles > 0
@@ -78,7 +79,9 @@ class TestInjectionWorkflowIntegration:
         # Export sprite palettes (8-15 are sprite palettes)
         palette_files = {}
         for i in range(8, 16):
-            pal_path = os.path.join(temp_workspace, "output", f"extracted_pal{i}.pal.json")
+            pal_path = os.path.join(
+                temp_workspace, "output", f"extracted_pal{i}.pal.json"
+            )
             created_path = palette_manager.create_palette_json(i, pal_path, output_path)
             if created_path:
                 palette_files[i] = created_path
@@ -109,7 +112,7 @@ class TestInjectionWorkflowIntegration:
             sprite_path=modified_path,
             vram_path=test_vram,
             output_path=test_vram,  # Overwrite the original
-            offset=0xC000
+            offset=0xC000,
         )
 
         assert result is True, f"Injection failed: {msg}"
@@ -118,8 +121,7 @@ class TestInjectionWorkflowIntegration:
         # Extract again and compare
         verification_path = os.path.join(temp_workspace, "output", "verification.png")
         verification_img, _ = extractor.extract_sprites_grayscale(
-            vram_path=test_vram,
-            output_path=verification_path
+            vram_path=test_vram, output_path=verification_path
         )
 
         # Both images should have the modification
@@ -156,7 +158,9 @@ class TestInjectionWorkflowIntegration:
         completion_results = []
 
         worker.progress.connect(lambda msg: progress_updates.append(msg))
-        worker.finished.connect(lambda success, msg: completion_results.append((success, msg)))
+        worker.finished.connect(
+            lambda success, msg: completion_results.append((success, msg))
+        )
 
         # Run worker
         worker.run()
@@ -178,7 +182,7 @@ class TestInjectionWorkflowIntegration:
                 "offset": 0xC000,
                 "tile_count": 8,
                 "palette_indices": [8, 9, 10],
-                "extraction_date": "2024-01-01"
+                "extraction_date": "2024-01-01",
             }
         }
 
@@ -195,6 +199,7 @@ class TestInjectionWorkflowIntegration:
 
         # Save metadata
         import json
+
         with open(metadata_path, "w") as f:
             json.dump(metadata, f)
 
@@ -249,7 +254,7 @@ class TestInjectionWorkflowIntegration:
         # Check that data was written at each offset
         for offset in offsets:
             # Should have non-zero data at each injection point
-            chunk = vram_data[offset:offset + 32]
+            chunk = vram_data[offset : offset + 32]
             assert any(b != 0 for b in chunk)
 
     def test_injection_error_recovery(self, temp_workspace, test_vram):
@@ -271,7 +276,8 @@ class TestInjectionWorkflowIntegration:
         is_valid, error_msg = injector.validate_sprite(rgb_sprite_path)
 
         assert not is_valid
-        assert "indexed color mode" in error_msg.lower()
+        assert "indexed" in error_msg.lower()
+        assert "mode" in error_msg.lower()
 
         # Test case 2: Too many colors in indexed mode
         indexed_sprite_path = os.path.join(temp_workspace, "too_many_colors.png")
@@ -299,11 +305,15 @@ class TestInjectionWorkflowIntegration:
 
         # inject_sprite doesn't validate, but convert_png_to_4bpp auto-converts RGB to indexed
         # So RGB images will actually succeed by being converted to 16 colors
-        result, msg = injector.inject_sprite(rgb_sprite_path, test_vram, test_vram, 0xC000)
+        result, msg = injector.inject_sprite(
+            rgb_sprite_path, test_vram, test_vram, 0xC000
+        )
         assert result is True  # Should succeed due to automatic conversion
 
         # However, indexed images with too many colors will be handled by adaptive palette
-        result, msg = injector.inject_sprite(indexed_sprite_path, test_vram, test_vram, 0xC000)
+        result, msg = injector.inject_sprite(
+            indexed_sprite_path, test_vram, test_vram, 0xC000
+        )
         assert result is True  # Also succeeds - convert_png_to_4bpp handles it
 
     def test_round_trip_preservation(self, temp_workspace, test_vram, test_cgram):
@@ -318,13 +328,14 @@ class TestInjectionWorkflowIntegration:
 
         # Extract using the correct API
         img, num_tiles = extractor.extract_sprites_grayscale(
-            vram_path=test_vram,
-            output_path=extracted_path
+            vram_path=test_vram, output_path=extracted_path
         )
 
         # Step 3: Inject back without modification
         injector = SpriteInjector()
-        result, msg = injector.inject_sprite(extracted_path, test_vram, test_vram, 0xC000)
+        result, msg = injector.inject_sprite(
+            extracted_path, test_vram, test_vram, 0xC000
+        )
         assert result is True, f"Injection failed: {msg}"
 
         # Step 4: Compare VRAM data
@@ -333,8 +344,8 @@ class TestInjectionWorkflowIntegration:
 
         # The sprite data region should be identical
         sprite_size = 32 * 32  # 32 tiles * 32 bytes per tile
-        original_sprite = original_data[0xC000:0xC000 + sprite_size]
-        final_sprite = final_data[0xC000:0xC000 + sprite_size]
+        original_sprite = original_data[0xC000 : 0xC000 + sprite_size]
+        final_sprite = final_data[0xC000 : 0xC000 + sprite_size]
 
         assert original_sprite == final_sprite, "Round trip failed to preserve data"
 

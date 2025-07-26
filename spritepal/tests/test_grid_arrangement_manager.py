@@ -155,9 +155,9 @@ class TestGridArrangementManager:
         invalid_positions = [
             TilePosition(-1, 0),  # Negative row
             TilePosition(0, -1),  # Negative col
-            TilePosition(3, 0),   # Row too large
-            TilePosition(0, 3),   # Col too large
-            TilePosition(5, 5),   # Both too large
+            TilePosition(3, 0),  # Row too large
+            TilePosition(0, 3),  # Col too large
+            TilePosition(5, 5),  # Both too large
         ]
 
         for pos in invalid_positions:
@@ -537,7 +537,12 @@ class TestGridArrangementManager:
         row_tiles = manager.get_row_tiles(1)
 
         assert len(row_tiles) == 4
-        expected_tiles = [TilePosition(1, 0), TilePosition(1, 1), TilePosition(1, 2), TilePosition(1, 3)]
+        expected_tiles = [
+            TilePosition(1, 0),
+            TilePosition(1, 1),
+            TilePosition(1, 2),
+            TilePosition(1, 3),
+        ]
         assert row_tiles == expected_tiles
 
     def test_get_column_tiles(self):
@@ -547,7 +552,12 @@ class TestGridArrangementManager:
         col_tiles = manager.get_column_tiles(1)
 
         assert len(col_tiles) == 4
-        expected_tiles = [TilePosition(0, 1), TilePosition(1, 1), TilePosition(2, 1), TilePosition(3, 1)]
+        expected_tiles = [
+            TilePosition(0, 1),
+            TilePosition(1, 1),
+            TilePosition(2, 1),
+            TilePosition(3, 1),
+        ]
         assert col_tiles == expected_tiles
 
     def test_reorder_arrangement_valid(self):
@@ -580,7 +590,9 @@ class TestGridArrangementManager:
         # Try to reorder with different items
         invalid_order = [(ArrangementType.TILE, "1,1"), (ArrangementType.ROW, "2")]
 
-        with pytest.raises(ValueError, match="New order must contain all current arrangement items"):
+        with pytest.raises(
+            ValueError, match="New order must contain all current arrangement items"
+        ):
             manager.reorder_arrangement(invalid_order)
 
         # Original order should be unchanged
@@ -596,7 +608,9 @@ class TestGridArrangementManager:
 
         # Add column 1 - should succeed, with overlap at (1,1)
         assert manager.add_column(1) is True
-        assert manager.get_arranged_count() == 5  # 3 from row + 2 new from column (excluding overlap)
+        assert (
+            manager.get_arranged_count() == 5
+        )  # 3 from row + 2 new from column (excluding overlap)
 
         # Verify specific tiles
         assert manager.is_tile_arranged(TilePosition(1, 0))  # From row

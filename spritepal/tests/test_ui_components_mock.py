@@ -22,7 +22,8 @@ class TestZoomablePreviewLogic:
         """Test that update_pixmap preserves zoom and pan state"""
 
         # Create widget instance with mocked Qt parts
-        with patch("spritepal.ui.zoomable_preview.QWidget"):
+        from .fixtures.qt_mocks import MockQWidget
+        with patch("spritepal.ui.zoomable_preview.QWidget", MockQWidget):
             widget = ZoomablePreviewWidget.__new__(ZoomablePreviewWidget)
 
             # Initialize the attributes we care about
@@ -195,20 +196,20 @@ class TestPreviewPanelLogic:
     def test_pil_image_to_pixmap_conversion(self):
         """Test PIL image to QPixmap conversion"""
 
-        # Create a mock panel
-        panel = PreviewPanel.__new__(PreviewPanel)
-
         # Create test image
         test_image = Image.new("RGB", (16, 16), "red")
 
-        # Mock QPixmap
-        with patch("spritepal.ui.zoomable_preview.QPixmap") as mock_pixmap:
+        # Mock QPixmap in the right location
+        with patch("spritepal.utils.image_utils.QPixmap") as mock_pixmap:
             mock_pixmap_instance = Mock()
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
             mock_pixmap.return_value = mock_pixmap_instance
 
+            # Import and test the actual function
+            from spritepal.utils.image_utils import pil_to_qpixmap
+
             # Test conversion
-            result = panel._pil_to_pixmap(test_image)
+            result = pil_to_qpixmap(test_image)
 
             # Verify
             assert result == mock_pixmap_instance
@@ -251,7 +252,6 @@ class TestPreviewPanelLogic:
         pixels = result.load()
         assert pixels[0, 0][3] == 0  # Should be transparent
 
-
     def test_view_preservation_in_palette_toggle(self):
         """Test that view is preserved when toggling palette"""
 
@@ -262,7 +262,9 @@ class TestPreviewPanelLogic:
 
         # Mock colorizer
         panel.colorizer = Mock()
-        panel.colorizer.get_display_image = Mock(return_value=Image.new("RGBA", (32, 32)))
+        panel.colorizer.get_display_image = Mock(
+            return_value=Image.new("RGBA", (32, 32))
+        )
         panel.colorizer.has_palettes = Mock(return_value=True)
 
         # Mock the preview widget

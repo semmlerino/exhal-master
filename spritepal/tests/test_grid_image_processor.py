@@ -2,7 +2,7 @@
 Unit tests for GridImageProcessor
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from PIL import Image
@@ -52,8 +52,10 @@ class TestGridImageProcessor:
 
         # Check that all expected positions are present
         expected_positions = [
-            TilePosition(0, 0), TilePosition(0, 1),
-            TilePosition(1, 0), TilePosition(1, 1)
+            TilePosition(0, 0),
+            TilePosition(0, 1),
+            TilePosition(1, 0),
+            TilePosition(1, 1),
         ]
 
         for pos in expected_positions:
@@ -263,7 +265,7 @@ class TestGridImageProcessor:
         # Create image from some tiles
         tiles = [
             (TilePosition(0, 0), processor.get_tile(TilePosition(0, 0))),
-            (TilePosition(0, 1), processor.get_tile(TilePosition(0, 1)))
+            (TilePosition(0, 1), processor.get_tile(TilePosition(0, 1))),
         ]
 
         result = processor.create_image_from_tiles(tiles)
@@ -297,7 +299,7 @@ class TestGridImageProcessor:
             (TilePosition(0, 0), processor.get_tile(TilePosition(0, 0))),
             (TilePosition(0, 1), processor.get_tile(TilePosition(0, 1))),
             (TilePosition(1, 0), processor.get_tile(TilePosition(1, 0))),
-            (TilePosition(1, 1), processor.get_tile(TilePosition(1, 1)))
+            (TilePosition(1, 1), processor.get_tile(TilePosition(1, 1))),
         ]
 
         result = processor.create_image_from_tiles(tiles, arrangement_width=2)
@@ -416,55 +418,60 @@ class TestGridImageProcessor:
 
         assert result is None
 
-    @patch("os.path.exists")
-    def test_process_sprite_sheet_as_grid_valid(self, mock_exists):
-        """Test complete sprite processing pipeline"""
-        mock_exists.return_value = True
-
-        processor = GridImageProcessor()
-
-        # Mock the load_sprite method
+    def test_process_sprite_sheet_as_grid_valid(self, tmp_path):
+        """Test complete sprite processing pipeline with real files"""
+        # Create real test sprite file
+        sprite_file = tmp_path / "test_sprite.png"
         test_image = Image.new("L", (16, 16))
-        processor.load_sprite = Mock(return_value=test_image)
-
-        # Mock extract_tiles_as_grid
-        mock_tiles = {TilePosition(0, 0): Image.new("L", (8, 8))}
-        processor.extract_tiles_as_grid = Mock(return_value=mock_tiles)
-
-        # Process sprite sheet
-        result_image, result_tiles = processor.process_sprite_sheet_as_grid("test.png", 2)
-
-        # Check results
-        assert result_image == test_image
-        assert result_tiles == mock_tiles
-        assert processor.original_image == test_image
-
-        # Check method calls
-        processor.load_sprite.assert_called_once_with("test.png")
-        processor.extract_tiles_as_grid.assert_called_once_with(test_image, 2)
-
-    @patch("os.path.exists")
-    def test_process_sprite_sheet_as_grid_file_not_found(self, mock_exists):
-        """Test processing when sprite file doesn't exist"""
-        mock_exists.return_value = False
+        # Create a simple pattern for testing
+        pixels = []
+        for y in range(16):
+            for x in range(16):
+                pixels.append((x + y * 16) % 256)
+        test_image.putdata(pixels)
+        test_image.save(sprite_file)
 
         processor = GridImageProcessor()
+
+        # Process sprite sheet using real file
+        result_image, result_tiles = processor.process_sprite_sheet_as_grid(
+            str(sprite_file), 2
+        )
+
+        # Check results - test actual behavior, not mocked behavior
+        assert result_image is not None
+        assert isinstance(result_image, Image.Image)
+        assert result_image.size == (16, 16)
+        assert result_tiles is not None
+        assert isinstance(result_tiles, dict)
+        assert processor.original_image is not None
+
+        # Verify real tile extraction occurred
+        assert len(result_tiles) > 0
+        for pos, tile in result_tiles.items():
+            assert isinstance(pos, TilePosition)
+            assert isinstance(tile, Image.Image)
+
+    def test_process_sprite_sheet_as_grid_file_not_found(self, tmp_path):
+        """Test processing when sprite file doesn't exist"""
+        processor = GridImageProcessor()
+
+        # Use a path that definitely doesn't exist
+        nonexistent_file = tmp_path / "nonexistent.png"
 
         with pytest.raises(FileNotFoundError, match="Sprite file not found"):
-            processor.process_sprite_sheet_as_grid("nonexistent.png", 2)
+            processor.process_sprite_sheet_as_grid(str(nonexistent_file), 2)
 
-    @patch("os.path.exists")
-    def test_process_sprite_sheet_as_grid_processing_error(self, mock_exists):
+    def test_process_sprite_sheet_as_grid_processing_error(self, tmp_path):
         """Test processing when an error occurs during processing"""
-        mock_exists.return_value = True
+        # Create a file that exists but isn't a valid image
+        invalid_file = tmp_path / "invalid.png"
+        invalid_file.write_text("This is not a valid PNG file")
 
         processor = GridImageProcessor()
 
-        # Mock load_sprite to raise an error
-        processor.load_sprite = Mock(side_effect=Exception("Test error"))
-
         with pytest.raises(Exception, match="Error processing sprite sheet"):
-            processor.process_sprite_sheet_as_grid("test.png", 2)
+            processor.process_sprite_sheet_as_grid(str(invalid_file), 2)
 
         # Check cleanup
         assert processor.original_image is None

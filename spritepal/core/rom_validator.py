@@ -4,37 +4,36 @@ ROM validation utilities for SpritePal
 
 import os
 import struct
-from typing import Optional, Tuple
+from typing import Any, ClassVar
 
+from spritepal.utils.logging_config import get_logger
 from spritepal.utils.rom_exceptions import (
     InvalidROMError,
     ROMChecksumError,
     ROMHeaderError,
     ROMSizeError,
-    ROMVersionError,
 )
-from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
 class ROMValidator:
     """Validates SNES ROM files"""
-    
+
     # Valid ROM sizes (in bytes, without header)
-    VALID_ROM_SIZES = [
-        0x80000,    # 512KB (4 Mbit)
-        0x100000,   # 1MB (8 Mbit)
-        0x180000,   # 1.5MB (12 Mbit)
-        0x200000,   # 2MB (16 Mbit)
-        0x280000,   # 2.5MB (20 Mbit)
-        0x300000,   # 3MB (24 Mbit)
-        0x400000,   # 4MB (32 Mbit)
-        0x600000,   # 6MB (48 Mbit)
+    VALID_ROM_SIZES: ClassVar[list[int]] = [
+        0x80000,  # 512KB (4 Mbit)
+        0x100000,  # 1MB (8 Mbit)
+        0x180000,  # 1.5MB (12 Mbit)
+        0x200000,  # 2MB (16 Mbit)
+        0x280000,  # 2.5MB (20 Mbit)
+        0x300000,  # 3MB (24 Mbit)
+        0x400000,  # 4MB (32 Mbit)
+        0x600000,  # 6MB (48 Mbit)
     ]
-    
+
     # Known game titles and their checksums
-    KNOWN_GAMES = {
+    KNOWN_GAMES: ClassVar[dict[str, dict[str, int]]] = {
         "KIRBY SUPER STAR": {
             "USA": 0x8A5C,
             "Japan": 0x7F4C,
@@ -42,44 +41,44 @@ class ROMValidator:
         },
         "KIRBY'S DREAM LAND 3": {
             "USA": 0x1234,  # Example, replace with actual
-        }
+        },
     }
-    
+
     @classmethod
-    def validate_rom_file(cls, rom_path: str) -> Tuple[bool, Optional[str]]:
+    def validate_rom_file(cls, rom_path: str) -> tuple[bool, str | None]:
         """
         Validate ROM file basic properties.
-        
+
         Returns:
             Tuple of (is_valid, error_message)
         """
         # Check file exists
         if not os.path.exists(rom_path):
             return False, "ROM file does not exist"
-        
+
         # Check file size
         file_size = os.path.getsize(rom_path)
         if file_size == 0:
             return False, "ROM file is empty"
-        
+
         # Check for SMC header (512 bytes)
         has_header = file_size % 1024 == 512
         rom_size = file_size - (512 if has_header else 0)
-        
+
         # Validate ROM size
         if rom_size not in cls.VALID_ROM_SIZES:
             return False, f"Invalid ROM size: {rom_size} bytes"
-        
+
         return True, None
-    
+
     @classmethod
-    def validate_rom_header(cls, rom_path: str) -> Tuple[dict, int]:
+    def validate_rom_header(cls, rom_path: str) -> tuple[dict[str, Any], int]:
         """
         Validate and extract ROM header information.
-        
+
         Returns:
             Tuple of (header_info, header_offset)
-        
+
         Raises:
             ROMHeaderError: If header is invalid
         """
@@ -87,15 +86,15 @@ class ROMValidator:
             # Check for SMC header
             file_size = os.path.getsize(rom_path)
             header_offset = 512 if file_size % 1024 == 512 else 0
-            
+
             # Try both possible header locations
             for base_offset in [0x7FC0, 0xFFC0]:
                 f.seek(header_offset + base_offset)
                 header_data = f.read(32)
-                
+
                 if len(header_data) < 32:
                     continue
-                
+
                 # Parse header fields
                 title = header_data[0:21].decode("ascii", errors="ignore").strip("\x00")
                 rom_type = header_data[21]
@@ -106,7 +105,7 @@ class ROMValidator:
                 version = header_data[27]
                 checksum_complement = struct.unpack("<H", header_data[28:30])[0]
                 checksum = struct.unpack("<H", header_data[30:32])[0]
-                
+
                 # Verify checksum format
                 if (checksum ^ checksum_complement) == 0xFFFF:
                     header_info = {
@@ -121,20 +120,24 @@ class ROMValidator:
                         "checksum_complement": checksum_complement,
                         "header_location": base_offset,
                     }
-                    
-                    logger.info(f"Found valid ROM header: {title} (checksum: 0x{checksum:04X})")
+
+                    logger.info(
+                        f"Found valid ROM header: {title} (checksum: 0x{checksum:04X})"
+                    )
                     return header_info, header_offset
-        
+
         raise ROMHeaderError("Could not find valid SNES ROM header")
-    
+
     @classmethod
-    def verify_rom_checksum(cls, rom_path: str, header_info: dict, header_offset: int) -> bool:
+    def verify_rom_checksum(
+        cls, rom_path: str, header_info: dict[str, Any], header_offset: int
+    ) -> bool:
         """
         Verify ROM checksum matches header.
-        
+
         Returns:
             True if checksum is valid
-            
+
         Raises:
             ROMChecksumError: If checksum validation fails
         """
@@ -142,7 +145,7 @@ class ROMValidator:
             # Read ROM data (skip SMC header if present)
             f.seek(header_offset)
             rom_data = f.read()
-        
+
         # Calculate actual checksum
         checksum = 0
         for i in range(0, len(rom_data), 2):
@@ -151,28 +154,28 @@ class ROMValidator:
             else:
                 word = rom_data[i]
             checksum = (checksum + word) & 0xFFFF
-        
+
         # Compare with header checksum
         if checksum != header_info["checksum"]:
             raise ROMChecksumError(
                 f"ROM checksum mismatch: expected 0x{header_info['checksum']:04X}, "
                 f"got 0x{checksum:04X}"
             )
-        
+
         logger.info("ROM checksum verified successfully")
         return True
-    
+
     @classmethod
-    def identify_rom_version(cls, header_info: dict) -> Optional[str]:
+    def identify_rom_version(cls, header_info: dict[str, Any]) -> str | None:
         """
         Identify ROM version/region from header.
-        
+
         Returns:
             Version string (e.g., "USA", "Japan") or None if unknown
         """
         title = header_info["title"]
         checksum = header_info["checksum"]
-        
+
         # Check known games
         for game_title, versions in cls.KNOWN_GAMES.items():
             if game_title in title.upper():
@@ -180,7 +183,7 @@ class ROMValidator:
                     if checksum == expected_checksum:
                         logger.info(f"Identified ROM: {game_title} ({version})")
                         return version
-        
+
         # Try to determine from region code
         region_codes = {
             0: "Japan",
@@ -202,21 +205,23 @@ class ROMValidator:
             16: "Brazil",
             17: "Australia",
         }
-        
+
         region = header_info.get("region", 0)
         if region in region_codes:
             return region_codes[region]
-        
+
         return None
-    
+
     @classmethod
-    def validate_rom_for_injection(cls, rom_path: str, sprite_offset: int) -> Tuple[dict, int]:
+    def validate_rom_for_injection(
+        cls, rom_path: str, sprite_offset: int
+    ) -> tuple[dict[str, Any], int]:
         """
         Complete ROM validation for injection.
-        
+
         Returns:
             Tuple of (header_info, header_offset)
-            
+
         Raises:
             Various ROM exceptions on validation failure
         """
@@ -224,28 +229,28 @@ class ROMValidator:
         is_valid, error_msg = cls.validate_rom_file(rom_path)
         if not is_valid:
             raise InvalidROMError(error_msg)
-        
+
         # Header validation
         header_info, header_offset = cls.validate_rom_header(rom_path)
-        
+
         # Checksum validation
         cls.verify_rom_checksum(rom_path, header_info, header_offset)
-        
+
         # Validate sprite offset
         file_size = os.path.getsize(rom_path)
         actual_rom_size = file_size - header_offset
-        
+
         if sprite_offset >= actual_rom_size:
             raise ROMSizeError(
                 f"Sprite offset 0x{sprite_offset:X} is beyond ROM size "
                 f"(0x{actual_rom_size:X} bytes)"
             )
-        
+
         # Identify version
         version = cls.identify_rom_version(header_info)
         if version:
             logger.info(f"ROM version identified: {version}")
         else:
             logger.warning("Unknown ROM version - sprite locations may not match")
-        
+
         return header_info, header_offset

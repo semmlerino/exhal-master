@@ -72,7 +72,7 @@ class TestROMInjector(unittest.TestCase):
 
         # Title (21 bytes)
         title = b"TEST ROM".ljust(21, b" ")
-        self.test_rom[header_offset:header_offset + 21] = title
+        self.test_rom[header_offset : header_offset + 21] = title
 
         # ROM type, size, SRAM size
         self.test_rom[header_offset + 21] = 0x20  # LoROM
@@ -82,8 +82,12 @@ class TestROMInjector(unittest.TestCase):
         # Checksum and complement (must XOR to 0xFFFF)
         checksum = 0x1234
         complement = checksum ^ 0xFFFF
-        self.test_rom[header_offset + 28:header_offset + 30] = complement.to_bytes(2, "little")
-        self.test_rom[header_offset + 30:header_offset + 32] = checksum.to_bytes(2, "little")
+        self.test_rom[header_offset + 28 : header_offset + 30] = complement.to_bytes(
+            2, "little"
+        )
+        self.test_rom[header_offset + 30 : header_offset + 32] = checksum.to_bytes(
+            2, "little"
+        )
 
     def test_read_rom_header(self):
         """Test reading ROM header"""
@@ -113,7 +117,7 @@ class TestROMInjector(unittest.TestCase):
             sram_size=0,
             checksum=0,
             checksum_complement=0,
-            header_offset=0
+            header_offset=0,
         )
 
         checksum, complement = self.injector.calculate_checksum(self.test_rom)
@@ -122,26 +126,28 @@ class TestROMInjector(unittest.TestCase):
         assert checksum ^ complement == 65535
 
     def test_sprite_location_finding(self):
-        """Test finding sprite locations"""
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            tmp.write(self.test_rom)
-            tmp_path = tmp.name
+        """Test finding sprite locations using real Kirby Super Star ROM"""
+        # Use real ROM file for testing
+        rom_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "Kirby Super Star (USA).sfc"
+        )
 
-        try:
-            locations = self.injector.find_sprite_locations(tmp_path)
+        # Skip test if ROM file doesn't exist
+        if not os.path.exists(rom_path):
+            self.skipTest(f"ROM file not found: {rom_path}")
 
-            # Should return known locations
-            assert "kirby_normal" in locations
-            assert "kirby_beam" in locations
+        locations = self.injector.find_sprite_locations(rom_path)
 
-            # Check structure
-            for _name, pointer in locations.items():
-                assert pointer.offset is not None
-                assert pointer.bank is not None
-                assert pointer.address is not None
+        # Should return known locations with new naming scheme
+        assert "High_Quality_Sprite_1" in locations
+        assert "High_Quality_Sprite_2" in locations
 
-        finally:
-            os.unlink(tmp_path)
+        # Check structure
+        for _name, pointer in locations.items():
+            assert pointer.offset is not None
+            assert pointer.bank is not None
+            assert pointer.address is not None
 
 
 @pytest.mark.gui

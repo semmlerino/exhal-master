@@ -19,6 +19,7 @@ from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGener
 
 class MockSelectionMode:
     """Mock version of SelectionMode enum"""
+
     TILE = "tile"
     ROW = "row"
     COLUMN = "column"
@@ -80,8 +81,7 @@ class MockGridArrangementDialog:
         """Update preview display"""
         if self.processor.original_image and self.manager:
             preview = self.generator.create_grid_preview_with_overlay(
-                self.processor, self.manager,
-                selected_tiles=list(self.selected_tiles)
+                self.processor, self.manager, selected_tiles=list(self.selected_tiles)
             )
             # Mock setting the preview
             self.preview_label.setPixmap = Mock()
@@ -138,7 +138,9 @@ class MockGridArrangementDialog:
 
         return result
 
-    def create_group_from_selection(self, group_id: str = "new_group", group_name: str = "New Group"):
+    def create_group_from_selection(
+        self, group_id: str = "new_group", group_name: str = "New Group"
+    ):
         """Create group from selected tiles"""
         if not self.manager or not self.selected_tiles:
             return None
@@ -228,8 +230,14 @@ class MockGridGraphicsView:
         self.zoom_level = 1.0
         self.zoom_changed = Mock()  # Mock signal
 
-    def setup_scene(self, image: Image.Image, tile_width: int, tile_height: int,
-                   grid_rows: int, grid_cols: int):
+    def setup_scene(
+        self,
+        image: Image.Image,
+        tile_width: int,
+        tile_height: int,
+        grid_rows: int,
+        grid_cols: int,
+    ):
         """Setup graphics scene"""
         self.tile_width = tile_width
         self.tile_height = tile_height
@@ -275,7 +283,9 @@ class MockGridGraphicsView:
             for row in range(self.grid_rows):
                 self.selected_tiles.add(TilePosition(row, col_index))
 
-    def select_rectangle(self, start_row: int, start_col: int, end_row: int, end_col: int):
+    def select_rectangle(
+        self, start_row: int, start_col: int, end_row: int, end_col: int
+    ):
         """Select rectangular region"""
         for row in range(min(start_row, end_row), max(start_row, end_row) + 1):
             for col in range(min(start_col, end_col), max(start_col, end_col) + 1):
@@ -291,8 +301,10 @@ class MockGridGraphicsView:
         # Mock highlighting
         for tile in tiles:
             self.scene.addRect(
-                tile.col * self.tile_width, tile.row * self.tile_height,
-                self.tile_width, self.tile_height
+                tile.col * self.tile_width,
+                tile.row * self.tile_height,
+                self.tile_width,
+                self.tile_height,
             )
 
     def zoom_in(self):
@@ -418,7 +430,9 @@ class TestGridArrangementDialogLogic:
             result = dialog.add_column_to_arrangement(1)
             assert result is True
             final_count = dialog.manager.get_arranged_count()
-            assert final_count >= initial_count  # Should have added some tiles from column
+            assert (
+                final_count >= initial_count
+            )  # Should have added some tiles from column
 
     def test_dialog_group_operations(self):
         """Test group operations"""

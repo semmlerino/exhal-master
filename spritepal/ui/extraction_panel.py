@@ -2,11 +2,21 @@
 Extraction panel with drag & drop zones for dump files
 """
 
+import builtins
+import contextlib
 import os
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPainter, QPen
+from PyQt6.QtGui import (
+    QColor,
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDropEvent,
+    QKeyEvent,
+    QPainter,
+    QPen,
+)
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -21,7 +31,10 @@ from PyQt6.QtWidgets import (
 )
 
 from spritepal.utils.constants import VRAM_SPRITE_OFFSET
+from spritepal.utils.logging_config import get_logger
 from spritepal.utils.settings_manager import get_settings_manager
+
+logger = get_logger(__name__)
 
 
 class DropZone(QWidget):
@@ -35,13 +48,15 @@ class DropZone(QWidget):
         self.file_path = ""
         self.setAcceptDrops(True)
         self.setMinimumHeight(80)
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             DropZone {
                 border: 2px dashed #666;
                 border-radius: 8px;
                 background-color: #2b2b2b;
             }
-        """)
+        """
+        )
 
         # Layout
         layout = QVBoxLayout(self)
@@ -66,38 +81,47 @@ class DropZone(QWidget):
         self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def dragEnterEvent(self, event: QDragEnterEvent):  # noqa: N802
+    def dragEnterEvent(self, a0: QDragEnterEvent | None):  # noqa: N802
         """Handle drag enter events"""
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-            self.setStyleSheet("""
-                DropZone {
-                    border: 2px solid #0078d4;
-                    border-radius: 8px;
-                    background-color: #383838;
-                }
-            """)
+        if a0:
+            mime_data = a0.mimeData()
+            if mime_data and mime_data.hasUrls():
+                a0.acceptProposedAction()
+                self.setStyleSheet(
+                    """
+                    DropZone {
+                        border: 2px solid #0078d4;
+                        border-radius: 8px;
+                        background-color: #383838;
+                    }
+                """
+                )
 
-    def dragLeaveEvent(self, event):  # noqa: N802
+    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):  # noqa: N802
         """Handle drag leave events"""
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             DropZone {
                 border: 2px dashed #666;
                 border-radius: 8px;
                 background-color: #2b2b2b;
             }
-        """)
+        """
+        )
 
-    def dropEvent(self, event: QDropEvent):  # noqa: N802
+    def dropEvent(self, a0: QDropEvent | None):  # noqa: N802
         """Handle drop events"""
-        files = [url.toLocalFile() for url in event.mimeData().urls()]
-        if files:
-            self.set_file(files[0])
-        self.dragLeaveEvent(event)
+        if a0:
+            mime_data = a0.mimeData()
+            if mime_data:
+                files = [url.toLocalFile() for url in mime_data.urls()]
+                if files:
+                    self.set_file(files[0])
+        self.dragLeaveEvent(None)  # Just reset the style
 
-    def paintEvent(self, event):  # noqa: N802
+    def paintEvent(self, a0):  # noqa: N802
         """Custom paint event to show status"""
-        super().paintEvent(event)
+        super().paintEvent(a0)
 
         if self.file_path:
             # Draw green checkmark
@@ -145,11 +169,16 @@ class DropZone(QWidget):
 
     def clear(self):
         """Clear the current file"""
+        old_path = self.file_path
         self.file_path = ""
         self.label.setText(f"Drop {self.file_type} file here")
         self.label.setStyleSheet("color: #999;")
         self.path_label.setText("")
         self.update()
+
+        # Emit file_dropped signal with empty path to trigger UI updates
+        if old_path:
+            self.file_dropped.emit("")
 
     def has_file(self):
         """Check if a file is loaded"""
@@ -166,6 +195,7 @@ class ExtractionPanel(QGroupBox):
     files_changed = pyqtSignal()
     extraction_ready = pyqtSignal(bool)
     offset_changed = pyqtSignal(int)  # Emitted when VRAM offset changes
+    mode_changed = pyqtSignal(int)  # Emitted when extraction mode changes
 
     def __init__(self):
         super().__init__("Input Files")
@@ -179,6 +209,9 @@ class ExtractionPanel(QGroupBox):
         self._offset_timer.timeout.connect(self._emit_offset_changed)
         self._pending_offset = None
         self._slider_changing = False  # Track if change is from slider
+
+        # Enable keyboard focus for shortcuts
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def _setup_ui(self):
         """Set up the UI"""
@@ -200,49 +233,148 @@ class ExtractionPanel(QGroupBox):
         self.offset_widget = QWidget()
         offset_layout = QVBoxLayout(self.offset_widget)
 
-        # Offset label
+        # Offset label with enhanced display
         offset_label_layout = QHBoxLayout()
         offset_label_layout.addWidget(QLabel("VRAM Offset:"))
+
+        # Enhanced hex label with better styling
         self.offset_hex_label = QLabel("0xC000")
-        self.offset_hex_label.setStyleSheet("font-family: monospace; color: #0078d4;")
+        self.offset_hex_label.setStyleSheet("""
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+            color: #66aaff;
+            padding: 4px 8px;
+            background: #1a1a1a;
+            border: 1px solid #444444;
+            border-radius: 4px;
+        """)
+        self.offset_hex_label.setMinimumWidth(80)
+        self.offset_hex_label.setToolTip("Current offset in VRAM")
         offset_label_layout.addWidget(self.offset_hex_label)
+
+        # Tile info label
+        self.tile_info_label = QLabel("(Tile #1536)")
+        self.tile_info_label.setStyleSheet("color: #888888; margin-left: 8px;")
+        offset_label_layout.addWidget(self.tile_info_label)
+
+        # Position percentage
+        self.position_label = QLabel("75.0%")
+        self.position_label.setStyleSheet("color: #888888; margin-left: 8px;")
+        offset_label_layout.addWidget(self.position_label)
+
         offset_label_layout.addStretch()
         offset_layout.addLayout(offset_label_layout)
 
-        # Offset slider
+        # Offset slider with fine control
         self.offset_slider = QSlider(Qt.Orientation.Horizontal)
         self.offset_slider.setMinimum(0)
         self.offset_slider.setMaximum(0x10000)  # 64KB max
         self.offset_slider.setValue(VRAM_SPRITE_OFFSET)
         self.offset_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.offset_slider.setTickInterval(0x1000)  # 4KB intervals
+        self.offset_slider.setTickInterval(0x1000)  # Visual ticks at 4KB intervals
+        self.offset_slider.setSingleStep(0x20)  # Single tile step
+        self.offset_slider.setPageStep(0x100)  # Page step
         self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
+        self.offset_slider.setStyleSheet("""
+            QSlider::groove:horizontal {
+                border: 1px solid #999999;
+                height: 8px;
+                background: #2b2b2b;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #5599ff;
+                border: 1px solid #5599ff;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+            QSlider::handle:horizontal:hover {
+                background: #66aaff;
+                border: 1px solid #66aaff;
+            }
+            QSlider::sub-page:horizontal {
+                background: #4488dd;
+                border-radius: 4px;
+            }
+        """)
         offset_layout.addWidget(self.offset_slider)
 
-        # Offset spinbox
-        offset_spin_layout = QHBoxLayout()
+        # Offset controls row
+        offset_controls_layout = QHBoxLayout()
+
+        # Offset spinbox with hex input
         self.offset_spinbox = QSpinBox()
         self.offset_spinbox.setMinimum(0)
         self.offset_spinbox.setMaximum(0x10000)
         self.offset_spinbox.setValue(VRAM_SPRITE_OFFSET)
-        self.offset_spinbox.setSuffix(" bytes")
+        self.offset_spinbox.setSingleStep(0x20)  # Default to tile-aligned
+        self.offset_spinbox.setDisplayIntegerBase(16)
+        self.offset_spinbox.setPrefix("0x")
+        self.offset_spinbox.setMinimumWidth(100)
         self.offset_spinbox.valueChanged.connect(self._on_offset_spinbox_changed)
-        offset_spin_layout.addWidget(self.offset_spinbox)
-        offset_spin_layout.addStretch()
-        offset_layout.addLayout(offset_spin_layout)
+        self.offset_spinbox.setToolTip("Enter offset in hex (0x prefix) or decimal")
+        offset_controls_layout.addWidget(self.offset_spinbox)
+
+        # Step size selector
+        offset_controls_layout.addWidget(QLabel("Step:"))
+        self.step_combo = QComboBox()
+        self.step_combo.addItems([
+            "0x20 (1 tile)",
+            "0x100 (8 tiles)",
+            "0x1000 (128 tiles)",
+            "0x4000 (512 tiles)"
+        ])
+        self.step_combo.setCurrentIndex(0)  # Default to tile-aligned
+        self.step_combo.currentIndexChanged.connect(self._on_step_changed)
+        self.step_combo.setToolTip("Select step size for navigation")
+        offset_controls_layout.addWidget(self.step_combo)
+
+        # Quick jump dropdown
+        offset_controls_layout.addWidget(QLabel("Quick Jump:"))
+        self.jump_combo = QComboBox()
+        self.jump_combo.addItems([
+            "Select...",
+            "0x0000 - Start",
+            "0x4000 - Lower sprites",
+            "0x8000 - Alt sprites",
+            "0xC000 - Kirby sprites",
+            "0x10000 - End"
+        ])
+        self.jump_combo.currentIndexChanged.connect(self._on_jump_selected)
+        self.jump_combo.setMinimumWidth(150)
+        offset_controls_layout.addWidget(self.jump_combo)
+
+        offset_controls_layout.addStretch()
+        offset_layout.addLayout(offset_controls_layout)
 
         # Hide by default
         self.offset_widget.setVisible(False)
         layout.addWidget(self.offset_widget)
 
+        # Extraction mode selector
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("Extraction Mode:"))
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["Full Color (requires CGRAM)", "Grayscale Only"])
+        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addStretch()
+        layout.addLayout(mode_layout)
+
         # Drop zones
         self.vram_drop = DropZone("VRAM")
+        self.vram_drop.setToolTip("Contains sprite graphics data (required for any extraction)")
         layout.addWidget(self.vram_drop)
 
         self.cgram_drop = DropZone("CGRAM")
+        self.cgram_drop.setToolTip("Contains color palette data (optional - without it, only grayscale extraction is possible)")
         layout.addWidget(self.cgram_drop)
 
         self.oam_drop = DropZone("OAM (Optional)")
+        self.oam_drop.setToolTip("Shows active sprites and palettes (optional - improves palette selection)")
         layout.addWidget(self.oam_drop)
 
         # Auto-detect button
@@ -266,14 +398,27 @@ class ExtractionPanel(QGroupBox):
         # Try to auto-detect related files
         self._auto_detect_related(file_path)
 
+        # Update mode visuals if CGRAM was added/removed
+        if file_path == self.cgram_drop.get_file_path():
+            self._on_mode_changed(self.mode_combo.currentIndex())
+
         # Trigger preview update if VRAM was just loaded
         if self.has_vram() and file_path == self.vram_drop.get_file_path():
             self.offset_changed.emit(self.get_vram_offset())
 
     def _check_extraction_ready(self):
         """Check if we're ready to extract"""
-        ready = self.vram_drop.has_file() and self.cgram_drop.has_file()
-        self.extraction_ready.emit(ready)
+        # Always need VRAM
+        if not self.vram_drop.has_file():
+            self.extraction_ready.emit(False)
+            return
+
+        # Check mode - grayscale doesn't need CGRAM
+        if self.mode_combo.currentIndex() == 1:  # Grayscale Only
+            self.extraction_ready.emit(True)
+        else:  # Full Color mode
+            ready = self.cgram_drop.has_file()
+            self.extraction_ready.emit(ready)
 
     def _auto_detect_related(self, file_path):
         """Try to auto-detect related dump files"""
@@ -315,7 +460,9 @@ class ExtractionPanel(QGroupBox):
             if file_path.exists() and not drop_zone.has_file():
                 drop_zone.set_file(str(file_path))
 
-    def _find_files_for_type(self, directory: Path, patterns: list[str], drop_zone: DropZone) -> bool:
+    def _find_files_for_type(
+        self, directory: Path, patterns: list[str], drop_zone: DropZone
+    ) -> bool:
         """Helper method to find and set files for a specific dump type"""
         if drop_zone.has_file():
             return False
@@ -368,57 +515,183 @@ class ExtractionPanel(QGroupBox):
 
     def _on_preset_changed(self, index):
         """Handle preset change"""
-        # Show/hide custom offset controls based on preset
-        if index == 1:  # Custom Range
-            self.offset_widget.setVisible(True)
-            # Trigger preview update if files are loaded
-            if self.has_vram():
-                self.offset_changed.emit(self.offset_spinbox.value())
-        else:  # Kirby Sprites
-            self.offset_widget.setVisible(False)
-            # Reset to default Kirby offset
-            self.offset_slider.setValue(VRAM_SPRITE_OFFSET)
-            self.offset_spinbox.setValue(VRAM_SPRITE_OFFSET)
-            # Trigger preview update with default offset
-            if self.has_vram():
-                self.offset_changed.emit(VRAM_SPRITE_OFFSET)
+        logger.debug(f"Preset changed to index: {index}")
+        try:
+            # Show/hide custom offset controls based on preset
+            if index == 1:  # Custom Range
+                logger.debug("Switching to Custom Range preset")
+                self.offset_widget.setVisible(True)
+                logger.debug("Offset widget made visible")
+
+                # Update display with current values
+                current_offset = self.offset_spinbox.value()
+                self._update_offset_display(current_offset)
+
+                # Trigger preview update if files are loaded
+                has_vram = self.has_vram()
+                logger.debug(f"Has VRAM: {has_vram}")
+                if has_vram:
+                    logger.debug(f"Emitting offset change for custom range: {current_offset} (0x{current_offset:04X})")
+                    self.offset_changed.emit(current_offset)
+                    logger.debug("Custom range offset change signal emitted")
+            else:  # Kirby Sprites
+                logger.debug("Switching to Kirby Sprites preset")
+                self.offset_widget.setVisible(False)
+                logger.debug("Offset widget hidden")
+
+                # Reset to default Kirby offset
+                logger.debug(f"Resetting to default Kirby offset: {VRAM_SPRITE_OFFSET} (0x{VRAM_SPRITE_OFFSET:04X})")
+                self.offset_slider.setValue(VRAM_SPRITE_OFFSET)
+                self.offset_spinbox.setValue(VRAM_SPRITE_OFFSET)
+                logger.debug("Offset controls reset to default values")
+
+                # Trigger preview update with default offset
+                has_vram = self.has_vram()
+                logger.debug(f"Has VRAM: {has_vram}")
+                if has_vram:
+                    logger.debug(f"Emitting default offset change: {VRAM_SPRITE_OFFSET}")
+                    self.offset_changed.emit(VRAM_SPRITE_OFFSET)
+                    logger.debug("Default offset change signal emitted")
+
+            logger.debug("Preset change completed successfully")
+
+        except Exception:
+            logger.exception("Error in preset change handler")
+            # Don't re-raise to prevent crash, just log the error
 
     def _on_offset_slider_changed(self, value):
         """Handle offset slider change"""
-        # Mark that this change is from the slider
-        self._slider_changing = True
+        logger.debug(f"Offset slider changed to: {value} (0x{value:04X})")
+        try:
+            # Mark that this change is from the slider
+            self._slider_changing = True
+            logger.debug("Marked slider as changing")
 
-        # Update spinbox (will trigger its handler)
-        self.offset_spinbox.setValue(value)
+            # Update spinbox (will trigger its handler)
+            logger.debug(f"Updating spinbox to value: {value}")
+            self.offset_spinbox.setValue(value)
+            logger.debug("Spinbox updated successfully")
 
-        # Emit change immediately for smooth real-time updates when dragging
-        if self.preset_combo.currentIndex() == 1 and self.has_vram():  # Custom Range
-            self.offset_changed.emit(value)
+            # Emit change immediately for smooth real-time updates when dragging
+            preset_index = self.preset_combo.currentIndex()
+            has_vram = self.has_vram()
+            logger.debug(f"Preset index: {preset_index}, has VRAM: {has_vram}")
 
-        self._slider_changing = False
+            if preset_index == 1 and has_vram:  # Custom Range
+                logger.debug(f"Emitting offset change signal: {value}")
+                self.offset_changed.emit(value)
+                logger.debug("Offset change signal emitted successfully")
+
+            self._slider_changing = False
+            logger.debug("Offset slider change completed successfully")
+
+        except Exception:
+            logger.exception("Error in offset slider change handler")
+            self._slider_changing = False  # Reset flag on error
+            # Don't re-raise to prevent crash, just log the error
 
     def _on_offset_spinbox_changed(self, value):
         """Handle offset spinbox change"""
-        # Update slider without triggering its handler
-        self.offset_slider.blockSignals(True)
-        self.offset_slider.setValue(value)
-        self.offset_slider.blockSignals(False)
+        logger.debug(f"Offset spinbox changed to: {value} (0x{value:04X})")
+        try:
+            # Update slider without triggering its handler
+            logger.debug("Blocking slider signals")
+            self.offset_slider.blockSignals(True)
 
+            logger.debug(f"Setting slider value to: {value}")
+            self.offset_slider.setValue(value)
+
+            logger.debug("Unblocking slider signals")
+            self.offset_slider.blockSignals(False)
+            logger.debug("Slider updated successfully")
+
+            # Update all display elements
+            self._update_offset_display(value)
+
+            # Only use debounce for direct spinbox changes (not from slider)
+            preset_index = self.preset_combo.currentIndex()
+            is_slider_changing = self._slider_changing
+            logger.debug(f"Preset index: {preset_index}, slider changing: {is_slider_changing}")
+
+            if preset_index == 1 and not is_slider_changing:  # Custom Range
+                logger.debug(f"Setting pending offset and starting timer: {value}")
+                self._pending_offset = value
+                self._offset_timer.stop()
+                self._offset_timer.start()
+                logger.debug("Timer started for debounced offset change")
+
+            logger.debug("Offset spinbox change completed successfully")
+
+        except Exception:
+            logger.exception("Error in offset spinbox change handler")
+            # Try to reset slider signals state on error
+            with contextlib.suppress(builtins.BaseException):
+                self.offset_slider.blockSignals(False)
+            # Don't re-raise to prevent crash, just log the error
+
+    def _update_offset_display(self, value):
+        """Update all offset display elements"""
         # Update hex label
-        self.offset_hex_label.setText(f"0x{value:04X}")
+        hex_text = f"0x{value:04X}"
+        self.offset_hex_label.setText(hex_text)
 
-        # Only use debounce for direct spinbox changes (not from slider)
-        if (
-            self.preset_combo.currentIndex() == 1 and not self._slider_changing
-        ):  # Custom Range
-            self._pending_offset = value
-            self._offset_timer.stop()
-            self._offset_timer.start()
+        # Update tile info
+        tile_number = value // 32  # 32 bytes per tile
+        self.tile_info_label.setText(f"(Tile #{tile_number})")
+
+        # Update position percentage
+        max_val = self.offset_slider.maximum()
+        if max_val > 0:
+            percentage = (value / max_val) * 100
+            self.position_label.setText(f"{percentage:.1f}%")
+        else:
+            self.position_label.setText("0%")
+
+    def _on_step_changed(self, index):
+        """Handle step size change"""
+        step_sizes = [0x20, 0x100, 0x1000, 0x4000]
+        step_size = step_sizes[index]
+
+        # Update spinbox step
+        self.offset_spinbox.setSingleStep(step_size)
+
+        # Update slider step
+        self.offset_slider.setSingleStep(step_size)
+        self.offset_slider.setPageStep(step_size * 4)
+
+        logger.debug(f"Step size changed to: 0x{step_size:04X}")
+
+    def _on_jump_selected(self, index):
+        """Handle quick jump selection"""
+        if index > 0:
+            jump_text = self.jump_combo.currentText()
+            # Extract hex value from text like "0xC000 - Kirby sprites"
+            hex_part = jump_text.split(" - ")[0]
+            try:
+                offset = int(hex_part, 16)
+                self.offset_spinbox.setValue(offset)
+                logger.debug(f"Jumped to offset: 0x{offset:04X}")
+            except ValueError:
+                logger.exception(f"Invalid jump offset: {hex_part}")
+
+            # Reset combo to "Select..."
+            self.jump_combo.setCurrentIndex(0)
 
     def _emit_offset_changed(self):
         """Emit the pending offset change after debounce"""
-        if self._pending_offset is not None:
-            self.offset_changed.emit(self._pending_offset)
+        logger.debug(f"Timer triggered - emitting pending offset: {self._pending_offset}")
+        try:
+            if self._pending_offset is not None:
+                offset_value = self._pending_offset
+                logger.debug(f"Emitting debounced offset change: {offset_value} (0x{offset_value:04X})")
+                self.offset_changed.emit(offset_value)
+                logger.debug("Debounced offset change signal emitted successfully")
+            else:
+                logger.debug("No pending offset to emit")
+
+        except Exception:
+            logger.exception("Error in debounced offset emission")
+            # Don't re-raise to prevent crash, just log the error
 
     def clear_files(self):
         """Clear all loaded files"""
@@ -461,6 +734,12 @@ class ExtractionPanel(QGroupBox):
 
     def restore_session_files(self, file_paths):
         """Restore file paths from session data"""
+        # Restore extraction mode first
+        if "extraction_mode" in file_paths:
+            mode_index = file_paths.get("extraction_mode", 0)
+            if 0 <= mode_index < self.mode_combo.count():
+                self.mode_combo.setCurrentIndex(mode_index)
+
         if file_paths.get("vram_path") and os.path.exists(file_paths["vram_path"]):
             self.vram_drop.set_file(file_paths["vram_path"])
 
@@ -479,4 +758,71 @@ class ExtractionPanel(QGroupBox):
             "vram_path": self.get_vram_path(),
             "cgram_path": self.get_cgram_path(),
             "oam_path": self.get_oam_path(),
+            "extraction_mode": self.mode_combo.currentIndex(),
         }
+
+    def _on_mode_changed(self, index):
+        """Handle extraction mode change"""
+        logger.debug(f"Extraction mode changed to: {self.mode_combo.currentText()}")
+
+        # Update CGRAM drop zone appearance based on mode
+        if index == 1:  # Grayscale Only
+            self.cgram_drop.label.setText("CGRAM (Not required for grayscale)")
+            self.cgram_drop.label.setStyleSheet("color: #666;")
+        elif self.cgram_drop.has_file():
+            self.cgram_drop.label.setText("✓ CGRAM")
+            self.cgram_drop.label.setStyleSheet("color: #107c41; font-weight: bold;")
+        else:
+            self.cgram_drop.label.setText("Drop CGRAM file here")
+            self.cgram_drop.label.setStyleSheet("color: #d13438;")  # Red for required but missing
+
+        # Re-check extraction readiness
+        self._check_extraction_ready()
+
+        # Emit mode changed signal
+        self.mode_changed.emit(index)
+
+    def is_grayscale_mode(self):
+        """Check if grayscale extraction mode is selected"""
+        return self.mode_combo.currentIndex() == 1
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+        """Handle keyboard shortcuts for offset navigation"""
+        # Only handle shortcuts in custom range mode
+        if self.preset_combo.currentIndex() != 1:
+            super().keyPressEvent(event)
+            return
+
+        current = self.offset_spinbox.value()
+        step = self.offset_spinbox.singleStep()
+
+        # Ctrl + Arrow keys for fine stepping
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            if event.key() == Qt.Key.Key_Left:
+                self.offset_spinbox.setValue(max(0, current - step))
+                event.accept()
+                return
+            if event.key() == Qt.Key.Key_Right:
+                self.offset_spinbox.setValue(min(self.offset_spinbox.maximum(), current + step))
+                event.accept()
+                return
+
+        # Page Up/Down for larger jumps
+        if event.key() == Qt.Key.Key_PageUp:
+            self.offset_spinbox.setValue(max(0, current - 0x1000))
+            event.accept()
+            return
+        if event.key() == Qt.Key.Key_PageDown:
+            self.offset_spinbox.setValue(min(self.offset_spinbox.maximum(), current + 0x1000))
+            event.accept()
+            return
+
+        # Number keys for percentage jumps (1-9 = 10%-90%)
+        if event.key() >= Qt.Key.Key_1 and event.key() <= Qt.Key.Key_9:
+            percentage = (event.key() - Qt.Key.Key_1 + 1) * 10
+            offset = int(self.offset_spinbox.maximum() * percentage / 100)
+            self.offset_spinbox.setValue(offset)
+            event.accept()
+            return
+
+        super().keyPressEvent(event)

@@ -5,7 +5,7 @@ Provides default palettes for sprites when CGRAM data is not available
 
 import json
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Any
 
 from spritepal.utils.logging_config import get_logger
 
@@ -14,108 +14,105 @@ logger = get_logger(__name__)
 
 class DefaultPaletteLoader:
     """Loads and manages default sprite palettes"""
-    
-    DEFAULT_PALETTE_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "config",
-        "default_palettes.json"
+
+    DEFAULT_PALETTE_PATH: str = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "config", "default_palettes.json"
     )
-    
-    def __init__(self, palette_path: Optional[str] = None):
+
+    def __init__(self, palette_path: str | None = None) -> None:
         """
         Initialize default palette loader.
-        
+
         Args:
             palette_path: Path to default palettes file (uses default if None)
         """
-        self.palette_path = palette_path or self.DEFAULT_PALETTE_PATH
-        self.palette_data = {}
+        self.palette_path: str = palette_path or self.DEFAULT_PALETTE_PATH
+        self.palette_data: dict[str, Any] = {}
         self.load_palettes()
-    
+
     def load_palettes(self) -> None:
         """Load default palettes from JSON file"""
         if not os.path.exists(self.palette_path):
             logger.warning(f"Default palettes not found: {self.palette_path}")
             return
-        
+
         try:
-            with open(self.palette_path, 'r') as f:
+            with open(self.palette_path) as f:
                 self.palette_data = json.load(f)
             logger.info(f"Loaded default palettes: {self.palette_path}")
-        except Exception as e:
-            logger.error(f"Failed to load default palettes: {e}")
-    
-    def get_sprite_palettes(self, sprite_name: str) -> List[Dict]:
+        except Exception:
+            logger.exception("Failed to load default palettes")
+
+    def get_sprite_palettes(self, sprite_name: str) -> list[dict[str, Any]]:
         """
         Get default palettes for a specific sprite.
-        
+
         Args:
             sprite_name: Name of the sprite (e.g., "kirby_normal")
-            
+
         Returns:
             List of palette dictionaries with index and colors
         """
         if "palettes" not in self.palette_data:
             return []
-        
+
         # Try exact match first
         if sprite_name in self.palette_data["palettes"]:
             sprite_data = self.palette_data["palettes"][sprite_name]
             return sprite_data.get("palettes", [])
-        
+
         # Try partial match (e.g., "kirby" in "kirby_normal")
         for palette_key, palette_data in self.palette_data["palettes"].items():
             if sprite_name.startswith(palette_key.split("_")[0]):
                 return palette_data.get("palettes", [])
-        
+
         logger.warning(f"No default palettes found for sprite: {sprite_name}")
         return []
-    
-    def create_palette_files(self, sprite_name: str, output_base: str) -> List[str]:
+
+    def create_palette_files(self, sprite_name: str, output_base: str) -> list[str]:
         """
         Create .pal.json files for a sprite using default palettes.
-        
+
         Args:
             sprite_name: Name of the sprite
             output_base: Base path for output files (without extension)
-            
+
         Returns:
             List of created palette file paths
         """
         palettes = self.get_sprite_palettes(sprite_name)
         created_files = []
-        
+
         for palette_data in palettes:
             palette_index = palette_data.get("index", 8)
             palette_name = palette_data.get("name", f"Palette {palette_index}")
             colors = palette_data.get("colors", [])
-            
+
             # Create palette file
             palette_path = f"{output_base}_pal{palette_index}.pal.json"
-            palette_json = {
-                "name": palette_name,
-                "colors": colors
-            }
-            
+            palette_json = {"name": palette_name, "colors": colors}
+
             try:
-                with open(palette_path, 'w') as f:
+                with open(palette_path, "w") as f:
                     json.dump(palette_json, f, indent=2)
                 created_files.append(palette_path)
-                logger.info(f"Created default palette: {palette_name} -> {os.path.basename(palette_path)}")
-            except Exception as e:
-                logger.error(f"Failed to create palette file: {e}")
-        
+                logger.info(
+                    f"Created default palette: {palette_name} -> {os.path.basename(palette_path)}"
+                )
+            except Exception:
+                logger.exception("Failed to create palette file")
+
         return created_files
-    
-    def get_all_kirby_palettes(self) -> Dict[int, List[Tuple[int, int, int]]]:
+
+    def get_all_kirby_palettes(self) -> dict[int, list[tuple[int, int, int]]]:
         """
         Get all Kirby palettes as a dictionary for quick access.
-        
+
         Returns:
             Dictionary mapping palette index to color list
         """
         all_palettes = {}
-        
+
         # Collect all Kirby-related palettes
         for sprite_name, sprite_data in self.palette_data.get("palettes", {}).items():
             if "kirby" in sprite_name.lower():
@@ -124,16 +121,16 @@ class DefaultPaletteLoader:
                     colors = palette.get("colors", [])
                     if colors:
                         all_palettes[index] = colors
-        
+
         return all_palettes
-    
+
     def has_default_palettes(self, sprite_name: str) -> bool:
         """
         Check if default palettes exist for a sprite.
-        
+
         Args:
             sprite_name: Name of the sprite
-            
+
         Returns:
             True if default palettes exist
         """

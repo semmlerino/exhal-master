@@ -4,13 +4,13 @@ Grid-based arrangement state management for flexible sprite organization
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
 class ArrangementType(Enum):
     """Types of tile arrangements"""
+
     ROW = "row"
     COLUMN = "column"
     TILE = "tile"
@@ -20,6 +20,7 @@ class ArrangementType(Enum):
 @dataclass
 class TilePosition:
     """Represents a tile's position in the grid"""
+
     row: int
     col: int
 
@@ -27,17 +28,22 @@ class TilePosition:
         return hash((self.row, self.col))
 
     def __eq__(self, other):
-        return isinstance(other, TilePosition) and self.row == other.row and self.col == other.col
+        return (
+            isinstance(other, TilePosition)
+            and self.row == other.row
+            and self.col == other.col
+        )
 
 
 @dataclass
 class TileGroup:
     """Represents a group of tiles that should stay together"""
+
     id: str
     tiles: list[TilePosition]
     width: int  # Group width in tiles
     height: int  # Group height in tiles
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class GridArrangementManager(QObject):
@@ -82,7 +88,9 @@ class GridArrangementManager(QObject):
 
         self._arranged_tiles.append(position)
         self._tile_set.add(position)
-        self._arrangement_order.append((ArrangementType.TILE, f"{position.row},{position.col}"))
+        self._arrangement_order.append(
+            (ArrangementType.TILE, f"{position.row},{position.col}")
+        )
 
         self.tile_added.emit(position)
         self.arrangement_changed.emit()
@@ -104,8 +112,11 @@ class GridArrangementManager(QObject):
 
         # Remove from arrangement order
         tile_key = f"{position.row},{position.col}"
-        self._arrangement_order = [(t, k) for t, k in self._arrangement_order
-                                   if not (t == ArrangementType.TILE and k == tile_key)]
+        self._arrangement_order = [
+            (t, k)
+            for t, k in self._arrangement_order
+            if not (t == ArrangementType.TILE and k == tile_key)
+        ]
 
         self.tile_removed.emit(position)
         self.arrangement_changed.emit()
@@ -176,7 +187,9 @@ class GridArrangementManager(QObject):
 
     def remove_row(self, row_index: int) -> bool:
         """Remove an entire row from the arrangement"""
-        tiles_to_remove = [TilePosition(row_index, col) for col in range(self.total_cols)]
+        tiles_to_remove = [
+            TilePosition(row_index, col) for col in range(self.total_cols)
+        ]
         removed_count = 0
 
         # Remove tiles that aren't part of groups
@@ -188,8 +201,11 @@ class GridArrangementManager(QObject):
 
         if removed_count > 0:
             # Remove from arrangement order
-            self._arrangement_order = [(t, k) for t, k in self._arrangement_order
-                                       if not (t == ArrangementType.ROW and k == str(row_index))]
+            self._arrangement_order = [
+                (t, k)
+                for t, k in self._arrangement_order
+                if not (t == ArrangementType.ROW and k == str(row_index))
+            ]
             self.arrangement_changed.emit()
             return True
 
@@ -197,7 +213,9 @@ class GridArrangementManager(QObject):
 
     def remove_column(self, col_index: int) -> bool:
         """Remove an entire column from the arrangement"""
-        tiles_to_remove = [TilePosition(row, col_index) for row in range(self.total_rows)]
+        tiles_to_remove = [
+            TilePosition(row, col_index) for row in range(self.total_rows)
+        ]
         removed_count = 0
 
         # Remove tiles that aren't part of groups
@@ -209,8 +227,11 @@ class GridArrangementManager(QObject):
 
         if removed_count > 0:
             # Remove from arrangement order
-            self._arrangement_order = [(t, k) for t, k in self._arrangement_order
-                                       if not (t == ArrangementType.COLUMN and k == str(col_index))]
+            self._arrangement_order = [
+                (t, k)
+                for t, k in self._arrangement_order
+                if not (t == ArrangementType.COLUMN and k == str(col_index))
+            ]
             self.arrangement_changed.emit()
             return True
 
@@ -233,15 +254,19 @@ class GridArrangementManager(QObject):
         del self._groups[group_id]
 
         # Remove from arrangement order
-        self._arrangement_order = [(t, k) for t, k in self._arrangement_order
-                                   if not (t == ArrangementType.GROUP and k == group_id)]
+        self._arrangement_order = [
+            (t, k)
+            for t, k in self._arrangement_order
+            if not (t == ArrangementType.GROUP and k == group_id)
+        ]
 
         self.group_removed.emit(group_id)
         self.arrangement_changed.emit()
         return True
 
-    def create_group_from_selection(self, tiles: list[TilePosition], group_id: str,
-                                  name: Optional[str] = None) -> Optional[TileGroup]:
+    def create_group_from_selection(
+        self, tiles: list[TilePosition], group_id: str, name: str | None = None
+    ) -> TileGroup | None:
         """Create a group from a selection of tiles"""
         if not tiles:
             return None
@@ -262,11 +287,7 @@ class GridArrangementManager(QObject):
 
         # Create group
         group = TileGroup(
-            id=group_id,
-            tiles=tiles,
-            width=width,
-            height=height,
-            name=name
+            id=group_id, tiles=tiles, width=width, height=height, name=name
         )
 
         if self.add_group(group):
@@ -312,7 +333,7 @@ class GridArrangementManager(QObject):
         """Check if a tile is arranged"""
         return position in self._tile_set or position in self._tile_to_group
 
-    def get_tile_group(self, position: TilePosition) -> Optional[str]:
+    def get_tile_group(self, position: TilePosition) -> str | None:
         """Get the group ID a tile belongs to, if any"""
         return self._tile_to_group.get(position)
 
@@ -340,5 +361,6 @@ class GridArrangementManager(QObject):
 
     def _is_valid_position(self, position: TilePosition) -> bool:
         """Check if a tile position is within grid bounds"""
-        return (0 <= position.row < self.total_rows and
-                0 <= position.col < self.total_cols)
+        return (
+            0 <= position.row < self.total_rows and 0 <= position.col < self.total_cols
+        )

@@ -54,7 +54,7 @@ class SpriteConfigLoader:
             with open(self.config_path) as f:
                 self.config_data = json.load(f)
             logger.info(f"Loaded sprite config: {self.config_path}")
-        except (OSError, json.JSONDecodeError) as e:
+        except (OSError, json.JSONDecodeError):
             logger.exception("Failed to load sprite config")
 
     def get_game_sprites(
@@ -317,5 +317,5 @@ class SpriteConfigLoader:
             with open(save_path, "w") as f:
                 json.dump(self.config_data, f, indent=2)
             logger.info(f"Saved sprite config: {save_path}")
-        except OSError as e:
+        except OSError:
             logger.exception("Failed to save sprite config")

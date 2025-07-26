@@ -174,6 +174,6 @@ class SettingsManager:
 
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance"""
-    if not hasattr(get_settings_manager, '_instance'):
+    if not hasattr(get_settings_manager, "_instance"):
         get_settings_manager._instance = SettingsManager()
     return get_settings_manager._instance

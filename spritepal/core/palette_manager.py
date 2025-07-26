@@ -5,7 +5,7 @@ Palette management for SpritePal
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from spritepal.utils.constants import (
     COLORS_PER_PALETTE,
@@ -20,7 +20,7 @@ class PaletteManager:
     """Manages palette extraction and file generation"""
 
     def __init__(self) -> None:
-        self.cgram_data: Optional[bytes] = None
+        self.cgram_data: bytes | None = None
         self.palettes: dict[int, list[list[int]]] = {}
 
     def load_cgram(self, cgram_path: str) -> None:
@@ -55,9 +55,9 @@ class PaletteManager:
 
                     # Convert BGR555 to RGB888 (proper 5-bit to 8-bit conversion)
                     # Use bit shifting for accurate conversion: (value << 3) | (value >> 2)
-                    b = ((snes_color >> 10) & 0x1F)
-                    g = ((snes_color >> 5) & 0x1F)
-                    r = (snes_color & 0x1F)
+                    b = (snes_color >> 10) & 0x1F
+                    g = (snes_color >> 5) & 0x1F
+                    r = snes_color & 0x1F
 
                     # Convert 5-bit to 8-bit values (0-31 to 0-255)
                     b = (b << 3) | (b >> 2)
@@ -86,7 +86,7 @@ class PaletteManager:
         self,
         palette_index: int,
         output_path: str,
-        companion_image: Optional[str] = None,
+        companion_image: str | None = None,
     ) -> str:
         """Create a .pal.json file for a specific palette"""
         colors = self.get_palette(palette_index)
@@ -134,7 +134,7 @@ class PaletteManager:
         self,
         output_base: str,
         palette_files: dict[int, str],
-        extraction_params: Optional[dict[str, Any]] = None,
+        extraction_params: dict[str, Any] | None = None,
     ) -> str:
         """Create metadata.json for palette switching and reinsertion"""
         metadata: dict[str, Any] = {
@@ -149,7 +149,7 @@ class PaletteManager:
         if extraction_params:
             # Check if this is ROM extraction or VRAM extraction
             source_type = extraction_params.get("source_type", "vram")
-            
+
             if source_type == "rom":
                 # ROM extraction metadata
                 metadata["extraction"] = {
@@ -205,7 +205,7 @@ class PaletteManager:
             # Validate file before loading
             is_valid, error_msg = validate_oam_file(oam_path)
             if not is_valid:
-                raise ValueError(f"Invalid OAM file: {error_msg}")
+                self._raise_invalid_oam(error_msg)
 
             with open(oam_path, "rb") as f:
                 oam_data = f.read()
@@ -228,3 +228,7 @@ class PaletteManager:
             return list(range(SPRITE_PALETTE_START, SPRITE_PALETTE_END))
 
         return sorted(active_palettes)
+
+    def _raise_invalid_oam(self, error_msg: str) -> None:
+        """Helper method to raise ValueError for invalid OAM (for TRY301 compliance)"""
+        raise ValueError(f"Invalid OAM file: {error_msg}")

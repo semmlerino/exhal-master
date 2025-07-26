@@ -2,7 +2,6 @@
 Row arrangement state management
 """
 
-
 from PyQt6.QtCore import QObject, pyqtSignal
 
 

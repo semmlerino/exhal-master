@@ -2,14 +2,13 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
 # Security constants
 MAX_VRAM_SIZE = 65536  # 64KB - standard SNES VRAM size
-MAX_CGRAM_SIZE = 512   # 512 bytes - standard SNES CGRAM size
-MAX_OAM_SIZE = 544     # 544 bytes - standard SNES OAM size
+MAX_CGRAM_SIZE = 512  # 512 bytes - standard SNES CGRAM size
+MAX_OAM_SIZE = 544  # 544 bytes - standard SNES OAM size
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for PNG files
-MAX_JSON_SIZE = 1 * 1024 * 1024    # 1MB for JSON files
+MAX_JSON_SIZE = 1 * 1024 * 1024  # 1MB for JSON files
 
 # Allowed file extensions
 VRAM_EXTENSIONS = {".dmp", ".bin", ".vram"}
@@ -19,8 +18,12 @@ IMAGE_EXTENSIONS = {".png"}
 JSON_EXTENSIONS = {".json"}
 
 
-def validate_file_path(file_path: str, allowed_extensions: Optional[set[str]] = None,
-                      max_size: Optional[int] = None, base_dir: Optional[str] = None) -> tuple[bool, str]:
+def validate_file_path(
+    file_path: str,
+    allowed_extensions: set[str] | None = None,
+    max_size: int | None = None,
+    base_dir: str | None = None,
+) -> tuple[bool, str]:
     """
     Validate a file path for security and constraints.
 
@@ -46,7 +49,10 @@ def validate_file_path(file_path: str, allowed_extensions: Optional[set[str]] = 
 
         # Check extension if specified
         if allowed_extensions and path.suffix.lower() not in allowed_extensions:
-            return False, f"Invalid file extension: {path.suffix}. Allowed: {allowed_extensions}"
+            return (
+                False,
+                f"Invalid file extension: {path.suffix}. Allowed: {allowed_extensions}",
+            )
 
         # Check file size if specified
         if max_size is not None:

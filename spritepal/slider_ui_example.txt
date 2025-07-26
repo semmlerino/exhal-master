@@ -1,0 +1,57 @@
+SpritePal - ROM Extraction Panel with Offset Slider
+===================================================
+
+┌─ ROM Extraction ──────────────────────────────────────────────────────┐
+│                                                                       │
+│ ┌─ ROM File ────────────────────────────────────────────────────────┐ │
+│ │ ROM: Kirby's Fun Pak (Europe).sfc                      [Browse...] │ │
+│ │ Title: KIRBY SUPER DELUXE                                          │ │
+│ │ Checksum: 0xBF51                                                   │ │
+│ │ Status: Configuration found ✓                                      │ │
+│ └───────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│ ┌─ Extraction Mode ─────────────────────────────────────────────────┐ │
+│ │ Mode: [Manual Offset Exploration ▼]                               │ │
+│ └───────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│ ┌─ Manual Offset Control ───────────────────────────────────────────┐ │
+│ │ Offset: 0x200000                                                  │ │
+│ │                                                                    │ │
+│ │ [═════════════╪══════════════════════════════════════════════]    │ │
+│ │      ^                                                             │ │
+│ │      └─ Current position (showing Kirby sprites)                  │ │
+│ │                                                                    │ │
+│ │ [2097152] Step: [0x1000 (4KB) ▼]                                  │ │
+│ │                                                                    │ │
+│ │ [◄ Prev Valid] [Next Valid ►] Jump to: [Select... ▼]              │ │
+│ │                                                                    │ │
+│ │ Found sprite at 0x200000 (quality: 1.00)                          │ │
+│ └───────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│ ┌─ Output ──────────────────────────────────────────────────────────┐ │
+│ │ Name: [kirby_manual_sprites           ]                           │ │
+│ └───────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+┌─ Sprite Preview ──────────────────────────────────────────────────────┐
+│                                                                       │
+│                    ┌─────────────────────┐                           │
+│                    │                     │                           │
+│                    │   [Kirby Sprite]    │                           │
+│                    │   [   Preview   ]   │                           │
+│                    │   [   256x256   ]   │                           │
+│                    │                     │                           │
+│                    └─────────────────────┘                           │
+│                                                                       │
+│ Palette: [Sprite 8 (Kirby Pink) ▼]                                   │
+│ 242 tiles (7744 bytes)                                                │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+Features in Action:
+- Slider at 0x200000 showing valid Kirby sprites
+- Real-time preview updates as you drag
+- Navigation buttons find next/previous valid sprites
+- Step size control for precise positioning
+- Quality score shows sprite validity

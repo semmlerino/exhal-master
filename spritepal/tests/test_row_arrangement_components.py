@@ -56,42 +56,58 @@ class TestRowImageProcessor:
         assert rows[1]["tiles"] == 16
         assert rows[1]["image"].size == (128, 8)
 
-    @patch("spritepal.ui.row_arrangement.image_processor.Image.open")
-    def test_load_sprite_palette_mode(self, mock_open):
-        """Test loading sprite in palette mode"""
+    def test_load_sprite_palette_mode(self, tmp_path):
+        """Test loading sprite in palette mode with real image"""
         processor = RowImageProcessor()
 
-        # Create mock palette mode image
-        mock_image = Mock()
-        mock_image.mode = "P"
-        mock_converted = Mock()
-        mock_image.convert.return_value = mock_converted
-        mock_open.return_value = mock_image
+        # Create real palette mode image file
+        sprite_file = tmp_path / "test_sprite.png"
+        img = Image.new("P", (16, 16))
+        # Set a simple palette
+        palette = []
+        for i in range(256):
+            palette.extend([i, i, i])  # Grayscale palette
+        img.putpalette(palette)
+        img.save(sprite_file)
 
-        result = processor.load_sprite("test.png")
+        result = processor.load_sprite(str(sprite_file))
 
-        mock_image.convert.assert_called_once_with("L")
-        assert result == mock_converted
+        # Verify real conversion occurred
+        assert result is not None
+        assert isinstance(result, Image.Image)
+        assert result.mode == "L"  # Should be converted to grayscale
 
-    @patch("spritepal.ui.row_arrangement.image_processor.Image.open")
-    def test_process_sprite_sheet(self, mock_open):
-        """Test complete sprite processing pipeline"""
+    def test_process_sprite_sheet(self, tmp_path):
+        """Test complete sprite processing pipeline with real image"""
         processor = RowImageProcessor()
 
-        # Create mock image
-        mock_image = Mock()
-        mock_image.mode = "L"
-        mock_image.width = 128
-        mock_image.height = 16
-        mock_image.crop.side_effect = lambda coords: Image.new("L", (128, 8))
-        mock_open.return_value = mock_image
+        # Create real test image (128x16 pixels for 2 rows of 16 tiles each)
+        sprite_file = tmp_path / "test_sprite.png"
+        img = Image.new("L", (128, 16))
+        # Create a pattern to verify processing
+        pixels = []
+        for y in range(16):
+            for x in range(128):
+                pixels.append((x + y) % 256)
+        img.putdata(pixels)
+        img.save(sprite_file)
 
-        image, rows = processor.process_sprite_sheet("test.png", 16)
+        image, rows = processor.process_sprite_sheet(str(sprite_file), 16)
 
-        assert image == mock_image
+        # Verify real processing occurred
+        assert image is not None
+        assert isinstance(image, Image.Image)
+        assert image.size == (128, 16)
         assert len(rows) == 2
         assert processor.tile_width == 8
         assert processor.tile_height == 8
+
+        # Verify row data
+        for row in rows:
+            assert "image" in row
+            assert "tiles" in row
+            assert "index" in row
+            assert isinstance(row["image"], Image.Image)
 
 
 class TestArrangementManager:
@@ -200,7 +216,7 @@ class TestPaletteColorizer:
 
         test_palettes = {
             8: [(255, 0, 0), (0, 255, 0), (0, 0, 255)],
-            9: [(255, 255, 0), (255, 0, 255), (0, 255, 255)]
+            9: [(255, 255, 0), (255, 0, 255), (0, 255, 255)],
         }
 
         colorizer.set_palettes(test_palettes)
@@ -246,13 +262,13 @@ class TestPaletteColorizer:
         # Create test grayscale image
         grayscale = Image.new("L", (2, 2))
         pixels = grayscale.load()
-        pixels[0, 0] = 0   # Transparent
+        pixels[0, 0] = 0  # Transparent
         pixels[1, 0] = 16  # Color index 1
         pixels[0, 1] = 32  # Color index 2
-        pixels[1, 1] = 240 # Color index 15
+        pixels[1, 1] = 240  # Color index 15
 
         # Test palette
-        palette = [(0, 0, 0)] + [(i*16, i*16, i*16) for i in range(1, 16)]
+        palette = [(0, 0, 0)] + [(i * 16, i * 16, i * 16) for i in range(1, 16)]
 
         result = colorizer.apply_palette_to_image(grayscale, palette)
 
@@ -388,10 +404,12 @@ class TestPreviewGenerator:
         """Test output filename generation"""
         generator = PreviewGenerator()
 
-        assert generator.generate_output_filename(
-            "/path/to/sprite.png"
-        ) == "/path/to/sprite_arranged.png"
+        assert (
+            generator.generate_output_filename("/path/to/sprite.png")
+            == "/path/to/sprite_arranged.png"
+        )
 
-        assert generator.generate_output_filename(
-            "sprite.png", "_modified"
-        ) == "sprite_modified.png"
+        assert (
+            generator.generate_output_filename("sprite.png", "_modified")
+            == "sprite_modified.png"
+        )

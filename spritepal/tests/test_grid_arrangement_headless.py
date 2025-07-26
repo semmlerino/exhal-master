@@ -4,6 +4,7 @@ Headless-safe integration tests for grid arrangement system
 
 import os
 import tempfile
+import time
 from unittest.mock import Mock
 
 import pytest
@@ -48,7 +49,9 @@ class TestGridArrangementHeadless:
             processor.tile_width = 16
             processor.tile_height = 16
 
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 4)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 4
+            )
 
             # Verify processing
             assert original_image is not None
@@ -79,7 +82,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 3)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 3
+            )
 
             # Create manager
             manager = GridArrangementManager(processor.grid_rows, processor.grid_cols)
@@ -96,7 +101,9 @@ class TestGridArrangementHeadless:
 
             # Add column with overlap
             assert manager.add_column(2) is True
-            assert manager.get_arranged_count() == 7  # 2 new tiles from column (1 overlap)
+            assert (
+                manager.get_arranged_count() == 7
+            )  # 2 new tiles from column (1 overlap)
 
             # Create and add group
             group_tiles = [TilePosition(2, 0), TilePosition(2, 1)]
@@ -125,7 +132,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 2)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 2
+            )
 
             # Create manager and add arrangements
             manager = GridArrangementManager(processor.grid_rows, processor.grid_cols)
@@ -165,7 +174,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 16)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 16
+            )
 
             # Verify processing
             assert len(tiles) == 256  # 16x16 grid
@@ -199,7 +210,7 @@ class TestGridArrangementHeadless:
             processor.process_sprite_sheet_as_grid("nonexistent.png", 4)
 
         # Test with invalid manager dimensions
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid.*dimensions"):
             GridArrangementManager(0, 5)
 
         # Test generator with empty arrangements
@@ -254,12 +265,16 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 2)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 2
+            )
 
             # Create mock colorizer
             colorizer = Mock(spec=PaletteColorizer)
             colorizer.is_palette_mode.return_value = True
-            colorizer.get_display_image.return_value = Image.new("RGBA", (16, 16), (255, 0, 0, 255))
+            colorizer.get_display_image.return_value = Image.new(
+                "RGBA", (16, 16), (255, 0, 0, 255)
+            )
 
             # Create generator with colorizer
             generator = GridPreviewGenerator(colorizer)
@@ -307,19 +322,25 @@ class TestGridArrangementHeadless:
                     sprite_path, (32 + len(results) * 16) // 16
                 )
 
-                manager = GridArrangementManager(processor.grid_rows, processor.grid_cols)
+                manager = GridArrangementManager(
+                    processor.grid_rows, processor.grid_cols
+                )
                 manager.add_row(0)  # Add first row
 
                 generator = GridPreviewGenerator()
-                arranged_image = generator.create_grid_arranged_image(processor, manager)
+                arranged_image = generator.create_grid_arranged_image(
+                    processor, manager
+                )
 
-                results.append({
-                    "sprite_path": sprite_path,
-                    "original_image": original_image,
-                    "arranged_image": arranged_image,
-                    "tile_count": len(tiles),
-                    "arranged_count": manager.get_arranged_count()
-                })
+                results.append(
+                    {
+                        "sprite_path": sprite_path,
+                        "original_image": original_image,
+                        "arranged_image": arranged_image,
+                        "tile_count": len(tiles),
+                        "arranged_count": manager.get_arranged_count(),
+                    }
+                )
 
             # Verify all sprites were processed
             assert len(results) == 3
@@ -341,7 +362,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 3)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 3
+            )
 
             # Create complex arrangement
             manager = GridArrangementManager(processor.grid_rows, processor.grid_cols)
@@ -398,7 +421,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 1)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 1
+            )
 
             assert len(tiles) == 1
             assert processor.grid_rows == 1
@@ -429,7 +454,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 4)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 4
+            )
 
             assert len(tiles) == 8  # 4x2 grid
             assert processor.grid_rows == 2
@@ -457,7 +484,9 @@ class TestGridArrangementHeadless:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 8)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 8
+            )
 
             manager = GridArrangementManager(8, 8)
             generator = GridPreviewGenerator()
@@ -473,10 +502,11 @@ class TestGridArrangementHeadless:
             group_count = 0
             for i in range(0, 6, 2):
                 # Use tiles in positions that won't conflict with rows/columns
-                group_tiles = [TilePosition(i+1, i+1), TilePosition(i+1, i+2)]
+                group_tiles = [TilePosition(i + 1, i + 1), TilePosition(i + 1, i + 2)]
                 # Check if tiles are available
-                if (not manager.is_tile_arranged(group_tiles[0]) and
-                    not manager.is_tile_arranged(group_tiles[1])):
+                if not manager.is_tile_arranged(
+                    group_tiles[0]
+                ) and not manager.is_tile_arranged(group_tiles[1]):
                     group = TileGroup(f"group_{i}", group_tiles, 2, 1)
                     if manager.add_group(group):
                         group_count += 1
@@ -491,7 +521,9 @@ class TestGridArrangementHeadless:
             assert preview is not None
             assert data is not None
             assert manager.get_arranged_count() > 0
-            assert len(data["groups"]) >= 0  # May be 0 if all tiles are already arranged
+            assert (
+                len(data["groups"]) >= 0
+            )  # May be 0 if all tiles are already arranged
 
 
 class TestGridArrangementPerformance:
@@ -505,14 +537,15 @@ class TestGridArrangementPerformance:
             test_image = Image.new("L", (160, 160))  # 10x10 tiles
             test_image.save(sprite_path)
 
-            import time
             start_time = time.time()
 
             # Process sprite
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 10)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 10
+            )
 
             processing_time = time.time() - start_time
 
@@ -524,7 +557,6 @@ class TestGridArrangementPerformance:
         """Test arrangement performance with many operations"""
         manager = GridArrangementManager(10, 10)
 
-        import time
         start_time = time.time()
 
         # Add many arrangements
@@ -555,7 +587,9 @@ class TestGridArrangementPerformance:
             processor = GridImageProcessor()
             processor.tile_width = 16
             processor.tile_height = 16
-            original_image, tiles = processor.process_sprite_sheet_as_grid(sprite_path, 6)
+            original_image, tiles = processor.process_sprite_sheet_as_grid(
+                sprite_path, 6
+            )
 
             # Create arrangement
             manager = GridArrangementManager(6, 6)
@@ -564,7 +598,6 @@ class TestGridArrangementPerformance:
 
             generator = GridPreviewGenerator()
 
-            import time
             start_time = time.time()
 
             # Generate previews

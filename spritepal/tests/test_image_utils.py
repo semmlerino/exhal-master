@@ -12,6 +12,7 @@ from spritepal.utils.image_utils import create_checkerboard_pattern, pil_to_qpix
 try:
     from PyQt6.QtCore import QCoreApplication
     from PyQt6.QtGui import QPixmap
+
     QT_AVAILABLE = True
 except ImportError:
     QT_AVAILABLE = False
@@ -21,17 +22,20 @@ def is_headless_environment():
     """Check if we're in a headless environment"""
     import os
     import sys
+
     return (
-        not os.environ.get('DISPLAY') or 
-        os.environ.get('CI') or
-        'microsoft' in os.uname().release.lower() or
-        sys.platform.startswith('linux') and not os.environ.get('DISPLAY')
+        not os.environ.get("DISPLAY")
+        or os.environ.get("CI")
+        or "microsoft" in os.uname().release.lower()
+        or (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
     )
 
 
 @pytest.mark.gui
 @pytest.mark.skipif(not QT_AVAILABLE, reason="Qt not available")
-@pytest.mark.skipif(is_headless_environment(), reason="GUI tests skipped in headless environment")
+@pytest.mark.skipif(
+    is_headless_environment(), reason="GUI tests skipped in headless environment"
+)
 class TestPilToQPixmap:
     """Test PIL to QPixmap conversion"""
 
@@ -44,7 +48,7 @@ class TestPilToQPixmap:
 
     def teardown_method(self):
         """Clean up Qt application"""
-        if hasattr(self, 'app') and self.app:
+        if hasattr(self, "app") and self.app:
             self.app.quit()
 
     def test_valid_image_conversion(self):
@@ -187,8 +191,9 @@ class TestCreateCheckerboardPattern:
         color1 = (100, 100, 100)
         color2 = (50, 50, 50)
 
-        img = create_checkerboard_pattern(32, 32, tile_size=8,
-                                         color1=color1, color2=color2)
+        img = create_checkerboard_pattern(
+            32, 32, tile_size=8, color1=color1, color2=color2
+        )
 
         assert img.getpixel((0, 0)) == color1
         assert img.getpixel((8, 0)) == color2
@@ -259,7 +264,9 @@ class TestCreateCheckerboardPattern:
             for x in range(0, 100, 10):
                 tile_x = x // 10
                 tile_y = y // 10
-                expected_color = (200, 200, 200) if (tile_x + tile_y) % 2 == 0 else (255, 255, 255)
+                expected_color = (
+                    (200, 200, 200) if (tile_x + tile_y) % 2 == 0 else (255, 255, 255)
+                )
                 assert img.getpixel((x, y)) == expected_color
 
     def test_edge_pixels(self):

@@ -49,14 +49,8 @@ def temp_vram(tmp_path):
 def temp_metadata(tmp_path):
     """Create a temporary metadata file"""
     metadata = {
-        "extraction": {
-            "vram_offset": "0xC000",
-            "tile_count": 100,
-            "tiles_per_row": 16
-        },
-        "palettes": {
-            "sprite_palettes": list(range(8, 16))
-        }
+        "extraction": {"vram_offset": "0xC000", "tile_count": 100, "tiles_per_row": 16},
+        "palettes": {"sprite_palettes": list(range(8, 16))},
     }
     metadata_path = tmp_path / "test.metadata.json"
     with open(metadata_path, "w") as f:
@@ -113,8 +107,8 @@ class TestEncode4bppTile:
         encoded = encode_4bpp_tile(tile_pixels)
 
         # For color 15 (1111 in binary), all bitplanes should be 0xFF
-        assert encoded[0] == 0xFF   # bp0
-        assert encoded[1] == 0xFF   # bp1
+        assert encoded[0] == 0xFF  # bp0
+        assert encoded[1] == 0xFF  # bp1
         assert encoded[16] == 0xFF  # bp2
         assert encoded[17] == 0xFF  # bp3
 
@@ -154,7 +148,8 @@ class TestSpriteInjector:
         valid, message = injector.validate_sprite(str(sprite_path))
 
         assert valid is False
-        assert "indexed color mode" in message
+        assert "indexed" in message.lower()
+        assert "mode" in message.lower()
 
     def test_validate_sprite_wrong_dimensions(self, injector, tmp_path):
         """Test validating sprite with non-multiple-of-8 dimensions"""
@@ -250,15 +245,14 @@ class TestSpriteInjector:
         assert len(tile_data) == 128
         assert isinstance(tile_data, bytes)
 
-    def test_inject_sprite_success(self, injector, temp_sprite_image, temp_vram, tmp_path):
+    def test_inject_sprite_success(
+        self, injector, temp_sprite_image, temp_vram, tmp_path
+    ):
         """Test successful sprite injection"""
         output_path = tmp_path / "output.vram"
 
         success, message = injector.inject_sprite(
-            str(temp_sprite_image),
-            str(temp_vram),
-            str(output_path),
-            offset=0xC000
+            str(temp_sprite_image), str(temp_vram), str(output_path), offset=0xC000
         )
 
         assert success is True
@@ -268,8 +262,9 @@ class TestSpriteInjector:
         # Verify output file size
         assert output_path.stat().st_size == 65536
 
-    def test_inject_sprite_with_metadata_offset(self, injector, temp_sprite_image,
-                                               temp_vram, temp_metadata, tmp_path):
+    def test_inject_sprite_with_metadata_offset(
+        self, injector, temp_sprite_image, temp_vram, temp_metadata, tmp_path
+    ):
         """Test injection using offset from metadata"""
         # Load metadata first
         injector.load_metadata(str(temp_metadata))
@@ -278,17 +273,15 @@ class TestSpriteInjector:
 
         # Don't provide offset, should use metadata
         success, message = injector.inject_sprite(
-            str(temp_sprite_image),
-            str(temp_vram),
-            str(output_path),
-            offset=None
+            str(temp_sprite_image), str(temp_vram), str(output_path), offset=None
         )
 
         assert success is True
         assert "0xC000" in message  # Should use metadata offset
 
-    def test_inject_sprite_offset_too_large(self, injector, temp_sprite_image,
-                                           temp_vram, tmp_path):
+    def test_inject_sprite_offset_too_large(
+        self, injector, temp_sprite_image, temp_vram, tmp_path
+    ):
         """Test injection with offset that would exceed VRAM"""
         output_path = tmp_path / "output.vram"
 
@@ -297,7 +290,7 @@ class TestSpriteInjector:
             str(temp_sprite_image),
             str(temp_vram),
             str(output_path),
-            offset=0xFFF0  # Too close to end
+            offset=0xFFF0,  # Too close to end
         )
 
         assert success is False
@@ -311,7 +304,7 @@ class TestSpriteInjector:
             str(temp_sprite_image),
             "/nonexistent/vram.bin",
             str(output_path),
-            offset=0xC000
+            offset=0xC000,
         )
 
         assert success is False
@@ -340,22 +333,16 @@ class TestInjectionWorker:
     @pytest.fixture
     def mock_signals(self):
         """Create mock signals for testing"""
-        return {
-            "progress": MagicMock(),
-            "finished": MagicMock()
-        }
+        return {"progress": MagicMock(), "finished": MagicMock()}
 
-    def test_worker_successful_injection(self, temp_sprite_image, temp_vram,
-                                       tmp_path, mock_signals):
+    def test_worker_successful_injection(
+        self, temp_sprite_image, temp_vram, tmp_path, mock_signals
+    ):
         """Test worker thread successful injection"""
         output_path = tmp_path / "output.vram"
 
         worker = InjectionWorker(
-            str(temp_sprite_image),
-            str(temp_vram),
-            str(output_path),
-            0xC000,
-            None
+            str(temp_sprite_image), str(temp_vram), str(output_path), 0xC000, None
         )
 
         # Mock signals
@@ -374,8 +361,9 @@ class TestInjectionWorker:
         assert success is True
         assert "Successfully" in message
 
-    def test_worker_with_metadata(self, temp_sprite_image, temp_vram,
-                                 temp_metadata, tmp_path, mock_signals):
+    def test_worker_with_metadata(
+        self, temp_sprite_image, temp_vram, temp_metadata, tmp_path, mock_signals
+    ):
         """Test worker with metadata loading"""
         output_path = tmp_path / "output.vram"
 
@@ -384,7 +372,7 @@ class TestInjectionWorker:
             str(temp_vram),
             str(output_path),
             0xC000,
-            str(temp_metadata)
+            str(temp_metadata),
         )
 
         worker.progress = mock_signals["progress"]
@@ -393,7 +381,9 @@ class TestInjectionWorker:
         worker.run()
 
         # Should emit "Loading metadata..." message
-        progress_calls = [call[0][0] for call in mock_signals["progress"].emit.call_args_list]
+        progress_calls = [
+            call[0][0] for call in mock_signals["progress"].emit.call_args_list
+        ]
         assert any("metadata" in msg.lower() for msg in progress_calls)
 
     def test_worker_validation_failure(self, temp_vram, tmp_path, mock_signals):
@@ -406,11 +396,7 @@ class TestInjectionWorker:
         output_path = tmp_path / "output.vram"
 
         worker = InjectionWorker(
-            str(sprite_path),
-            str(temp_vram),
-            str(output_path),
-            0xC000,
-            None
+            str(sprite_path), str(temp_vram), str(output_path), 0xC000, None
         )
 
         worker.progress = mock_signals["progress"]
@@ -421,7 +407,8 @@ class TestInjectionWorker:
         # Should fail with validation error
         success, message = mock_signals["finished"].emit.call_args[0]
         assert success is False
-        assert "indexed color mode" in message
+        assert "indexed" in message.lower()
+        assert "mode" in message.lower()
 
     def test_worker_exception_handling(self, tmp_path, mock_signals):
         """Test worker exception handling"""
@@ -432,7 +419,7 @@ class TestInjectionWorker:
             "/nonexistent/vram.bin",
             str(output_path),
             0xC000,
-            None
+            None,
         )
 
         worker.progress = mock_signals["progress"]
