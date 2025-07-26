@@ -68,10 +68,10 @@ def validate_file_path(
             except ValueError:
                 return False, f"File is outside allowed directory: {base_dir}"
 
-        return True, ""
-
     except Exception as e:
         return False, f"Path validation error: {e!s}"
+    else:
+        return True, ""
 
 
 def validate_vram_file(file_path: str) -> tuple[bool, str]:

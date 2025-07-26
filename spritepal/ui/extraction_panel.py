@@ -672,7 +672,7 @@ class ExtractionPanel(QGroupBox):
                 self.offset_spinbox.setValue(offset)
                 logger.debug(f"Jumped to offset: 0x{offset:04X}")
             except ValueError:
-                logger.exception(f"Invalid jump offset: {hex_part}")
+                logger.exception("Invalid jump offset: %s", hex_part)
 
             # Reset combo to "Select..."
             self.jump_combo.setCurrentIndex(0)

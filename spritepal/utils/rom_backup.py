@@ -59,10 +59,10 @@ class ROMBackupManager:
             # Clean up old backups
             cls._cleanup_old_backups(backup_subdir, rom_base, rom_ext)
 
-            return backup_path
-
         except Exception as e:
             raise ROMBackupError(f"Failed to create backup: {e}") from e
+        else:
+            return backup_path
 
     @classmethod
     def _cleanup_old_backups(cls, backup_dir: str, rom_base: str, rom_ext: str) -> None:

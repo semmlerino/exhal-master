@@ -304,10 +304,10 @@ class GridImageProcessor(RowImageProcessor):
             # Extract tiles
             tiles = self.extract_tiles_as_grid(image, tiles_per_row)
 
-            return image, tiles
-
         except Exception as e:
             # Clean up on error
             self.original_image = None
             self.tiles.clear()
             raise TileError(f"Error processing sprite sheet: {e}") from e
+        else:
+            return image, tiles

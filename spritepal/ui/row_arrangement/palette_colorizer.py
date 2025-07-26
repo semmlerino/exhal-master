@@ -142,11 +142,11 @@ class PaletteColorizer(QObject):
                         # Use black for out of range indices
                         pixels[x, y] = (0, 0, 0, 255)
 
-            return rgba_image
-
         except Exception as e:
             print(f"Error applying palette: {e}")
             return None
+        else:
+            return rgba_image
 
     def get_display_image(
         self, row_index: int, grayscale_image: Image.Image

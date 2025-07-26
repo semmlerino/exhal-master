@@ -237,11 +237,11 @@ class SpriteValidator:
 
             estimated_compressed = int(uncompressed_size * compression_ratio)
 
-            return uncompressed_size, estimated_compressed
-
         except Exception:
             logger.exception("Failed to estimate size")
             return 0, 0
+        else:
+            return uncompressed_size, estimated_compressed
 
     @staticmethod
     def check_sprite_compatibility(

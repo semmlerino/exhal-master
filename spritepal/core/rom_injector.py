@@ -537,6 +537,11 @@ class ROMInjector(SpriteInjector):
             total_time = time.time() - start_time
             logger.info(f"ROM injection completed in {total_time:.2f} seconds")
 
+        except HALCompressionError as e:
+            return False, f"Compression error: {e!s}"
+        except Exception as e:
+            return False, f"ROM injection error: {e!s}"
+        else:
             return True, (
                 f"Successfully injected sprite at 0x{sprite_offset:X}\n"
                 f"Original size: {original_size} bytes\n"
@@ -546,11 +551,6 @@ class ROMInjector(SpriteInjector):
                 f"Checksum updated: 0x{self.header.checksum:04X}\n"
                 f"Total time: {total_time:.2f} seconds"
             )
-
-        except HALCompressionError as e:
-            return False, f"Compression error: {e!s}"
-        except Exception as e:
-            return False, f"ROM injection error: {e!s}"
 
     def find_sprite_locations(self, rom_path: str) -> dict[str, SpritePointer]:
         """
@@ -820,8 +820,8 @@ class ROMInjectionWorker(QThread):
                 elif "Compression mode:" in line:
                     info["compression_mode"] = line.split(":")[1].strip()
 
-            return info if info else None
-
         except Exception as e:
             logger.warning(f"Failed to extract compression info: {e}")
             return None
+        else:
+            return info if info else None

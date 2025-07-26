@@ -66,11 +66,11 @@ class SpriteVisualValidator:
             logger.info(f"Sprite validation: valid={is_valid}, confidence={confidence:.3f}")
             logger.debug(f"Metrics: {metrics}")
 
-            return is_valid, confidence, metrics
-
         except Exception:
             logger.exception("Failed to validate sprite image")
             return False, 0.0, {}
+        else:
+            return is_valid, confidence, metrics
 
     def _calculate_coherence_score(self, img_array: np.ndarray) -> float:
         """

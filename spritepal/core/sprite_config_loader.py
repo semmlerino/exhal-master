@@ -107,7 +107,7 @@ class SpriteConfigLoader:
 
         # Then try title matching with flexible patterns
         title_matched_games = []
-        for game_name, game_data in self.config_data["games"].items():
+        for game_name, _game_data in self.config_data["games"].items():
             # Check multiple title matching patterns
             if self._title_matches(game_name, rom_title):
                 title_matched_games.append(game_name)

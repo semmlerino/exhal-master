@@ -11,7 +11,8 @@ import tempfile
 parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
-from spritepal.core.hal_compression import HALCompressor
+# Import after path setup
+from spritepal.core.hal_compression import HALCompressor  # noqa: E402
 
 
 def extract_kirby_patterns(vram_path: str):

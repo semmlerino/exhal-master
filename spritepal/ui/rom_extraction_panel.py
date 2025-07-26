@@ -259,7 +259,7 @@ class ROMExtractionPanel(QWidget):
             logger.info(f"Successfully loaded ROM: {os.path.basename(filename)}")
 
         except Exception:
-            logger.exception(f"Error loading ROM file {filename}")
+            logger.exception("Error loading ROM file %s", filename)
             # Clear ROM on error
             self.rom_path = ""
             self.rom_file_widget.set_rom_path("")

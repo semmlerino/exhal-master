@@ -38,10 +38,10 @@ class RowImageProcessor:
                 # Convert any other mode (RGB, RGBA, etc.) to grayscale
                 image = image.convert("L")
 
-            return image
-
         except Exception as e:
             raise FileFormatError(f"Error loading sprite: {e}") from e
+        else:
+            return image
 
     def calculate_tile_dimensions(
         self, image: Image.Image, tiles_per_row: int

@@ -390,11 +390,11 @@ class ROMExtractor:
             # Sort by quality score (higher is better)
             found_sprites.sort(key=lambda x: x["quality"], reverse=True)
 
-            return found_sprites
-
         except Exception:
             logger.exception("Failed to scan for sprites")
             return []
+        else:
+            return found_sprites
 
     def _assess_sprite_quality(self, sprite_data: bytes, check_embedded: bool = True) -> float:
         """

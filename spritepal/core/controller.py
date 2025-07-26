@@ -99,13 +99,11 @@ class ExtractionWorker(QThread):
         finally:
             # Disconnect signals to avoid memory leaks
             if self.manager:
-                try:
+                with contextlib.suppress(Exception):
                     self.manager.extraction_progress.disconnect()
                     self.manager.preview_generated.disconnect()
                     self.manager.palettes_extracted.disconnect()
                     self.manager.active_palettes_found.disconnect()
-                except Exception:
-                    pass  # Ignore disconnect errors
 
 
 class ExtractionController(QObject):
@@ -244,7 +242,7 @@ class ExtractionController(QObject):
 
         except Exception as e:
             error_msg = f"Preview update failed: {e!s}"
-            logger.exception(f"Error in preview update with offset 0x{offset:04X}")
+            logger.exception("Error in preview update with offset 0x%04X", offset)
 
             # Try to show error in status bar
             try:
@@ -323,7 +321,7 @@ class ExtractionController(QObject):
             tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
             # Open row arrangement dialog
-            from spritepal.ui.row_arrangement_dialog import (
+            from spritepal.ui.row_arrangement_dialog import (  # noqa: PLC0415
                 RowArrangementDialog,
             )
             dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
@@ -371,7 +369,7 @@ class ExtractionController(QObject):
         tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
         # Open grid arrangement dialog
-        from spritepal.ui.grid_arrangement_dialog import (
+        from spritepal.ui.grid_arrangement_dialog import (  # noqa: PLC0415
             GridArrangementDialog,
         )
         dialog = GridArrangementDialog(sprite_file, tiles_per_row, self.main_window)
