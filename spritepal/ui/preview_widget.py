@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QWidget
 class SpritePreviewWidget(QWidget):
     """Widget for previewing extracted sprites"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._pixmap = None
         self._tile_count = 0
@@ -59,19 +59,19 @@ class SpritePreviewWidget(QWidget):
         self._tiles_per_row = tiles_per_row
         self.update()
 
-    def set_preview_from_file(self, file_path):
+    def set_preview_from_file(self, file_path: str) -> None:
         """Load preview from file"""
         pixmap = QPixmap(file_path)
         if not pixmap.isNull():
             self.set_preview(pixmap)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the preview"""
         self._pixmap = None
         self._tile_count = 0
         self._tiles_per_row = 0
         self.update()
 
-    def get_tile_info(self):
+    def get_tile_info(self) -> tuple[int, int]:
         """Get tile information"""
         return self._tile_count, self._tiles_per_row

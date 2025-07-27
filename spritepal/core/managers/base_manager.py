@@ -33,7 +33,7 @@ class BaseManager(QObject, metaclass=ManagerMeta):
         Initialize base manager
 
         Args:
-            name: Optional manager name for logging
+            name: manager name for logging
         """
         super().__init__()
 
@@ -134,7 +134,7 @@ class BaseManager(QObject, metaclass=ManagerMeta):
 
         Args:
             error: The exception that occurred
-            operation: Optional operation name for context
+            operation: operation name for context
         """
         error_msg = str(error)
         if operation:
@@ -179,7 +179,7 @@ class BaseManager(QObject, metaclass=ManagerMeta):
         Raises:
             ValidationError: If required parameters are missing
         """
-        missing = [key for key in required if key not in params or params[key] is None]
+        missing = [key for key in required if key not in params or not params[key]]
         if missing:
             raise ValidationError(f"Missing required parameters: {', '.join(missing)}")
 

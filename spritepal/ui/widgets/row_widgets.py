@@ -208,7 +208,7 @@ class DragDropListWidget(QListWidget):
                 super().dropEvent(event)
                 self.item_dropped.emit(0, 0)  # Signal for refresh
 
-    def startDrag(self, supported_actions) -> None:  # noqa: N802
+    def startDrag(self, supportedActions) -> None:  # noqa: N802
         """Start drag operation"""
         item = self.currentItem()
         if item:

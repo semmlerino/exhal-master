@@ -1,0 +1,107 @@
+{
+  "format_version": "1.0",
+  "format_description": "Indexed Pixel Editor Palette File",
+  "palette": {
+    "name": "UI/HUD",
+    "colors": [
+      [
+        0,
+        33,
+        0
+      ],
+      [
+        16,
+        99,
+        0
+      ],
+      [
+        33,
+        165,
+        0
+      ],
+      [
+        49,
+        231,
+        0
+      ],
+      [
+        66,
+        33,
+        8
+      ],
+      [
+        82,
+        99,
+        8
+      ],
+      [
+        99,
+        165,
+        8
+      ],
+      [
+        115,
+        231,
+        8
+      ],
+      [
+        132,
+        33,
+        16
+      ],
+      [
+        148,
+        99,
+        16
+      ],
+      [
+        165,
+        165,
+        16
+      ],
+      [
+        181,
+        231,
+        16
+      ],
+      [
+        198,
+        33,
+        24
+      ],
+      [
+        214,
+        99,
+        24
+      ],
+      [
+        231,
+        165,
+        24
+      ],
+      [
+        247,
+        231,
+        24
+      ]
+    ],
+    "color_count": 16,
+    "format": "RGB888"
+  },
+  "usage_hints": {
+    "transparent_index": 0,
+    "typical_use": "sprite",
+    "extraction_mode": "grayscale_companion"
+  },
+  "editor_compatibility": {
+    "indexed_pixel_editor": true,
+    "supports_grayscale_mode": true,
+    "auto_loadable": true
+  },
+  "source": {
+    "palette_index": 12,
+    "extraction_tool": "SpritePal",
+    "companion_image": "test_output.png",
+    "description": "User interface elements"
+  }
+}

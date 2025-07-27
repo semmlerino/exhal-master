@@ -192,8 +192,12 @@ class TestExtractionWorker:
             worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
             worker.finished.connect(lambda files: finished_files.extend(files))
 
-            # Run worker
-            worker.run()
+            # Start worker as real thread and wait for completion
+            with qtbot.waitSignal(worker.finished, timeout=10000):
+                worker.start()
+
+            # Wait for worker to fully complete
+            worker.wait(5000)
 
             # Check signals were emitted
             assert len(progress_messages) > 0
@@ -208,7 +212,10 @@ class TestExtractionWorker:
             assert any(f.endswith(".png") for f in finished_files)
             assert any(f.endswith(".pal.json") for f in finished_files)
         finally:
-            # Clean up managers
+            # Clean up worker and managers
+            if worker.isRunning():
+                worker.terminate()
+                worker.wait(5000)
             cleanup_managers()
 
     @pytest.mark.gui
@@ -235,14 +242,21 @@ class TestExtractionWorker:
             errors = []
             worker.error.connect(lambda e: errors.append(e))
 
-            # Run worker - should emit error
-            worker.run()
+            # Start worker as real thread and wait for error signal
+            with qtbot.waitSignal(worker.error, timeout=10000):
+                worker.start()
+
+            # Wait for worker to complete
+            worker.wait(5000)
 
             assert len(errors) > 0
             # Check for either file not found or validation error
             assert any(phrase in errors[0].lower() for phrase in ["no such file", "not found", "does not exist", "vram file"])
         finally:
-            # Clean up managers
+            # Clean up worker and managers
+            if worker.isRunning():
+                worker.terminate()
+                worker.wait(5000)
             cleanup_managers()
 
 
@@ -500,10 +514,16 @@ class TestFullWorkflowIntegration:
             }
 
             # Mock Qt components and create worker directly
-            with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-                mock_pixmap_instance = Mock()
-                mock_pixmap_instance.loadFromData = Mock(return_value=True)
-                mock_qpixmap.return_value = mock_pixmap_instance
+            mock_pixmap_instance = Mock()
+            mock_pixmap_instance.loadFromData = Mock(return_value=True)
+
+            with (
+                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            ):
+                # Configure mocks
+                mock_qpixmap_utils.return_value = mock_pixmap_instance
+                mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with mock signals
                 worker = ExtractionWorker(
@@ -590,10 +610,16 @@ class TestFullWorkflowIntegration:
             }
 
             # Mock Qt components
-            with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-                mock_pixmap_instance = Mock()
-                mock_pixmap_instance.loadFromData = Mock(return_value=True)
-                mock_qpixmap.return_value = mock_pixmap_instance
+            mock_pixmap_instance = Mock()
+            mock_pixmap_instance.loadFromData = Mock(return_value=True)
+
+            with (
+                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            ):
+                # Configure mocks
+                mock_qpixmap_utils.return_value = mock_pixmap_instance
+                mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with invalid params
                 worker = ExtractionWorker(invalid_params)
@@ -643,10 +669,16 @@ class TestFullWorkflowIntegration:
                 }
 
                 # Mock Qt components
-                with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-                    mock_pixmap_instance = Mock()
-                    mock_pixmap_instance.loadFromData = Mock(return_value=True)
-                    mock_qpixmap.return_value = mock_pixmap_instance
+                mock_pixmap_instance = Mock()
+                mock_pixmap_instance.loadFromData = Mock(return_value=True)
+
+                with (
+                    patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                    patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                ):
+                    # Configure mocks
+                    mock_qpixmap_utils.return_value = mock_pixmap_instance
+                    mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                     # Create worker with valid params
                     recovery_worker = ExtractionWorker(valid_params)
@@ -710,10 +742,16 @@ class TestFullWorkflowIntegration:
             mock_main_window.extraction_complete = completion_calls.append
 
             # Mock Qt components and create worker directly
-            with patch("spritepal.core.controller.QPixmap") as mock_qpixmap:
-                mock_pixmap_instance = Mock()
-                mock_pixmap_instance.loadFromData = Mock(return_value=True)
-                mock_qpixmap.return_value = mock_pixmap_instance
+            mock_pixmap_instance = Mock()
+            mock_pixmap_instance.loadFromData = Mock(return_value=True)
+
+            with (
+                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            ):
+                # Configure mocks
+                mock_qpixmap_utils.return_value = mock_pixmap_instance
+                mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with OAM analysis parameters
                 worker = ExtractionWorker(

@@ -3,27 +3,48 @@
     "vram_path": "",
     "cgram_path": "",
     "oam_path": "",
-    "extraction_mode": 0,
     "output_name": "",
     "create_grayscale": true,
-    "create_metadata": true
+    "create_metadata": true,
+    "extraction_mode": 0
   },
   "ui": {
-    "window_width": 1138,
-    "window_height": 711,
-    "window_x": 75,
-    "window_y": 253
+    "window_width": 1707,
+    "window_height": 996,
+    "window_x": 0,
+    "window_y": -7
   },
   "paths": {
     "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal"
   },
   "test": {
-    "key": "new_value"
+    "key": "value",
+    "data": "value",
+    "new_data": "new_value"
   },
   "rom_injection": {
     "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
     "last_sprite_location": "Kirby Sprite (0x123456)",
     "last_custom_offset": "0x123456",
     "fast_compression": true
+  },
+  "extraction": {
+    "default_tile_width": 256,
+    "auto_detect_size": true,
+    "preserve_transparency": true,
+    "compression_level": 6,
+    "palette_format": "rgb888",
+    "include_unused_palettes": false,
+    "tile_width": 256
+  },
+  "appearance": {
+    "color_scheme": {
+      "theme": "dark",
+      "preview_background": "#2b2b2b",
+      "grid_color": "#555555",
+      "selection_color": "#4a90e2",
+      "transparency_pattern": "checkerboard"
+    },
+    "theme": "dark"
   }
 }

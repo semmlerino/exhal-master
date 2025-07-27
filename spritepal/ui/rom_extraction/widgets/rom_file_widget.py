@@ -55,7 +55,7 @@ class ROMFileWidget(BaseExtractionWidget):
         self.browse_rom_btn = QPushButton("Browse...")
         self.browse_rom_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.browse_rom_btn.setFixedWidth(BUTTON_MAX_WIDTH)
-        self.browse_rom_btn.clicked.connect(self.browse_clicked.emit)
+        self._ = browse_rom_btn.clicked.connect(self.browse_clicked.emit)
         rom_row.addWidget(self.browse_rom_btn)
 
         rom_layout.addLayout(rom_row)

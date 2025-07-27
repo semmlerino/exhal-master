@@ -6,7 +6,8 @@ Test script to verify the granular offset slider implementation
 import sys
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
-from ui.extraction_panel import ExtractionPanel
+
+from spritepal.ui.extraction_panel import ExtractionPanel
 
 
 def test_offset_slider():

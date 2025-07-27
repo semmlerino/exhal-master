@@ -4,14 +4,13 @@ Mock-based tests for grid arrangement dialog logic (without actual PyQt6 imports
 
 import os
 import tempfile
-from typing import Optional
 from unittest.mock import Mock
 
 from PIL import Image
 
 from spritepal.ui.row_arrangement.grid_arrangement_manager import (
     GridArrangementManager,
-    TilePosition,
+    TilePosition
 )
 from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
 from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
@@ -189,7 +188,7 @@ class MockGridArrangementDialog:
         for arr_type, key in arrangement_order:
             self.arrangement_list.addItem(f"{arr_type.value}: {key}")
 
-    def export_arrangement(self, export_path: Optional[str] = None):
+    def export_arrangement(self, export_path: str | None = None):
         """Export arranged image"""
         if not self.manager or not self.processor:
             return None
@@ -236,7 +235,7 @@ class MockGridGraphicsView:
         tile_width: int,
         tile_height: int,
         grid_rows: int,
-        grid_cols: int,
+        grid_cols: int
     ):
         """Setup graphics scene"""
         self.tile_width = tile_width
@@ -304,7 +303,7 @@ class MockGridGraphicsView:
                 tile.col * self.tile_width,
                 tile.row * self.tile_height,
                 self.tile_width,
-                self.tile_height,
+                self.tile_height
             )
 
     def zoom_in(self):

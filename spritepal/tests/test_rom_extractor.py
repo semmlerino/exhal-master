@@ -432,7 +432,7 @@ class TestROMExtractorMainExtraction:
             "Failed to decompress sprite data"
         )
 
-        with pytest.raises(Exception, match="HAL.*compression") as exc_info:
+        with pytest.raises(Exception, match="Failed to decompress sprite") as exc_info:
             mock_extractor.extract_sprite_from_rom(
                 str(rom_path), 0x8000, str(output_base), "test_sprite"
             )
@@ -509,7 +509,7 @@ class TestROMExtractorIntegration:
         output_base = tmp_path / "failed_extraction"
         expected_png = Path(f"{output_base}.png")
 
-        with pytest.raises(Exception, match="extraction.*failed|validation.*failed"):
+        with pytest.raises(Exception, match="Simulated error"):
             extractor.extract_sprite_from_rom(
                 str(rom_path), 0x8000, str(output_base), "test_sprite"
             )

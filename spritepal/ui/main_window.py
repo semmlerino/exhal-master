@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QVBoxLayout,
-    QWidget,
+    QWidget
 )
 
 from spritepal.core.managers import get_session_manager
@@ -31,6 +31,7 @@ from spritepal.ui.dialogs import UserErrorDialog
 from spritepal.ui.extraction_panel import ExtractionPanel
 from spritepal.ui.palette_preview import PalettePreviewWidget
 from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
+from spritepal.ui.styles import get_button_style, get_muted_text_style
 from spritepal.ui.zoomable_preview import PreviewPanel
 
 
@@ -112,7 +113,7 @@ class MainWindow(QMainWindow):
         self.output_name_edit.setPlaceholderText("e.g., cave_sprites_editor")
         name_layout.addWidget(self.output_name_edit)
         self.browse_button = QPushButton("Browse...")
-        self.browse_button.clicked.connect(self._browse_output)
+        _ = self.browse_button.clicked.connect(self._browse_output)
         name_layout.addWidget(self.browse_button)
         output_layout.addLayout(name_layout)
 
@@ -133,7 +134,7 @@ class MainWindow(QMainWindow):
 
         # Output files info label
         self.output_info_label = QLabel("Files to create: Loading...")
-        self.output_info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px 0;")
+        self.output_info_label.setStyleSheet(get_muted_text_style(italic=True))
         output_layout.addWidget(self.output_info_label)
 
         output_group.setLayout(output_layout)
@@ -148,26 +149,7 @@ class MainWindow(QMainWindow):
         self.extract_button.setMinimumHeight(35)
         self.extract_button.setShortcut(QKeySequence("Ctrl+E"))
         self.extract_button.setToolTip("Extract sprites for editing (Ctrl+E)")
-        self.extract_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #0078d4;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #106ebe;
-            }
-            QPushButton:pressed {
-                background-color: #005a9e;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """
-        )
+        self.extract_button.setStyleSheet(get_button_style("extract"))
         button_layout.addWidget(self.extract_button, 0, 0)
 
         self.open_editor_button = QPushButton("Open in Editor")
@@ -175,26 +157,7 @@ class MainWindow(QMainWindow):
         self.open_editor_button.setEnabled(False)
         self.open_editor_button.setShortcut(QKeySequence("Ctrl+O"))
         self.open_editor_button.setToolTip("Open extracted sprites in pixel editor (Ctrl+O)")
-        self.open_editor_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #107c41;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #0e6332;
-            }
-            QPushButton:pressed {
-                background-color: #0c5228;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """
-        )
+        self.open_editor_button.setStyleSheet(get_button_style("editor"))
         button_layout.addWidget(self.open_editor_button, 0, 1)
 
         self.arrange_rows_button = QPushButton("Arrange Rows")
@@ -202,26 +165,7 @@ class MainWindow(QMainWindow):
         self.arrange_rows_button.setEnabled(False)
         self.arrange_rows_button.setShortcut(QKeySequence("Ctrl+R"))
         self.arrange_rows_button.setToolTip("Arrange sprite rows for easier editing (Ctrl+R)")
-        self.arrange_rows_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #c7672a;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #a85521;
-            }
-            QPushButton:pressed {
-                background-color: #86441a;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """
-        )
+        self.arrange_rows_button.setStyleSheet(get_button_style("primary"))
         button_layout.addWidget(self.arrange_rows_button, 1, 0)
 
         self.arrange_grid_button = QPushButton("Grid Arrange")
@@ -231,26 +175,7 @@ class MainWindow(QMainWindow):
         self.arrange_grid_button.setToolTip(
             "Arrange sprites using flexible grid (rows/columns/tiles) (Ctrl+G)"
         )
-        self.arrange_grid_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #2a67c7;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #2155a8;
-            }
-            QPushButton:pressed {
-                background-color: #1a4486;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """
-        )
+        self.arrange_grid_button.setStyleSheet(get_button_style("secondary"))
         button_layout.addWidget(self.arrange_grid_button, 1, 1)
 
         self.inject_button = QPushButton("Inject")
@@ -258,26 +183,7 @@ class MainWindow(QMainWindow):
         self.inject_button.setEnabled(False)
         self.inject_button.setShortcut(QKeySequence("Ctrl+I"))
         self.inject_button.setToolTip("Inject edited sprite back into VRAM or ROM (Ctrl+I)")
-        self.inject_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #744da9;
-                color: white;
-                font-weight: bold;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #5b3d85;
-            }
-            QPushButton:pressed {
-                background-color: #472d68;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #999;
-            }
-        """
-        )
+        self.inject_button.setStyleSheet(get_button_style("accent"))
         button_layout.addWidget(self.inject_button, 2, 0, 1, 2)  # Span both columns
 
         left_layout.addLayout(button_layout)
@@ -304,7 +210,7 @@ class MainWindow(QMainWindow):
         # Preview info
         self.preview_info = QLabel("No sprites loaded")
         self.preview_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_info.setStyleSheet("color: #999; padding: 5px;")
+        self.preview_info.setStyleSheet(get_muted_text_style())
         self.preview_info.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
         )
@@ -362,7 +268,7 @@ class MainWindow(QMainWindow):
         # New extraction
         new_action = QAction("New Extraction", self)
         new_action.setShortcut("Ctrl+N")
-        new_action.triggered.connect(self._new_extraction)
+        _ = new_action.triggered.connect(self._new_extraction)
         if file_menu:
             file_menu.addAction(new_action)
             file_menu.addSeparator()
@@ -370,7 +276,7 @@ class MainWindow(QMainWindow):
         # Exit
         exit_action = QAction("Exit", self)
         exit_action.setShortcut("Ctrl+Q")
-        exit_action.triggered.connect(self.close)
+        _ = exit_action.triggered.connect(self.close)
         if file_menu:
             file_menu.addAction(exit_action)
 
@@ -380,24 +286,24 @@ class MainWindow(QMainWindow):
         # Keyboard shortcuts
         shortcuts_action = QAction("Keyboard Shortcuts", self)
         shortcuts_action.setShortcut("F1")
-        shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
+        _ = shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
         if help_menu:
             help_menu.addAction(shortcuts_action)
             help_menu.addSeparator()
 
         # About
         about_action = QAction("About SpritePal", self)
-        about_action.triggered.connect(self._show_about)
+        _ = about_action.triggered.connect(self._show_about)
         if help_menu:
             help_menu.addAction(about_action)
 
     def _connect_signals(self) -> None:
         """Connect internal signals"""
-        self.extract_button.clicked.connect(self._on_extract_clicked)
-        self.open_editor_button.clicked.connect(self._on_open_editor_clicked)
-        self.arrange_rows_button.clicked.connect(self._on_arrange_rows_clicked)
-        self.arrange_grid_button.clicked.connect(self._on_arrange_grid_clicked)
-        self.inject_button.clicked.connect(self._on_inject_clicked)
+        _ = self.extract_button.clicked.connect(self._on_extract_clicked)
+        _ = self.open_editor_button.clicked.connect(self._on_open_editor_clicked)
+        _ = self.arrange_rows_button.clicked.connect(self._on_arrange_rows_clicked)
+        _ = self.arrange_grid_button.clicked.connect(self._on_arrange_grid_clicked)
+        _ = self.inject_button.clicked.connect(self._on_inject_clicked)
 
         # Connect extraction panel signals
         self.extraction_panel.files_changed.connect(self._on_files_changed)
@@ -421,7 +327,7 @@ class MainWindow(QMainWindow):
         self.metadata_check.toggled.connect(lambda: self._update_output_info_label())
 
         # Connect output name change to sync with ROM panel
-        self.output_name_edit.textChanged.connect(self._on_output_name_changed)
+        _ = self.output_name_edit.textChanged.connect(self._on_output_name_changed)
 
     def _on_files_changed(self) -> None:
         """Handle when input files change"""
@@ -522,7 +428,7 @@ class MainWindow(QMainWindow):
         # Update main output field without triggering sync back
         self.output_name_edit.textChanged.disconnect()
         self.output_name_edit.setText(text)
-        self.output_name_edit.textChanged.connect(self._on_output_name_changed)
+        _ = self.output_name_edit.textChanged.connect(self._on_output_name_changed)
 
     def _on_extraction_tab_changed(self, index: int) -> None:
         """Handle tab change between VRAM and ROM extraction"""
@@ -585,7 +491,7 @@ class MainWindow(QMainWindow):
             self,
             "Save Sprites As",
             suggested_path,
-            "PNG Files (*.png)",
+            "PNG Files (*.png)"
         )
 
         if filename:
@@ -595,15 +501,6 @@ class MainWindow(QMainWindow):
 
     def _on_extract_clicked(self) -> None:
         """Handle extract button click"""
-        # Validate output name first (for both modes)
-        if not self.output_name_edit.text():
-            QMessageBox.warning(
-                self,
-                "Output Name Required",
-                "Please enter a name for the output files.",
-            )
-            return
-
         # Check which tab is active
         if self.extraction_tabs.currentIndex() == 0:
             # ROM extraction
@@ -611,12 +508,26 @@ class MainWindow(QMainWindow):
             if params:
                 # Use the shared output name
                 params["output_base"] = self.output_name_edit.text()
+
+                # Validate parameters using extraction manager
+                from spritepal.core.managers import get_extraction_manager
+                try:
+                    extraction_manager = get_extraction_manager()
+                    extraction_manager.validate_extraction_params(params)
+                except Exception as e:
+                    _ = QMessageBox.warning(
+                        self,
+                        "Validation Error",
+                        str(e)
+                    )
+                    return
+
                 self._output_path = params["output_base"]
                 self.status_bar.showMessage("Extracting sprites from ROM...")
                 self.extract_button.setEnabled(False)
                 self.controller.start_rom_extraction(params)
         else:
-            # VRAM extraction
+            # VRAM extraction - validation will be handled by controller
             self._output_path = self.output_name_edit.text()
             self.status_bar.showMessage("Extracting sprites from VRAM...")
             self.extract_button.setEnabled(False)
@@ -675,7 +586,7 @@ class MainWindow(QMainWindow):
             "<p>A modern sprite extraction tool for SNES games.</p>"
             "<p>Simplifies sprite extraction with automatic palette association.</p>"
             "<br>"
-            "<p>Part of the Kirby Super Star sprite editing toolkit.</p>",
+            "<p>Part of the Kirby Super Star sprite editing toolkit.</p>"
         )
 
     def _show_keyboard_shortcuts(self) -> None:
@@ -702,10 +613,11 @@ class MainWindow(QMainWindow):
 
         <h3>ROM Manual Offset Mode</h3>
         <table>
-        <tr><td><b>Alt+Left</b></td><td>Find previous sprite</td></tr>
-        <tr><td><b>Alt+Right</b></td><td>Find next sprite</td></tr>
-        <tr><td><b>Page Up</b></td><td>Jump backward 64KB</td></tr>
-        <tr><td><b>Page Down</b></td><td>Jump forward 64KB</td></tr>
+        <tr><td><b>Ctrl+M</b></td><td>Open Manual Offset Control window</td></tr>
+        <tr><td><b>Alt+Left</b></td><td>Find previous sprite (in dialog)</td></tr>
+        <tr><td><b>Alt+Right</b></td><td>Find next sprite (in dialog)</td></tr>
+        <tr><td><b>Page Up</b></td><td>Jump backward 64KB (in dialog)</td></tr>
+        <tr><td><b>Page Down</b></td><td>Jump forward 64KB (in dialog)</td></tr>
         </table>
 
         <h3>Preview Window</h3>
@@ -718,7 +630,7 @@ class MainWindow(QMainWindow):
         </table>
         """
 
-        QMessageBox.information(
+        _ = QMessageBox.information(
             self,
             "Keyboard Shortcuts",
             shortcuts_text
@@ -837,39 +749,50 @@ class MainWindow(QMainWindow):
         if a0:
             super().closeEvent(a0)
 
-    def keyPressEvent(self, event) -> None:  # noqa: N802
+    def keyPressEvent(self, a0) -> None:  # noqa: N802
         """Handle keyboard shortcuts"""
         # Tab navigation
-        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            if event.key() == Qt.Key.Key_Tab:
+        if a0.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            if a0.key() == Qt.Key.Key_Tab:
                 # Ctrl+Tab: Next tab
                 current = self.extraction_tabs.currentIndex()
                 next_tab = (current + 1) % self.extraction_tabs.count()
                 self.extraction_tabs.setCurrentIndex(next_tab)
-                event.accept()
+                a0.accept()
                 return
-        elif event.modifiers() == (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
-            if event.key() == Qt.Key.Key_Backtab:
+        elif a0.modifiers() == (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier):
+            if a0.key() == Qt.Key.Key_Backtab:
                 # Ctrl+Shift+Tab: Previous tab
                 current = self.extraction_tabs.currentIndex()
                 prev_tab = (current - 1) % self.extraction_tabs.count()
                 self.extraction_tabs.setCurrentIndex(prev_tab)
-                event.accept()
+                a0.accept()
                 return
 
         # F5 as alternative to Extract
-        if event.key() == Qt.Key.Key_F5 and self.extract_button.isEnabled():
+        if a0.key() == Qt.Key.Key_F5 and self.extract_button.isEnabled():
             self._on_extract_clicked()
-            event.accept()
+            a0.accept()
             return
 
+        # Ctrl+M: Open Manual Offset Control (if in ROM extraction mode)
+        if a0.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            if a0.key() == Qt.Key.Key_M:
+                # Check if ROM extraction tab is active and manual mode is selected
+                if (self.extraction_tabs.currentIndex() == 0 and
+                    hasattr(self.rom_extraction_panel, "_manual_offset_mode") and
+                    self.rom_extraction_panel._manual_offset_mode):
+                    self.rom_extraction_panel._open_manual_offset_dialog()
+                    a0.accept()
+                    return
+
         # Focus shortcuts
-        if event.modifiers() == Qt.KeyboardModifier.AltModifier:
-            if event.key() == Qt.Key.Key_N:
+        if a0.modifiers() == Qt.KeyboardModifier.AltModifier:
+            if a0.key() == Qt.Key.Key_N:
                 # Alt+N: Focus output name field
                 self.output_name_edit.setFocus()
                 self.output_name_edit.selectAll()
-                event.accept()
+                a0.accept()
                 return
 
-        super().keyPressEvent(event)
+        super().keyPressEvent(a0)

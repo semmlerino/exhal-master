@@ -99,9 +99,17 @@ class RangeScanWorker(QThread):
                             sprites_found += 1
                             logger.debug(f"Found sprite at 0x{offset:06X} with quality {quality:.2f}")
 
-                except Exception:
-                    # Not a valid sprite at this offset, continue scanning
+                except (ValueError, IndexError, KeyError):
+                    # Expected errors: invalid sprite data, invalid offset, etc.
+                    # These are normal during scanning, continue silently
                     pass
+                except (MemoryError, OSError) as e:
+                    # Serious errors that might indicate system issues
+                    logger.warning(f"System error at offset 0x{offset:06X}: {e}")
+                    # Continue scanning but log the issue
+                except Exception as e:
+                    # Unexpected errors - log but continue
+                    logger.debug(f"Unexpected error at offset 0x{offset:06X}: {e}")
 
             # Final progress update
             self.progress_update.emit(self.end_offset)
@@ -112,8 +120,14 @@ class RangeScanWorker(QThread):
             # Emit completion signal
             self.scan_complete.emit(True)
 
+        except OSError:
+            logger.exception("File I/O error during range scan")
+            self.scan_complete.emit(False)
+        except MemoryError:
+            logger.exception("Memory error during range scan")
+            self.scan_complete.emit(False)
         except Exception:
-            logger.exception("Error during range scan")
+            logger.exception("Unexpected error during range scan")
             self.scan_complete.emit(False)
 
     def pause_scan(self):

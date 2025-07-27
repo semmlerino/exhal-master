@@ -3,6 +3,7 @@ Manager for handling all extraction operations
 """
 
 import os
+from dataclasses import asdict
 from typing import Any
 
 from PIL import Image
@@ -16,7 +17,7 @@ from spritepal.core.rom_extractor import ROMExtractor
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,
-    SPRITE_PALETTE_START,
+    SPRITE_PALETTE_START
 )
 
 
@@ -59,9 +60,9 @@ class ExtractionManager(BaseManager):
         Args:
             vram_path: Path to VRAM dump file
             output_base: Base name for output files (without extension)
-            cgram_path: Optional path to CGRAM dump for palette extraction
-            oam_path: Optional path to OAM dump for palette analysis
-            vram_offset: Optional offset in VRAM (default: 0xC000)
+            cgram_path: path to CGRAM dump for palette extraction
+            oam_path: path to OAM dump for palette analysis
+            vram_offset: offset in VRAM (default: 0xC000)
             create_grayscale: Create grayscale palette files
             create_metadata: Create metadata JSON file
             grayscale_mode: Skip palette extraction entirely
@@ -146,7 +147,7 @@ class ExtractionManager(BaseManager):
             offset: Offset in ROM to extract from
             output_base: Base name for output files
             sprite_name: Name of the sprite being extracted
-            cgram_path: Optional CGRAM dump for palette extraction
+            cgram_path: CGRAM dump for palette extraction
 
         Returns:
             List of created file paths
@@ -188,8 +189,7 @@ class ExtractionManager(BaseManager):
             output_file = f"{output_base}.png"
             try:
                 result = self._rom_extractor.extract_sprite_from_rom(
-                    rom_path, offset, output_file,
-                    format="4bpp", width=128  # Default width
+                    rom_path, offset, output_file
                 )
 
                 if result:
@@ -238,7 +238,7 @@ class ExtractionManager(BaseManager):
         Args:
             rom_path: Path to ROM file
             offset: Offset in ROM
-            sprite_name: Optional sprite name for logging
+            sprite_name: sprite name for logging
 
         Returns:
             Tuple of (tile_data, width, height)
@@ -298,9 +298,10 @@ class ExtractionManager(BaseManager):
         """
         # Determine extraction type
         if "vram_path" in params:
-            # VRAM extraction
-            self._validate_required(params, ["vram_path", "output_base"])
-            self._validate_file_exists(params["vram_path"], "VRAM file")
+            # VRAM extraction - check for missing VRAM file specifically
+            if not params.get("vram_path"):
+                raise ValidationError("VRAM file is required for extraction")
+            self._validate_required(params, ["output_base"])
         elif "rom_path" in params:
             # ROM extraction
             self._validate_required(params, ["rom_path", "offset", "output_base"])
@@ -310,9 +311,31 @@ class ExtractionManager(BaseManager):
         else:
             raise ValidationError("Must provide either vram_path or rom_path")
 
+        # Validate CGRAM requirements for VRAM extraction
+        if "vram_path" in params:
+            grayscale_mode = params.get("grayscale_mode", False)
+            cgram_path = params.get("cgram_path")
+
+            # CGRAM is required for full color mode
+            if not grayscale_mode and not cgram_path:
+                raise ValidationError(
+                    "CGRAM file is required for Full Color mode.\n"
+                    "Please provide a CGRAM file or switch to Grayscale Only mode."
+                )
+
+            # Validate CGRAM file exists if provided
+            if cgram_path:
+                self._validate_file_exists(cgram_path, "CGRAM file")
+
+            # Validate VRAM file exists (after CGRAM validation)
+            self._validate_file_exists(params["vram_path"], "VRAM file")
+
+        # Validate output_base is provided and not empty
+        output_base = params.get("output_base", "")
+        if not output_base or not output_base.strip():
+            raise ValidationError("Output name is required for extraction")
+
         # Validate optional files
-        if params.get("cgram_path"):
-            self._validate_file_exists(params["cgram_path"], "CGRAM file")
         if params.get("oam_path"):
             self._validate_file_exists(params["oam_path"], "OAM file")
 
@@ -393,18 +416,75 @@ class ExtractionManager(BaseManager):
         """
         try:
             # Load VRAM
-            self._extractor.load_vram(vram_path)
+            self._sprite_extractor.load_vram(vram_path)
 
             # Extract tiles with new offset
-            tiles, num_tiles = self._extractor.extract_tiles(offset=offset)
+            tiles, num_tiles = self._sprite_extractor.extract_tiles(offset=offset)
 
             # Create grayscale image
-            img = self._extractor.create_grayscale_image(tiles)
+            img = self._sprite_extractor.create_grayscale_image(tiles)
 
         except Exception as e:
             raise ExtractionError(f"Failed to generate preview: {e}") from e
         else:
             return img, num_tiles
+
+    def get_rom_extractor(self) -> "ROMExtractor":
+        """
+        Get the ROM extractor instance for advanced operations
+
+        Returns:
+            ROMExtractor instance
+
+        Note:
+            This method provides access to the underlying ROM extractor
+            for UI components that need direct access to ROM operations.
+            Consider using the manager methods when possible.
+        """
+        if not self._is_initialized:
+            raise ExtractionError("ExtractionManager not initialized")
+        return self._rom_extractor
+
+    def get_known_sprite_locations(self, rom_path: str) -> dict[str, Any]:
+        """
+        Get known sprite locations for a ROM
+
+        Args:
+            rom_path: Path to ROM file
+
+        Returns:
+            Dictionary of known sprite locations
+
+        Raises:
+            ExtractionError: If operation fails
+        """
+        try:
+            self._validate_file_exists(rom_path, "rom_path")
+            return self._rom_extractor.get_known_sprite_locations(rom_path)
+        except Exception as e:
+            self._handle_error(e, "get_known_sprite_locations")
+            raise ExtractionError(f"Failed to get sprite locations: {e}") from e
+
+    def read_rom_header(self, rom_path: str) -> dict[str, Any]:
+        """
+        Read ROM header information
+
+        Args:
+            rom_path: Path to ROM file
+
+        Returns:
+            Dictionary containing ROM header information
+
+        Raises:
+            ExtractionError: If operation fails
+        """
+        try:
+            self._validate_file_exists(rom_path, "rom_path")
+            header = self._rom_extractor.rom_injector.read_rom_header(rom_path)
+            return asdict(header)
+        except Exception as e:
+            self._handle_error(e, "read_rom_header")
+            raise ExtractionError(f"Failed to read ROM header: {e}") from e
 
     def _raise_extraction_failed(self, message: str) -> None:
         """Helper method to raise ExtractionError (for TRY301 compliance)"""

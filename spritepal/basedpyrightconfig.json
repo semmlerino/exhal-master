@@ -1,0 +1,31 @@
+{
+  "typeCheckingMode": "basic",
+  "reportUnusedImport": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportMissingImports": "warning",
+  "reportOptionalMemberAccess": "error",
+  "reportOptionalSubscript": "error",
+  "reportAttributeAccessIssue": "error",
+  "reportIncompatibleMethodOverride": "error",
+  "reportImplicitOverride": "none",
+  "reportDeprecated": "none",
+  "reportUnannotatedClassAttribute": "none",
+  "reportAny": "none",
+  "reportUnusedVariable": "none",
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonPath": "./.venv/bin/python",
+  "exclude": [
+    "**/build",
+    "**/venv",
+    "**/.mypy_cache",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "PYQT6_BEST_PRACTICES_EXAMPLES.py",
+    "test_transparency_headless.py",
+    "view_sprites_zoomed.py"
+  ]
+}

@@ -26,7 +26,7 @@ class SpriteValidator:
 
         Args:
             sprite_path: Path to sprite PNG file
-            metadata_path: Optional path to metadata JSON
+            metadata_path: path to metadata JSON
 
         Returns:
             Tuple of (is_valid, errors, warnings)

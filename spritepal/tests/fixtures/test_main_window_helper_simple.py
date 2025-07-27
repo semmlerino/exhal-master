@@ -1,0 +1,320 @@
+"""
+Simplified helper for testing MainWindow functionality without creating Qt widgets
+"""
+
+import tempfile
+from pathlib import Path
+from typing import Anyfrom unittest.mock import Mock
+
+from PyQt6.QtCore import QObject, pyqtSignal
+
+
+class TestMainWindowHelperSimple(QObject):
+    """Simplified helper for MainWindow testing without real Qt widgets"""
+
+    # Define signals that MainWindow has
+    extract_requested = pyqtSignal()
+    open_in_editor_requested = pyqtSignal(str)
+    arrange_rows_requested = pyqtSignal(str)
+    arrange_grid_requested = pyqtSignal(str)
+    inject_requested = pyqtSignal()
+
+    def __init__(self, temp_dir: str | None = None):
+        """Initialize helper with optional temporary directory"""
+        super().__init__()
+        self.temp_dir = temp_dir or tempfile.mkdtemp()
+        self.temp_path = Path(self.temp_dir)
+
+        # Track state without creating Qt widgets
+        self._extracted_files: list[str] = []
+        self._output_path = ""
+        self._extraction_params: dict[str, Any] = {}
+        self._status_message = "Ready to extract sprites"
+        self._preview_info_text = "No sprites loaded"
+
+        # Track signal emissions for testing
+        self.signal_emissions: dict[str, list[Any]] = {
+            "extract_requested": [],
+            "open_in_editor_requested": [],
+            "arrange_rows_requested": [],
+            "arrange_grid_requested": [],
+            "inject_requested": [],
+            "extraction_complete": [],
+            "extraction_failed": [],
+            "status_messages": [],
+            "preview_updates": [],
+            "palette_updates": []
+        }
+
+        # Connect signals to track emissions
+        self.extract_requested.connect(lambda: self.signal_emissions["extract_requested"].append(True))
+        self.open_in_editor_requested.connect(lambda path: self.signal_emissions["open_in_editor_requested"].append(path))
+        self.arrange_rows_requested.connect(lambda path: self.signal_emissions["arrange_rows_requested"].append(path))
+        self.arrange_grid_requested.connect(lambda path: self.signal_emissions["arrange_grid_requested"].append(path))
+        self.inject_requested.connect(lambda: self.signal_emissions["inject_requested"].append(True))
+
+        # Create test files
+        self._create_test_files()
+
+    def _create_test_files(self):
+        """Create test files for extraction parameters"""
+        # Create test VRAM file
+        self.vram_file = self.temp_path / "test_VRAM.dmp"
+        vram_data = bytearray(0x10000)  # 64KB
+        # Add some test data at sprite offset
+        for i in range(0x1000):
+            vram_data[0xC000 + i] = i % 256
+        self.vram_file.write_bytes(vram_data)
+
+        # Create test CGRAM file
+        self.cgram_file = self.temp_path / "test_CGRAM.dmp"
+        cgram_data = bytearray(512)  # 256 colors * 2 bytes
+        for i in range(256):
+            cgram_data[i * 2] = i % 32
+            cgram_data[i * 2 + 1] = (i // 32) % 32
+        self.cgram_file.write_bytes(cgram_data)
+
+        # Create test OAM file
+        self.oam_file = self.temp_path / "test_OAM.dmp"
+        oam_data = bytearray(544)  # 544 bytes
+        # Add some test sprite entries
+        oam_data[0] = 0x50  # X position
+        oam_data[1] = 0x50  # Y position
+        oam_data[2] = 0x00  # Tile number
+        oam_data[3] = 0x00  # Attributes
+        self.oam_file.write_bytes(oam_data)
+
+        # Create test ROM file
+        self.rom_file = self.temp_path / "test_ROM.sfc"
+        rom_data = bytearray(0x400000)  # 4MB
+        # Add some test data
+        for i in range(0x1000):
+            rom_data[0x8000 + i] = i % 256
+        self.rom_file.write_bytes(rom_data)
+
+    def get_extraction_params(self) -> dict[str, Any]:
+        """Get extraction parameters (mimics MainWindow.get_extraction_params)"""
+        # Return default test parameters if none set
+        if not self._extraction_params:
+            return {
+                "vram_path": str(self.vram_file),
+                "cgram_path": str(self.cgram_file),
+                "output_base": str(self.temp_path / "test_sprite"),
+                "create_grayscale": True,
+                "create_metadata": True,
+                "oam_path": str(self.oam_file),
+                "vram_offset": 0xC000,
+                "sprite_size": (8, 8),
+            }
+        return self._extraction_params.copy()
+
+    def set_extraction_params(self, params: dict[str, Any]):
+        """Set extraction parameters for testing"""
+        self._extraction_params = params.copy()
+
+    def extraction_complete(self, extracted_files: list[str]):
+        """Handle extraction completion (mimics MainWindow.extraction_complete)"""
+        self._extracted_files = extracted_files
+        self.signal_emissions["extraction_complete"].append(extracted_files)
+
+        # Update status message
+        sprite_file = None
+        for file_path in extracted_files:
+            if file_path.endswith(".png"):
+                sprite_file = file_path
+                break
+
+        if sprite_file:
+            self._preview_info_text = f"Extracted {len(extracted_files)} files"
+            self._status_message = "Extraction complete!"
+            self.signal_emissions["status_messages"].append("Extraction complete!")
+        else:
+            self._status_message = "Extraction failed"
+            self.signal_emissions["status_messages"].append("Extraction failed")
+
+    def extraction_failed(self, error_message: str):
+        """Handle extraction failure (mimics MainWindow.extraction_failed)"""
+        self.signal_emissions["extraction_failed"].append(error_message)
+        self._status_message = "Extraction failed"
+        self.signal_emissions["status_messages"].append("Extraction failed")
+
+    # Mock MainWindow UI component interface
+    class MockStatusBar:
+        def __init__(self, helper):
+            self.helper = helper
+
+        def showMessage(self, message: str):
+            self.helper._status_message = message
+            self.helper.signal_emissions["status_messages"].append(message)
+
+        def currentMessage(self):
+            return self.helper._status_message
+
+    class MockPreviewInfo:
+        def __init__(self, helper):
+            self.helper = helper
+
+        def setText(self, text: str):
+            self.helper._preview_info_text = text
+
+        def text(self):
+            return self.helper._preview_info_text
+
+    class MockSpritePreview:
+        def __init__(self, helper):
+            self.helper = helper
+
+        def set_preview(self, pixmap, tile_count=0):
+            self.helper.signal_emissions["preview_updates"].append({"pixmap": pixmap, "tile_count": tile_count})
+
+        def set_palettes(self, palettes):
+            self.helper.signal_emissions["palette_updates"].append({"sprite_palettes": palettes})
+
+        def set_grayscale_image(self, pil_image):
+            self.helper.signal_emissions["preview_updates"].append({"grayscale_image": pil_image})
+
+    class MockPalettePreview:
+        def __init__(self, helper):
+            self.helper = helper
+
+        def set_all_palettes(self, palettes_data):
+            self.helper.signal_emissions["palette_updates"].append(palettes_data)
+
+        def highlight_active_palettes(self, active_palettes: list[int]):
+            self.helper.signal_emissions["palette_updates"].append({"active_palettes": active_palettes})
+
+    class MockExtractionPanel:
+        def __init__(self, helper):
+            self.helper = helper
+            # Mock signal for offset changes
+            self.offset_changed = Mock()
+            self.offset_changed.connect = Mock()
+
+    @property
+    def status_bar(self):
+        """Get mock status bar"""
+        if not hasattr(self, "_mock_status_bar"):
+            self._mock_status_bar = self.MockStatusBar(self)
+        return self._mock_status_bar
+
+    @property
+    def sprite_preview(self):
+        """Get mock sprite preview"""
+        if not hasattr(self, "_mock_sprite_preview"):
+            self._mock_sprite_preview = self.MockSpritePreview(self)
+        return self._mock_sprite_preview
+
+    @property
+    def palette_preview(self):
+        """Get mock palette preview"""
+        if not hasattr(self, "_mock_palette_preview"):
+            self._mock_palette_preview = self.MockPalettePreview(self)
+        return self._mock_palette_preview
+
+    @property
+    def preview_info(self):
+        """Get mock preview info"""
+        if not hasattr(self, "_mock_preview_info"):
+            self._mock_preview_info = self.MockPreviewInfo(self)
+        return self._mock_preview_info
+
+    @property
+    def extraction_panel(self):
+        """Get mock extraction panel"""
+        if not hasattr(self, "_mock_extraction_panel"):
+            self._mock_extraction_panel = self.MockExtractionPanel(self)
+        return self._mock_extraction_panel
+
+    def get_extracted_files(self) -> list[str]:
+        """Get list of extracted files"""
+        return self._extracted_files.copy()
+
+    def get_status_message(self) -> str:
+        """Get current status bar message"""
+        return self._status_message
+
+    def get_preview_info_text(self) -> str:
+        """Get current preview info text"""
+        return self._preview_info_text
+
+    def simulate_extract_request(self):
+        """Simulate user clicking extract button"""
+        self.extract_requested.emit()
+
+    def simulate_open_in_editor_request(self, sprite_path: str):
+        """Simulate user requesting to open sprite in editor"""
+        self.open_in_editor_requested.emit(sprite_path)
+
+    def simulate_arrange_rows_request(self, sprite_path: str):
+        """Simulate user requesting row arrangement"""
+        self.arrange_rows_requested.emit(sprite_path)
+
+    def simulate_arrange_grid_request(self, sprite_path: str):
+        """Simulate user requesting grid arrangement"""
+        self.arrange_grid_requested.emit(sprite_path)
+
+    def clear_signal_tracking(self):
+        """Clear signal emission tracking"""
+        for key in self.signal_emissions:
+            self.signal_emissions[key].clear()
+
+    def get_signal_emissions(self) -> dict[str, list[Any]]:
+        """Get copy of signal emissions for testing"""
+        return {key: value.copy() for key, value in self.signal_emissions.items()}
+
+    def cleanup(self):
+        """Cleanup helper resources"""
+        # Cleanup temp files
+        import shutil
+        try:
+            shutil.rmtree(self.temp_dir)
+        except Exception:
+            pass  # Best effort cleanup
+
+    # Convenience methods for common test scenarios
+    def create_vram_extraction_scenario(self) -> dict[str, Any]:
+        """Create a typical VRAM extraction scenario"""
+        params = {
+            "vram_path": str(self.vram_file),
+            "cgram_path": str(self.cgram_file),
+            "output_base": str(self.temp_path / "vram_extraction"),
+            "create_grayscale": True,
+            "create_metadata": True,
+            "oam_path": str(self.oam_file),
+            "vram_offset": 0xC000,
+            "sprite_size": (8, 8),
+        }
+        self.set_extraction_params(params)
+        return params
+
+    def create_rom_extraction_scenario(self) -> dict[str, Any]:
+        """Create a typical ROM extraction scenario"""
+        params = {
+            "rom_path": str(self.rom_file),
+            "offset": 0x8000,
+            "output_base": str(self.temp_path / "rom_extraction"),
+            "sprite_name": "test_sprite",
+            "cgram_path": str(self.cgram_file),
+        }
+        self.set_extraction_params(params)
+        return params
+
+    def verify_workflow_signals(self, expected_signals: list[str]) -> bool:
+        """Verify that expected workflow signals were emitted"""
+        for signal_name in expected_signals:
+            if signal_name not in self.signal_emissions:
+                return False
+            if not self.signal_emissions[signal_name]:
+                return False
+        return True
+
+    def get_workflow_summary(self) -> dict[str, Any]:
+        """Get summary of workflow state for testing"""
+        return {
+            "extracted_files_count": len(self._extracted_files),
+            "status_message": self.get_status_message(),
+            "preview_info": self.get_preview_info_text(),
+            "signals_emitted": {k: len(v) for k, v in self.signal_emissions.items()},
+            "has_preview_data": len(self.signal_emissions["preview_updates"]) > 0,
+            "has_palette_data": len(self.signal_emissions["palette_updates"]) > 0,
+        }

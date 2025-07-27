@@ -4,6 +4,7 @@ Grid-based arrangement state management for flexible sprite organization
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -24,10 +25,10 @@ class TilePosition:
     row: int
     col: int
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.row, self.col))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TilePosition)
             and self.row == other.row
@@ -51,8 +52,8 @@ class GridArrangementManager(QObject):
 
     # Signals
     arrangement_changed = pyqtSignal()
-    tile_added = pyqtSignal(TilePosition)
-    tile_removed = pyqtSignal(TilePosition)
+    tile_added = pyqtSignal(object)  # TilePosition
+    tile_removed = pyqtSignal(object)  # TilePosition
     group_added = pyqtSignal(str)  # Group ID
     group_removed = pyqtSignal(str)  # Group ID
     arrangement_cleared = pyqtSignal()

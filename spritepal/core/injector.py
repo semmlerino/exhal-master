@@ -260,7 +260,7 @@ class InjectionWorker(QThread):
     """Worker thread for sprite injection process"""
 
     progress: pyqtSignal = pyqtSignal(str)  # status message
-    finished: pyqtSignal = pyqtSignal(bool, str)  # success, message
+    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # success, message
 
     def __init__(
         self,
@@ -294,7 +294,7 @@ class InjectionWorker(QThread):
             valid, message = self.injector.validate_sprite(self.sprite_path)
             if not valid:
                 logger.error(f"Sprite validation failed: {message}")
-                self.finished.emit(False, message)
+                self.injection_finished.emit(False, message)
                 return
 
             # Perform injection
@@ -311,8 +311,8 @@ class InjectionWorker(QThread):
             else:
                 logger.error(f"Injection failed: {message}")
 
-            self.finished.emit(success, message)
+            self.injection_finished.emit(success, message)
 
         except Exception as e:
             logger.exception("Injection worker encountered unexpected error")
-            self.finished.emit(False, f"Unexpected error: {e!s}")
+            self.injection_finished.emit(False, f"Unexpected error: {e!s}")

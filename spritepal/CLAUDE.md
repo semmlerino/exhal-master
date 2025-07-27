@@ -15,7 +15,7 @@ source venv/bin/activate  # Linux/macOS
 venv\Scripts\activate     # Windows
 
 # Install dependencies
-pip install PyQt6 Pillow pytest pytest-qt
+pip install PyQt6 Pillow pytest pytest-qt ruff pyright
 
 # Verify virtual environment is active
 which python              # Should show venv/bin/python (Linux/macOS)
@@ -40,9 +40,21 @@ pytest tests/ -x                         # Run all tests, stop on first failure
 pytest tests/test_extractor.py -v       # Run specific test file
 pytest -k "test_palette"                 # Run tests matching keyword
 
-# Linting
+# Linting and Type Checking
+source venv/bin/activate                 # Activate virtual environment first (REQUIRED)
 ruff check .                             # Check for linting issues
 ruff check . --fix --unsafe-fixes        # Auto-fix linting issues
+pyright                                  # Type check with pyright (npm package available)
+
+# IMPORTANT: Always run linting tools from virtual environment
+# - ruff is installed in venv/, not globally
+# - Commands will fail with "command not found" without venv activation
+# - Install linting tools: pip install ruff pyright
+
+# Test Coverage
+pytest tests/ --cov=core --cov=ui --cov=utils    # Run tests with coverage
+coverage report                                   # View coverage report
+coverage html                                     # Generate HTML coverage report
 ```
 
 #### Deactivating Virtual Environment
@@ -50,11 +62,6 @@ ruff check . --fix --unsafe-fixes        # Auto-fix linting issues
 deactivate                               # Return to system Python
 ```
 
-### Type Checking
-```bash
-mypy spritepal/                          # Type check all code
-mypy spritepal/core/palette_manager.py  # Type check specific file
-```
 
 ### Testing with Virtual Display
 ```bash
@@ -78,26 +85,34 @@ SpritePal is a PyQt6 application for extracting SNES sprites from memory dumps w
 
 ### Core Components
 
-**MVC Architecture:**
-- **Model**: Core extraction logic in `core/` (extractor.py, palette_manager.py)
-- **View**: PyQt6 UI components in `ui/` (main_window.py, preview widgets)
-- **Controller**: Workflow coordination in `core/controller.py`
+**Manager-Based Architecture:**
+- **Business Logic**: Centralized in `core/managers/` (ExtractionManager, InjectionManager, SessionManager)
+- **View**: PyQt6 UI components in `ui/` (main_window.py, preview widgets) - presentation only
+- **Controller**: Thin coordination layer in `core/controller.py` - delegates to managers
+- **Core**: Low-level extraction/injection classes in `core/` (used by managers)
 
-**Key Classes:**
-- `SpriteExtractor`: Handles VRAM sprite extraction to grayscale PNG
-- `PaletteManager`: Manages CGRAM palette extraction and JSON generation
-- `ExtractionWorker`: QThread for non-blocking extraction process
-- `MainWindow`: Primary UI with drag-drop zones and preview panels
+**Manager Classes:**
+- `ExtractionManager`: Handles all extraction workflows (VRAM/ROM), validation, and preview generation
+- `InjectionManager`: Manages all injection operations (VRAM/ROM) with unified interface
+- `SessionManager`: Handles application state, settings persistence, and session management
+- `ManagerRegistry`: Singleton registry providing global access to manager instances
+
+**UI Components:**
+- `MainWindow`: Primary UI - delegates to controller, no business logic
+- `ROMExtractionPanel`: ROM selection UI - uses ExtractionManager via registry
+- `InjectionDialog`: Injection configuration - uses managers for validation
+- Workers: QThread wrappers that delegate to managers for actual operations
 
 ### Data Flow
-1. User drops VRAM/CGRAM/OAM dump files onto UI
-2. `ExtractionController` validates inputs and creates worker thread
-3. `ExtractionWorker` runs extraction process:
-   - Extract sprites from VRAM → grayscale PNG
-   - Extract palettes from CGRAM → palette JSON files
-   - Analyze OAM for active palette highlighting
-4. Worker emits signals for UI updates (progress, preview, completion)
-5. Generated files ready for pixel editor integration
+1. User interacts with UI (drag-drop files, configure extraction/injection)
+2. UI delegates to `Controller` for workflow coordination
+3. `Controller` uses `ExtractionManager` or `InjectionManager` for business logic:
+   - Manager validates parameters and handles errors
+   - Manager creates worker threads with proper configuration
+   - Manager coordinates low-level core classes (SpriteExtractor, ROMExtractor, etc.)
+4. Workers emit signals to managers, managers emit signals to controller/UI
+5. UI updates presentation based on manager signals (progress, preview, completion)
+6. `SessionManager` handles state persistence and settings throughout the process
 
 ### File Formats
 - **Input**: SNES memory dumps (.dmp files)
@@ -137,3 +152,22 @@ Settings saved to `.spritepal_settings.json` include:
 - Pixel editor launcher in `controller.py`
 - Auto-loading palette files by matching names
 - Metadata for advanced palette features
+
+### Architecture Patterns
+
+#### Manager Pattern (2025 Refactoring)
+- **Business Logic Separation**: All business logic moved from UI components to dedicated manager classes
+- **Centralized Validation**: Parameter validation and error handling consolidated in managers
+- **Unified Interfaces**: Managers provide consistent APIs for UI components
+- **Registry Access**: Global singleton registry provides access to manager instances
+
+#### Clean Architecture Benefits
+- **Testability**: Business logic can be unit tested independently of UI
+- **Maintainability**: Changes to business rules don't require UI modifications  
+- **Reusability**: Manager logic can be reused across different UI components
+- **Type Safety**: Strong typing and validation at the manager layer
+
+#### Legacy Pattern Support
+- **ROM Extraction UI**: Modular widget architecture in `ui/rom_extraction/`
+- **Error Handling**: Centralized exception hierarchy in `core/managers/exceptions.py`
+- **Thread Safety**: Manager operations are thread-safe with proper locking

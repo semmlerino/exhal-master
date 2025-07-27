@@ -45,7 +45,7 @@ class OutputNameWidget(BaseExtractionWidget):
         self.output_name_edit = QLineEdit()
         self.output_name_edit.setPlaceholderText("Enter output base name...")
         self.output_name_edit.setMinimumWidth(250)
-        self.output_name_edit.textChanged.connect(self.text_changed.emit)
+        self._ = output_name_edit.textChanged.connect(self.text_changed.emit)
         output_layout.addWidget(self.output_name_edit, 1)
 
         output_group.setLayout(output_layout)

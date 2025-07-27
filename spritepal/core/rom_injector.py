@@ -655,7 +655,7 @@ class ROMInjectionWorker(QThread):
     progress: pyqtSignal = pyqtSignal(str)  # Status message
     progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
     compression_info: pyqtSignal = pyqtSignal(dict)  # Compression statistics
-    finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
+    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
 
     def __init__(
         self,
@@ -698,7 +698,7 @@ class ROMInjectionWorker(QThread):
             # Basic validation
             valid, message = self.injector.validate_sprite(self.sprite_path)
             if not valid:
-                self.finished.emit(False, message)
+                self.injection_finished.emit(False, message)
                 return
 
             # Enhanced validation
@@ -711,7 +711,7 @@ class ROMInjectionWorker(QThread):
                 for error in errors:
                     logger.error(f"  - {error}")
                 error_msg = "Sprite validation failed:\n" + "\n".join(errors)
-                self.finished.emit(False, error_msg)
+                self.injection_finished.emit(False, error_msg)
                 return
             if warnings:
                 logger.warning(f"Sprite validation warnings ({len(warnings)}):")
@@ -725,7 +725,7 @@ class ROMInjectionWorker(QThread):
             self.progress_percent.emit(int((current_step / total_steps) * 100))
             tools_ok, tools_msg = self.injector.hal_compressor.test_tools()
             if not tools_ok:
-                self.finished.emit(False, tools_msg)
+                self.injection_finished.emit(False, tools_msg)
                 return
             current_step += 1
 
@@ -737,7 +737,7 @@ class ROMInjectionWorker(QThread):
                     self.rom_input, self.sprite_offset
                 )
             except Exception as e:
-                self.finished.emit(False, f"ROM validation failed: {e}")
+                self.injection_finished.emit(False, f"ROM validation failed: {e}")
                 return
             current_step += 1
 
@@ -791,11 +791,11 @@ class ROMInjectionWorker(QThread):
                 if compression_info:
                     self.compression_info.emit(compression_info)
 
-            self.finished.emit(success, message)
+            self.injection_finished.emit(success, message)
 
         except Exception as e:
             logger.exception("ROM injection worker encountered unexpected error")
-            self.finished.emit(False, f"Unexpected error: {e!s}")
+            self.injection_finished.emit(False, f"Unexpected error: {e!s}")
 
     def _extract_compression_info(self, message: str) -> dict[str, Any] | None:
         """Extract compression statistics from success message"""

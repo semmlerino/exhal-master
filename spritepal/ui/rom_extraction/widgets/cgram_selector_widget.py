@@ -31,8 +31,8 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Optional CGRAM for palettes
-        cgram_group = self._create_group_box("Palette Data (Optional)")
+        # CGRAM for palettes
+        cgram_group = self._create_group_box("Palette Data ()")
         cgram_layout = QVBoxLayout()
         cgram_layout.setSpacing(SPACING_MEDIUM)
         cgram_layout.setContentsMargins(SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM)
@@ -73,7 +73,7 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
         self.browse_cgram_btn = QPushButton("Browse...")
         self.browse_cgram_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.browse_cgram_btn.setFixedWidth(BUTTON_MAX_WIDTH)
-        self.browse_cgram_btn.clicked.connect(self.browse_clicked.emit)
+        self._ = browse_cgram_btn.clicked.connect(self.browse_clicked.emit)
         cgram_row.addWidget(self.browse_cgram_btn)
 
         cgram_layout.addLayout(cgram_row)

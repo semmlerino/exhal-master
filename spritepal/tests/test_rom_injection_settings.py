@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from spritepal.core.managers import get_injection_manager, InjectionManager
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
@@ -64,6 +65,11 @@ class TestROMInjectionSettingsPersistence:
         dialog.input_vram_edit = Mock()
         dialog.output_vram_edit = Mock()
 
+        # Add input/output selectors
+        dialog.input_rom_selector = Mock()
+        dialog.output_rom_selector = Mock()
+        dialog.rom_offset_input = Mock()
+        
         # Add the actual method from the class
         dialog.save_rom_injection_parameters = (
             InjectionDialog.save_rom_injection_parameters.__get__(dialog)
@@ -74,7 +80,6 @@ class TestROMInjectionSettingsPersistence:
         dialog._restore_saved_sprite_location = (
             InjectionDialog._restore_saved_sprite_location.__get__(dialog)
         )
-        dialog._suggest_output_rom_path = Mock(return_value="/test/rom_modified.sfc")
         dialog._load_rom_info = Mock()
 
         return dialog
@@ -82,21 +87,24 @@ class TestROMInjectionSettingsPersistence:
     def test_save_rom_injection_parameters(self, mock_dialog, settings_manager):
         """Test saving ROM injection parameters"""
         # Set up mock values
-        mock_dialog.input_rom_edit.text.return_value = "/path/to/test.sfc"
+        mock_dialog.input_rom_selector.get_path.return_value = "/path/to/test.sfc"
         mock_dialog.sprite_location_combo.currentText.return_value = (
             "Kirby Sprite (0x123456)"
         )
-        mock_dialog.rom_offset_hex_edit.text.return_value = "0x123456"
+        mock_dialog.rom_offset_input.get_text.return_value = "0x123456"
         mock_dialog.fast_compression_check.isChecked.return_value = True
 
-        # Save parameters
-        with patch(
-            "spritepal.ui.injection_dialog.get_settings_manager",
-            return_value=settings_manager,
+        # Create a real injection manager that uses our test settings_manager
+        injection_manager = InjectionManager()
+        with patch.object(
+            injection_manager, "_get_session_manager", return_value=settings_manager
         ):
+            mock_dialog.injection_manager = injection_manager
+
+            # Save parameters
             mock_dialog.save_rom_injection_parameters()
 
-        # Verify saved values
+        # Verify saved values in the actual settings manager
         assert (
             settings_manager.get_value(
                 SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM
@@ -125,18 +133,21 @@ class TestROMInjectionSettingsPersistence:
     def test_save_empty_rom_injection_parameters(self, mock_dialog, settings_manager):
         """Test saving when fields are empty"""
         # Set up empty values
-        mock_dialog.input_rom_edit.text.return_value = ""
+        mock_dialog.input_rom_selector.get_path.return_value = ""
         mock_dialog.sprite_location_combo.currentText.return_value = (
             "Select sprite location..."
         )
-        mock_dialog.rom_offset_hex_edit.text.return_value = ""
+        mock_dialog.rom_offset_input.get_text.return_value = ""
         mock_dialog.fast_compression_check.isChecked.return_value = False
 
-        # Save parameters
-        with patch(
-            "spritepal.ui.injection_dialog.get_settings_manager",
-            return_value=settings_manager,
+        # Create a real injection manager that uses our test settings_manager
+        injection_manager = InjectionManager()
+        with patch.object(
+            injection_manager, "_get_session_manager", return_value=settings_manager
         ):
+            mock_dialog.injection_manager = injection_manager
+
+            # Save parameters
             mock_dialog.save_rom_injection_parameters()
 
         # Verify empty custom offset is saved as empty string
@@ -204,21 +215,30 @@ class TestROMInjectionSettingsPersistence:
             SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_FAST_COMPRESSION, True
         )
 
-        # Mock file existence check
+        # Create a real injection manager that uses our test settings_manager
+        injection_manager = InjectionManager()
         with (
             patch("os.path.exists", return_value=True),
-            patch(
-                "spritepal.ui.injection_dialog.get_settings_manager",
-                return_value=settings_manager,
+            patch.object(
+                injection_manager, "_get_session_manager", return_value=settings_manager
             ),
         ):
+            mock_dialog.injection_manager = injection_manager
+            mock_dialog.sprite_path = "/test/sprite.png"
+            mock_dialog.metadata = None
+            mock_dialog.rom_extraction_info = None
+            mock_dialog.extraction_vram_offset = None
 
             mock_dialog._set_rom_injection_defaults()
 
         # Verify UI elements were populated
-        mock_dialog.input_rom_edit.setText.assert_called_with("/test/rom.sfc")
-        mock_dialog.output_rom_edit.setText.assert_called_with("/test/rom_modified.sfc")
-        mock_dialog.rom_offset_hex_edit.setText.assert_called_with("0x789ABC")
+        mock_dialog.input_rom_selector.set_path.assert_called_with("/test/rom.sfc")
+        # Check that output ROM path was set (it may include a timestamp if file exists)
+        assert mock_dialog.output_rom_selector.set_path.called
+        output_path = mock_dialog.output_rom_selector.set_path.call_args[0][0]
+        assert output_path.startswith("/test/rom_modified")
+        assert output_path.endswith(".sfc")
+        mock_dialog.rom_offset_input.set_text.assert_called_with("0x789ABC")
         mock_dialog.fast_compression_check.setChecked.assert_called_with(True)
 
     def test_settings_save_error_handling(self, mock_dialog, settings_manager, caplog):
@@ -228,23 +248,24 @@ class TestROMInjectionSettingsPersistence:
         caplog.set_level(logging.ERROR)
 
         # Set up mock values
-        mock_dialog.input_rom_edit.text.return_value = "/path/to/test.sfc"
+        mock_dialog.input_rom_selector.get_path.return_value = "/path/to/test.sfc"
         mock_dialog.sprite_location_combo.currentText.return_value = (
             "Select sprite location..."
         )
-        mock_dialog.rom_offset_hex_edit.text.return_value = ""
+        mock_dialog.rom_offset_input.get_text.return_value = ""
         mock_dialog.fast_compression_check.isChecked.return_value = False
 
         # Mock save to raise exception
+        injection_manager = InjectionManager()
         with (
-            patch(
-                "spritepal.ui.injection_dialog.get_settings_manager",
-                return_value=settings_manager,
+            patch.object(
+                injection_manager, "_get_session_manager", return_value=settings_manager
             ),
             patch.object(
                 settings_manager, "save", side_effect=OSError("Permission denied")
             ),
         ):
+            mock_dialog.injection_manager = injection_manager
 
             # Call the method
             mock_dialog.save_rom_injection_parameters()
@@ -254,24 +275,37 @@ class TestROMInjectionSettingsPersistence:
             assert "Failed to save ROM injection parameters" in caplog.text
             assert "Permission denied" in caplog.text
 
-    def test_sprite_location_restoration_after_rom_load(self, mock_dialog):
+    def test_sprite_location_restoration_after_rom_load(self, mock_dialog, settings_manager):
         """Test that sprite location is restored after ROM is loaded"""
         # Setup combo box with items
         mock_dialog.sprite_location_combo.count.return_value = 4
-        mock_dialog.sprite_location_combo.itemText.side_effect = [
-            "Select sprite location...",
-            "Kirby Sprite (0x123456)",
-            "Helper Sprite (0x234567)",
-            "Boss Sprite (0x345678)",
-        ]
+        # Define the item texts by index
+        item_texts = {
+            0: "Select sprite location...",
+            1: "Kirby Sprite (0x123456)",
+            2: "Helper Sprite (0x234567)",
+            3: "Boss Sprite (0x345678)",
+        }
+        mock_dialog.sprite_location_combo.itemText.side_effect = lambda i: item_texts.get(i, "")
+        
+        # Define the item data by index
+        item_data = {0: None, 1: 0x123456, 2: 0x234567, 3: 0x345678}
+        mock_dialog.sprite_location_combo.itemData.side_effect = lambda i: item_data.get(i)
 
         # Mock settings with saved sprite location
-        with patch(
-            "spritepal.ui.injection_dialog.get_settings_manager"
-        ) as mock_get_settings:
-            mock_settings = Mock()
-            mock_settings.get_value.return_value = "Helper Sprite (0x234567)"
-            mock_get_settings.return_value = mock_settings
+        # Note: The saved value includes the full text with offset, as saved by the dialog
+        settings_manager.set_value(
+            SETTINGS_NS_ROM_INJECTION,
+            SETTINGS_KEY_LAST_SPRITE_LOCATION,
+            "Helper Sprite (0x234567)"
+        )
+
+        injection_manager = InjectionManager()
+        with patch.object(
+            injection_manager, "_get_session_manager", return_value=settings_manager
+        ):
+            mock_dialog.injection_manager = injection_manager
+            mock_dialog.extraction_vram_offset = None
 
             mock_dialog._restore_saved_sprite_location()
 

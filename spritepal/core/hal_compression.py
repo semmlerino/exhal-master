@@ -100,7 +100,7 @@ class HALCompressor:
         Args:
             rom_path: Path to ROM file
             offset: Offset in ROM where compressed data starts
-            output_path: Optional path to save decompressed data
+            output_path: path to save decompressed data
 
         Returns:
             Decompressed data as bytes
@@ -207,7 +207,7 @@ class HALCompressor:
         rom_path: str,
         offset: int,
         output_rom_path: str | None = None,
-        fast: bool = False,
+        fast: bool = False
     ) -> tuple[bool, str]:
         """
         Compress data and inject into ROM at specified offset.
@@ -229,7 +229,7 @@ class HALCompressor:
             logger.error(f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})")
             return (
                 False,
-                f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})",
+                f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})"
             )
 
         # If no output path, modify in place
@@ -278,7 +278,7 @@ class HALCompressor:
             logger.info(f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}")
             return (
                 True,
-                f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}",
+                f"Successfully injected compressed data ({compressed_size} bytes) at offset 0x{offset:X}"
             )
 
         finally:
@@ -316,14 +316,14 @@ class HALCompressor:
             logger.exception("HAL tools not found")
             return (
                 False,
-                f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}",
+                f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}"
             )
         except OSError as e:
             if platform.system() == "Windows" and hasattr(e, "winerror") and getattr(e, "winerror", None) == 193:
                 logger.exception("Wrong platform binaries detected")
                 return (
                     False,
-                    "Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows",
+                    "Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows"
                 )
             logger.exception("OS error testing tools")
             return False, f"Error testing tools: {e!s}"

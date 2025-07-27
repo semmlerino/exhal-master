@@ -8,7 +8,16 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from core.hal_compression import find_all_compressed
+# TODO: find_all_compressed function needs to be implemented
+# from spritepal.core.hal_compression import find_all_compressed
+
+
+def find_all_compressed(rom_data: bytes) -> list[tuple[int, bytes]]:
+    """Placeholder for finding compressed blocks in ROM data."""
+    # This function should scan ROM data for HAL-compressed blocks
+    # and return a list of (offset, decompressed_data) tuples
+    print("WARNING: find_all_compressed is not implemented")
+    return []
 
 
 def search_for_vram_patterns(rom_path: str, vram_samples: list):

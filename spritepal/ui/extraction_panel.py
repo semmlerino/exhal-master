@@ -15,7 +15,7 @@ from PyQt6.QtGui import (
     QDropEvent,
     QKeyEvent,
     QPainter,
-    QPen,
+    QPen
 )
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -27,9 +27,17 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
+    QWidget
 )
 
+from spritepal.ui.styles import (
+    get_error_text_style,
+    get_hex_label_style,
+    get_link_text_style,
+    get_muted_text_style,
+    get_slider_style,
+    get_success_text_style
+)
 from spritepal.utils.constants import VRAM_SPRITE_OFFSET
 from spritepal.utils.logging_config import get_logger
 from spritepal.utils.settings_manager import get_settings_manager
@@ -65,20 +73,20 @@ class DropZone(QWidget):
         # Icon and label
         self.label = QLabel(f"Drop {file_type} file here")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet("color: #999;")
+        self.label.setStyleSheet(get_muted_text_style(color_level="light"))
         layout.addWidget(self.label)
 
         # File path label
         self.path_label = QLabel("")
         self.path_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.path_label.setStyleSheet("color: #0078d4; font-size: 11px;")
+        self.path_label.setStyleSheet(get_link_text_style("extract"))
         self.path_label.setWordWrap(True)
         layout.addWidget(self.path_label)
 
         # Browse button
         self.browse_button = QPushButton("Browse")
         self.browse_button.setMaximumWidth(100)
-        self.browse_button.clicked.connect(self._browse_file)
+        self._ = browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def dragEnterEvent(self, a0: QDragEnterEvent | None):  # noqa: N802
@@ -158,7 +166,7 @@ class DropZone(QWidget):
         if os.path.exists(file_path):
             self.file_path = file_path
             self.label.setText(f"✓ {self.file_type}")
-            self.label.setStyleSheet("color: #107c41; font-weight: bold;")
+            self.label.setStyleSheet(get_success_text_style())
 
             # Show filename
             filename = Path(file_path).name
@@ -172,7 +180,7 @@ class DropZone(QWidget):
         old_path = self.file_path
         self.file_path = ""
         self.label.setText(f"Drop {self.file_type} file here")
-        self.label.setStyleSheet("color: #999;")
+        self.label.setStyleSheet(get_muted_text_style(color_level="light"))
         self.path_label.setText("")
         self.update()
 
@@ -239,28 +247,19 @@ class ExtractionPanel(QGroupBox):
 
         # Enhanced hex label with better styling
         self.offset_hex_label = QLabel("0xC000")
-        self.offset_hex_label.setStyleSheet("""
-            font-family: monospace;
-            font-size: 14px;
-            font-weight: bold;
-            color: #66aaff;
-            padding: 4px 8px;
-            background: #1a1a1a;
-            border: 1px solid #444444;
-            border-radius: 4px;
-        """)
+        self.offset_hex_label.setStyleSheet(get_hex_label_style(background=True, color="extract"))
         self.offset_hex_label.setMinimumWidth(80)
         self.offset_hex_label.setToolTip("Current offset in VRAM")
         offset_label_layout.addWidget(self.offset_hex_label)
 
         # Tile info label
         self.tile_info_label = QLabel("(Tile #1536)")
-        self.tile_info_label.setStyleSheet("color: #888888; margin-left: 8px;")
+        self.tile_info_label.setStyleSheet(get_muted_text_style(color_level="medium"))
         offset_label_layout.addWidget(self.tile_info_label)
 
         # Position percentage
         self.position_label = QLabel("75.0%")
-        self.position_label.setStyleSheet("color: #888888; margin-left: 8px;")
+        self.position_label.setStyleSheet(get_muted_text_style(color_level="medium"))
         offset_label_layout.addWidget(self.position_label)
 
         offset_label_layout.addStretch()
@@ -276,29 +275,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_slider.setSingleStep(0x20)  # Single tile step
         self.offset_slider.setPageStep(0x100)  # Page step
         self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
-        self.offset_slider.setStyleSheet("""
-            QSlider::groove:horizontal {
-                border: 1px solid #999999;
-                height: 8px;
-                background: #2b2b2b;
-                border-radius: 4px;
-            }
-            QSlider::handle:horizontal {
-                background: #5599ff;
-                border: 1px solid #5599ff;
-                width: 18px;
-                margin: -5px 0;
-                border-radius: 9px;
-            }
-            QSlider::handle:horizontal:hover {
-                background: #66aaff;
-                border: 1px solid #66aaff;
-            }
-            QSlider::sub-page:horizontal {
-                background: #4488dd;
-                border-radius: 4px;
-            }
-        """)
+        self.offset_slider.setStyleSheet(get_slider_style("extract"))
         offset_layout.addWidget(self.offset_slider)
 
         # Offset controls row
@@ -373,13 +350,13 @@ class ExtractionPanel(QGroupBox):
         self.cgram_drop.setToolTip("Contains color palette data (optional - without it, only grayscale extraction is possible)")
         layout.addWidget(self.cgram_drop)
 
-        self.oam_drop = DropZone("OAM (Optional)")
+        self.oam_drop = DropZone("OAM ()")
         self.oam_drop.setToolTip("Shows active sprites and palettes (optional - improves palette selection)")
         layout.addWidget(self.oam_drop)
 
         # Auto-detect button
         self.auto_detect_button = QPushButton("Auto-detect Files")
-        self.auto_detect_button.clicked.connect(self._auto_detect_files)
+        self._ = auto_detect_button.clicked.connect(self._auto_detect_files)
         layout.addWidget(self.auto_detect_button)
 
         self.setLayout(layout)
@@ -768,13 +745,13 @@ class ExtractionPanel(QGroupBox):
         # Update CGRAM drop zone appearance based on mode
         if index == 1:  # Grayscale Only
             self.cgram_drop.label.setText("CGRAM (Not required for grayscale)")
-            self.cgram_drop.label.setStyleSheet("color: #666;")
+            self.cgram_drop.label.setStyleSheet(get_muted_text_style(color_level="dark"))
         elif self.cgram_drop.has_file():
             self.cgram_drop.label.setText("✓ CGRAM")
-            self.cgram_drop.label.setStyleSheet("color: #107c41; font-weight: bold;")
+            self.cgram_drop.label.setStyleSheet(get_success_text_style())
         else:
             self.cgram_drop.label.setText("Drop CGRAM file here")
-            self.cgram_drop.label.setStyleSheet("color: #d13438;")  # Red for required but missing
+            self.cgram_drop.label.setStyleSheet(get_error_text_style())
 
         # Re-check extraction readiness
         self._check_extraction_ready()

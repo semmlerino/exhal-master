@@ -7,7 +7,7 @@ import os
 import sys
 
 try:
-    import cv2
+    import cv2  # noqa: F401 - Used throughout this script
 except ImportError:
     print("ERROR: OpenCV is required for visual validation")
     print("Please install it with: pip install opencv-python")

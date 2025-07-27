@@ -16,7 +16,7 @@ class PreviewGenerator:
         """Initialize preview generator
 
         Args:
-            colorizer: Optional palette colorizer for colorized previews
+            colorizer: palette colorizer for colorized previews
         """
         self.colorizer = colorizer
 
@@ -26,7 +26,7 @@ class PreviewGenerator:
         tile_rows: list[dict],
         arranged_indices: list[int],
         tile_height: int,
-        row_spacing_ratio: float = 0.75,
+        row_spacing_ratio: float = 0.75
     ) -> Image.Image | None:
         """Create image with arranged rows
 

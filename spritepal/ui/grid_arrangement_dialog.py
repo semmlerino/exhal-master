@@ -18,8 +18,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QButtonGroup,
-    QDialog,
-    QDialogButtonBox,
     QGraphicsLineItem,
     QGraphicsRectItem,
     QGraphicsScene,
@@ -32,12 +30,11 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
-    QSplitter,
-    QStatusBar,
     QVBoxLayout,
     QWidget,
 )
 
+from .components import SplitterDialog
 from .row_arrangement import PaletteColorizer
 from .row_arrangement.grid_arrangement_manager import (
     ArrangementType,
@@ -61,7 +58,7 @@ class GridGraphicsView(QGraphicsView):
     """Custom graphics view for grid-based sprite selection"""
 
     # Signals
-    tile_clicked = pyqtSignal(TilePosition)
+    tile_clicked = pyqtSignal(object)  # TilePosition
     tiles_selected = pyqtSignal(list)  # List of TilePosition
     selection_completed = pyqtSignal()
     zoom_changed = pyqtSignal(float)  # Zoom level changed
@@ -216,31 +213,31 @@ class GridGraphicsView(QGraphicsView):
             # Default scroll behavior
             super().wheelEvent(event)
 
-    def keyPressEvent(self, event):  # noqa: N802
+    def keyPressEvent(self, a0):  # noqa: N802
         """Handle keyboard shortcuts for zoom"""
-        if event and event.key() == Qt.Key.Key_F:
+        if a0 and a0.key() == Qt.Key.Key_F:
             # F: Zoom to fit
             self.zoom_to_fit()
-        elif event and (
-            event.key() == Qt.Key.Key_0
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        elif a0 and (
+            a0.key() == Qt.Key.Key_0
+            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
             # Ctrl+0: Reset zoom
             self.reset_zoom()
-        elif event and (
-            event.key() == Qt.Key.Key_Plus
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        elif a0 and (
+            a0.key() == Qt.Key.Key_Plus
+            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
             # Ctrl++: Zoom in
             self.zoom_in()
-        elif event and (
-            event.key() == Qt.Key.Key_Minus
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        elif a0 and (
+            a0.key() == Qt.Key.Key_Minus
+            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
             # Ctrl+-: Zoom out
             self.zoom_out()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(a0)
 
     def _zoom_at_point(self, point, zoom_factor):
         """Zoom at a specific point"""
@@ -451,11 +448,19 @@ class GridGraphicsView(QGraphicsView):
             scene.addItem(self.hover_rect)
 
 
-class GridArrangementDialog(QDialog):
+class GridArrangementDialog(SplitterDialog):
     """Dialog for grid-based sprite arrangement with row and column support"""
 
     def __init__(self, sprite_path: str, tiles_per_row: int = 16, parent=None):
-        super().__init__(parent)
+        super().__init__(
+            parent=parent,
+            title="Grid-Based Sprite Arrangement",
+            modal=True,
+            size=(1600, 900),
+            with_status_bar=True,
+            orientation=Qt.Orientation.Horizontal,
+            splitter_handle_width=8,
+        )
         self.sprite_path = sprite_path
         self.tiles_per_row = tiles_per_row
         self.output_path = None
@@ -472,7 +477,7 @@ class GridArrangementDialog(QDialog):
             )
         except Exception as e:
             # Show error dialog and close
-            QMessageBox.critical(
+            _ = QMessageBox.critical(
                 parent, "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
             )
             # Set up minimal state to prevent crashes
@@ -494,27 +499,19 @@ class GridArrangementDialog(QDialog):
         self.colorizer.palette_mode_changed.connect(self._on_palette_mode_changed)
 
         # Set up UI
-        self.setWindowTitle("Grid-Based Sprite Arrangement")
-        self.setModal(True)
-        self.resize(1600, 900)
         self._setup_ui()
 
         # Initial update (only if we have valid data)
         if self.original_image is not None:
             self._update_displays()
-            self._update_status(
+            self.update_status(
                 "Select tiles, rows, or columns to arrange. Ctrl+Wheel or F to zoom."
             )
         else:
-            self._update_status("Error: Unable to load sprite file")
+            self.update_status("Error: Unable to load sprite file")
 
     def _setup_ui(self):
-        """Set up the dialog UI"""
-        layout = QVBoxLayout(self)
-
-        # Create main splitter
-        main_splitter = QSplitter(Qt.Orientation.Horizontal)
-
+        """Set up the dialog UI using SplitterDialog panels"""
         # Left panel - Grid view and controls
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
@@ -576,19 +573,19 @@ class GridArrangementDialog(QDialog):
         actions_layout = QHBoxLayout()
 
         self.add_btn = QPushButton("Add Selection")
-        self.add_btn.clicked.connect(self._add_selection)
+        self._ = add_btn.clicked.connect(self._add_selection)
         actions_layout.addWidget(self.add_btn)
 
         self.remove_btn = QPushButton("Remove Selection")
-        self.remove_btn.clicked.connect(self._remove_selection)
+        self._ = remove_btn.clicked.connect(self._remove_selection)
         actions_layout.addWidget(self.remove_btn)
 
         self.create_group_btn = QPushButton("Create Group")
-        self.create_group_btn.clicked.connect(self._create_group)
+        self._ = create_group_btn.clicked.connect(self._create_group)
         actions_layout.addWidget(self.create_group_btn)
 
         self.clear_btn = QPushButton("Clear All")
-        self.clear_btn.clicked.connect(self._clear_arrangement)
+        self._ = clear_btn.clicked.connect(self._clear_arrangement)
         actions_layout.addWidget(self.clear_btn)
 
         # Separator
@@ -596,7 +593,7 @@ class GridArrangementDialog(QDialog):
 
         # Zoom controls
         self.zoom_out_btn = QPushButton("-")
-        self.zoom_out_btn.clicked.connect(self.grid_view.zoom_out)
+        self._ = zoom_out_btn.clicked.connect(self.grid_view.zoom_out)
         self.zoom_out_btn.setMaximumWidth(30)
         actions_layout.addWidget(self.zoom_out_btn)
 
@@ -606,17 +603,17 @@ class GridArrangementDialog(QDialog):
         actions_layout.addWidget(self.zoom_level_label)
 
         self.zoom_in_btn = QPushButton("+")
-        self.zoom_in_btn.clicked.connect(self.grid_view.zoom_in)
+        self._ = zoom_in_btn.clicked.connect(self.grid_view.zoom_in)
         self.zoom_in_btn.setMaximumWidth(30)
         actions_layout.addWidget(self.zoom_in_btn)
 
         self.zoom_fit_btn = QPushButton("Fit")
-        self.zoom_fit_btn.clicked.connect(self.grid_view.zoom_to_fit)
+        self._ = zoom_fit_btn.clicked.connect(self.grid_view.zoom_to_fit)
         self.zoom_fit_btn.setMaximumWidth(40)
         actions_layout.addWidget(self.zoom_fit_btn)
 
         self.zoom_reset_btn = QPushButton("1:1")
-        self.zoom_reset_btn.clicked.connect(self.grid_view.reset_zoom)
+        self._ = zoom_reset_btn.clicked.connect(self.grid_view.reset_zoom)
         self.zoom_reset_btn.setMaximumWidth(40)
         actions_layout.addWidget(self.zoom_reset_btn)
 
@@ -651,30 +648,13 @@ class GridArrangementDialog(QDialog):
         preview_group.setLayout(preview_layout)
         right_layout.addWidget(preview_group, 1)
 
-        # Add panels to splitter
-        main_splitter.addWidget(left_widget)
-        main_splitter.addWidget(right_widget)
-        main_splitter.setStretchFactor(0, 2)
-        main_splitter.setStretchFactor(1, 1)
+        # Add panels to main splitter using SplitterDialog
+        self.add_panel(left_widget, stretch_factor=2)    # 67% for left panel
+        self.add_panel(right_widget, stretch_factor=1)   # 33% for right panel
 
-        layout.addWidget(main_splitter)
-
-        # Status bar
-        self.status_bar = QStatusBar()
-        layout.addWidget(self.status_bar)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox()
-
-        self.export_btn = QPushButton("Export Arrangement")
-        self.export_btn.clicked.connect(self._export_arrangement)
+        # Add custom buttons using SplitterDialog's button system
+        self.export_btn = self.add_button("Export Arrangement", callback=self._export_arrangement)
         self.export_btn.setEnabled(False)
-        button_box.addButton(self.export_btn, QDialogButtonBox.ButtonRole.ActionRole)
-
-        button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
-        button_box.rejected.connect(self.reject)
-
-        layout.addWidget(button_box)
 
     def _on_mode_changed(self, button) -> None:
         """Handle selection mode change"""
@@ -900,13 +880,13 @@ class GridArrangementDialog(QDialog):
 
         except Exception as e:
             self._update_status(f"Export failed: {e!s}")
-            QMessageBox.warning(
+            _ = QMessageBox.warning(
                 self, "Export Error", f"Failed to export arrangement:\n{e!s}"
             )
 
     def _update_status(self, message: str):
         """Update status bar message"""
-        self.status_bar.showMessage(message)
+        self.update_status(message)
 
     def _update_zoom_level_display(self):
         """Update the zoom level display"""

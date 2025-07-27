@@ -14,7 +14,7 @@ class PaletteColorizer(QObject):
     palette_mode_changed = pyqtSignal(bool)  # Emitted when palette mode is toggled
     palette_index_changed = pyqtSignal(int)  # Emitted when palette index changes
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._current_palettes: dict[int, list[tuple[int, int, int]]] = {}
         self._palette_applied: bool = False

@@ -1,0 +1,790 @@
+"""
+Manager for handling all injection operations (VRAM and ROM)
+"""
+
+import json
+import os
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from PyQt6.QtCore import QThread, pyqtSignal
+
+if TYPE_CHECKING:
+    from spritepal.core.managers.session_manager import SessionManager
+
+from spritepal.core.injector import InjectionWorker
+from spritepal.core.managers.base_manager import BaseManager
+from spritepal.core.managers.exceptions import ValidationError
+from spritepal.core.rom_injector import ROMInjectionWorker
+from spritepal.utils.constants import (
+    SETTINGS_KEY_FAST_COMPRESSION,
+    SETTINGS_KEY_LAST_CUSTOM_OFFSET,
+    SETTINGS_KEY_LAST_INPUT_ROM,
+    SETTINGS_KEY_LAST_INPUT_VRAM,
+    SETTINGS_KEY_LAST_SPRITE_LOCATION,
+    SETTINGS_KEY_VRAM_PATH,
+    SETTINGS_NS_ROM_INJECTION
+)
+
+
+class InjectionManager(BaseManager):
+    """Manages all injection workflows (VRAM and ROM)"""
+
+    # Additional signals specific to injection
+    injection_progress: pyqtSignal = pyqtSignal(str)  # Progress message
+    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
+    compression_info: pyqtSignal = pyqtSignal(dict)  # ROM compression statistics
+    progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
+
+    def __init__(self) -> None:
+        """Initialize the injection manager"""
+        super().__init__("InjectionManager")
+
+    def _initialize(self) -> None:
+        """Initialize injection components"""
+        self._current_worker: QThread | None = None
+        self._is_initialized = True
+        self._logger.info("InjectionManager initialized")
+
+    def cleanup(self) -> None:
+        """Cleanup injection resources"""
+        if self._current_worker and self._current_worker.isRunning():
+            self._logger.info("Stopping active injection worker")
+            _ = self._current_worker.terminate()
+            _ = self._current_worker.wait(5000)  # Wait up to 5 seconds
+        self._current_worker = None
+
+    def _get_session_manager(self) -> "SessionManager":
+        """Get session manager with late import to avoid circular dependencies"""
+        from spritepal.core.managers import get_session_manager
+        return get_session_manager()
+
+    def start_injection(self, params: dict[str, Any]) -> bool:
+        """
+        Start injection process with unified interface
+
+        Args:
+            params: Injection parameters containing:
+                - mode: "vram" or "rom"
+                - sprite_path: Path to sprite PNG file
+                - For VRAM: input_vram, output_vram, offset
+                - For ROM: input_rom, output_rom, offset, fast_compression
+                - : metadata_path
+
+        Returns:
+            True if injection started successfully, False otherwise
+
+        Raises:
+            InjectionError: If injection cannot be started
+            ValidationError: If parameters are invalid
+        """
+        operation = "injection"
+
+        if not self._start_operation(operation):
+            return False
+
+        try:
+            # Validate parameters
+            self.validate_injection_params(params)
+
+            # Stop any existing worker
+            if self._current_worker and self._current_worker.isRunning():
+                _ = self._current_worker.terminate()
+                _ = self._current_worker.wait(1000)
+
+            # Create appropriate worker based on mode
+            if params["mode"] == "vram":
+                self._current_worker = InjectionWorker(
+                    params["sprite_path"],
+                    params["input_vram"],
+                    params["output_vram"],
+                    params["offset"],
+                    params.get("metadata_path")
+                )
+            elif params["mode"] == "rom":
+                self._current_worker = ROMInjectionWorker(
+                    params["sprite_path"],
+                    params["input_rom"],
+                    params["output_rom"],
+                    params["offset"],
+                    params.get("fast_compression", False),
+                    params.get("metadata_path")
+                )
+            else:
+                raise ValidationError(f"Invalid injection mode: {params['mode']}")
+
+            # Connect worker signals
+            self._connect_worker_signals()
+
+            # Start the worker
+            self._current_worker.start()
+
+            mode_text = "VRAM" if params["mode"] == "vram" else "ROM"
+            self._logger.info(f"Started {mode_text} injection: {params['sprite_path']}")
+            self.injection_progress.emit(f"Starting {mode_text} injection...")
+
+            return True
+
+        except Exception as e:
+            self._handle_error(e, operation)
+            return False
+
+    def validate_injection_params(self, params: dict[str, Any]) -> None:
+        """
+        Validate injection parameters
+
+        Args:
+            params: Parameters to validate
+
+        Raises:
+            ValidationError: If parameters are invalid
+        """
+        # Check required common parameters
+        required = ["mode", "sprite_path", "offset"]
+        self._validate_required(params, required)
+
+        self._validate_type(params["mode"], "mode", str)
+        self._validate_type(params["sprite_path"], "sprite_path", str)
+        self._validate_type(params["offset"], "offset", int)
+
+        self._validate_file_exists(params["sprite_path"], "sprite_path")
+        self._validate_range(params["offset"], "offset", min_val=0)
+
+        # Check mode-specific parameters
+        if params["mode"] == "vram":
+            vram_required = ["input_vram", "output_vram"]
+            self._validate_required(params, vram_required)
+            self._validate_file_exists(params["input_vram"], "input_vram")
+
+        elif params["mode"] == "rom":
+            rom_required = ["input_rom", "output_rom"]
+            self._validate_required(params, rom_required)
+            self._validate_file_exists(params["input_rom"], "input_rom")
+
+            # Validate optional fast_compression parameter
+            if "fast_compression" in params:
+                self._validate_type(params["fast_compression"], "fast_compression", bool)
+        else:
+            raise ValidationError(f"Invalid injection mode: {params['mode']}")
+
+        # Validate optional metadata_path
+        if params.get("metadata_path"):
+            self._validate_file_exists(params["metadata_path"], "metadata_path")
+
+    def get_smart_vram_suggestion(self, sprite_path: str, metadata_path: str = "") -> str:
+        """
+        Get smart suggestion for input VRAM path using multiple strategies
+
+        Args:
+            sprite_path: Path to sprite file
+            metadata_path: metadata file path
+
+        Returns:
+            Suggested VRAM path or empty string if none found
+        """
+        strategies = [
+            lambda: self._try_extraction_panel_vram(),
+            lambda: self._try_metadata_vram(metadata_path, sprite_path),
+            lambda: self._try_basename_vram_patterns(sprite_path),
+            lambda: self._try_session_vram(),
+            lambda: self._try_last_injection_vram(),
+        ]
+
+        for strategy in strategies:
+            try:
+                vram_path = strategy()
+                if vram_path:
+                    self._logger.debug(f"Smart VRAM suggestion found: {vram_path}")
+                    return vram_path
+            except Exception as e:
+                self._logger.debug(f"VRAM suggestion strategy failed: {e}")
+                continue
+
+        self._logger.debug("No VRAM suggestion found")
+        return ""
+
+    def is_injection_active(self) -> bool:
+        """Check if injection is currently active"""
+        return bool(self._current_worker and self._current_worker.isRunning())
+
+    def _connect_worker_signals(self) -> None:
+        """Connect worker signals to manager signals"""
+        if not self._current_worker:
+            return
+
+        # Common signals for both worker types
+        worker = self._current_worker  # Type narrowing for safety
+        worker.progress.connect(self._on_worker_progress)
+        if hasattr(worker, "injection_finished"):
+            worker.injection_finished.connect(self._on_worker_finished)
+        else:
+            # Fallback to QThread's finished signal
+            worker.finished.connect(lambda: self._on_worker_finished(True, "Completed"))
+
+        # ROM-specific signals
+        if hasattr(worker, "progress_percent"):
+            worker.progress_percent.connect(self.progress_percent.emit)
+        if hasattr(worker, "compression_info"):
+            worker.compression_info.connect(self.compression_info.emit)
+
+    def _on_worker_progress(self, message: str) -> None:
+        """Handle worker progress updates"""
+        self.injection_progress.emit(message)
+
+    def _on_worker_finished(self, success: bool, message: str) -> None:
+        """Handle worker completion"""
+        self._finish_operation("injection")
+        self.injection_finished.emit(success, message)
+
+        if success:
+            self._logger.info(f"Injection completed successfully: {message}")
+        else:
+            self._logger.error(f"Injection failed: {message}")
+
+    def _try_extraction_panel_vram(self) -> str:
+        """Try to get VRAM path from extraction panel's current session"""
+        try:
+            session_manager = self._get_session_manager()
+            vram_path = session_manager.get("session", "vram_path", "")
+            if vram_path and os.path.exists(vram_path):
+                return vram_path
+        except Exception:
+            pass
+        return ""
+
+    def _try_metadata_vram(self, metadata_path: str, sprite_path: str) -> str:
+        """Try to get VRAM path from metadata file"""
+        if not metadata_path or not os.path.exists(metadata_path):
+            return ""
+
+        try:
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+            vram_path = metadata.get("source_vram", "")
+            if vram_path and os.path.exists(vram_path):
+                return vram_path
+        except Exception:
+            pass
+        return ""
+
+    def _try_basename_vram_patterns(self, sprite_path: str) -> str:
+        """Try to find VRAM file using basename patterns"""
+        sprite_path_obj = Path(sprite_path)
+        sprite_dir = sprite_path_obj.parent
+        base_name = sprite_path_obj.stem
+
+        # Common VRAM file patterns
+        patterns = [
+            f"{base_name}.dmp",
+            f"{base_name}_VRAM.dmp",
+            f"{base_name}.vram",
+            "VRAM.dmp",
+            "vram.dmp",
+        ]
+
+        for pattern in patterns:
+            vram_path = sprite_dir / pattern
+            if vram_path.exists():
+                return str(vram_path)
+        return ""
+
+    def _try_session_vram(self) -> str:
+        """Try to get VRAM path from session data"""
+        try:
+            session_manager = self._get_session_manager()
+            recent_vram = session_manager.get_recent_files("vram")
+            if recent_vram and os.path.exists(recent_vram[0]):
+                return recent_vram[0]
+        except Exception:
+            pass
+        return ""
+
+    def _try_last_injection_vram(self) -> str:
+        """Try to get VRAM path from last injection settings"""
+        try:
+            session_manager = self._get_session_manager()
+            last_injection_vram = session_manager.get(
+                SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM, ""
+            )
+            if last_injection_vram and os.path.exists(last_injection_vram):
+                return last_injection_vram
+        except Exception:
+            pass
+        return ""
+
+    def load_metadata(self, metadata_path: str) -> dict[str, Any] | None:
+        """
+        Load and parse metadata file
+
+        Args:
+            metadata_path: Path to metadata JSON file
+
+        Returns:
+            Parsed metadata dict with extraction info, or None if loading fails
+        """
+        if not metadata_path or not os.path.exists(metadata_path):
+            return None
+
+        try:
+            with open(metadata_path) as f:
+                metadata = json.load(f)
+
+            # Parse extraction info if available
+            if "extraction" in metadata:
+                extraction = metadata["extraction"]
+                source_type = extraction.get("source_type", "vram")
+
+                parsed_info = {
+                    "metadata": metadata,
+                    "source_type": source_type,
+                    "extraction": extraction
+                }
+
+                if source_type == "rom":
+                    # ROM extraction metadata
+                    parsed_info["rom_extraction_info"] = {
+                        "rom_source": extraction.get("rom_source", ""),
+                        "rom_offset": extraction.get("rom_offset", "0x0"),
+                        "sprite_name": extraction.get("sprite_name", ""),
+                        "tile_count": extraction.get("tile_count", "Unknown")
+                    }
+                    parsed_info["extraction_vram_offset"] = None
+                    parsed_info["default_vram_offset"] = "0xC000"
+                else:
+                    # VRAM extraction metadata
+                    vram_offset = extraction.get("vram_offset", "0xC000")
+                    parsed_info["extraction_vram_offset"] = vram_offset
+                    parsed_info["rom_extraction_info"] = None
+
+                return parsed_info
+            return {
+                "metadata": metadata,
+                "source_type": "vram",
+                "extraction": None,
+                "extraction_vram_offset": None,
+                "rom_extraction_info": None,
+                "default_vram_offset": "0xC000"
+            }
+
+        except Exception as e:
+            self._logger.warning(f"Failed to load metadata from {metadata_path}: {e}")
+            return None
+
+    def load_rom_info(self, rom_path: str) -> dict[str, Any] | None:
+        """
+        Load ROM information and sprite locations
+
+        Args:
+            rom_path: Path to ROM file
+
+        Returns:
+            Dict containing:
+                - header: ROM header info
+                - sprite_locations: Dict of sprite name -> offset
+                - error: Error message if failed
+            Or None if loading completely fails
+        """
+        try:
+            # Validate ROM file exists and is readable
+            if not os.path.exists(rom_path):
+                return {
+                    "error": f"ROM file not found: {rom_path}",
+                    "error_type": "FileNotFoundError"
+                }
+
+            if not os.access(rom_path, os.R_OK):
+                return {
+                    "error": f"Cannot read ROM file: {rom_path}",
+                    "error_type": "PermissionError"
+                }
+
+            # Check file size is reasonable for a SNES ROM
+            file_size = os.path.getsize(rom_path)
+            if file_size < 0x8000:  # Minimum reasonable SNES ROM size (32KB)
+                return {
+                    "error": f"File too small to be a valid SNES ROM: {file_size} bytes",
+                    "error_type": "ValueError"
+                }
+            if file_size > 0x600000:  # Maximum reasonable size (6MB)
+                return {
+                    "error": f"File too large to be a valid SNES ROM: {file_size} bytes",
+                    "error_type": "ValueError"
+                }
+
+            # Get extraction manager to read ROM header
+            from spritepal.core.managers import get_extraction_manager
+            extraction_manager = get_extraction_manager()
+            header = extraction_manager.read_rom_header(rom_path)
+
+            result = {
+                "header": {
+                    "title": header.title,
+                    "rom_type": header.rom_type,
+                    "checksum": header.checksum
+                },
+                "sprite_locations": {}
+            }
+
+            # Get sprite locations if this is Kirby Super Star
+            if "KIRBY" in header.title.upper():
+                try:
+                    locations = extraction_manager.get_known_sprite_locations(rom_path)
+                    # Convert to simple dict of name -> offset
+                    sprite_dict = {}
+                    for name, pointer in locations.items():
+                        display_name = name.replace("_", " ").title()
+                        sprite_dict[display_name] = pointer.offset
+                    result["sprite_locations"] = sprite_dict
+                except Exception as sprite_error:
+                    self._logger.warning(f"Failed to load sprite locations: {sprite_error}")
+                    result["sprite_locations_error"] = str(sprite_error)
+
+            return result
+
+        except Exception as e:
+            self._logger.exception("Failed to load ROM info")
+            return {
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+
+    def find_suggested_input_vram(self, sprite_path: str, metadata: dict[str, Any] | None = None,
+                                  suggested_vram: str = "") -> str:
+        """
+        Find the best suggestion for input VRAM path
+
+        Args:
+            sprite_path: Path to sprite file
+            metadata: Loaded metadata dict (from load_metadata)
+            suggested_vram: Pre-suggested VRAM path
+
+        Returns:
+            Suggested VRAM path or empty string if none found
+        """
+        # If we already have a suggestion, use it
+        if suggested_vram and os.path.exists(suggested_vram):
+            return suggested_vram
+
+        # Try metadata first
+        if metadata and metadata.get("extraction"):
+            vram_source = metadata["extraction"].get("vram_source", "")
+            if vram_source and sprite_path:
+                # Look for the file in the sprite's directory
+                sprite_dir = os.path.dirname(sprite_path)
+                possible_path = os.path.join(sprite_dir, vram_source)
+                if os.path.exists(possible_path):
+                    return possible_path
+
+        # Try to find VRAM file with same base name as sprite
+        if sprite_path:
+            sprite_dir = os.path.dirname(sprite_path)
+            sprite_base = os.path.splitext(os.path.basename(sprite_path))[0]
+
+            # Remove common sprite suffixes to find original base
+            for suffix in ["_sprites_editor", "_sprites", "_editor", "Edited"]:
+                if sprite_base.endswith(suffix):
+                    sprite_base = sprite_base[: -len(suffix)]
+                    break
+
+            # Try common VRAM file patterns
+            vram_patterns = [
+                f"{sprite_base}.dmp",
+                f"{sprite_base}.SnesVideoRam.dmp",
+                f"{sprite_base}_VRAM.dmp",
+                f"{sprite_base}.VideoRam.dmp",
+                f"{sprite_base}.VRAM.dmp",
+            ]
+
+            for pattern in vram_patterns:
+                possible_path = os.path.join(sprite_dir, pattern)
+                if os.path.exists(possible_path):
+                    return possible_path
+
+        # Check session data from settings manager
+        session_manager = self._get_session_manager()
+        session_data = session_manager.get_session_data()
+        if SETTINGS_KEY_VRAM_PATH in session_data:
+            vram_path = session_data[SETTINGS_KEY_VRAM_PATH]
+            if vram_path and os.path.exists(vram_path):
+                return vram_path
+
+        # Check last used injection VRAM
+        last_injection_vram = session_manager.get(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM, ""
+        )
+        if last_injection_vram and os.path.exists(last_injection_vram):
+            return last_injection_vram
+
+        return ""
+
+    def suggest_output_vram_path(self, input_vram_path: str) -> str:
+        """
+        Suggest output VRAM path based on input path with smart numbering
+
+        Args:
+            input_vram_path: Input VRAM file path
+
+        Returns:
+            Suggested output path
+        """
+        base = os.path.splitext(input_vram_path)[0]
+
+        # Check if base already ends with "_injected" to avoid duplication
+        if base.endswith("_injected"):
+            base = base[:-9]  # Remove "_injected"
+
+        # Try _injected first
+        suggested_path = f"{base}_injected.dmp"
+        if not os.path.exists(suggested_path):
+            return suggested_path
+
+        # If _injected exists, try _injected2, _injected3, etc.
+        counter = 2
+        while counter <= 10:  # Reasonable limit
+            suggested_path = f"{base}_injected{counter}.dmp"
+            if not os.path.exists(suggested_path):
+                return suggested_path
+            counter += 1
+
+        # If all numbered versions exist, just use the base with timestamp
+        timestamp = int(time.time())
+        return f"{base}_injected_{timestamp}.dmp"
+
+    def suggest_output_rom_path(self, input_rom_path: str) -> str:
+        """
+        Suggest output ROM path based on input path with smart numbering
+
+        Args:
+            input_rom_path: Input ROM file path
+
+        Returns:
+            Suggested output path
+        """
+        base = os.path.splitext(input_rom_path)[0]
+        ext = os.path.splitext(input_rom_path)[1]
+
+        # Check if base already ends with "_modified" to avoid duplication
+        if base.endswith("_modified"):
+            base = base[:-9]  # Remove "_modified"
+
+        # Try _modified first
+        suggested_path = f"{base}_modified{ext}"
+        if not os.path.exists(suggested_path):
+            return suggested_path
+
+        # If _modified exists, try _modified2, _modified3, etc.
+        counter = 2
+        while counter <= 10:  # Reasonable limit
+            suggested_path = f"{base}_modified{counter}{ext}"
+            if not os.path.exists(suggested_path):
+                return suggested_path
+            counter += 1
+
+        # If all numbered versions exist, just use the base with timestamp
+        timestamp = int(time.time())
+        return f"{base}_modified_{timestamp}{ext}"
+
+    def convert_vram_to_rom_offset(self, vram_offset_str: str) -> int | None:
+        """
+        Convert VRAM offset to ROM offset based on known mappings
+
+        Args:
+            vram_offset_str: VRAM offset as string (e.g., "0xC000") or int
+
+        Returns:
+            ROM offset as integer, or None if no mapping found
+        """
+        try:
+            # Parse VRAM offset
+            if isinstance(vram_offset_str, str):
+                vram_offset = int(vram_offset_str, 16)
+            else:
+                vram_offset = vram_offset_str
+
+            # Known VRAM to ROM mappings for Kirby Super Star
+            # VRAM 0xC000 (sprite area) typically maps to ROM locations for sprite data
+            if vram_offset == 0xC000:
+                # Default to Kirby Normal sprite location
+                return 0x0C8000
+
+            # For other offsets, no direct mapping available
+            # Could be extended with more mappings in the future
+            return None
+
+        except (ValueError, TypeError):
+            return None
+
+    def save_rom_injection_settings(self, input_rom: str, sprite_location_text: str,
+                                    custom_offset: str, fast_compression: bool) -> None:
+        """
+        Save ROM injection parameters to settings for future use
+
+        Args:
+            input_rom: Input ROM path
+            sprite_location_text: Selected sprite location text from combo box
+            custom_offset: Custom offset text if used
+            fast_compression: Fast compression checkbox state
+        """
+        session_manager = self._get_session_manager()
+
+        # Save input ROM path
+        if input_rom:
+            session_manager.set(
+                SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM, input_rom
+            )
+
+        # Save sprite location (from combo box)
+        if sprite_location_text and sprite_location_text != "Select sprite location...":
+            session_manager.set(
+                SETTINGS_NS_ROM_INJECTION,
+                SETTINGS_KEY_LAST_SPRITE_LOCATION,
+                sprite_location_text
+            )
+
+        # Save custom offset if used
+        if custom_offset:
+            session_manager.set(
+                SETTINGS_NS_ROM_INJECTION,
+                SETTINGS_KEY_LAST_CUSTOM_OFFSET,
+                custom_offset
+            )
+
+        # Save fast compression setting
+        session_manager.set(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_FAST_COMPRESSION, fast_compression
+        )
+
+        # Save settings to file
+        try:
+            session_manager.save()
+        except Exception:
+            self._logger.exception("Failed to save ROM injection parameters")
+
+    def load_rom_injection_defaults(self, sprite_path: str, metadata: dict[str, Any] | None = None
+                                   ) -> dict[str, Any]:
+        """
+        Load ROM injection defaults from metadata or saved settings
+
+        Args:
+            sprite_path: Path to sprite file
+            metadata: Loaded metadata dict (from load_metadata)
+
+        Returns:
+            Dict containing:
+                - input_rom: Suggested input ROM path
+                - output_rom: Suggested output ROM path
+                - rom_offset: Suggested ROM offset (int)
+                - sprite_location_index: Index to select in combo box
+                - custom_offset: Custom offset text
+                - fast_compression: Fast compression setting
+        """
+        session_manager = self._get_session_manager()
+        result = {
+            "input_rom": "",
+            "output_rom": "",
+            "rom_offset": None,
+            "sprite_location_index": None,
+            "custom_offset": "",
+            "fast_compression": False
+        }
+
+        # Check if we have ROM extraction metadata
+        if metadata and metadata.get("rom_extraction_info"):
+            rom_info = metadata["rom_extraction_info"]
+            rom_source = rom_info.get("rom_source", "")
+            rom_offset_str = rom_info.get("rom_offset", "0x0")
+
+            # Look for the ROM file in the sprite's directory
+            if rom_source and sprite_path:
+                sprite_dir = os.path.dirname(sprite_path)
+                possible_rom_path = os.path.join(sprite_dir, rom_source)
+                if os.path.exists(possible_rom_path):
+                    result["input_rom"] = possible_rom_path
+                    result["output_rom"] = self.suggest_output_rom_path(possible_rom_path)
+
+                    # Parse the ROM offset
+                    try:
+                        if rom_offset_str.startswith(("0x", "0X")):
+                            result["rom_offset"] = int(rom_offset_str, 16)
+                        else:
+                            result["rom_offset"] = int(rom_offset_str, 16)
+                        result["custom_offset"] = rom_offset_str
+                    except (ValueError, TypeError):
+                        pass
+
+                    return result
+
+        # Fall back to saved settings
+        last_input_rom = session_manager.get(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM, ""
+        )
+        if last_input_rom and os.path.exists(last_input_rom):
+            result["input_rom"] = last_input_rom
+            result["output_rom"] = self.suggest_output_rom_path(last_input_rom)
+
+        # Load last used custom offset
+        result["custom_offset"] = session_manager.get(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_CUSTOM_OFFSET, ""
+        )
+
+        # Load fast compression setting
+        result["fast_compression"] = session_manager.get(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_FAST_COMPRESSION, False
+        )
+
+        return result
+
+    def restore_saved_sprite_location(self, extraction_vram_offset: str | None,
+                                     sprite_locations: dict[str, int]) -> dict[str, Any]:
+        """
+        Restore saved sprite location selection
+
+        Args:
+            extraction_vram_offset: VRAM offset from extraction metadata
+            sprite_locations: Dict of sprite name -> offset from loaded ROM
+
+        Returns:
+            Dict containing:
+                - sprite_location_name: Name to select in combo box
+                - sprite_location_index: Index to select (1-based)
+                - custom_offset: Custom offset text if no match
+        """
+        session_manager = self._get_session_manager()
+        result = {
+            "sprite_location_name": None,
+            "sprite_location_index": None,
+            "custom_offset": ""
+        }
+
+        # First, try to use extraction offset if available
+        if extraction_vram_offset:
+            # Convert VRAM offset to ROM offset and find matching sprite location
+            rom_offset = self.convert_vram_to_rom_offset(extraction_vram_offset)
+            if rom_offset is not None:
+                # Find sprite location that matches this offset
+                for i, (name, offset) in enumerate(sprite_locations.items(), 1):
+                    if offset == rom_offset:
+                        result["sprite_location_name"] = name
+                        result["sprite_location_index"] = i
+                        return result
+                # If no exact match, set custom offset
+                result["custom_offset"] = f"0x{rom_offset:X}"
+                return result
+
+        # Fall back to saved sprite location
+        last_sprite_location = session_manager.get(
+            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_SPRITE_LOCATION, ""
+        )
+        if last_sprite_location:
+            # Extract display name from saved text (remove offset part if present)
+            saved_display_name = last_sprite_location.split(" (0x")[0] if " (0x" in last_sprite_location else last_sprite_location
+
+            # Find matching sprite location in dict
+            for i, name in enumerate(sprite_locations.keys(), 1):
+                if name == saved_display_name:
+                    result["sprite_location_name"] = name
+                    result["sprite_location_index"] = i
+                    break
+
+        return result

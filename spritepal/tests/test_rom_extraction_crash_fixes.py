@@ -47,7 +47,7 @@ class TestSignalLoopFixes:
         dialog.sprite_location_combo.setCurrentIndex(1)
 
         # Verify the offset field was updated
-        assert dialog.rom_offset_hex_edit.text() == "0x8000"
+        assert dialog.rom_offset_input.hex_edit.text() == "0x8000"
 
         # Verify the signal handler was NOT called due to signal blocking
         assert not rom_offset_changed_called
@@ -74,7 +74,7 @@ class TestSignalLoopFixes:
         dialog._on_sprite_location_changed = mock_sprite_location_changed
 
         # Manually change the offset field
-        dialog.rom_offset_hex_edit.setText("0x9000")
+        dialog.rom_offset_input.hex_edit.setText("0x9000")
 
         # Verify the combo box was reset to index 0
         assert dialog.sprite_location_combo.currentIndex() == 0
@@ -110,7 +110,7 @@ class TestOffsetParsingFixes:
         ]
 
         for input_text, expected in test_cases:
-            result = dialog._parse_hex_offset(input_text)
+            result = dialog.rom_offset_input._parse_hex_offset(input_text)
             assert result == expected, f"Failed for input: '{input_text}'"
 
     def test_parse_hex_offset_invalid_formats(self, injection_dialog):
@@ -130,7 +130,7 @@ class TestOffsetParsingFixes:
         ]
 
         for invalid_input in invalid_inputs:
-            result = dialog._parse_hex_offset(invalid_input)
+            result = dialog.rom_offset_input._parse_hex_offset(invalid_input)
             assert result is None, f"Should have failed for input: '{invalid_input}'"
 
     def test_offset_validation_in_get_parameters(self, injection_dialog):
@@ -138,24 +138,26 @@ class TestOffsetParsingFixes:
         dialog = injection_dialog
 
         # Set up dialog for ROM injection
-        dialog.tabs.setCurrentIndex(1)  # ROM tab
-        dialog.sprite_path_edit.setText("/fake/sprite.png")
-        dialog.input_rom_edit.setText("/fake/input.sfc")
-        dialog.output_rom_edit.setText("/fake/output.sfc")
+        dialog.set_current_tab(1)  # ROM tab
 
-        # Test invalid offset
-        dialog.rom_offset_hex_edit.setText("invalid_hex")
+        # Mock file selectors to avoid UI blocking
+        with patch.object(dialog.sprite_file_selector, "get_path", return_value="/fake/sprite.png"), \
+             patch.object(dialog.input_rom_selector, "get_path", return_value="/fake/input.sfc"), \
+             patch.object(dialog.output_rom_selector, "get_path", return_value="/fake/output.sfc"):
 
-        # Mock QDialog.accept and dialog result
-        dialog.setResult(dialog.DialogCode.Accepted)
+            # Test invalid offset
+            dialog.rom_offset_input.hex_edit.setText("invalid_hex")
 
-        # Should return None due to invalid offset
-        with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
-            result = dialog.get_parameters()
-            assert result is None
-            mock_warning.assert_called_once()
-            args = mock_warning.call_args[0]
-            assert "Invalid ROM offset value" in args[2]
+            # Mock QDialog.accept and dialog result
+            dialog.setResult(dialog.DialogCode.Accepted)
+
+            # Should return None due to invalid offset
+            with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
+                result = dialog.get_parameters()
+                assert result is None
+                mock_warning.assert_called_once()
+                args = mock_warning.call_args[0]
+                assert "Invalid ROM offset value" in args[2]
 
 
 class TestROMLoadingSafety:
@@ -316,24 +318,28 @@ class TestInputValidation:
         return dialog
 
     def test_real_time_offset_validation(self, injection_dialog):
-        """Test real-time validation feedback for offset input"""
+        """Test offset input accepts various formats"""
         dialog = injection_dialog
 
-        # Test valid input shows decimal conversion
-        dialog._on_offset_changed("0x8000")
-        assert dialog.offset_dec_label.text() == "32768"
+        # Test valid hex input formats are accepted
+        test_cases = [
+            "0x8000",
+            "0X8000",
+            "8000",
+            "ABCD",
+            "  0x1234  ",  # with whitespace
+        ]
 
-        # Test invalid input shows "Invalid"
-        dialog._on_offset_changed("invalid")
-        assert dialog.offset_dec_label.text() == "Invalid"
+        for test_input in test_cases:
+            dialog.rom_offset_input.hex_edit.setText(test_input)
+            # Just verify the text was set - the widget doesn't have decimal display
+            assert dialog.rom_offset_input.hex_edit.text() == test_input
 
-        # Test empty input shows empty label
-        dialog._on_offset_changed("")
-        assert dialog.offset_dec_label.text() == ""
-
-        # Test whitespace-only input shows empty label
-        dialog._on_offset_changed("   ")
-        assert dialog.offset_dec_label.text() == ""
+        # Test that parsing works correctly through the internal method
+        assert dialog.rom_offset_input._parse_hex_offset("0x8000") == 0x8000
+        assert dialog.rom_offset_input._parse_hex_offset("invalid") is None
+        assert dialog.rom_offset_input._parse_hex_offset("") is None
+        assert dialog.rom_offset_input._parse_hex_offset("   ") is None
 
     def test_comprehensive_parameter_validation(self, injection_dialog):
         """Test comprehensive parameter validation in get_parameters"""
@@ -343,12 +349,16 @@ class TestInputValidation:
         dialog.setResult(dialog.DialogCode.Accepted)
 
         # Test ROM injection tab
-        dialog.tabs.setCurrentIndex(1)
+        dialog.set_current_tab(1)
 
         # Test missing sprite path
-        with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
-            result = dialog.get_parameters()
-            assert result is None
-            mock_warning.assert_called_once()
-            args = mock_warning.call_args[0]
-            assert "sprite file" in args[2]
+        with patch.object(dialog.sprite_file_selector, "get_path", return_value=""), \
+             patch.object(dialog.input_rom_selector, "get_path", return_value=""), \
+             patch.object(dialog.output_rom_selector, "get_path", return_value=""):
+
+            with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
+                result = dialog.get_parameters()
+                assert result is None
+                mock_warning.assert_called_once()
+                args = mock_warning.call_args[0]
+                assert "sprite file" in args[2].lower()

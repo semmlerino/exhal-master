@@ -156,7 +156,7 @@ class SettingsManager:
             self.get(
                 "paths",
                 "default_dumps_dir",
-                r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger",
+                r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger"
             )
         )
         if default_dir and os.path.exists(default_dir):
@@ -172,8 +172,12 @@ class SettingsManager:
             self.save_settings()
 
 
+# Global instance variable
+_settings_manager_instance: SettingsManager | None = None
+
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance"""
-    if not hasattr(get_settings_manager, "_instance"):
-        get_settings_manager._instance = SettingsManager()
-    return get_settings_manager._instance
+    global _settings_manager_instance
+    if _settings_manager_instance is None:
+        _settings_manager_instance = SettingsManager()
+    return _settings_manager_instance

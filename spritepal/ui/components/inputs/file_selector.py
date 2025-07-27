@@ -1,0 +1,196 @@
+"""
+File selector component with browse functionality
+
+Provides a standardized file selection widget with path input and browse button,
+exactly replicating the file selection patterns from InjectionDialog.
+"""
+
+import os
+from typing import Callable
+
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QWidget
+)
+
+from spritepal.utils.settings_manager import get_settings_manager
+
+
+class FileSelector(QWidget):
+    """
+    File selector widget with path input and browse functionality.
+
+    Features:
+    - Path input field (can be read-only or editable)
+    - Browse button with file dialogs
+    - Support for open/save dialogs with file filters
+    - Settings manager integration for directory tracking
+    - Validation state (file exists/doesn't exist)
+    - callback functionality after selection
+
+    Exactly replicates the file selection patterns from InjectionDialog.
+    """
+
+    # Signals
+    file_selected = pyqtSignal(str)     # Emits selected file path
+    path_changed = pyqtSignal(str)      # Emits when path text changes
+
+    def __init__(
+        self,
+        parent=None,
+        label_text: str = "",
+        placeholder: str = "",
+        browse_text: str = "Browse...",
+        dialog_title: str = "Select File",
+        file_filter: str = "All Files (*.*)",
+        mode: str = "open",  # "open" or "save"
+        read_only: bool = False,
+        initial_path: str = "",
+        selection_callback: Callable[[str], None] | None = None,
+        settings_key: str | None = None,
+        settings_namespace: str | None = None
+    ):
+        super().__init__(parent)
+
+        self._dialog_title = dialog_title
+        self._file_filter = file_filter
+        self._mode = mode
+        self._selection_callback = selection_callback
+        self._settings_key = settings_key
+        self._settings_namespace = settings_namespace
+
+        # Create UI components
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        # label
+        if label_text:
+            self.label = QLabel(label_text)
+            self.layout.addWidget(self.label)
+
+        # Path input field
+        self.path_edit = QLineEdit(initial_path)
+        self.path_edit.setPlaceholderText(placeholder)
+        self.path_edit.setReadOnly(read_only)
+        self._ = path_edit.textChanged.connect(self._on_path_changed)
+        self.layout.addWidget(self.path_edit)
+
+        # Browse button
+        self.browse_button = QPushButton(browse_text)
+        self._ = browse_button.clicked.connect(self._browse_file)
+        self.layout.addWidget(self.browse_button)
+
+    def _on_path_changed(self, text: str):
+        """Handle path text changes"""
+        self.path_changed.emit(text)
+
+    def _browse_file(self):
+        """
+        Browse for file using appropriate dialog.
+
+        Exactly replicates the file browsing logic from InjectionDialog.
+        """
+        settings = get_settings_manager()
+
+        # Determine initial directory
+        current_path = self.path_edit.text()
+        if current_path and os.path.exists(current_path):
+            if os.path.isfile(current_path):
+                default_dir = os.path.dirname(current_path)
+                initial_path = current_path
+            else:
+                default_dir = current_path
+                initial_path = current_path
+        else:
+            default_dir = settings.get_default_directory()
+            initial_path = default_dir
+
+        # Show appropriate file dialog
+        filename = None
+        if self._mode == "open":
+            filename, _ = QFileDialog.getOpenFileName(
+                self,
+                self._dialog_title,
+                initial_path,
+                self._file_filter
+            )
+        elif self._mode == "save":
+            # For save dialogs, use current text as initial suggestion if available
+            initial_path = current_path if current_path else initial_path
+            filename, _ = QFileDialog.getSaveFileName(
+                self,
+                self._dialog_title,
+                initial_path,
+                self._file_filter
+            )
+
+        if filename:
+            # Update the path
+            self.path_edit.setText(filename)
+
+            # Update settings manager with last used directory
+            settings.set_last_used_directory(os.path.dirname(filename))
+
+            # Save to specific settings key if provided
+            if self._settings_key and self._settings_namespace:
+                settings.set_value(self._settings_namespace, self._settings_key, filename)
+            elif self._settings_key:
+                # Use default namespace if only key provided
+                settings.set_value("file_selector", self._settings_key, filename)
+
+            # Emit signal
+            self.file_selected.emit(filename)
+
+            # Call selection callback if provided
+            if self._selection_callback:
+                try:
+                    self._selection_callback(filename)
+                except Exception as e:
+                    # Log error but don't crash
+                    print(f"Error in file selection callback: {e}")
+
+    def get_path(self) -> str:
+        """Get the current file path"""
+        return self.path_edit.text()
+
+    def set_path(self, path: str):
+        """Set the file path"""
+        self.path_edit.setText(path)
+
+    def clear_path(self):
+        """Clear the file path"""
+        self.path_edit.clear()
+
+    def is_valid(self) -> bool:
+        """Check if current path exists (for validation)"""
+        path = self.get_path()
+        if not path:
+            return True  # Empty path is considered valid (optional field)
+
+        if self._mode == "open":
+            return os.path.exists(path) and os.path.isfile(path)
+        # save mode
+        # For save mode, check if directory exists
+        dir_path = os.path.dirname(path)
+        return os.path.exists(dir_path) if dir_path else True
+
+    def set_placeholder(self, placeholder: str):
+        """Set the placeholder text"""
+        self.path_edit.setPlaceholderText(placeholder)
+
+    def set_read_only(self, read_only: bool):
+        """Set read-only state of the path input"""
+        self.path_edit.setReadOnly(read_only)
+
+    def setFocus(self):
+        """Set focus to the path input field"""
+        self.path_edit.setFocus()
+
+    def set_browse_enabled(self, enabled: bool):
+        """Enable/disable the browse button"""
+        self.browse_button.setEnabled(enabled)

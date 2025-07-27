@@ -389,11 +389,11 @@ class PreviewPanel(QWidget):
 
         # Zoom controls
         self.zoom_fit_btn = QPushButton("Fit")
-        self.zoom_fit_btn.clicked.connect(self.preview.zoom_to_fit)
+        self._ = zoom_fit_btn.clicked.connect(self.preview.zoom_to_fit)
         self.zoom_fit_btn.setMaximumWidth(60)
 
         self.zoom_reset_btn = QPushButton("1:1")
-        self.zoom_reset_btn.clicked.connect(self.preview.reset_view)
+        self._ = zoom_reset_btn.clicked.connect(self.preview.reset_view)
         self.zoom_reset_btn.setMaximumWidth(60)
 
         # Help text
@@ -518,6 +518,14 @@ class PreviewPanel(QWidget):
         self.palette_toggle.setChecked(False)
         self.palette_selector.setEnabled(False)
         self.preview.clear()
+
+    def clear_preview(self) -> None:
+        """Clear the preview (alias for clear)"""
+        self.clear()
+
+    def get_tile_info(self) -> tuple[int, int]:
+        """Get tile information from the preview widget"""
+        return self.preview.get_tile_info()
 
     def set_grayscale_image(self, pil_image: Any) -> None:
         """Set the grayscale PIL image for palette application"""

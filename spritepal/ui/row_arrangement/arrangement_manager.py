@@ -14,7 +14,7 @@ class ArrangementManager(QObject):
     row_removed = pyqtSignal(int)  # Emitted when a row is removed
     arrangement_cleared = pyqtSignal()  # Emitted when arrangement is cleared
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._arranged_rows: list[int] = []
 

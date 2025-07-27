@@ -10,7 +10,7 @@ from spritepal.utils.exceptions import FileFormatError
 class RowImageProcessor:
     """Handles sprite image loading and row extraction"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tile_width: int = 0
         self.tile_height: int = 0
 

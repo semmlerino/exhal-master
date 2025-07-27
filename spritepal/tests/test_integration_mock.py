@@ -3,90 +3,45 @@ Mock-based integration tests that work in any environment.
 These tests mock Qt components to test business logic without requiring a display.
 """
 
-import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
-# Add parent directories to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
+# Imports handled by centralized conftest.py path setup
 from spritepal.core.controller import ExtractionController, ExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.palette_manager import PaletteManager
-from spritepal.utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 
-
-@pytest.fixture(autouse=True)
-def setup_managers():
-    """Setup managers for all tests"""
-    initialize_managers("TestApp")
-    yield
-    cleanup_managers()
+# Manager setup handled by centralized conftest.py
 
 
 class TestExtractionWorkerMocked:
     """Test ExtractionWorker with mocked Qt components"""
 
-    @pytest.fixture
-    def mock_signals(self):
-        """Create mock signals that behave like Qt signals"""
-        from .fixtures.qt_mocks import create_mock_signals
-        return create_mock_signals()
-
-    @pytest.fixture
-    def worker_params(self, tmp_path):
-        """Create test parameters"""
-        # Create minimal test files
-        vram_data = bytearray(0x10000)
-        for i in range(10):
-            offset = VRAM_SPRITE_OFFSET + i * BYTES_PER_TILE
-            for j in range(BYTES_PER_TILE):
-                vram_data[offset + j] = (i + j) % 256
-
-        cgram_data = bytearray(512)
-        cgram_data[256] = 0x1F
-        cgram_data[257] = 0x00
-
-        vram_path = tmp_path / "test.vram"
-        cgram_path = tmp_path / "test.cgram"
-
-        vram_path.write_bytes(vram_data)
-        cgram_path.write_bytes(cgram_data)
-
-        return {
-            "vram_path": str(vram_path),
-            "cgram_path": str(cgram_path),
-            "output_base": str(tmp_path / "output"),
-            "create_grayscale": True,
-            "create_metadata": False,
-            "oam_path": None,
-        }
+    # Mock signals and worker params now provided by centralized fixtures
+    # No need for local fixture definitions
 
     @patch("spritepal.core.controller.pil_to_qpixmap")
     @patch("spritepal.core.controller.QThread")
     @patch("spritepal.core.controller.pyqtSignal")
     def test_worker_with_mocked_qt(
-        self, mock_signal, mock_qthread, mock_pil_to_qpixmap, worker_params, mock_signals
+        self, mock_signal, mock_qthread, mock_pil_to_qpixmap,
+        standard_test_params, mock_extraction_signals
     ):
         """Test worker functionality with mocked Qt components"""
-        # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
-        initialize_managers("TestApp")
-
+        # Manager setup handled by centralized fixture
         try:
             # Configure mocks
             mock_signal.side_effect = lambda *args: Mock()
             mock_pixmap_instance = Mock()
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
-            # Create worker normally
-            worker = ExtractionWorker(worker_params)
+            # Create worker with centralized test parameters
+            worker = ExtractionWorker(standard_test_params)
 
             # Replace signals with our mocks
-            for signal_name, mock_signal_obj in mock_signals.items():
+            for signal_name, mock_signal_obj in mock_extraction_signals.items():
                 setattr(worker, signal_name, mock_signal_obj)
 
             # Track emitted data
@@ -97,24 +52,25 @@ class TestExtractionWorkerMocked:
             # Connect handlers
             worker.progress.connect(lambda msg: progress_messages.append(msg))
             worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
-            worker.finished.connect(lambda files: finished_files.extend(files))
+            worker.extraction_finished.connect(lambda files: finished_files.extend(files))
 
             # Run the worker directly (not as thread)
             worker.run()
 
             # Verify files were created
-            assert worker.finished.emit.called
-            call_args = worker.finished.emit.call_args[0][0]
+            assert worker.extraction_finished.emit.called
+            call_args = worker.extraction_finished.emit.call_args[0][0]
             assert len(call_args) >= 1
             assert any(f.endswith(".png") for f in call_args)
 
             # If CGRAM was provided, should have palette files too
-            if worker_params.get("cgram_path"):
+            if standard_test_params.get("cgram_path"):
                 assert any(f.endswith(".pal.json") for f in call_args)
 
-        finally:
-            # Clean up managers
-            cleanup_managers()
+        except Exception as e:
+            # Add error context for debugging
+            pytest.fail(f"Test failed: {e}")
+        # Manager cleanup handled by centralized fixture
 
     @patch("spritepal.utils.image_utils.QPixmap")
     def test_pixmap_creation_mocked(self, mock_qpixmap):
@@ -150,32 +106,25 @@ class TestControllerMocked:
 
     @patch("spritepal.core.controller.QObject")
     @patch("spritepal.core.controller.ExtractionWorker")
-    def test_controller_workflow(self, mock_worker_class, mock_qobject):
+    def test_controller_workflow(
+        self, mock_worker_class, mock_qobject,
+        mock_main_window_configured, standard_test_params
+    ):
         """Test controller workflow with mocks"""
-        # Create mock main window
-        mock_main_window = Mock()
-        mock_main_window.get_extraction_params = Mock(
-            return_value={
-                "vram_path": "/test/vram.dmp",
-                "cgram_path": "/test/cgram.dmp",
-                "output_base": "/test/output",
-                "create_grayscale": True,
-                "create_metadata": True,
-                "oam_path": None,
-            }
-        )
+        # Use centralized mock main window, update its extraction params
+        mock_main_window_configured.get_extraction_params.return_value = standard_test_params
 
         # Create mock worker
         mock_worker = Mock()
         mock_worker_class.return_value = mock_worker
 
-        # Create controller
+        # Create controller with centralized mock main window
+        controller = ExtractionController(mock_main_window_configured)
 
-        # Create controller normally
-        controller = ExtractionController(mock_main_window)
-
-        # Start extraction
-        controller.start_extraction()
+        # Mock validation to allow worker creation with fake file paths
+        with patch.object(controller.extraction_manager, "validate_extraction_params"):
+            # Start extraction
+            controller.start_extraction()
 
         # Verify worker was created and started
         assert mock_worker_class.called
@@ -192,47 +141,28 @@ class TestControllerMocked:
 class TestBusinessLogicOnly:
     """Test pure business logic without Qt dependencies"""
 
-    def test_extraction_workflow_no_qt(self, tmp_path):
+    def test_extraction_workflow_no_qt(self, standard_test_params):
         """Test the extraction workflow without any Qt components"""
+        # Use centralized test data and file paths
 
-        # Create test data
-        vram_data = bytearray(0x10000)
-        cgram_data = bytearray(512)
-
-        # Add some test patterns
-        for i in range(100):
-            offset = VRAM_SPRITE_OFFSET + i * BYTES_PER_TILE
-            if offset + BYTES_PER_TILE <= len(vram_data):
-                for j in range(BYTES_PER_TILE):
-                    vram_data[offset + j] = (i * 2 + j) % 256
-
-        # Add test palettes
-        for i in range(256):
-            cgram_data[i * 2] = i % 32
-            cgram_data[i * 2 + 1] = (i // 32) % 32
-
-        # Save test files
-        vram_path = tmp_path / "test.vram"
-        cgram_path = tmp_path / "test.cgram"
-        vram_path.write_bytes(vram_data)
-        cgram_path.write_bytes(cgram_data)
-
-        # Test extraction
+        # Test extraction using centralized test files
         extractor = SpriteExtractor()
-        output_png = str(tmp_path / "output.png")
-        img, num_tiles = extractor.extract_sprites_grayscale(str(vram_path), output_png)
+        output_png = standard_test_params["output_base"] + ".png"
+        img, num_tiles = extractor.extract_sprites_grayscale(
+            standard_test_params["vram_path"], output_png
+        )
 
         assert Path(output_png).exists()
         assert num_tiles > 0
 
-        # Test palette extraction
+        # Test palette extraction using centralized test files
         palette_manager = PaletteManager()
-        palette_manager.load_cgram(str(cgram_path))
+        palette_manager.load_cgram(standard_test_params["cgram_path"])
 
         palettes = palette_manager.get_sprite_palettes()
         assert len(palettes) == 8  # Palettes 8-15
 
         # Test palette file creation
-        pal_file = str(tmp_path / "test.pal.json")
+        pal_file = standard_test_params["output_base"] + ".pal.json"
         palette_manager.create_palette_json(8, pal_file, output_png)
         assert Path(pal_file).exists()

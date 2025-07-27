@@ -7,6 +7,7 @@ from typing import Any
 
 from spritepal.core.managers.exceptions import ManagerError
 from spritepal.core.managers.extraction_manager import ExtractionManager
+from spritepal.core.managers.injection_manager import InjectionManager
 from spritepal.core.managers.session_manager import SessionManager
 from spritepal.utils.logging_config import get_logger
 
@@ -56,6 +57,7 @@ class ManagerRegistry:
 
             # Initialize other managers
             self._managers["extraction"] = ExtractionManager()
+            self._managers["injection"] = InjectionManager()
 
             # Future managers will be added here
 
@@ -101,6 +103,18 @@ class ManagerRegistry:
         """
         return self._get_manager("extraction", ExtractionManager)
 
+    def get_injection_manager(self) -> InjectionManager:
+        """
+        Get the injection manager instance
+
+        Returns:
+            InjectionManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        return self._get_manager("injection", InjectionManager)
+
     def _get_manager(self, name: str, expected_type: type) -> Any:
         """
         Get a manager by name with type checking
@@ -133,7 +147,7 @@ class ManagerRegistry:
     def is_initialized(self) -> bool:
         """Check if managers are initialized"""
         # Check that all expected managers are present
-        expected_managers = {"session", "extraction"}
+        expected_managers = {"session", "extraction", "injection"}
         return expected_managers.issubset(self._managers.keys())
 
     def get_all_managers(self) -> dict[str, Any]:
@@ -174,6 +188,19 @@ def get_extraction_manager() -> ExtractionManager:
         ManagerError: If managers not initialized
     """
     return _registry.get_extraction_manager()
+
+
+def get_injection_manager() -> InjectionManager:
+    """
+    Get the global injection manager instance
+
+    Returns:
+        InjectionManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _registry.get_injection_manager()
 
 
 def initialize_managers(app_name: str = "SpritePal") -> None:

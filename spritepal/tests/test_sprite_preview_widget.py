@@ -9,7 +9,16 @@ import pytest
 from PIL import Image
 from PyQt6.QtWidgets import QApplication
 
+from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
+
+
+@pytest.fixture(autouse=True)
+def setup_managers():
+    """Setup managers for all tests"""
+    initialize_managers("TestApp")
+    yield
+    cleanup_managers()
 
 
 class TestSpritePreviewWidget:

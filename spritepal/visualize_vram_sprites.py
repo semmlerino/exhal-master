@@ -87,7 +87,7 @@ def main():
         print(f"  Saved: {output_name}")
 
         # Also save a scaled version for better visibility
-        scaled_img = img.resize((img.width * 2, img.height * 2), Image.NEAREST)
+        scaled_img = img.resize((img.width * 2, img.height * 2), Image.Resampling.NEAREST)
         scaled_name = region_file.stem + "_scaled.png"
         scaled_img.save(scaled_name)
         print(f"  Saved scaled: {scaled_name}")

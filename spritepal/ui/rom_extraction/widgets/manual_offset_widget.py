@@ -154,13 +154,13 @@ class ManualOffsetWidget(BaseExtractionWidget):
 
         self.prev_sprite_btn = QPushButton("← Find Previous")
         self.prev_sprite_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.prev_sprite_btn.clicked.connect(self.find_prev_clicked.emit)
+        self._ = prev_sprite_btn.clicked.connect(self.find_prev_clicked.emit)
         self.prev_sprite_btn.setToolTip("Find previous sprite (Shortcut: Alt+Left)")
         nav_row.addWidget(self.prev_sprite_btn)
 
         self.next_sprite_btn = QPushButton("Find Next →")
         self.next_sprite_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.next_sprite_btn.clicked.connect(self.find_next_clicked.emit)
+        self._ = next_sprite_btn.clicked.connect(self.find_next_clicked.emit)
         self.next_sprite_btn.setToolTip("Find next sprite (Shortcut: Alt+Right)")
         nav_row.addWidget(self.next_sprite_btn)
 

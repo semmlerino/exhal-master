@@ -69,7 +69,7 @@ class ExtractionStateManager(QObject):
         ExtractionState.EXTRACTING,
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._current_state = ExtractionState.IDLE
         self._error_message: str | None = None

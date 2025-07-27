@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QTextEdit,
     QVBoxLayout,
-    QWidget,
+    QWidget
 )
 
 from spritepal.core.managers import get_extraction_manager
@@ -26,23 +26,23 @@ from spritepal.ui.dialogs import UserErrorDialog
 from spritepal.ui.dialogs.manual_offset_dialog import ManualOffsetDialog
 from spritepal.ui.rom_extraction.state_manager import (
     ExtractionState,
-    ExtractionStateManager,
+    ExtractionStateManager
 )
 from spritepal.ui.rom_extraction.widgets import (
     CGRAMSelectorWidget,
     ModeSelectorWidget,
     OutputNameWidget,
     ROMFileWidget,
-    SpriteSelectorWidget,
+    SpriteSelectorWidget
 )
 from spritepal.ui.rom_extraction.workers import (
     SpritePreviewWorker,
-    SpriteScanWorker,
+    SpriteScanWorker
 )
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from spritepal.utils.constants import (
     SETTINGS_KEY_LAST_INPUT_ROM,
-    SETTINGS_NS_ROM_INJECTION,
+    SETTINGS_NS_ROM_INJECTION
 )
 from spritepal.utils.logging_config import get_logger
 from spritepal.utils.settings_manager import get_settings_manager
@@ -128,7 +128,7 @@ class ROMExtractionPanel(QWidget):
         # Manual offset control button (replaces embedded widget)
         self.manual_offset_button = QPushButton("Open Manual Offset Control")
         self.manual_offset_button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
-        self.manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
+        self._ = manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
         self.manual_offset_button.setVisible(True)  # Show by default (manual mode)
         self.manual_offset_button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
         self.manual_offset_button.setStyleSheet("""
@@ -209,7 +209,7 @@ class ROMExtractionPanel(QWidget):
             self,
             "Select ROM File",
             default_dir,
-            "SNES ROM Files (*.sfc *.smc);;All Files (*.*)",
+            "SNES ROM Files (*.sfc *.smc);;All Files (*.*)"
         )
 
         if filename:
@@ -359,9 +359,9 @@ class ROMExtractionPanel(QWidget):
 
         filename, _ = QFileDialog.getOpenFileName(
             self,
-            "Select CGRAM File (Optional)",
+            "Select CGRAM File ()",
             default_dir,
-            "CGRAM Files (*.dmp *.bin);;All Files (*.*)",
+            "CGRAM Files (*.dmp *.bin);;All Files (*.*)"
         )
 
         if filename:
@@ -393,7 +393,7 @@ class ROMExtractionPanel(QWidget):
                     display_name = name.replace("_", " ").title()
                     self.sprite_selector_widget.add_sprite(
                         f"{display_name} (0x{pointer.offset:06X})",
-                        (name, pointer.offset),
+                        (name, pointer.offset)
                     )
                 self.sprite_locations = locations
                 self.sprite_selector_widget.set_enabled(True)
@@ -401,7 +401,7 @@ class ROMExtractionPanel(QWidget):
                 # Change button text to indicate scanner is optional
                 self.sprite_selector_widget.set_find_button_text("Scan for More Sprites")
                 self.sprite_selector_widget.set_find_button_tooltip(
-                    "Optional: Scan ROM for additional sprites not in the known list"
+                    ": Scan ROM for additional sprites not in the known list"
                 )
                 self.sprite_selector_widget.set_find_button_enabled(True)
             else:
@@ -713,7 +713,7 @@ class ROMExtractionPanel(QWidget):
             dialog.finished.connect(on_dialog_finished)
             button_box.rejected.connect(dialog.reject)
             if apply_btn:
-                apply_btn.clicked.connect(on_apply)
+                _ = apply_btn.clicked.connect(on_apply)
 
             # Start scanning
             self.scan_worker.start()

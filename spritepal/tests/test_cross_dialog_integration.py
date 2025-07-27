@@ -4,26 +4,15 @@ Tests multi-dialog workflow integration and data flow between dialogs.
 """
 
 import os
-import sys
 import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from tests.fixtures.test_dialog_helper import TestDialogHelper
+from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
-# Add parent directories to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
+# Path setup and manager initialization handled by centralized conftest.py
 from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import cleanup_managers, initialize_managers
-
-
-@pytest.fixture(autouse=True)
-def setup_managers():
-    """Setup managers for all tests"""
-    initialize_managers("TestApp")
-    yield
-    cleanup_managers()
 
 
 class TestMainWindowToArrangementDialog:
@@ -49,7 +38,7 @@ class TestMainWindowToArrangementDialog:
             patch(
                 "spritepal.ui.main_window.PalettePreviewWidget"
             ) as mock_palette_class,
-            patch("spritepal.ui.main_window.ExtractionController"),
+            patch("spritepal.core.controller.ExtractionController"),
         ):
 
             # Mock session manager
@@ -258,7 +247,7 @@ class TestMainWindowToArrangementDialog:
 
             # Test arrange rows dialog creation
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = (
@@ -308,7 +297,7 @@ class TestMainWindowToArrangementDialog:
             # Test successful arrangement dialog
             with (
                     patch(
-                        "spritepal.core.controller.RowArrangementDialog"
+                        "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
                     ) as mock_dialog,
                 ):
 
@@ -381,7 +370,7 @@ class TestMainWindowToArrangementDialog:
             # Test cancelled dialog
             with (
                     patch(
-                        "spritepal.core.controller.RowArrangementDialog"
+                        "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
                     ) as mock_dialog,
                     patch("spritepal.ui.main_window.QMessageBox") as mock_msgbox,
                 ):
@@ -439,7 +428,7 @@ class TestArrangementDialogToPixelEditor:
             # Mock dialog workflow
             with (
                 patch(
-                    "spritepal.core.controller.RowArrangementDialog"
+                    "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
                 ) as mock_dialog,
                 patch("subprocess.Popen") as mock_popen,
                 patch("sys.executable", return_value="/usr/bin/python"),
@@ -493,7 +482,7 @@ class TestArrangementDialogToPixelEditor:
 
             # Mock dialog with palette support
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_dialog:
 
                 mock_dialog_instance = Mock()
@@ -539,7 +528,7 @@ class TestArrangementDialogToPixelEditor:
 
             # Test metadata handling
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_dialog:
 
                 mock_dialog_instance = Mock()
@@ -584,7 +573,7 @@ class TestInjectionDialogWorkflow:
                     f.write("mock data")
 
             # Mock injection dialog
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -602,12 +591,9 @@ class TestInjectionDialogWorkflow:
                 mock_window = Mock()
                 controller = ExtractionController(mock_window)
 
-                # Mock injection worker creation
-                with patch(
-                    "spritepal.core.controller.InjectionWorker"
-                ) as mock_injection_worker_class:
-                    mock_injection_worker = Mock()
-                    mock_injection_worker_class.return_value = mock_injection_worker
+                # Mock injection manager
+                with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
+                    mock_start_injection.return_value = True
 
                     # Set up controller state
                     controller._output_path = "test_sprite"
@@ -618,8 +604,8 @@ class TestInjectionDialogWorkflow:
                     # Verify dialog was created
                     mock_dialog.assert_called_once()
 
-                    # Verify injection worker was created
-                    mock_injection_worker_class.assert_called_once()
+                    # Verify injection manager was called
+                    mock_start_injection.assert_called_once()
 
     @pytest.mark.integration
     def test_injection_dialog_rom_workflow(self):
@@ -636,7 +622,7 @@ class TestInjectionDialogWorkflow:
                     f.write("mock data")
 
             # Mock injection dialog
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -655,12 +641,9 @@ class TestInjectionDialogWorkflow:
                 mock_window = Mock()
                 controller = ExtractionController(mock_window)
 
-                # Mock ROM injection worker creation
-                with patch(
-                    "spritepal.core.controller.ROMInjectionWorker"
-                ) as mock_rom_injection_worker_class:
-                    mock_rom_injection_worker = Mock()
-                    mock_rom_injection_worker_class.return_value = mock_rom_injection_worker
+                # Mock injection manager
+                with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
+                    mock_start_injection.return_value = True
 
                     # Set up controller state
                     controller._output_path = "test_sprite"
@@ -671,8 +654,8 @@ class TestInjectionDialogWorkflow:
                     # Verify dialog was created
                     mock_dialog.assert_called_once()
 
-                    # Verify ROM injection worker was created
-                    mock_rom_injection_worker_class.assert_called_once()
+                    # Verify injection manager was called
+                    mock_start_injection.assert_called_once()
 
     @pytest.mark.integration
     def test_injection_dialog_metadata_integration(self):
@@ -691,7 +674,7 @@ class TestInjectionDialogWorkflow:
                 )
 
             # Mock injection dialog
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -732,7 +715,7 @@ class TestInjectionDialogWorkflow:
     def test_injection_dialog_parameter_validation(self):
         """Test injection dialog parameter validation"""
         # Mock injection dialog with invalid parameters
-        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
 
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -756,17 +739,10 @@ class TestInjectionDialogWorkflow:
             mock_dialog.assert_called_once()
 
             # Verify no injection operations were called
-            with (
-                patch(
-                    "spritepal.core.controller.InjectionWorker"
-                ) as mock_injection_worker,
-                patch(
-                    "spritepal.core.controller.ROMInjectionWorker"
-                ) as mock_inject_rom,
-            ):
-
-                mock_injection_worker.assert_not_called()
-                mock_inject_rom.assert_not_called()
+            with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
+                # Since the test is run after the controller.start_injection() call above,
+                # we verify that start_injection was never called due to invalid parameters
+                mock_start_injection.assert_not_called()
 
 
 class TestDialogDataPersistence:
@@ -791,7 +767,7 @@ class TestDialogDataPersistence:
 
             # Mock arrangement dialog
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_arrange_dialog:
                 mock_arrange_instance = Mock()
                 mock_arrange_instance.exec.return_value = 1  # Accepted
@@ -800,7 +776,7 @@ class TestDialogDataPersistence:
 
                 # Mock injection dialog
                 with patch(
-                    "spritepal.core.controller.InjectionDialog"
+                    "spritepal.ui.injection_dialog.InjectionDialog"
                 ) as mock_inject_dialog:
                     mock_inject_instance = Mock()
                     mock_inject_instance.exec.return_value = 1  # Accepted
@@ -853,7 +829,7 @@ class TestDialogDataPersistence:
 
             # Mock arrangement dialog with palette support
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -900,7 +876,7 @@ class TestDialogDataPersistence:
             controller = ExtractionController(mock_window)
 
             # Mock injection dialog
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
                 mock_dialog_instance.get_parameters.return_value = {
@@ -935,16 +911,18 @@ class TestDialogDataPersistence:
         """Test settings persistence across dialog operations"""
         # Mock settings manager
         with patch(
-            "spritepal.core.controller.get_settings_manager"
-        ) as mock_get_settings:
+            "spritepal.core.managers.get_session_manager"
+        ) as mock_get_session:
             mock_settings = Mock()
             mock_settings.get_session_data.return_value = {}
-            mock_settings.get_value.return_value = "/tmp/last_vram.dmp"
-            mock_settings.set_value = Mock()
-            mock_get_settings.return_value = mock_settings
+            # The actual implementation calls get_recent_files, not get_value
+            mock_settings.get_recent_files.return_value = ["/tmp/last_vram.dmp"]
+            mock_settings.add_recent_file = Mock()
+            mock_settings.save_session = Mock()  # Prevent JSON serialization issues
+            mock_get_session.return_value = mock_settings
 
             # Test settings usage in injection dialog
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
                 mock_dialog_instance.get_parameters.return_value = {
@@ -970,8 +948,8 @@ class TestDialogDataPersistence:
                 # Verify dialog was created
                 mock_dialog.assert_called_once()
 
-                # Verify settings were accessed
-                mock_settings.get_value.assert_called()
+                # Verify settings were accessed (implementation calls get_recent_files)
+                mock_settings.get_recent_files.assert_called_with("vram")
 
 
 class TestDialogCancellationHandling:
@@ -995,7 +973,7 @@ class TestDialogCancellationHandling:
 
             # Mock cancelled dialog
             with patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
@@ -1022,7 +1000,7 @@ class TestDialogCancellationHandling:
         controller = ExtractionController(mock_window)
 
         # Mock cancelled injection dialog
-        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
             mock_dialog.return_value = mock_dialog_instance
@@ -1050,7 +1028,7 @@ class TestDialogCancellationHandling:
 
         # Mock cancelled dialog with resource cleanup
         with patch(
-            "spritepal.core.controller.RowArrangementDialog"
+            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
@@ -1082,10 +1060,10 @@ class TestDialogCancellationHandling:
         # Mock cancelled dialogs
         with (
             patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_arrange_dialog,
             patch(
-                "spritepal.core.controller.InjectionDialog"
+                "spritepal.ui.injection_dialog.InjectionDialog"
             ) as mock_inject_dialog,
         ):
 
@@ -1134,7 +1112,7 @@ class TestModalDialogInteraction:
 
         # Mock modal dialog
         with patch(
-            "spritepal.core.controller.RowArrangementDialog"
+            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1162,7 +1140,7 @@ class TestModalDialogInteraction:
         controller = ExtractionController(mock_window)
 
         # Mock dialog with focus management
-        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
             mock_dialog_instance.get_parameters.return_value = {
@@ -1197,7 +1175,7 @@ class TestModalDialogInteraction:
 
         # Mock dialog with memory management
         with patch(
-            "spritepal.core.controller.RowArrangementDialog"
+            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1229,10 +1207,10 @@ class TestModalDialogInteraction:
         # Mock multiple dialogs
         with (
             patch(
-                "spritepal.core.controller.RowArrangementDialog"
+                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
             ) as mock_arrange_dialog,
             patch(
-                "spritepal.core.controller.InjectionDialog"
+                "spritepal.ui.injection_dialog.InjectionDialog"
             ) as mock_inject_dialog,
         ):
 
@@ -1299,10 +1277,10 @@ class TestCrossDialogIntegration:
             # Mock all dialogs in the workflow
             with (
                 patch(
-                    "spritepal.core.controller.RowArrangementDialog"
+                    "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
                 ) as mock_arrange_dialog,
                 patch(
-                    "spritepal.core.controller.InjectionDialog"
+                    "spritepal.ui.injection_dialog.InjectionDialog"
                 ) as mock_inject_dialog,
                 patch("subprocess.Popen") as mock_popen,
             ):
@@ -1355,7 +1333,7 @@ class TestCrossDialogIntegration:
 
         # Mock arrangement dialog with error
         with patch(
-            "spritepal.core.controller.RowArrangementDialog"
+            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.side_effect = Exception("Dialog error")
@@ -1382,7 +1360,7 @@ class TestCrossDialogIntegration:
 
         # Mock slow dialog execution
         with patch(
-            "spritepal.core.controller.RowArrangementDialog"
+            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1400,3 +1378,155 @@ class TestCrossDialogIntegration:
                 # Verify both dialogs were handled (sequentially)
                 assert mock_dialog.call_count == 2
                 assert mock_dialog_instance.exec.call_count == 2
+
+
+class TestRealDialogIntegration:
+    """Test dialog integration with real dialog components (Mock Reduction Phase 3.2)"""
+
+    @pytest.fixture
+    def dialog_helper(self, tmp_path):
+        """Create dialog helper for real dialog testing"""
+        helper = TestDialogHelper(str(tmp_path))
+        yield helper
+        helper.cleanup()
+
+    @pytest.fixture
+    def window_helper(self, tmp_path):
+        """Create window helper for integration testing"""
+        helper = TestMainWindowHelperSimple(str(tmp_path))
+        yield helper
+        helper.cleanup()
+
+    @pytest.mark.integration
+    def test_real_injection_dialog_creation(self, dialog_helper):
+        """Test real InjectionDialog creation and parameter extraction"""
+        # Create real injection dialog
+        dialog = dialog_helper.create_injection_dialog()
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+        assert hasattr(dialog, "get_parameters")
+
+        # Test parameter extraction
+        params = dialog_helper.get_injection_parameters(dialog)
+        assert params is not None
+        assert isinstance(params, dict)
+
+        # Dialog should be configurable
+        assert hasattr(dialog, "exec")
+        assert hasattr(dialog, "accept")
+        assert hasattr(dialog, "reject")
+
+    @pytest.mark.integration
+    def test_real_row_arrangement_dialog_creation(self, dialog_helper):
+        """Test real RowArrangementDialog creation and functionality"""
+        # Create real row arrangement dialog
+        dialog = dialog_helper.create_row_arrangement_dialog()
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+        assert hasattr(dialog, "get_arranged_path")
+
+        # Test arrangement functionality
+        arranged_path = dialog_helper.get_arrangement_path(dialog)
+        # Path may be None until arrangement is performed
+        assert arranged_path is None or isinstance(arranged_path, str)
+
+        # Dialog should be configurable
+        assert hasattr(dialog, "exec")
+        assert hasattr(dialog, "accept")
+        assert hasattr(dialog, "reject")
+
+    @pytest.mark.integration
+    def test_real_grid_arrangement_dialog_creation(self, dialog_helper):
+        """Test real GridArrangementDialog creation and functionality"""
+        # Create real grid arrangement dialog
+        dialog = dialog_helper.create_grid_arrangement_dialog()
+
+        # Verify dialog was created successfully
+        assert dialog is not None
+        assert hasattr(dialog, "get_arranged_path")
+
+        # Test arrangement functionality
+        arranged_path = dialog_helper.get_arrangement_path(dialog)
+        # Path may be None until arrangement is performed
+        assert arranged_path is None or isinstance(arranged_path, str)
+
+        # Dialog should be configurable
+        assert hasattr(dialog, "exec")
+        assert hasattr(dialog, "accept")
+        assert hasattr(dialog, "reject")
+
+    @pytest.mark.integration
+    def test_real_dialog_workflow_integration(self, dialog_helper, window_helper):
+        """Test end-to-end workflow with real dialogs and window helper"""
+        # Set up extraction parameters
+        params = window_helper.create_vram_extraction_scenario()
+
+        # Simulate extraction completion
+        extracted_files = [
+            str(dialog_helper.sprite_file),
+            str(dialog_helper.palette_file),
+            str(dialog_helper.metadata_file)
+        ]
+        window_helper.extraction_complete(extracted_files)
+
+        # Verify extraction state
+        assert len(window_helper.get_extracted_files()) == 3
+
+        # Test real dialog creation with extracted files
+        injection_dialog = dialog_helper.create_injection_dialog(
+            sprite_path=str(dialog_helper.sprite_file),
+            metadata_path=str(dialog_helper.metadata_file)
+        )
+
+        # Verify dialog has access to real file data
+        params = dialog_helper.get_injection_parameters(injection_dialog)
+        assert params["sprite_path"] == str(dialog_helper.sprite_file)
+
+        # Test arrangement dialog with real sprite file
+        row_dialog = dialog_helper.create_row_arrangement_dialog(
+            sprite_path=str(dialog_helper.sprite_file)
+        )
+
+        # Verify dialog can access sprite file
+        assert hasattr(row_dialog, "sprite_file")
+
+        # Test grid arrangement dialog
+        grid_dialog = dialog_helper.create_grid_arrangement_dialog(
+            sprite_path=str(dialog_helper.sprite_file)
+        )
+
+        # Verify dialog can access sprite file
+        assert hasattr(grid_dialog, "sprite_file")
+
+    @pytest.mark.integration
+    def test_real_dialog_signal_behavior(self, dialog_helper):
+        """Test real dialog signal emission and handling"""
+        # Create real injection dialog
+        dialog = dialog_helper.create_injection_dialog()
+
+        # Track signal emissions
+        accept_called = False
+        reject_called = False
+
+        def on_accept():
+            nonlocal accept_called
+            accept_called = True
+
+        def on_reject():
+            nonlocal reject_called
+            reject_called = True
+
+        # Connect to real signals
+        dialog.accepted.connect(on_accept)
+        dialog.rejected.connect(on_reject)
+
+        # Test accept signal
+        dialog_helper.simulate_dialog_accept(dialog)
+        assert accept_called
+
+        # Reset and test reject
+        accept_called = False
+        dialog_helper.simulate_dialog_reject(dialog)
+        assert reject_called

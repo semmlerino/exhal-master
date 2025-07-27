@@ -7,7 +7,6 @@ from typing import ClassVar
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
@@ -16,8 +15,11 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from spritepal.ui.components import BaseDialog
+from spritepal.ui.styles import get_bold_text_style, get_muted_text_style
 
-class UserErrorDialog(QDialog):
+
+class UserErrorDialog(BaseDialog):
     """Dialog that displays user-friendly error messages with recovery suggestions"""
 
     # Common error mappings
@@ -90,16 +92,20 @@ class UserErrorDialog(QDialog):
         technical_details: str | None = None,
         parent=None
     ):
-        super().__init__(parent)
-
-        # Find matching error type
+        # Find matching error type first
         error_info = self._find_error_mapping(error_message)
 
-        self.setWindowTitle(error_info.get("title", "Error"))
-        self.setModal(True)
-        self.setMinimumWidth(500)
+        # Initialize BaseDialog with error-specific configuration
+        super().__init__(
+            parent=parent,
+            title=error_info.get("title", "Error"),
+            modal=True,
+            min_size=(500, None),  # Only set minimum width
+            with_status_bar=False,
+            with_button_box=False,  # We'll create custom OK-only button box
+        )
 
-        # Main layout
+        # Create main content layout
         layout = QVBoxLayout()
         layout.setSpacing(15)
 
@@ -125,14 +131,14 @@ class UserErrorDialog(QDialog):
 
         main_message = QLabel(error_info.get("message", "An error occurred"))
         main_message.setWordWrap(True)
-        main_message.setStyleSheet("font-size: 14px; font-weight: bold;")
+        main_message.setStyleSheet(get_bold_text_style("default"))
         message_layout.addWidget(main_message)
 
         # Suggestion
         if error_info.get("suggestion"):
             suggestion_label = QLabel(error_info["suggestion"])
             suggestion_label.setWordWrap(True)
-            suggestion_label.setStyleSheet("color: #666; margin-top: 5px;")
+            suggestion_label.setStyleSheet(get_muted_text_style(color_level="dark"))
             message_layout.addWidget(suggestion_label)
 
         header_layout.addLayout(message_layout, 1)
@@ -167,12 +173,15 @@ class UserErrorDialog(QDialog):
             layout.addWidget(self.details_button)
             layout.addWidget(details_text)
 
-        # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        button_box.accepted.connect(self.accept)
-        layout.addWidget(button_box)
+        # Set the content layout
+        self.set_content_layout(layout)
 
-        self.setLayout(layout)
+        # Create custom OK-only button box
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        from spritepal.ui.styles import get_dialog_button_box_style
+        button_box.setStyleSheet(get_dialog_button_box_style())
+        button_box.accepted.connect(self.accept)
+        self.main_layout.addWidget(button_box)
 
     def _find_error_mapping(self, error_message: str) -> dict:
         """Find the appropriate error mapping based on the error message"""

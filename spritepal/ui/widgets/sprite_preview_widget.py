@@ -18,7 +18,8 @@ from PyQt6.QtWidgets import (
 )
 
 from spritepal.core.default_palette_loader import DefaultPaletteLoader
-from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.core.managers import get_extraction_manager
+from spritepal.ui.styles import get_muted_text_style, get_preview_panel_style
 from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -55,16 +56,7 @@ class SpritePreviewWidget(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setStyleSheet(
-            """
-            QLabel {
-                border: 2px solid #ccc;
-                background-color: #f0f0f0;
-                background-image: qlineargradient(x1:0, y1:0, x2:16, y2:16,
-                    stop:0 #e0e0e0, stop:0.5 #e0e0e0, stop:0.51 #f0f0f0, stop:1 #f0f0f0);
-            }
-        """
-        )
+        self.preview_label.setStyleSheet(get_preview_panel_style())
         group_layout.addWidget(self.preview_label)
 
         # Palette selector
@@ -80,7 +72,7 @@ class SpritePreviewWidget(QWidget):
 
         # Info label
         self.info_label = QLabel("No sprite loaded")
-        self.info_label.setStyleSheet("QLabel { color: #666; }")
+        self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
         group_layout.addWidget(self.info_label)
 
         group.setLayout(group_layout)
@@ -263,7 +255,8 @@ class SpritePreviewWidget(QWidget):
                 return
 
             # Use ROM extractor's conversion method
-            extractor = ROMExtractor()
+            extraction_manager = get_extraction_manager()
+            extractor = extraction_manager.get_rom_extractor()
 
             # Create temporary image from 4bpp data
             img = Image.new("L", (width, height), 0)

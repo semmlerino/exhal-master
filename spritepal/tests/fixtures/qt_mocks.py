@@ -103,7 +103,7 @@ def create_mock_signals():
         "active_palettes_ready": MockSignal(),
         "extraction_complete": MockSignal(),
         "extraction_failed": MockSignal(),
-        "finished": MockSignal(),
+        "extraction_finished": MockSignal(),
         "error": MockSignal(),
     }
 
@@ -172,3 +172,131 @@ def create_mock_extraction_worker():
     worker.isRunning = Mock(return_value=False)
 
     return worker
+
+
+def create_mock_session_manager():
+    """
+    Create a mock session manager with all required methods.
+
+    Returns:
+        Mock: Configured mock session manager
+    """
+    session_manager = Mock()
+    session_manager.get_session_data.return_value = {}
+    session_manager.save_session_data = Mock()
+    session_manager.load_settings = Mock(return_value={})
+    session_manager.save_settings = Mock()
+    session_manager.get_recent_files = Mock(return_value=[])
+    session_manager.add_recent_file = Mock()
+    session_manager.get_window_geometry = Mock(return_value=None)
+    session_manager.save_window_geometry = Mock()
+    return session_manager
+
+
+def create_mock_settings_manager():
+    """
+    Create a mock settings manager with standard configuration.
+
+    Returns:
+        Mock: Configured mock settings manager
+    """
+    settings_manager = Mock()
+    settings_manager.get_setting = Mock(return_value=None)
+    settings_manager.set_setting = Mock()
+    settings_manager.get_all_settings = Mock(return_value={})
+    settings_manager.save_settings = Mock()
+    settings_manager.load_settings = Mock()
+    settings_manager.reset_settings = Mock()
+    return settings_manager
+
+
+def create_mock_extraction_manager():
+    """
+    Create a mock extraction manager for testing.
+
+    Returns:
+        Mock: Configured mock extraction manager
+    """
+    manager = Mock()
+    manager.extract_sprites = Mock()
+    manager.get_rom_extractor = Mock()
+    manager.validate_extraction_params = Mock(return_value=True)
+    manager.create_worker = Mock()
+
+    # Add signals
+    signals = create_mock_signals()
+    for signal_name, signal in signals.items():
+        setattr(manager, signal_name, signal)
+
+    return manager
+
+
+def create_mock_injection_manager():
+    """
+    Create a mock injection manager for testing.
+
+    Returns:
+        Mock: Configured mock injection manager
+    """
+    manager = Mock()
+    manager.inject_sprites = Mock()
+    manager.validate_injection_params = Mock(return_value=True)
+    manager.get_rom_injector = Mock()
+
+    # Add common injection signals
+    manager.injection_started = MockSignal()
+    manager.injection_progress = MockSignal()
+    manager.injection_complete = MockSignal()
+    manager.injection_failed = MockSignal()
+
+    return manager
+
+
+def create_mock_file_dialogs():
+    """
+    Create mock file dialog functions for testing.
+
+    Returns:
+        dict: Dictionary of mock file dialog functions
+    """
+    return {
+        "getOpenFileName": Mock(return_value=("test_file.dmp", "Memory dump (*.dmp)")),
+        "getSaveFileName": Mock(return_value=("output.png", "PNG files (*.png)")),
+        "getExistingDirectory": Mock(return_value="/test/directory"),
+    }
+
+
+def create_mock_qimage():
+    """
+    Create a mock QImage for image processing tests.
+
+    Returns:
+        Mock: Configured mock QImage
+    """
+    qimage = Mock()
+    qimage.width = Mock(return_value=128)
+    qimage.height = Mock(return_value=128)
+    qimage.format = Mock(return_value=Mock())
+    qimage.bits = Mock(return_value=b"\x00" * 1024)
+    qimage.save = Mock(return_value=True)
+    qimage.load = Mock(return_value=True)
+    qimage.isNull = Mock(return_value=False)
+    return qimage
+
+
+def create_mock_drag_drop_event():
+    """
+    Create a mock drag and drop event for testing.
+
+    Returns:
+        Mock: Configured mock drag drop event
+    """
+    event = Mock()
+    event.mimeData = Mock()
+    event.mimeData().hasUrls = Mock(return_value=True)
+    event.mimeData().urls = Mock(return_value=[
+        Mock(toLocalFile=Mock(return_value="/test/file.dmp"))
+    ])
+    event.accept = Mock()
+    event.ignore = Mock()
+    return event

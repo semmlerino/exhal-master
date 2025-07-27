@@ -9,9 +9,10 @@ import traceback
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
-from core.rom_extractor import ROMExtractor
-from core.sprite_config_loader import SpriteConfigLoader
 from PIL import Image
+
+from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.core.sprite_config_loader import SpriteConfigLoader
 
 
 def test_rom_extraction():

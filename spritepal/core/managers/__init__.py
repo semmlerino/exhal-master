@@ -13,10 +13,12 @@ from .exceptions import (
     ValidationError,
 )
 from .extraction_manager import ExtractionManager
+from .injection_manager import InjectionManager
 from .registry import (
     are_managers_initialized,
     cleanup_managers,
     get_extraction_manager,
+    get_injection_manager,
     get_registry,
     get_session_manager,
     initialize_managers,
@@ -31,6 +33,7 @@ __all__ = [
     "ExtractionManager",
     "FileOperationError",
     "InjectionError",
+    "InjectionManager",
     # Exceptions
     "ManagerError",
     "PreviewError",
@@ -40,6 +43,7 @@ __all__ = [
     "are_managers_initialized",
     "cleanup_managers",
     "get_extraction_manager",
+    "get_injection_manager",
     # Registry functions
     "get_registry",
     "get_session_manager",

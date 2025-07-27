@@ -5,11 +5,10 @@ Main controller for SpritePal extraction workflow
 from __future__ import annotations
 
 import contextlib
-import json
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict, override
 
 from PIL import Image
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
@@ -20,25 +19,43 @@ if TYPE_CHECKING:
 
     from spritepal.ui.main_window import MainWindow
 
-from spritepal.core.injector import InjectionWorker
 from spritepal.core.managers import (
     ExtractionManager,
     get_extraction_manager,
+    get_injection_manager,
     get_session_manager,
 )
-from spritepal.core.rom_injector import ROMInjectionWorker
+
+
+# Type definitions
+class ExtractionParams(TypedDict):
+    """Type definition for extraction parameters"""
+    vram_path: str
+    cgram_path: str
+    oam_path: str
+    vram_offset: int
+    output_base: str
+    create_grayscale: bool
+    create_metadata: bool
+    grayscale_mode: bool
+
+
+class ROMExtractionParams(TypedDict):
+    """Type definition for ROM extraction parameters"""
+    rom_path: str
+    sprite_offset: int
+    sprite_name: str
+    output_base: str
+    cgram_path: str | None
+
 
 # UI imports moved to functions to avoid circular dependencies
 from spritepal.utils.constants import (
     DEFAULT_TILES_PER_ROW,
-    SETTINGS_KEY_LAST_INPUT_VRAM,
-    SETTINGS_KEY_VRAM_PATH,
-    SETTINGS_NS_ROM_INJECTION,
     TILE_WIDTH,
 )
 from spritepal.utils.image_utils import pil_to_qpixmap
 from spritepal.utils.logging_config import get_logger
-from spritepal.utils.settings_manager import get_settings_manager
 from spritepal.utils.validation import validate_image_file
 
 logger = get_logger(__name__)
@@ -52,24 +69,31 @@ class ExtractionWorker(QThread):
     preview_image_ready: pyqtSignal = pyqtSignal(object)  # PIL image for palette application
     palettes_ready: pyqtSignal = pyqtSignal(dict)  # palette data
     active_palettes_ready: pyqtSignal = pyqtSignal(list)  # active palette indices
-    finished: pyqtSignal = pyqtSignal(list)  # extracted files
+    extraction_finished: pyqtSignal = pyqtSignal(list)  # extracted files
     error: pyqtSignal = pyqtSignal(str)  # error message
 
-    def __init__(self, params: dict[str, Any]) -> None:
+    def __init__(self, params: ExtractionParams) -> None:
         super().__init__()
-        self.params: dict[str, Any] = params
+        self.params: ExtractionParams = params
         self.manager: ExtractionManager | None = None
 
     def run(self) -> None:
         """Run the extraction process using ExtractionManager"""
+        # Store connection references for proper disconnection
+        self._connections = []
+
         try:
             # Get the extraction manager
             self.manager = get_extraction_manager()
 
-            # Connect manager signals to worker signals
-            self.manager.extraction_progress.connect(self.progress.emit)
-            self.manager.palettes_extracted.connect(self.palettes_ready.emit)
-            self.manager.active_palettes_found.connect(self.active_palettes_ready.emit)
+            # Connect manager signals to worker signals BEFORE starting extraction
+            # to prevent race condition where signals are emitted before connections
+            connection1 = self.manager.extraction_progress.connect(self.progress.emit)
+            connection2 = self.manager.palettes_extracted.connect(self.palettes_ready.emit)
+            connection3 = self.manager.active_palettes_found.connect(self.active_palettes_ready.emit)
+
+            # Store connections for proper cleanup
+            self._connections.extend([connection1, connection2, connection3])
 
             # Handle preview generation
             def on_preview_generated(img: Image.Image, tile_count: int) -> None:
@@ -78,7 +102,8 @@ class ExtractionWorker(QThread):
                 self.preview_ready.emit(pixmap, tile_count)
                 self.preview_image_ready.emit(img)
 
-            self.manager.preview_generated.connect(on_preview_generated)
+            connection4 = self.manager.preview_generated.connect(on_preview_generated)
+            self._connections.append(connection4)
 
             # Perform extraction using manager
             extracted_files = self.manager.extract_from_vram(
@@ -92,18 +117,17 @@ class ExtractionWorker(QThread):
                 grayscale_mode=self.params.get("grayscale_mode", False),
             )
 
-            self.finished.emit(extracted_files)
+            self.extraction_finished.emit(extracted_files)
 
         except Exception as e:
             self.error.emit(str(e))
         finally:
-            # Disconnect signals to avoid memory leaks
-            if self.manager:
+            # Disconnect only this worker's specific connections to avoid affecting other components
+            if self.manager and hasattr(self, "_connections"):
                 with contextlib.suppress(Exception):
-                    self.manager.extraction_progress.disconnect()
-                    self.manager.preview_generated.disconnect()
-                    self.manager.palettes_extracted.disconnect()
-                    self.manager.active_palettes_found.disconnect()
+                    for connection in self._connections:
+                        if connection:
+                            self.manager.disconnect(connection)
 
 
 class ExtractionController(QObject):
@@ -116,13 +140,13 @@ class ExtractionController(QObject):
         # Get managers
         self.session_manager = get_session_manager()
         self.extraction_manager = get_extraction_manager()
+        self.injection_manager = get_injection_manager()
 
         # Workers still managed locally (thin wrappers)
         self.worker: ExtractionWorker | None = None
-        self.injection_worker: InjectionWorker | ROMInjectionWorker | None = None
         self.rom_worker: ROMExtractionWorker | None = None
 
-        # Connect signals
+        # Connect UI signals
         self.main_window.extract_requested.connect(self.start_extraction)
         self.main_window.open_in_editor_requested.connect(self.open_in_editor)
         self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
@@ -132,22 +156,20 @@ class ExtractionController(QObject):
             self.update_preview_with_offset
         )
 
+        # Connect injection manager signals
+        self.injection_manager.injection_progress.connect(self._on_injection_progress)
+        self.injection_manager.injection_finished.connect(self._on_injection_finished)
+
     def start_extraction(self) -> None:
         """Start the extraction process"""
         # Get parameters from UI
         params = self.main_window.get_extraction_params()
 
-        # Validate parameters
-        if not params["vram_path"]:
-            self.main_window.extraction_failed("VRAM file is required for extraction")
-            return
-
-        # Check if CGRAM is required (not in grayscale mode)
-        if not params.get("grayscale_mode", False) and not params["cgram_path"]:
-            self.main_window.extraction_failed(
-                "CGRAM file is required for Full Color mode.\n"
-                "Please provide a CGRAM file or switch to Grayscale Only mode."
-            )
+        # Validate parameters using extraction manager
+        try:
+            self.extraction_manager.validate_extraction_params(params)
+        except Exception as e:
+            self.main_window.extraction_failed(str(e))
             return
 
         # Create and start worker thread
@@ -157,7 +179,7 @@ class ExtractionController(QObject):
         self.worker.preview_image_ready.connect(self._on_preview_image_ready)
         self.worker.palettes_ready.connect(self._on_palettes_ready)
         self.worker.active_palettes_ready.connect(self._on_active_palettes_ready)
-        self.worker.finished.connect(self._on_extraction_finished)
+        self.worker.extraction_finished.connect(self._on_extraction_finished)
         self.worker.error.connect(self._on_extraction_error)
         self.worker.start()
 
@@ -174,7 +196,7 @@ class ExtractionController(QObject):
         """Handle preview PIL image ready"""
         self.main_window.sprite_preview.set_grayscale_image(pil_image)
 
-    def _on_palettes_ready(self, palettes: dict[str, Any]) -> None:
+    def _on_palettes_ready(self, palettes: dict[str, list[tuple[int, int, int]]]) -> None:
         """Handle palettes ready"""
         self.main_window.palette_preview.set_all_palettes(palettes)
         self.main_window.sprite_preview.set_palettes(palettes)
@@ -186,12 +208,21 @@ class ExtractionController(QObject):
     def _on_extraction_finished(self, extracted_files: list[str]) -> None:
         """Handle extraction finished"""
         self.main_window.extraction_complete(extracted_files)
-        self.worker = None
+        self._cleanup_worker()
 
     def _on_extraction_error(self, error_message: str) -> None:
         """Handle extraction error"""
         self.main_window.extraction_failed(error_message)
-        self.worker = None
+        self._cleanup_worker()
+
+    def _cleanup_worker(self) -> None:
+        """Safely cleanup worker thread"""
+        if self.worker:
+            # Wait for thread to finish before dereferencing
+            if self.worker.isRunning():
+                self.worker.quit()
+                self._ = worker.wait(3000)  # Wait up to 3 seconds
+            self.worker = None
 
     def update_preview_with_offset(self, offset: int) -> None:
         """Update preview with new VRAM offset without full extraction"""
@@ -353,7 +384,7 @@ class ExtractionController(QObject):
                 else:
                     self.main_window.status_bar.showMessage("Row arrangement cancelled")
         except Exception as e:
-            QMessageBox.critical(
+            _ = QMessageBox.critical(
                 self.main_window,
                 "Error",
                 f"Failed to open row arrangement dialog: {e!s}"
@@ -437,7 +468,7 @@ class ExtractionController(QObject):
         return DEFAULT_TILES_PER_ROW
 
     def start_injection(self) -> None:
-        """Start the injection process"""
+        """Start the injection process using InjectionManager"""
         # Get sprite path and metadata path
         output_base = self.main_window._output_path
         if not output_base:
@@ -447,9 +478,9 @@ class ExtractionController(QObject):
         sprite_path = f"{output_base}.png"
         metadata_path = f"{output_base}.metadata.json"
 
-        # Get smart input VRAM suggestion
-        suggested_input_vram = self._get_smart_input_vram_suggestion(
-            sprite_path, metadata_path
+        # Get smart input VRAM suggestion using injection manager
+        suggested_input_vram = self.injection_manager.get_smart_vram_suggestion(
+            sprite_path, metadata_path if os.path.exists(metadata_path) else ""
         )
 
         # Show injection dialog
@@ -468,38 +499,10 @@ class ExtractionController(QObject):
                 self.session_manager.set("workflow", "current_injection_dialog", dialog)
                 self.session_manager.set("workflow", "current_injection_params", params)
 
-                # Check injection mode
-                if params["mode"] == "vram":
-                    # Create VRAM injection worker
-                    self.injection_worker = InjectionWorker(
-                        params["sprite_path"],
-                        params["input_vram"],
-                        params["output_vram"],
-                        params["offset"],
-                        params.get("metadata_path"),
-                    )
-                else:  # ROM injection
-                    # Create ROM injection worker
-                    self.injection_worker = ROMInjectionWorker(
-                        params["sprite_path"],
-                        params["input_rom"],
-                        params["output_rom"],
-                        params["offset"],
-                        params.get("fast_compression", False),
-                        params.get("metadata_path"),
-                    )
-
-                # Connect signals (same for both types)
-                if self.injection_worker:
-                    self.injection_worker.progress.connect(self._on_injection_progress)
-                    self.injection_worker.finished.connect(self._on_injection_finished)
-
-                    # Start injection
-                    mode_text = "VRAM" if params["mode"] == "vram" else "ROM"
-                    self.main_window.status_bar.showMessage(
-                        f"Starting {mode_text} injection..."
-                    )
-                    self.injection_worker.start()
+                # Start injection using manager
+                success = self.injection_manager.start_injection(params)
+                if not success:
+                    self.main_window.status_bar.showMessage("Failed to start injection")
 
     def _on_injection_progress(self, message: str) -> None:
         """Handle injection progress updates"""
@@ -531,117 +534,17 @@ class ExtractionController(QObject):
             self.main_window.status_bar.showMessage(f"Injection failed: {message}")
 
         # Clean up
-        self.injection_worker = None
+        # Injection worker removed - now handled by InjectionManager
         self.session_manager.set("workflow", "current_injection_dialog", None)
         self.session_manager.set("workflow", "current_injection_params", None)
 
-    def _get_smart_input_vram_suggestion(
-        self, sprite_path: str, metadata_path: str
-    ) -> str:
-        """Get smart suggestion for input VRAM path"""
-        strategies = [
-            lambda: self._try_extraction_panel_vram(),
-            lambda: self._try_metadata_vram(metadata_path, sprite_path),
-            lambda: self._try_basename_vram_patterns(sprite_path),
-            lambda: self._try_session_vram(),
-            lambda: self._try_last_injection_vram(),
-        ]
-
-        for strategy in strategies:
-            vram_path = strategy()
-            if vram_path:
-                return vram_path
-
-        return ""
-
-    def _try_extraction_panel_vram(self) -> str:
-        """Try to get VRAM path from extraction panel's current session"""
-        if (
-            hasattr(self.main_window, "extraction_panel")
-            and self.main_window.extraction_panel
-        ):
-            try:
-                vram_path = self.main_window.extraction_panel.get_vram_path()
-                if vram_path and os.path.exists(vram_path):
-                    return vram_path
-            except (AttributeError, TypeError):
-                pass
-        return ""
-
-    def _try_metadata_vram(self, metadata_path: str, sprite_path: str) -> str:
-        """Try metadata approach to find VRAM file"""
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path) as f:
-                    metadata = json.load(f)
-
-                if "extraction" in metadata:
-                    vram_source = metadata["extraction"].get("vram_source", "")
-                    if vram_source:
-                        # Look for the file in the sprite's directory
-                        sprite_dir = os.path.dirname(sprite_path)
-                        possible_path = os.path.join(sprite_dir, vram_source)
-                        if os.path.exists(possible_path):
-                            return possible_path
-            except Exception:
-                pass
-        return ""
-
-    def _try_basename_vram_patterns(self, sprite_path: str) -> str:
-        """Try to find VRAM file with same base name as sprite"""
-        if not sprite_path:
-            return ""
-
-        sprite_dir = os.path.dirname(sprite_path)
-        sprite_base = os.path.splitext(os.path.basename(sprite_path))[0]
-
-        # Remove common sprite suffixes to find original base
-        for suffix in ["_sprites_editor", "_sprites", "_editor", "Edited"]:
-            if sprite_base.endswith(suffix):
-                sprite_base = sprite_base[: -len(suffix)]
-                break
-
-        # Try common VRAM file patterns
-        vram_patterns = [
-            f"{sprite_base}.dmp",
-            f"{sprite_base}.SnesVideoRam.dmp",
-            f"{sprite_base}_VRAM.dmp",
-            f"{sprite_base}.VideoRam.dmp",
-            f"{sprite_base}.VRAM.dmp",
-        ]
-
-        for pattern in vram_patterns:
-            possible_path = os.path.join(sprite_dir, pattern)
-            if os.path.exists(possible_path):
-                return possible_path
-        return ""
-
-    def _try_session_vram(self) -> str:
-        """Check session data from settings manager"""
-        settings = get_settings_manager()
-        session_data = settings.get_session_data()
-        if SETTINGS_KEY_VRAM_PATH in session_data:
-            vram_path = session_data[SETTINGS_KEY_VRAM_PATH]
-            if vram_path and os.path.exists(vram_path):
-                return vram_path
-        return ""
-
-    def _try_last_injection_vram(self) -> str:
-        """Check last used injection VRAM"""
-        settings = get_settings_manager()
-        last_injection_vram = settings.get_value(
-            SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM, ""
-        )
-        if last_injection_vram and os.path.exists(last_injection_vram):
-            return last_injection_vram
-        return ""
 
     def start_rom_extraction(self, params: dict[str, Any]) -> None:
         """Start ROM sprite extraction process"""
         # Create and start ROM extraction worker
         self.rom_worker = ROMExtractionWorker(params)
         self.rom_worker.progress.connect(self._on_rom_progress)
-        self.rom_worker.finished.connect(self._on_rom_extraction_finished)
+        self.rom_worker.extraction_finished.connect(self._on_rom_extraction_finished)
         self.rom_worker.error.connect(self._on_rom_extraction_error)
         self.rom_worker.start()
 
@@ -652,34 +555,49 @@ class ExtractionController(QObject):
     def _on_rom_extraction_finished(self, extracted_files: list[str]) -> None:
         """Handle ROM extraction completion"""
         self.main_window.extraction_complete(extracted_files)
-        self.rom_worker = None
+        self._cleanup_rom_worker()
 
     def _on_rom_extraction_error(self, error_message: str) -> None:
         """Handle ROM extraction error"""
         self.main_window.extraction_failed(error_message)
-        self.rom_worker = None
+        self._cleanup_rom_worker()
+
+    def _cleanup_rom_worker(self) -> None:
+        """Safely cleanup ROM worker thread"""
+        if self.rom_worker:
+            # Wait for thread to finish before dereferencing
+            if self.rom_worker.isRunning():
+                self.rom_worker.quit()
+                self._ = rom_worker.wait(3000)  # Wait up to 3 seconds
+            self.rom_worker = None
 
 
 class ROMExtractionWorker(QThread):
     """Worker thread for ROM extraction process - thin wrapper around ExtractionManager"""
 
     progress: pyqtSignal = pyqtSignal(str)  # status message
-    finished: pyqtSignal = pyqtSignal(list)  # extracted files
+    extraction_finished: pyqtSignal = pyqtSignal(list)  # extracted files
     error: pyqtSignal = pyqtSignal(str)  # error message
 
-    def __init__(self, params: dict[str, Any]) -> None:
+    def __init__(self, params: ROMExtractionParams) -> None:
         super().__init__()
-        self.params: dict[str, Any] = params
+        self.params: ROMExtractionParams = params
         self.manager: ExtractionManager | None = None
 
+    @override
     def run(self) -> None:
         """Run the ROM extraction process using ExtractionManager"""
+        # Store connection references for proper disconnection
+        self._connections = []
+
         try:
             # Get the extraction manager
             self.manager = get_extraction_manager()
 
-            # Connect manager signals to worker signals
-            self.manager.extraction_progress.connect(self.progress.emit)
+            # Connect manager signals to worker signals BEFORE starting extraction
+            # to prevent race condition where signals are emitted before connections
+            connection = self.manager.extraction_progress.connect(self.progress.emit)
+            self._connections.append(connection)
 
             # Perform extraction using manager
             extracted_files = self.manager.extract_from_rom(
@@ -690,12 +608,14 @@ class ROMExtractionWorker(QThread):
                 cgram_path=self.params.get("cgram_path"),
             )
 
-            self.finished.emit(extracted_files)
+            self.extraction_finished.emit(extracted_files)
 
         except Exception as e:
             self.error.emit(str(e))
         finally:
-            # Disconnect signals to avoid memory leaks
-            if self.manager:
+            # Disconnect only this worker's specific connections to avoid affecting other components
+            if self.manager and hasattr(self, "_connections"):
                 with contextlib.suppress(Exception):
-                    self.manager.extraction_progress.disconnect()
+                    for connection in self._connections:
+                        if connection:
+                            self.manager.disconnect(connection)

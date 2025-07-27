@@ -23,9 +23,9 @@
           "notes": "Very high quality (0.98) - smaller sprite set"
         },
         "High_Quality_Sprite_3": {
-          "offset": "0x1D0002",
+          "offset": "0x1D0000",
           "expected_size": 8192,
-          "notes": "Excellent quality (0.96) - standard 8KB sprite block"
+          "notes": "Excellent quality (0.96) - standard 8KB sprite block - aligned to tile boundary"
         },
         "High_Quality_Sprite_4": {
           "offset": "0x1C0000",
@@ -33,9 +33,9 @@
           "notes": "High quality (0.94) - standard sprite size"
         },
         "Medium_Quality_Set_1": {
-          "offset": "0x398002",
-          "expected_size": 2711,
-          "notes": "Good quality (0.92) - smaller sprite set"
+          "offset": "0x398000",
+          "expected_size": 2688,
+          "notes": "Good quality (0.92) - smaller sprite set - aligned to tile boundary"
         },
         "Medium_Quality_Set_2": {
           "offset": "0x1D0000",
@@ -47,7 +47,7 @@
           "expected_size": 8192,
           "notes": "Good quality (0.88) - standard sprite block"
         },
-        "_note": "Additional sprites found at offsets: 0x1A8002, 0x318002, 0x3A0001, 0x210002 with quality 0.81-0.85"
+        "_note": "Additional sprites found at offsets: 0x1A8000, 0x318000, 0x3A0000, 0x210000 with quality 0.81-0.85 (offsets aligned to tile boundaries)"
       },
       "offset_variants": {
         "Europe": ["0x200000", "0x378000", "0x1D0000", "0x1C0000"],
@@ -74,9 +74,9 @@
           "notes": "Very high quality (0.98) - smaller sprite set"
         },
         "High_Quality_Sprite_3": {
-          "offset": "0x1D0002",
+          "offset": "0x1D0000",
           "expected_size": 8192,
-          "notes": "Excellent quality (0.96) - standard 8KB sprite block"
+          "notes": "Excellent quality (0.96) - standard 8KB sprite block - aligned to tile boundary"
         },
         "High_Quality_Sprite_4": {
           "offset": "0x1C0000",
@@ -84,9 +84,9 @@
           "notes": "High quality (0.94) - standard sprite size"
         },
         "Medium_Quality_Set_1": {
-          "offset": "0x398002",
-          "expected_size": 2711,
-          "notes": "Good quality (0.92) - smaller sprite set"
+          "offset": "0x398000",
+          "expected_size": 2688,
+          "notes": "Good quality (0.92) - smaller sprite set - aligned to tile boundary"
         },
         "Medium_Quality_Set_2": {
           "offset": "0x1D0000",
@@ -119,9 +119,9 @@
           "notes": "Very high quality (0.98) - smaller sprite set"
         },
         "High_Quality_Sprite_3": {
-          "offset": "0x1D0002",
+          "offset": "0x1D0000",
           "expected_size": 8192,
-          "notes": "Excellent quality (0.96) - standard 8KB sprite block"
+          "notes": "Excellent quality (0.96) - standard 8KB sprite block - aligned to tile boundary"
         },
         "High_Quality_Sprite_4": {
           "offset": "0x1C0000",

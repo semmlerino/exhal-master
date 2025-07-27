@@ -15,7 +15,7 @@ from .image_processor import RowImageProcessor
 class GridImageProcessor(RowImageProcessor):
     """Extended image processor with grid-based tile extraction capabilities"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.tiles: dict[TilePosition, Image.Image] = {}
         self.grid_rows = 0

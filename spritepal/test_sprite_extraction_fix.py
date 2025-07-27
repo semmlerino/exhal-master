@@ -15,9 +15,9 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.rom_extractor import ROMExtractor
-from core.rom_injector import ROMInjector
-from utils.logging_config import get_logger
+from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.core.rom_injector import ROMInjector
+from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

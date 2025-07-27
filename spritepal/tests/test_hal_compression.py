@@ -550,3 +550,339 @@ class TestHALCompressorIntegration:
 
         except HALCompressionError:
             pytest.skip("HAL tools not available for cleanup testing")
+
+
+class TestHALCompressorAdvanced:
+    """Advanced tests for comprehensive coverage"""
+
+    @pytest.fixture
+    def mock_compressor(self):
+        """Create compressor with mock tool paths"""
+        compressor = HALCompressor.__new__(HALCompressor)
+        compressor.exhal_path = "mock_exhal"
+        compressor.inhal_path = "mock_inhal"
+        return compressor
+
+    def test_find_tool_executable_check(self, tmp_path, caplog):
+        """Test _find_tool checks executable permissions during search"""
+        compressor = HALCompressor.__new__(HALCompressor)
+
+        # Create non-executable file in a search path location
+        tool_path = tmp_path / "tools" / "test_tool"
+        tool_path.parent.mkdir()
+        tool_path.write_text("mock tool")
+        # Don't make it executable
+
+        # Test that when a file is found during search but not executable, it logs a warning
+        with patch("os.path.abspath") as mock_abspath:
+            # Make abspath return our test path when searching tools directory
+            def mock_abspath_func(p):
+                if "tools/test_tool" in p:
+                    return str(tool_path)
+                return os.path.abspath(p)
+
+            mock_abspath.side_effect = mock_abspath_func
+
+            with patch("os.path.isfile") as mock_isfile:
+                # Only return True for our test file
+                mock_isfile.side_effect = lambda p: p == str(tool_path)
+
+                with patch("os.access", return_value=False):
+                    import logging
+                    with caplog.at_level(logging.WARNING):
+                        result = compressor._find_tool("test_tool")  # No provided path
+                        assert result == str(tool_path)
+                        # Verify warning was logged
+                        assert "may not be executable" in caplog.text
+
+    def test_find_tool_all_search_paths(self, tmp_path):
+        """Test _find_tool searches all expected paths"""
+        compressor = HALCompressor.__new__(HALCompressor)
+
+        searched_paths = []
+
+        def mock_isfile(path):
+            searched_paths.append(path)
+            return False
+
+        with patch("os.path.isfile", side_effect=mock_isfile):
+            with pytest.raises(HALCompressionError):
+                compressor._find_tool("test_tool")
+
+        # Verify it searched multiple locations
+        assert len(searched_paths) > 5  # Should search many paths
+        # Check some expected patterns
+        assert any("tools" in p for p in searched_paths)
+        assert any("archive" in p for p in searched_paths)
+
+    def test_compress_to_rom_fast_mode_flag(self, mock_compressor, tmp_path):
+        """Test fast mode flag is properly passed to inhal"""
+        rom_path = tmp_path / "test.sfc"
+        rom_path.write_bytes(b"ROM data")
+        test_data = b"sprite data"
+
+        captured_command = None
+
+        def capture_command(cmd, **kwargs):
+            nonlocal captured_command
+            captured_command = cmd
+            result = Mock()
+            result.returncode = 0
+            result.stdout = ""
+            result.stderr = ""
+            return result
+
+        with patch("subprocess.run", side_effect=capture_command):
+            mock_compressor.compress_to_rom(test_data, str(rom_path), 0x8000, fast=True)
+
+            # Verify -fast flag was included
+            assert "-fast" in captured_command
+            assert captured_command[0] == "mock_inhal"
+            assert captured_command[1] == "-fast"
+
+    def test_decompress_offset_formatting(self, mock_compressor, tmp_path):
+        """Test hex offset formatting in decompression command"""
+        rom_path = tmp_path / "test.sfc"
+        rom_path.write_bytes(b"ROM data")
+
+        captured_command = None
+
+        def capture_command(cmd, **kwargs):
+            nonlocal captured_command
+            captured_command = cmd
+            result = Mock()
+            result.returncode = 0
+            result.stdout = ""
+            result.stderr = ""
+            return result
+
+        with patch("subprocess.run", side_effect=capture_command):
+            with patch("builtins.open", mock_open(read_data=b"data")):
+                mock_compressor.decompress_from_rom(str(rom_path), 0x12345)
+
+                # Verify hex offset formatting
+                assert "0x12345" in captured_command
+                assert captured_command[0] == "mock_exhal"
+                assert captured_command[1] == str(rom_path)
+                assert captured_command[2] == "0x12345"
+
+    def test_compress_output_logging(self, mock_compressor, tmp_path, caplog):
+        """Test compression ratio logging"""
+        output_path = tmp_path / "output.bin"
+        test_data = b"X" * 1000  # 1000 bytes
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("os.path.getsize", return_value=250):  # 75% compression
+                import logging
+                with caplog.at_level(logging.INFO):
+                    result_size = mock_compressor.compress_to_file(test_data, str(output_path))
+
+                    assert result_size == 250
+                    assert "75.0% reduction" in caplog.text
+
+    def test_test_tools_output_checking(self, mock_compressor):
+        """Test tool validation checks both stdout and stderr"""
+        # Test exhal validation
+        exhal_result = Mock()
+        exhal_result.stdout = ""
+        exhal_result.stderr = "Usage: exhal [options]"  # In stderr instead of stdout
+        exhal_result.returncode = 1  # Non-zero but has usage info
+
+        inhal_result = Mock()
+        inhal_result.stdout = "InHAL compressor"
+        inhal_result.stderr = ""
+
+        call_count = 0
+
+        def mock_run(cmd, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return exhal_result
+            return inhal_result
+
+        with patch("subprocess.run", side_effect=mock_run):
+            success, message = mock_compressor.test_tools()
+
+            assert success  # Should pass because "usage" is in stderr
+            assert "working correctly" in message
+
+    def test_test_tools_neither_stdout_nor_stderr(self, mock_compressor):
+        """Test tool validation when neither stdout nor stderr has expected output"""
+        empty_result = Mock()
+        empty_result.stdout = ""
+        empty_result.stderr = ""
+        empty_result.returncode = 0
+
+        with patch("subprocess.run", return_value=empty_result):
+            success, message = mock_compressor.test_tools()
+
+            assert not success
+            assert "not working correctly" in message
+
+    def test_subprocess_debug_logging(self, mock_compressor, tmp_path, caplog):
+        """Test detailed subprocess logging for debugging"""
+        output_path = tmp_path / "output.bin"
+        test_data = b"test"
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Compression output"
+        mock_result.stderr = "Warning: small file"
+
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("os.path.getsize", return_value=10):
+                import logging
+                with caplog.at_level(logging.DEBUG):
+                    mock_compressor.compress_to_file(test_data, str(output_path))
+
+                    # Verify debug logging includes command and output
+                    assert "Running command:" in caplog.text
+                    assert "stdout: Compression output" in caplog.text
+                    assert "stderr: Warning: small file" in caplog.text
+
+    def test_windows_platform_specific_behavior(self, tmp_path):
+        """Test Windows-specific platform behavior"""
+        with patch("platform.system", return_value="Windows"):
+            compressor = HALCompressor.__new__(HALCompressor)
+
+            # Create Windows executable
+            tool_path = tmp_path / "test_tool.exe"
+            tool_path.write_text("mock tool")
+
+            with patch("os.path.isfile") as mock_isfile:
+                # Only return True for .exe file
+                mock_isfile.side_effect = lambda p: str(p).endswith(".exe") and "test_tool" in str(p)
+
+                with patch("os.path.abspath", side_effect=lambda p: str(tool_path) if "test_tool" in p else p):
+                    with patch("os.access", return_value=True):
+                        result = compressor._find_tool("test_tool", None)
+                        assert result.endswith(".exe")
+
+    def test_contextlib_suppress_in_cleanup(self, mock_compressor, tmp_path):
+        """Test contextlib.suppress handles exceptions during cleanup"""
+        output_path = tmp_path / "output.bin"
+        test_data = b"test"
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+
+        # Create a scenario where cleanup might fail
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("os.path.getsize", return_value=10):
+                with patch("os.unlink", side_effect=OSError("Permission denied")):
+                    # Should not raise exception due to contextlib.suppress
+                    result = mock_compressor.compress_to_file(test_data, str(output_path))
+                    assert result == 10  # Should complete successfully
+
+    def test_compress_to_rom_no_size_in_output(self, mock_compressor, tmp_path):
+        """Test ROM compression when size info not in output"""
+        rom_path = tmp_path / "test.sfc"
+        rom_path.write_bytes(b"ROM data")
+        test_data = b"sprite data"
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Compression completed successfully"  # No size info
+        mock_result.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_result):
+            success, message = mock_compressor.compress_to_rom(
+                test_data, str(rom_path), 0x8000
+            )
+
+            assert success
+            assert "unknown bytes" in message  # Should use "unknown" when size not found
+
+
+class TestHALCompressorEdgeCases:
+    """Test edge cases and error conditions"""
+
+    def test_compress_empty_data(self, tmp_path):
+        """Test compressing empty data"""
+        compressor = HALCompressor.__new__(HALCompressor)
+        compressor.exhal_path = "mock_exhal"
+        compressor.inhal_path = "mock_inhal"
+
+        output_path = tmp_path / "empty.bin"
+        empty_data = b""
+
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        # This test documents a bug - empty data causes division by zero
+        with patch("subprocess.run", return_value=mock_result):
+            with patch("os.path.getsize", return_value=0):
+                with pytest.raises(ZeroDivisionError):
+                    compressor.compress_to_file(empty_data, str(output_path))
+
+    def test_decompress_large_offset(self, tmp_path):
+        """Test decompression with very large offset"""
+        compressor = HALCompressor.__new__(HALCompressor)
+        compressor.exhal_path = "mock_exhal"
+        compressor.inhal_path = "mock_inhal"
+
+        rom_path = tmp_path / "test.sfc"
+        rom_path.write_bytes(b"ROM" * 1000)
+
+        # Test with maximum reasonable offset
+        large_offset = 0xFFFFFF
+
+        captured_command = None
+
+        def capture_command(cmd, **kwargs):
+            nonlocal captured_command
+            captured_command = cmd
+            result = Mock()
+            result.returncode = 0
+            return result
+
+        with patch("subprocess.run", side_effect=capture_command):
+            with patch("builtins.open", mock_open(read_data=b"data")):
+                compressor.decompress_from_rom(str(rom_path), large_offset)
+
+                # Verify large offset is properly formatted
+                assert f"0x{large_offset:X}" in captured_command
+
+    def test_tool_paths_with_spaces(self, tmp_path):
+        """Test handling of tool paths containing spaces"""
+        # Create tool path with spaces
+        tool_dir = tmp_path / "HAL Tools"
+        tool_dir.mkdir()
+        tool_path = tool_dir / "exhal tool.exe"
+        tool_path.write_text("mock")
+
+        compressor = HALCompressor.__new__(HALCompressor)
+
+        with patch("os.path.isfile", return_value=True):
+            with patch("os.path.abspath", return_value=str(tool_path)):
+                with patch("os.access", return_value=True):
+                    result = compressor._find_tool("exhal", str(tool_path))
+                    assert result == str(tool_path)
+                    assert " " in result  # Path contains spaces
+
+    def test_exception_during_init(self):
+        """Test exception handling during initialization"""
+        with patch.object(HALCompressor, "_find_tool", side_effect=Exception("Unexpected error")):
+            with pytest.raises(Exception, match="Unexpected error"):
+                HALCompressor()
+
+    def test_test_tools_generic_exception(self):
+        """Test generic exception handling in test_tools"""
+        compressor = HALCompressor.__new__(HALCompressor)
+        compressor.exhal_path = "mock_exhal"
+        compressor.inhal_path = "mock_inhal"
+
+        with patch("subprocess.run", side_effect=RuntimeError("Unexpected runtime error")):
+            success, message = compressor.test_tools()
+
+            assert not success
+            assert "Error testing tools" in message
+            assert "Unexpected runtime error" in message

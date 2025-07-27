@@ -347,7 +347,7 @@ class TestInjectionWorker:
 
         # Mock signals
         worker.progress = mock_signals["progress"]
-        worker.finished = mock_signals["finished"]
+        worker.injection_finished = mock_signals["finished"]
 
         # Run the worker
         worker.run()
