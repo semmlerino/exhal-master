@@ -10,7 +10,9 @@ from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFileDialog,
+    QLabel,
     QProgressBar,
+    QPushButton,
     QSizePolicy,
     QSpacerItem,
     QSplitter,
@@ -19,15 +21,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.core.managers import get_extraction_manager
 from spritepal.ui.dialogs import UserErrorDialog
+from spritepal.ui.dialogs.manual_offset_dialog import ManualOffsetDialog
 from spritepal.ui.rom_extraction.state_manager import (
     ExtractionState,
     ExtractionStateManager,
 )
 from spritepal.ui.rom_extraction.widgets import (
     CGRAMSelectorWidget,
-    ManualOffsetWidget,
     ModeSelectorWidget,
     OutputNameWidget,
     ROMFileWidget,
@@ -36,7 +38,6 @@ from spritepal.ui.rom_extraction.widgets import (
 from spritepal.ui.rom_extraction.workers import (
     SpritePreviewWorker,
     SpriteScanWorker,
-    SpriteSearchWorker,
 )
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from spritepal.utils.constants import (
@@ -74,7 +75,9 @@ class ROMExtractionPanel(QWidget):
         super().__init__(parent)
         self.rom_path = ""
         self.sprite_locations = {}
-        self.rom_extractor = ROMExtractor()
+        # Get extraction manager and ROM extractor
+        self.extraction_manager = get_extraction_manager()
+        self.rom_extractor = self.extraction_manager.get_rom_extractor()
         self.rom_size = 0  # Track ROM size for slider limits
         self._manual_offset_mode = True  # Default to manual offset mode
 
@@ -122,13 +125,46 @@ class ROMExtractionPanel(QWidget):
         self.sprite_selector_widget.setVisible(False)  # Hide by default (manual mode is default)
         layout.addWidget(self.sprite_selector_widget)
 
-        # Manual offset widget
-        self.manual_offset_widget = ManualOffsetWidget()
-        self.manual_offset_widget.offset_changed.connect(self._preview_manual_offset)
-        self.manual_offset_widget.find_next_clicked.connect(self._find_next_sprite)
-        self.manual_offset_widget.find_prev_clicked.connect(self._find_prev_sprite)
-        self.manual_offset_widget.setVisible(True)  # Show by default (manual mode)
-        layout.addWidget(self.manual_offset_widget, 1)  # Give stretch factor to compete with spacer
+        # Manual offset control button (replaces embedded widget)
+        self.manual_offset_button = QPushButton("Open Manual Offset Control")
+        self.manual_offset_button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
+        self.manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
+        self.manual_offset_button.setVisible(True)  # Show by default (manual mode)
+        self.manual_offset_button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
+        self.manual_offset_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4488dd;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;
+                border-radius: 6px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #5599ee;
+            }
+            QPushButton:pressed {
+                background-color: #3377cc;
+            }
+        """)
+        layout.addWidget(self.manual_offset_button)
+
+        # Manual offset status label
+        self.manual_offset_status = QLabel("Use Manual Offset Control to explore ROM offsets")
+        self.manual_offset_status.setStyleSheet("""
+            padding: 8px;
+            background: #2b2b2b;
+            border: 1px solid #444444;
+            border-radius: 4px;
+            color: #cccccc;
+        """)
+        self.manual_offset_status.setWordWrap(True)
+        self.manual_offset_status.setVisible(True)
+        layout.addWidget(self.manual_offset_status)
+
+        # Reference to dialog (will be created on demand)
+        self._manual_offset_dialog = None
+        self._manual_offset = 0x200000  # Default offset
 
         # CGRAM selector widget
         self.cgram_selector_widget = CGRAMSelectorWidget()
@@ -212,8 +248,9 @@ class ROMExtractionPanel(QWidget):
                 with open(filename, "rb") as f:
                     f.seek(0, 2)  # Seek to end
                     self.rom_size = f.tell()
-                    # Update slider and spinbox limits
-                    self.manual_offset_widget.set_rom_size(self.rom_size)
+                    # Update dialog if it exists
+                    if self._manual_offset_dialog:
+                        self._manual_offset_dialog.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
                     logger.debug(f"ROM size: {self.rom_size} bytes (0x{self.rom_size:X})")
             except Exception as e:
                 logger.warning(f"Could not determine ROM size: {e}")
@@ -264,6 +301,51 @@ class ROMExtractionPanel(QWidget):
             self.rom_path = ""
             self.rom_file_widget.set_rom_path("")
 
+    def _open_manual_offset_dialog(self):
+        """Open the manual offset control dialog"""
+        if not self.rom_path:
+            UserErrorDialog.show_error(
+                self,
+                "Please load a ROM file first",
+                "A ROM must be loaded before using manual offset control."
+            )
+            return
+
+        # Create or get existing dialog instance
+        if self._manual_offset_dialog is None:
+            self._manual_offset_dialog = ManualOffsetDialog.get_instance(self)
+            # Connect signals
+            self._manual_offset_dialog.offset_changed.connect(self._on_dialog_offset_changed)
+            self._manual_offset_dialog.sprite_found.connect(self._on_dialog_sprite_found)
+
+        # Update dialog with current ROM data
+        self._manual_offset_dialog.set_rom_data(
+            self.rom_path, self.rom_size, self.extraction_manager
+        )
+
+        # Set current offset
+        self._manual_offset_dialog.set_offset(self._manual_offset)
+
+        # Show the dialog
+        self._manual_offset_dialog.show()
+        self._manual_offset_dialog.raise_()
+        self._manual_offset_dialog.activateWindow()
+
+    def _on_dialog_offset_changed(self, offset: int):
+        """Handle offset changes from the dialog"""
+        self._manual_offset = offset
+        self._preview_manual_offset(offset)
+        # Update status label
+        self.manual_offset_status.setText(f"Current offset: 0x{offset:06X}")
+
+    def _on_dialog_sprite_found(self, offset: int, sprite_name: str):
+        """Handle sprite found signal from dialog"""
+        self._manual_offset = offset
+        # Update status to show sprite was selected
+        self.manual_offset_status.setText(f"Selected sprite at 0x{offset:06X}")
+        # Check extraction readiness
+        self._check_extraction_ready()
+
     def _browse_cgram(self):
         """Browse for CGRAM file"""
         settings = get_settings_manager()
@@ -296,7 +378,7 @@ class ROMExtractionPanel(QWidget):
 
         try:
             # Get known sprite locations
-            locations = self.rom_extractor.get_known_sprite_locations(self.rom_path)
+            locations = self.extraction_manager.get_known_sprite_locations(self.rom_path)
 
             if locations:
                 # Show count of known sprites to make it clear they're available
@@ -413,7 +495,7 @@ class ROMExtractionPanel(QWidget):
 
         # Handle manual mode
         if self._manual_offset_mode:
-            offset = self.manual_offset_widget.get_current_offset()
+            offset = self._manual_offset
             sprite_name = f"manual_0x{offset:X}"
         else:
             # Preset mode
@@ -686,7 +768,8 @@ class ROMExtractionPanel(QWidget):
 
         # Show/hide appropriate controls
         self.sprite_selector_widget.setVisible(not self._manual_offset_mode)
-        self.manual_offset_widget.setVisible(self._manual_offset_mode)
+        self.manual_offset_button.setVisible(self._manual_offset_mode)
+        self.manual_offset_status.setVisible(self._manual_offset_mode)
 
         # Clear preview when switching modes
         self.preview_widget.clear()
@@ -715,19 +798,35 @@ class ROMExtractionPanel(QWidget):
             return
 
         if offset is None:
-            offset = self.manual_offset_widget.get_current_offset()
+            offset = self._manual_offset
 
         # Update status
-        self.manual_offset_widget.set_status_text(f"Attempting to decompress at 0x{offset:06X}...")
+        self.manual_offset_status.setText(f"Attempting to decompress at 0x{offset:06X}...")
 
         # Clean up any existing preview worker
         if self.preview_worker:
             self.preview_worker.quit()
             self.preview_worker.wait()
 
-        # Create preview worker for manual offset
+        # Try to find sprite configuration for this offset
+        sprite_config = None
+        sprite_name = f"manual_0x{offset:X}"
+
+        # Look up known sprite configurations to see if this offset matches
+        try:
+            if hasattr(self, "sprite_locations") and self.sprite_locations:
+                for name, pointer in self.sprite_locations.items():
+                    if pointer.offset == offset:
+                        sprite_config = pointer
+                        sprite_name = name
+                        logger.debug(f"Found matching sprite config: {name} at 0x{offset:06X}")
+                        break
+        except Exception as e:
+            logger.debug(f"Error looking up sprite config: {e}")
+
+        # Create preview worker for manual offset with sprite config if found
         self.preview_worker = SpritePreviewWorker(
-            self.rom_path, offset, f"manual_0x{offset:X}", self.rom_extractor
+            self.rom_path, offset, sprite_name, self.rom_extractor, sprite_config
         )
         self.preview_worker.preview_ready.connect(self._on_preview_ready)
         self.preview_worker.preview_error.connect(self._on_manual_preview_error)
@@ -742,106 +841,50 @@ class ROMExtractionPanel(QWidget):
         self.preview_widget.info_label.setText("No sprite found")
 
         # Update status with user-friendly message
-        offset = self.manual_offset_widget.get_current_offset()
+        offset = self._manual_offset
         if "decompression" in error_msg.lower() or "hal" in error_msg.lower():
-            self.manual_offset_widget.set_status_text(
-                f"No sprite data at 0x{offset:06X}. Use ← → buttons to search."
+            self.manual_offset_status.setText(
+                f"No sprite data at 0x{offset:06X}. Use Manual Offset Control to search."
             )
         else:
             # For unexpected errors, show more detail
-            self.manual_offset_widget.set_status_text(
+            self.manual_offset_status.setText(
                 f"Cannot read offset 0x{offset:06X}. Try a different location."
             )
 
     def _find_next_sprite(self):
-        """Find next valid sprite offset"""
-        if not self.rom_path:
-            return
-
-        # Check if we can start search
-        if not self.state_manager.can_search:
-            logger.warning("Cannot start search - another operation is in progress")
-            return
-
-        # Transition to search state
-        if not self.state_manager.start_search():
-            logger.error("Failed to transition to search state")
-            return
-
-        current_offset = self.manual_offset_widget.get_current_offset()
-        step = self.manual_offset_widget.get_step_size()
-
-        direction = "forward" if step > 0 else "backward"
-        self.manual_offset_widget.set_status_text(f"Searching {direction} from 0x{current_offset:06X} (step: 0x{step:X})...")
-        self.manual_offset_widget.set_navigation_enabled(False)
-
-        # Clean up any existing search worker
-        if self.search_worker:
-            self.search_worker.quit()
-            self.search_worker.wait()
-
-        # Create worker to search for next sprite
-        self.search_worker = SpriteSearchWorker(
-            self.rom_path, current_offset, step, self.rom_size, self.rom_extractor, forward=True
-        )
-        self.search_worker.sprite_found.connect(self._on_sprite_found)
-        self.search_worker.search_complete.connect(self._on_search_complete)
-        self.search_worker.finished.connect(
-            lambda: self.state_manager.finish_search()
-        )
-        self.search_worker.start()
+        """Find next valid sprite offset - now handled by dialog"""
+        # Open dialog if not already open
+        if self._manual_offset_dialog and self._manual_offset_dialog.isVisible():
+            # Dialog will handle the search
+            pass
+        else:
+            self._open_manual_offset_dialog()
 
     def _find_prev_sprite(self):
-        """Find previous valid sprite offset"""
-        if not self.rom_path:
-            return
-
-        # Check if we can start search
-        if not self.state_manager.can_search:
-            logger.warning("Cannot start search - another operation is in progress")
-            return
-
-        # Transition to search state
-        if not self.state_manager.start_search():
-            logger.error("Failed to transition to search state")
-            return
-
-        current_offset = self.manual_offset_widget.get_current_offset()
-        step = self.manual_offset_widget.get_step_size()
-
-        self.manual_offset_widget.set_status_text(f"Searching backward from 0x{current_offset:06X} (step: 0x{step:X})...")
-        self.manual_offset_widget.set_navigation_enabled(False)
-
-        # Clean up any existing search worker
-        if self.search_worker:
-            self.search_worker.quit()
-            self.search_worker.wait()
-
-        # Create worker to search for previous sprite
-        self.search_worker = SpriteSearchWorker(
-            self.rom_path, current_offset, step, self.rom_size, self.rom_extractor, forward=False
-        )
-        self.search_worker.sprite_found.connect(self._on_sprite_found)
-        self.search_worker.search_complete.connect(self._on_search_complete)
-        self.search_worker.finished.connect(
-            lambda: self.state_manager.finish_search()
-        )
-        self.search_worker.start()
+        """Find previous valid sprite offset - now handled by dialog"""
+        # Open dialog if not already open
+        if self._manual_offset_dialog and self._manual_offset_dialog.isVisible():
+            # Dialog will handle the search
+            pass
+        else:
+            self._open_manual_offset_dialog()
 
     def _on_sprite_found(self, offset: int, quality: float):
         """Handle sprite found during search"""
-        self.manual_offset_widget.set_offset(offset)
-        self.manual_offset_widget.add_found_sprite(offset)  # Track found sprites
-        self.manual_offset_widget.set_status_text(
+        self._manual_offset = offset
+        self.manual_offset_status.setText(
             f"Found sprite at 0x{offset:06X} (quality: {quality:.2f})"
         )
+        # Update dialog if open
+        if self._manual_offset_dialog:
+            self._manual_offset_dialog.set_offset(offset)
+            self._manual_offset_dialog.add_found_sprite(offset, quality)
 
     def _on_search_complete(self, found: bool):
         """Handle search completion"""
-        self.manual_offset_widget.set_navigation_enabled(True)
-
         if not found:
-            self.manual_offset_widget.set_status_text(
+            self.manual_offset_status.setText(
                 "No valid sprites found in search range. Try a different area."
             )
 
@@ -853,14 +896,14 @@ class ROMExtractionPanel(QWidget):
             self.rom_file_widget.setEnabled(True)
             self.mode_selector_widget.setEnabled(True)
             self.sprite_selector_widget.set_find_button_enabled(True)
-            self.manual_offset_widget.set_navigation_enabled(True)
+            self.manual_offset_button.setEnabled(True)
 
         elif new_state in {ExtractionState.LOADING_ROM, ExtractionState.EXTRACTING}:
             # Disable all controls during critical operations
             self.rom_file_widget.setEnabled(False)
             self.mode_selector_widget.setEnabled(False)
             self.sprite_selector_widget.set_find_button_enabled(False)
-            self.manual_offset_widget.set_navigation_enabled(False)
+            self.manual_offset_button.setEnabled(False)
 
         elif new_state == ExtractionState.SCANNING_SPRITES:
             # Disable sprite selection during scan
@@ -868,7 +911,7 @@ class ROMExtractionPanel(QWidget):
 
         elif new_state == ExtractionState.SEARCHING_SPRITE:
             # Disable navigation during search
-            self.manual_offset_widget.set_navigation_enabled(False)
+            self.manual_offset_button.setEnabled(False)
 
         # Log state transitions for debugging
         logger.debug(f"State transition: {old_state.name} -> {new_state.name}")

@@ -77,11 +77,16 @@ class SpritePreviewWorker(QThread):
 
                 # Apply default fallback if no expected size found
                 if not expected_size:
-                    expected_size = 8192  # Default 8KB for Kirby sprites
-                    logger.warning(
-                        f"No expected size found for {self.sprite_name}, using default: {expected_size} bytes. "
-                        "This prevents oversized decompression but may need adjustment."
-                    )
+                    # Use more conservative default for manual/unknown offsets
+                    if self.sprite_name.startswith("manual_"):
+                        expected_size = 4096  # More conservative 4KB for manual exploration
+                        logger.debug(f"Using conservative 4KB limit for manual offset {self.sprite_name}")
+                    else:
+                        expected_size = 8192  # Default 8KB for Kirby sprites
+                        logger.warning(
+                            f"No expected size found for {self.sprite_name}, using default: {expected_size} bytes. "
+                            "This prevents oversized decompression but may need adjustment."
+                        )
 
                 if offset_variants:
                     # Use fallback mechanism with expected size

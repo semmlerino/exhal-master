@@ -39,8 +39,9 @@ class SpriteSearchWorker(QThread):
                 search_end = min(self.start_offset + max_search_distance, self.rom_size)
                 step = self.step
             else:
-                search_start = max(0, self.start_offset - max_search_distance)
-                search_end = self.start_offset - self.step
+                # For backward search, start from current position and go backwards
+                search_start = self.start_offset - self.step
+                search_end = max(-1, self.start_offset - max_search_distance)  # -1 so range stops at 0
                 step = -self.step
 
             # Search for valid sprite
