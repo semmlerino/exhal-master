@@ -1,11 +1,5 @@
-"""
-Base dialog components for SpritePal UI architecture
-"""
+"""Base UI components for SpritePal"""
 
-from .dialog_base import BaseDialog, SplitterDialog, TabbedDialog
+from .dialog_base import DialogBase, InitializationOrderError
 
-__all__ = [
-    "BaseDialog",
-    "SplitterDialog",
-    "TabbedDialog",
-]
+__all__ = ["DialogBase", "InitializationOrderError"]

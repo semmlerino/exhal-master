@@ -1,282 +1,228 @@
 """
-Base dialog classes for SpritePal UI architecture
+Base dialog class for SpritePal that enforces proper initialization patterns.
 
-Provides standard dialog foundations with consistent styling and behavior.
+This class ensures that instance variables are declared before setup methods are called,
+preventing the common bug where widgets created in setup methods are overwritten by
+late instance variable declarations.
 """
 
+from abc import ABC, abstractmethod
+from typing import Any, ClassVar, Dict, List, Type
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QSplitter,
-    QStatusBar,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget
-)
+from PyQt6.QtWidgets import QDialog, QWidget
 
-from spritepal.ui.styles import get_dialog_button_box_style, get_splitter_style
+from spritepal.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
-class BaseDialog(QDialog):
+class InitializationOrderError(Exception):
+    """Raised when initialization order requirements are violated."""
+
+
+class DialogBaseMeta(type(QDialog)):
+    """Metaclass to enforce initialization order in dialogs."""
+    
+    def __new__(mcs, name: str, bases: tuple, namespace: dict) -> Type:
+        # Create the class
+        cls = super().__new__(mcs, name, bases, namespace)
+        
+        # For DialogBase itself, don't add checks
+        if name == "DialogBase":
+            return cls
+            
+        # Wrap __init__ to add initialization checks
+        original_init = cls.__init__
+        
+        def checked_init(self, *args, **kwargs):
+            # Track initialization state
+            self._initialization_phase = "pre_init"
+            self._declared_variables: set[str] = set()
+            self._setup_called = False
+            
+            # Call original init
+            original_init(self, *args, **kwargs)
+            
+            # Verify initialization completed properly
+            if hasattr(self, "_setup_ui") and not self._setup_called:
+                raise InitializationOrderError(
+                    f"{cls.__name__} has _setup_ui method but didn't call super().__init__()"
+                )
+                
+        cls.__init__ = checked_init
+        return cls
+
+
+class DialogBase(QDialog, metaclass=DialogBaseMeta):
     """
-    Standard dialog foundation with consistent styling and behavior.
-
-    Features:
-    - Consistent modal setup and sizing
-    - Integrated styling system
-    - status bar support
-    - Standardized button box handling
-    - Window title and icon management
+    Base class for all SpritePal dialogs with enforced initialization patterns.
+    
+    Subclasses MUST follow this pattern:
+    
+    ```python
+    class MyDialog(DialogBase):
+        def __init__(self, parent: QWidget | None = None):
+            # Step 1: Declare instance variables
+            self.my_widget: QWidget | None = None
+            self.my_data: list[str] = []
+            
+            # Step 2: Call parent init (this calls _setup_ui)
+            super().__init__(parent)
+            
+        def _setup_ui(self):
+            # Step 3: Create widgets (safe - variables already declared)
+            self.my_widget = QWidget()
+    ```
     """
-
-    def __init__(
-        self,
-        parent=None,
-        title: str = "Dialog",
-        modal: bool = True,
-        size: tuple[int, int | None] = None,
-        min_size: tuple[int, int | None] = None,
-        with_status_bar: bool = False,
-        with_button_box: bool = True
-    ):
+    
+    # Class-level registry of known widget attributes to check
+    _WIDGET_ATTRIBUTES: ClassVar[List[str]] = [
+        "rom_map", "offset_widget", "scan_controls", "import_export",
+        "status_panel", "preview_widget", "mode_selector", "status_label",
+        "dumps_dir_edit", "cache_enabled_check", "source_list", "arranged_list",
+        "available_rows_widget", "arranged_rows_widget"
+    ]
+    
+    def __init__(self, parent: QWidget | None = None):
+        """
+        Initialize the dialog base.
+        
+        Args:
+            parent: Parent widget (optional)
+        """
+        # Initialize tracking before calling Qt's init
+        self._initialization_phase = "during_init"
+        self._declared_variables: set[str] = set()
+        self._setup_called = False
+        
+        # Record all instance variables declared before super().__init__()
+        for attr_name in dir(self):
+            if not attr_name.startswith("_") and hasattr(self, attr_name):
+                self._declared_variables.add(attr_name)
+        
+        # Call Qt's init
         super().__init__(parent)
-
-        # Store configuration
-        self._with_status_bar = with_status_bar
-        self._with_button_box = with_button_box
-
-        # Set basic properties
-        self.setWindowTitle(title)
-        self.setModal(modal)
-
-        # Set sizing
-        if size:
-            self.resize(*size)
-        if min_size:
-            if min_size[0] is not None:
-                self.setMinimumWidth(min_size[0])
-            if len(min_size) > 1 and min_size[1] is not None:
-                self.setMinimumHeight(min_size[1])
-
-        # Initialize UI components
-        self.main_layout = QVBoxLayout(self)
-        self.content_widget: QWidget | None = None
-        self.status_bar: QStatusBar | None = None
-        self.button_box: QDialogButtonBox | None = None
-
-        self._setup_base_ui()
-
-    def _setup_base_ui(self):
-        """Set up the base dialog UI structure"""
-        # Create content area (will be populated by subclasses)
-        self.content_widget = QWidget()
-        self.main_layout.addWidget(self.content_widget)
-
-        # Add status bar if requested
-        if self._with_status_bar:
-            self.status_bar = QStatusBar()
-            self.main_layout.addWidget(self.status_bar)
-
-        # Add button box if requested
-        if self._with_button_box:
-            self.button_box = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-            )
-            self.button_box.setStyleSheet(get_dialog_button_box_style())
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.reject)
-            self.main_layout.addWidget(self.button_box)
-
-    def set_content_layout(self, layout):
-        """Set the layout for the content area"""
-        if self.content_widget:
-            self.content_widget.setLayout(layout)
-
-    def add_button(self, text: str, role=QDialogButtonBox.ButtonRole.ActionRole, callback=None):
-        """Add a custom button to the button box"""
-        if not self.button_box:
-            raise ValueError("Dialog was created without button box")
-
-        button = self.button_box.addButton(text, role)
-        if callback:
-            _ = button.clicked.connect(callback)
-        return button
-
-    def update_status(self, message: str):
-        """Update the status bar message"""
-        if self.status_bar:
-            self.status_bar.showMessage(message)
-
-    def clear_status(self):
-        """Clear the status bar message"""
-        if self.status_bar:
-            self.status_bar.clearMessage()
-
-
-class SplitterDialog(BaseDialog):
-    """
-    Dialog with resizable splitter panels.
-
-    Features:
-    - Pre-configured styled splitters
-    - Standard layout patterns for resizable panels
-    - Automatic stretch factor handling
-    - Consistent splitter styling
-    """
-
-    def __init__(
-        self,
-        parent=None,
-        title: str = "Dialog",
-        modal: bool = True,
-        size: tuple[int, int | None] = None,
-        min_size: tuple[int, int | None] = None,
-        with_status_bar: bool = True,
-        orientation: Qt.Orientation = Qt.Orientation.Horizontal,
-        splitter_handle_width: int = 8
-    ):
-        self._orientation = orientation
-        self._handle_width = splitter_handle_width
-
-        super().__init__(
-            parent=parent,
-            title=title,
-            modal=modal,
-            size=size,
-            min_size=min_size,
-            with_status_bar=with_status_bar,
-            with_button_box=True
-        )
-
-    def _setup_base_ui(self):
-        """Set up splitter-based UI structure"""
-        # Create main splitter
-        self.main_splitter = QSplitter(self._orientation)
-        self.main_splitter.setHandleWidth(self._handle_width)
-        self.main_splitter.setStyleSheet(get_splitter_style(self._handle_width))
-
-        self.main_layout.addWidget(self.main_splitter)
-
-        # Add status bar if requested
-        if self._with_status_bar:
-            self.status_bar = QStatusBar()
-            self.main_layout.addWidget(self.status_bar)
-
-        # Add button box if requested
-        if self._with_button_box:
-            self.button_box = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-            )
-            self.button_box.setStyleSheet(get_dialog_button_box_style())
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.reject)
-            self.main_layout.addWidget(self.button_box)
-
-    def add_panel(self, widget: QWidget, stretch_factor: int = 1) -> int:
-        """Add a panel to the splitter"""
-        self.main_splitter.addWidget(widget)
-        index = self.main_splitter.count() - 1  # Get the index of the just-added widget
-        self.main_splitter.setStretchFactor(index, stretch_factor)
-        return index
-
-    def add_vertical_splitter(self, handle_width: int = 8) -> QSplitter:
-        """Add a nested vertical splitter as a panel"""
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.setHandleWidth(handle_width)
-        splitter.setStyleSheet(get_splitter_style(handle_width))
-        self.add_panel(splitter)
-        return splitter
-
-    def add_horizontal_splitter(self, handle_width: int = 8) -> QSplitter:
-        """Add a nested horizontal splitter as a panel"""
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(handle_width)
-        splitter.setStyleSheet(get_splitter_style(handle_width))
-        self.add_panel(splitter)
-        return splitter
-
-    def set_panel_ratios(self, ratios: list[int]):
-        """Set the size ratios for splitter panels"""
-        if len(ratios) != self.main_splitter.count():
-            raise ValueError(f"Expected {self.main_splitter.count()} ratios, got {len(ratios)}")
-
-        for i, ratio in enumerate(ratios):
-            self.main_splitter.setStretchFactor(i, ratio)
-
-
-class TabbedDialog(BaseDialog):
-    """
-    Dialog with tabbed interface for multiple modes/views.
-
-    Features:
-    - Tab widget with consistent styling
-    - Standard tab management utilities
-    - Easy tab addition and configuration
-    """
-
-    def __init__(
-        self,
-        parent=None,
-        title: str = "Dialog",
-        modal: bool = True,
-        size: tuple[int, int | None] = None,
-        min_size: tuple[int, int | None] = None,
-        with_status_bar: bool = False,
-        default_tab: int = 0
-    ):
-        self._default_tab = default_tab
-
-        super().__init__(
-            parent=parent,
-            title=title,
-            modal=modal,
-            size=size,
-            min_size=min_size,
-            with_status_bar=with_status_bar,
-            with_button_box=True
-        )
-
-    def _setup_base_ui(self):
-        """Set up tabbed UI structure"""
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        self.main_layout.addWidget(self.tab_widget)
-
-        # Add status bar if requested
-        if self._with_status_bar:
-            self.status_bar = QStatusBar()
-            self.main_layout.addWidget(self.status_bar)
-
-        # Add button box if requested
-        if self._with_button_box:
-            self.button_box = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-            )
-            self.button_box.setStyleSheet(get_dialog_button_box_style())
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.reject)
-            self.main_layout.addWidget(self.button_box)
-
-    def add_tab(self, widget: QWidget, title: str) -> int:
-        """Add a tab to the tab widget"""
-        return self.tab_widget.addTab(widget, title)
-
-    def set_current_tab(self, index: int):
-        """Set the currently active tab"""
-        self.tab_widget.setCurrentIndex(index)
-
-    def get_current_tab_index(self) -> int:
-        """Get the index of the currently active tab"""
-        return self.tab_widget.currentIndex()
-
-    def get_current_tab_widget(self) -> QWidget | None:
-        """Get the widget of the currently active tab"""
-        return self.tab_widget.currentWidget()
-
-    def showEvent(self, a0):
-        """Set default tab when dialog is shown"""
-        super().showEvent(a0)
-        if self._default_tab >= 0:
-            self.set_current_tab(self._default_tab)
+        
+        # Set standard dialog properties
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        
+        # Call setup method if it exists
+        if hasattr(self, "_setup_ui"):
+            self._initialization_phase = "setup"
+            self._setup_ui()
+            self._setup_called = True
+            
+        # Verify no widget attributes were overwritten
+        self._verify_initialization()
+        self._initialization_phase = "complete"
+    
+    def __setattr__(self, name: str, value: Any) -> None:
+        """
+        Override setattr to catch initialization order bugs.
+        
+        This detects when instance variables are assigned None after setup methods,
+        which would overwrite already-created widgets.
+        """
+        # Allow private attributes and initialization tracking
+        if name.startswith("_"):
+            super().__setattr__(name, value)
+            return
+            
+        # During initialization phase, track what's happening
+        if hasattr(self, "_initialization_phase"):
+            phase = self._initialization_phase
+            
+            # Check for suspicious patterns
+            if (phase == "setup" and 
+                value is None and 
+                name in self._WIDGET_ATTRIBUTES):
+                logger.warning(
+                    f"{self.__class__.__name__}: Assigning None to '{name}' "
+                    f"during setup phase - possible initialization order bug!"
+                )
+                
+            # After setup, check for late assignments
+            elif (phase == "complete" and 
+                  value is None and 
+                  name not in self._declared_variables and
+                  name in self._WIDGET_ATTRIBUTES):
+                raise InitializationOrderError(
+                    f"{self.__class__.__name__}: Cannot assign None to '{name}' "
+                    f"after setup - this would overwrite an existing widget! "
+                    f"Declare '{name}' before calling super().__init__()"
+                )
+        
+        super().__setattr__(name, value)
+    
+    def _verify_initialization(self) -> None:
+        """Verify that initialization followed the correct pattern."""
+        # Check for common widget attributes that should not be None
+        for attr_name in self._WIDGET_ATTRIBUTES:
+            if hasattr(self, attr_name):
+                value = getattr(self, attr_name)
+                if value is None and attr_name not in self._declared_variables:
+                    logger.warning(
+                        f"{self.__class__.__name__}: Widget attribute '{attr_name}' "
+                        f"is None after initialization - was it properly created?"
+                    )
+    
+    @abstractmethod
+    def _setup_ui(self) -> None:
+        """
+        Set up the dialog UI.
+        
+        Subclasses MUST implement this method to create their UI.
+        This is called automatically by __init__ after instance variables
+        are declared but before the dialog is shown.
+        """
+        raise NotImplementedError("Subclasses must implement _setup_ui()")
+    
+    def show_error(self, title: str, message: str) -> None:
+        """
+        Show an error message dialog.
+        
+        Args:
+            title: Error dialog title
+            message: Error message to display
+        """
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.critical(self, title, message)
+    
+    def show_info(self, title: str, message: str) -> None:
+        """
+        Show an information message dialog.
+        
+        Args:
+            title: Info dialog title
+            message: Info message to display
+        """
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, title, message)
+    
+    def show_warning(self, title: str, message: str) -> None:
+        """
+        Show a warning message dialog.
+        
+        Args:
+            title: Warning dialog title
+            message: Warning message to display
+        """
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(self, title, message)
+    
+    def confirm_action(self, title: str, message: str) -> bool:
+        """
+        Show a confirmation dialog.
+        
+        Args:
+            title: Confirmation dialog title
+            message: Confirmation message
+            
+        Returns:
+            True if user confirmed, False otherwise
+        """
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(self, title, message)
+        return reply == QMessageBox.StandardButton.Yes

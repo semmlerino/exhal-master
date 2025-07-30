@@ -6,7 +6,7 @@ Refactored to use component-based architecture with SplitterDialog base.
 """
 
 import os
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 if TYPE_CHECKING:
     from spritepal.core.managers.extraction_manager import ExtractionManager
@@ -41,6 +41,7 @@ class ManualOffsetDialog(SplitterDialog):
 
     # Singleton instance
     _instance: ClassVar["ManualOffsetDialog | None"] = None
+
 
     @classmethod
     def get_instance(cls, parent: "QWidget | None" = None) -> "ManualOffsetDialog":
@@ -80,6 +81,15 @@ class ManualOffsetDialog(SplitterDialog):
         # Fullscreen state
         self._is_fullscreen: bool = False
         self._normal_geometry: QRect | None = None
+
+        # UI Components - declare before _setup_dialog_ui() to avoid overwriting
+        self.rom_map: ROMMapWidget | None = None
+        self.offset_widget: ManualOffsetWidget | None = None
+        self.scan_controls: ScanControlsWidget | None = None
+        self.import_export: ImportExportControls | None = None
+        self.status_panel: StatusPanel | None = None
+        self.preview_widget: SpritePreviewWidget | None = None
+        self.apply_btn: QPushButton | None = None
 
         self._setup_dialog_ui()
         self._connect_signals()
@@ -184,7 +194,9 @@ class ManualOffsetDialog(SplitterDialog):
             self.apply_btn.setToolTip("Use the current offset for extraction")
 
             close_btn = self.button_box.addButton("Close", QDialogButtonBox.ButtonRole.RejectRole)
-            _ = close_btn.clicked.connect(self.hide)  # Hide instead of close to maintain state
+            self.apply_btn.clicked.connect(self._apply_offset)
+            if close_btn:
+                close_btn.clicked.connect(self.hide)  # Hide instead of close to maintain state
 
     def _connect_signals(self):
         """Connect internal signals"""
@@ -209,7 +221,7 @@ class ManualOffsetDialog(SplitterDialog):
 
         # Connect custom buttons
         if self.apply_btn:
-            self._ = apply_btn.clicked.connect(self._apply_offset)
+            _ = self.apply_btn.clicked.connect(self._apply_offset)
 
     def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: "ExtractionManager") -> None:
         """Set ROM data for the dialog"""
@@ -231,6 +243,42 @@ class ManualOffsetDialog(SplitterDialog):
         if rom_path:
             rom_name = os.path.basename(rom_path)
             self.setWindowTitle(f"Manual Offset Control - {rom_name}")
+
+        # Connect cache signals for status updates
+        self._connect_cache_signals()
+
+    def _connect_cache_signals(self) -> None:
+        """Connect extraction manager cache signals for status updates"""
+        extraction_manager, _ = self._get_managers_safely()
+        if not extraction_manager:
+            return
+
+        # Connect cache signals to update status panel
+        extraction_manager.cache_hit.connect(self._on_cache_hit)
+        extraction_manager.cache_miss.connect(self._on_cache_miss)
+        extraction_manager.cache_saved.connect(self._on_cache_saved)
+
+    def _on_cache_hit(self, cache_type: str, time_saved: float) -> None:
+        """Handle cache hit - update status panel"""
+        # Update cache status to reflect any changes
+        self.status_panel.update_cache_status()
+
+        # Show cache hit message in status
+        message = f"Loaded {cache_type.replace('_', ' ')} from cache (saved {time_saved:.1f}s)"
+        self.status_panel.update_status(message)
+
+    def _on_cache_miss(self, cache_type: str) -> None:
+        """Handle cache miss - just for logging, don't update UI"""
+        # Cache misses are normal, don't need UI feedback
+
+    def _on_cache_saved(self, cache_type: str, count: int) -> None:
+        """Handle cache saved - update status panel"""
+        # Update cache status to reflect new cached items
+        self.status_panel.update_cache_status()
+
+        # Show cache save message in status
+        message = f"Saved {count} {cache_type.replace('_', ' ')} to cache"
+        self.status_panel.update_status(message)
 
     def _get_managers_safely(self) -> tuple["ExtractionManager | None", "ROMExtractor | None"]:
         """Get manager references safely with thread protection"""
@@ -275,10 +323,10 @@ class ManualOffsetDialog(SplitterDialog):
         # Clean up any existing preview worker
         if self.preview_worker:
             self.preview_worker.quit()
-            if not self._ = preview_worker.wait(3000):  # 3 second timeout
+            if not self.preview_worker.wait(3000):  # 3 second timeout
                 logger.warning("Preview worker cleanup timeout, terminating")
-                self._ = preview_worker.terminate()
-                self._ = preview_worker.wait(1000)  # 1 second for termination
+                self.preview_worker.terminate()
+                _ = self.preview_worker.wait(1000)  # 1 second for termination
 
         # Get managers safely
         extraction_manager, rom_extractor = self._get_managers_safely()
@@ -367,10 +415,10 @@ class ManualOffsetDialog(SplitterDialog):
         # Clean up any existing search worker
         if self.search_worker:
             self.search_worker.quit()
-            if not self._ = search_worker.wait(3000):  # 3 second timeout
+            if not self.search_worker.wait(3000):  # 3 second timeout
                 logger.warning("Search worker cleanup timeout, terminating")
-                self._ = search_worker.terminate()
-                self._ = search_worker.wait(1000)  # 1 second for termination
+                self.search_worker.terminate()
+                _ = self.search_worker.wait(1000)  # 1 second for termination
 
         # Create worker to search for next sprite
         self.search_worker = SpriteSearchWorker(
@@ -400,10 +448,10 @@ class ManualOffsetDialog(SplitterDialog):
         # Clean up any existing search worker
         if self.search_worker:
             self.search_worker.quit()
-            if not self._ = search_worker.wait(3000):  # 3 second timeout
+            if not self.search_worker.wait(3000):  # 3 second timeout
                 logger.warning("Search worker cleanup timeout, terminating")
-                self._ = search_worker.terminate()
-                self._ = search_worker.wait(1000)  # 1 second for termination
+                self.search_worker.terminate()
+                _ = self.search_worker.wait(1000)  # 1 second for termination
 
         # Create worker to search for previous sprite
         self.search_worker = SpriteSearchWorker(
@@ -524,20 +572,20 @@ class ManualOffsetDialog(SplitterDialog):
         # Stop preview worker
         if self.preview_worker:
             self.preview_worker.quit()
-            if not self._ = preview_worker.wait(5000):  # 5 second timeout
+            if not self.preview_worker.wait(5000):  # 5 second timeout
                 logger.warning("Preview worker did not stop gracefully, terminating")
-                self._ = preview_worker.terminate()
-                if not self._ = preview_worker.wait(2000):  # 2 second timeout for termination
+                self.preview_worker.terminate()
+                if not self.preview_worker.wait(2000):  # 2 second timeout for termination
                     logger.error("Preview worker failed to terminate")
             self.preview_worker = None
 
         # Stop search worker
         if self.search_worker:
             self.search_worker.quit()
-            if not self._ = search_worker.wait(5000):  # 5 second timeout
+            if not self.search_worker.wait(5000):  # 5 second timeout
                 logger.warning("Search worker did not stop gracefully, terminating")
-                self._ = search_worker.terminate()
-                if not self._ = search_worker.wait(2000):  # 2 second timeout for termination
+                self.search_worker.terminate()
+                if not self.search_worker.wait(2000):  # 2 second timeout for termination
                     logger.error("Search worker failed to terminate")
             self.search_worker = None
 

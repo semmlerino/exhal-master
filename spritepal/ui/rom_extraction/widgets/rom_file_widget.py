@@ -1,9 +1,15 @@
 """ROM file selector widget for ROM extraction"""
 
+from typing import Any
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
 
+from spritepal.utils.logging_config import get_logger
+from spritepal.utils.rom_cache import get_rom_cache
 from .base_widget import BaseExtractionWidget
+
+logger = get_logger(__name__)
 
 # UI Spacing Constants (matching main panel)
 SPACING_SMALL = 6
@@ -21,9 +27,14 @@ class ROMFileWidget(BaseExtractionWidget):
 
     # Signals
     browse_clicked = pyqtSignal()  # Emitted when browse button clicked
+    cache_status_changed = pyqtSignal(dict)  # Emitted when cache status changes
+    partial_scan_detected = pyqtSignal(dict)  # Emitted when partial scan cache found
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._rom_path = ""
+        self._cache_status = {"has_cache": False, "cache_type": None}
+        self._rom_cache = get_rom_cache()
         self._setup_ui()
 
     def _setup_ui(self):
@@ -55,7 +66,7 @@ class ROMFileWidget(BaseExtractionWidget):
         self.browse_rom_btn = QPushButton("Browse...")
         self.browse_rom_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.browse_rom_btn.setFixedWidth(BUTTON_MAX_WIDTH)
-        self._ = browse_rom_btn.clicked.connect(self.browse_clicked.emit)
+        _ = self.browse_rom_btn.clicked.connect(self.browse_clicked.emit)
         rom_row.addWidget(self.browse_rom_btn)
 
         rom_layout.addLayout(rom_row)
@@ -73,13 +84,113 @@ class ROMFileWidget(BaseExtractionWidget):
 
     def set_rom_path(self, path: str):
         """Set the ROM path display"""
+        self._rom_path = path
         self.rom_path_edit.setText(path)
+        # Check cache status when ROM is set
+        if path:
+            self._check_cache_status()
 
     def set_info_text(self, html: str):
         """Set the ROM info display text (supports HTML)"""
+        # Append cache status if available
+        if self._cache_status["has_cache"]:
+            cache_html = self._get_cache_status_html()
+            # Insert cache status before the closing tags if they exist
+            if "</span>" in html:
+                parts = html.rsplit("</span>", 1)
+                html = parts[0] + "</span><br>" + cache_html + (parts[1] if len(parts) > 1 else "")
+            else:
+                html += "<br>" + cache_html
         self.rom_info_label.setText(html)
 
     def clear(self):
         """Clear the ROM selection"""
+        self._rom_path = ""
+        self._cache_status = {"has_cache": False, "cache_type": None}
         self.rom_path_edit.clear()
         self.rom_info_label.setText("No ROM loaded")
+
+    def _check_cache_status(self):
+        """Check cache status for the current ROM"""
+        if not self._rom_path or not self._rom_cache._cache_enabled:
+            self._cache_status = {"has_cache": False, "cache_type": None}
+            return
+
+        # Check for different types of cache
+        has_sprite_cache = False
+        has_scan_cache = False
+        partial_scan_data = None
+        sprite_locations = None
+        partial_scan = None
+
+        try:
+            # Check sprite locations cache
+            sprite_locations = self._rom_cache.get_sprite_locations(self._rom_path)
+            if sprite_locations:
+                has_sprite_cache = True
+
+            # Check for partial scan cache (must match SpriteScanWorker params)
+            scan_params = {
+                "start_offset": 0xC0000,
+                "end_offset": 0xF0000,
+                "alignment": 0x100
+            }
+            partial_scan = self._rom_cache.get_partial_scan_results(self._rom_path, scan_params)
+            if partial_scan:
+                has_scan_cache = True
+                partial_scan_data = partial_scan
+
+                # Emit partial scan signal if scan is incomplete
+                if not partial_scan.get("completed", False):
+                    self.partial_scan_detected.emit(partial_scan)
+
+        except Exception as e:
+            # Log the error but don't crash the UI
+            logger.warning(f"Cache check failed: {e}")
+
+        self._cache_status = {
+            "has_cache": has_sprite_cache or has_scan_cache,
+            "has_sprite_cache": has_sprite_cache,
+            "has_scan_cache": has_scan_cache,
+            "sprite_count": len(sprite_locations) if sprite_locations else 0,
+            "partial_scan_data": partial_scan_data
+        }
+
+        # Emit signal if cache status changed
+        self.cache_status_changed.emit(self._cache_status)
+
+    def _get_cache_status_html(self) -> str:
+        """Generate HTML for cache status indicator"""
+        if not self._cache_status["has_cache"]:
+            return ""
+
+        cache_parts = []
+
+        if self._cache_status.get("has_sprite_cache"):
+            count = self._cache_status.get("sprite_count", 0)
+            cache_parts.append(f'<span style="color: #0078d4;">💾 {count} sprites cached</span>')
+
+        if self._cache_status.get("has_scan_cache"):
+            cache_parts.append('<span style="color: #107c41;">📊 Partial scan cached</span>')
+
+        return " | ".join(cache_parts) if cache_parts else ""
+
+    def get_cache_status(self) -> dict[str, Any]:
+        """Get the current cache status"""
+        return self._cache_status.copy()
+
+    def refresh_cache_status(self):
+        """Refresh cache status and update display"""
+        if self._rom_path:
+            self._check_cache_status()
+            # Re-set the info text to update cache display
+            current_text = self.rom_info_label.text()
+            # Remove old cache info if present
+            if "💾" in current_text or "📊" in current_text:
+                # Find where cache info starts
+                parts = current_text.split("<br>")
+                # Remove cache parts
+                parts = [p for p in parts if "💾" not in p and "📊" not in p]
+                current_text = "<br>".join(parts)
+            # Set text again to add updated cache info
+            self.set_info_text(current_text)
