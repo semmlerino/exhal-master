@@ -201,8 +201,11 @@ class TestFileCorruptionErrorPropagation:
             # Test dialog with corrupted image
             from spritepal.core.controller import ExtractionController
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock arrangement dialog with image loading error
             with patch(
@@ -253,8 +256,8 @@ class TestFileCorruptionErrorPropagation:
                 mock_dialog.return_value = mock_dialog_instance
 
                 # Mock file existence check and image processing
-                with patch("os.path.exists", return_value=True):
-                    with patch.object(controller, "_get_tiles_per_row_from_sprite", return_value=8):
+                with patch("os.path.exists", return_value=True), \
+                     patch.object(controller, "_get_tiles_per_row_from_sprite", return_value=8):
                         # Mock sprite preview palette retrieval to simulate corrupted palette error
                         window.sprite_preview.get_palettes = Mock(
                             side_effect=Exception("Invalid JSON format")
@@ -1032,22 +1035,23 @@ class TestCascadingErrorPrevention:
             mock_dialog.side_effect = Exception("Dialog initialization failed")
 
             # Mock error handling
-            with patch("spritepal.core.controller.QMessageBox") as mock_msgbox:
-                # Mock file existence check
-                with patch("os.path.exists", return_value=True):
-                    # Trigger arrangement with failing dialog
-                    controller.open_row_arrangement("test_sprite.png")
+            with (
+                patch("spritepal.core.controller.QMessageBox") as mock_msgbox,
+                patch("os.path.exists", return_value=True)
+            ):
+                # Trigger arrangement with failing dialog
+                controller.open_row_arrangement("test_sprite.png")
 
-                    # Verify error was handled
-                    mock_msgbox.critical.assert_called_once()
+                # Verify error was handled
+                mock_msgbox.critical.assert_called_once()
 
-                    # Verify main window is still functional
-                    assert mock_window is not None
+                # Verify main window is still functional
+                assert mock_window is not None
 
-                    # Verify other operations still work
-                    controller._output_path = "test_output"
-                    # This should not raise an exception
-                    assert controller._output_path == "test_output"
+                # Verify other operations still work
+                controller._output_path = "test_output"
+                # This should not raise an exception
+                assert controller._output_path == "test_output"
 
     @pytest.mark.integration
     def test_preview_error_isolation(self):
@@ -1249,8 +1253,11 @@ class TestErrorRecoveryWorkflows:
         """Test dialog retry after error"""
         # Create mock controller
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock dialog that fails first time, succeeds second time
         with patch(
@@ -1763,13 +1770,11 @@ class TestRealErrorBoundaryImplementation:
         }
 
         # Test real validation error
-        try:
+        from spritepal.core.managers.exceptions import ValidationError
+        
+        with pytest.raises(ValidationError, match=r".+") as exc_info:
             extraction_manager.validate_extraction_params(invalid_params)
-            raise AssertionError("Should have raised validation error")
-        except Exception as e:
-            # Verify we got a real validation error
-            assert isinstance(e, Exception)
-            assert str(e)  # Should have error message
+        # The match ensures we have a non-empty error message
 
     @pytest.mark.integration
     def test_real_sprite_extractor_error_handling(self, window_helper):
@@ -1780,20 +1785,21 @@ class TestRealErrorBoundaryImplementation:
         # Test with invalid VRAM data
         invalid_vram_data = b"invalid"  # Too short for real VRAM
 
-        try:
-            # Attempt extraction with invalid data - should handle gracefully
-            result = extractor.extract_sprites_from_vram(
-                vram_data=invalid_vram_data,
-                cgram_data=None,
-                vram_offset=0xC000,
-                create_grayscale=True
-            )
-            # If it doesn't raise an exception, it should return empty/invalid result
-            assert result is None or (hasattr(result, "__len__") and len(result) == 0)
-        except Exception as e:
-            # Should be a meaningful error, not a generic crash
-            assert isinstance(e, Exception)
-            assert str(e)  # Should have descriptive error message
+        # Attempt extraction with invalid data
+        # This should either return None/empty result OR raise a descriptive exception
+        # We test the graceful handling by attempting the operation
+        
+        result = extractor.extract_sprites_from_vram(
+            vram_data=invalid_vram_data,
+            cgram_data=None,
+            vram_offset=0xC000,
+            create_grayscale=True
+        )
+        
+        # If we get here without exception, result should be None or empty
+        # This tests that the extractor handles invalid data gracefully
+        assert result is None or (hasattr(result, "__len__") and len(result) == 0), \
+            "Invalid VRAM data should return None or empty result"
 
     @pytest.mark.integration
     def test_real_error_recovery_workflow(self, window_helper):

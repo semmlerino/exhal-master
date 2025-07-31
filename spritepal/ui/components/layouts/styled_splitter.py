@@ -6,6 +6,8 @@ exactly replicating the splitter patterns from existing dialogs.
 """
 
 
+# No longer need Optional import for Python 3.10+
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QWidget
 
@@ -55,7 +57,7 @@ class StyledSplitter(QSplitter):
         self.setStretchFactor(index, stretch_factor)
         return index
 
-    def add_widgets(self, widgets: list[QWidget], stretch_factors: list[int | None] = None):
+    def add_widgets(self, widgets: list[QWidget], stretch_factors: list[int | None] | None = None):
         """
         Add multiple widgets with optional stretch factors.
 

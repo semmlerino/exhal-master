@@ -4,13 +4,14 @@ Mock-based tests for grid arrangement dialog logic (without actual PyQt6 imports
 
 import os
 import tempfile
+from typing import Any
 from unittest.mock import Mock
 
 from PIL import Image
 
 from spritepal.ui.row_arrangement.grid_arrangement_manager import (
     GridArrangementManager,
-    TilePosition
+    TilePosition,
 )
 from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
 from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
@@ -36,7 +37,7 @@ class MockGridArrangementDialog:
 
         # Create actual components (non-UI parts)
         self.processor = GridImageProcessor()
-        self.manager = None
+        self.manager: GridArrangementManager | None = None
         self.generator = GridPreviewGenerator()
 
         # Mock UI components
@@ -44,6 +45,9 @@ class MockGridArrangementDialog:
         self.arrangement_list = Mock()
         self.progress_bar = Mock()
         self.status_label = Mock()
+
+        # Initialize last_error to None
+        self.last_error: str | None = None
 
         # Initialize if sprite exists
         if os.path.exists(sprite_path):
@@ -295,7 +299,7 @@ class MockGridGraphicsView:
         """Clear selection"""
         self.selected_tiles.clear()
 
-    def highlight_tiles(self, tiles: set):
+    def highlight_tiles(self, tiles: set[Any]):
         """Highlight tiles"""
         # Mock highlighting
         for tile in tiles:
@@ -417,17 +421,20 @@ class TestGridArrangementDialogLogic:
             result = dialog.add_selected_tiles_to_arrangement()
 
             assert result is True
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() == 1
 
             # Test adding row
             result = dialog.add_row_to_arrangement(1)
             assert result is True
+            assert dialog.manager is not None
             initial_count = dialog.manager.get_arranged_count()
             assert initial_count > 1  # Should have added tiles from the row
 
             # Test adding column
             result = dialog.add_column_to_arrangement(1)
             assert result is True
+            assert dialog.manager is not None
             final_count = dialog.manager.get_arranged_count()
             assert (
                 final_count >= initial_count
@@ -454,11 +461,13 @@ class TestGridArrangementDialogLogic:
             assert group.id == "test_group"
             assert group.name == "Test Group"
             assert len(group.tiles) == 2
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() == 2
 
             # Remove group
             result = dialog.remove_group("test_group")
             assert result is True
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() == 0
 
     def test_dialog_arrangement_clearing(self):
@@ -475,10 +484,12 @@ class TestGridArrangementDialogLogic:
             dialog.add_row_to_arrangement(0)
             dialog.add_column_to_arrangement(1)
 
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() > 0
 
             # Clear arrangement
             dialog.clear_arrangement()
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() == 0
 
     def test_dialog_export_functionality(self):
@@ -715,6 +726,7 @@ class TestGridArrangementDialogIntegration:
             data = dialog.get_arrangement_data()
 
             # Verify workflow
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() > 0  # Should have tiles arranged
             assert arranged_image is not None
             assert data is not None
@@ -754,5 +766,6 @@ class TestGridArrangementDialogIntegration:
 
             # Clear and verify cleanup
             dialog.clear_arrangement()
+            assert dialog.manager is not None
             assert dialog.manager.get_arranged_count() == 0
             assert len(dialog.selected_tiles) == 0

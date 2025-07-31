@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction, QCloseEvent, QKeySequence
+from PyQt6.QtGui import QAction, QCloseEvent, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -23,11 +23,11 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QVBoxLayout,
-    QWidget
+    QWidget,
 )
 
 from spritepal.core.managers import get_session_manager
-from spritepal.ui.dialogs import UserErrorDialog
+from spritepal.ui.dialogs import SettingsDialog, UserErrorDialog
 from spritepal.ui.extraction_panel import ExtractionPanel
 from spritepal.ui.palette_preview import PalettePreviewWidget
 from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
@@ -56,7 +56,7 @@ class MainWindow(QMainWindow):
         self._connect_signals()
 
         # Create controller (lazy import to avoid circular dependency)
-        from spritepal.core.controller import ExtractionController  # noqa: PLC0415
+        from spritepal.core.controller import ExtractionController
         self.controller = ExtractionController(self)
 
         # Restore session after UI is set up
@@ -254,7 +254,127 @@ class MainWindow(QMainWindow):
         # Status bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
+
+        # Add cache status indicator
+        self._setup_status_bar_indicators()
+
         self.status_bar.showMessage("Ready to extract sprites")
+
+    def _setup_status_bar_indicators(self) -> None:
+        """Set up permanent status bar indicators"""
+        from spritepal.utils.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+
+        # Only show indicators if enabled in settings
+        if not settings_manager.get("cache", "show_indicators", True):
+            return
+
+        # Cache status widget
+        self.cache_status_widget = QWidget()
+        cache_layout = QHBoxLayout()
+        cache_layout.setContentsMargins(0, 0, 0, 0)
+        cache_layout.setSpacing(4)
+
+        # Cache icon
+        self.cache_icon_label = QLabel()
+        self.cache_icon_label.setToolTip("ROM cache status")
+        cache_layout.addWidget(self.cache_icon_label)
+
+        # Cache info label
+        self.cache_info_label = QLabel()
+        self.cache_info_label.setStyleSheet(get_muted_text_style())
+        cache_layout.addWidget(self.cache_info_label)
+
+        # Cache operation badge (hidden by default)
+        self.cache_operation_badge = QLabel()
+        self.cache_operation_badge.setStyleSheet(
+            "background-color: #3498db; color: white; padding: 2px 6px; "
+            "border-radius: 3px; font-size: 10px; font-weight: bold;"
+        )
+        self.cache_operation_badge.setVisible(False)
+        cache_layout.addWidget(self.cache_operation_badge)
+
+        self.cache_status_widget.setLayout(cache_layout)
+
+        # Add to status bar as permanent widget
+        self.status_bar.addPermanentWidget(self.cache_status_widget)
+
+        # Update cache status
+        self._update_cache_status()
+
+    def _update_cache_status(self) -> None:
+        """Update cache status indicator"""
+        from spritepal.utils.rom_cache import get_rom_cache
+        from spritepal.utils.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+
+        # Check if indicators are enabled
+        if not hasattr(self, "cache_status_widget") or not settings_manager.get("cache", "show_indicators", True):
+            return
+
+        # Check if cache is enabled
+        cache_enabled = settings_manager.get_cache_enabled()
+
+        if cache_enabled:
+            # Get cache stats
+            try:
+                rom_cache = get_rom_cache()
+                stats = rom_cache.get_cache_stats()
+
+                # Update icon (✓ for enabled, ✗ for disabled)
+                self.cache_icon_label.setText("✓ Cache:")
+                self.cache_icon_label.setStyleSheet("color: green;")
+
+                # Update info
+                total_files = stats.get("total_files", 0)
+                size_bytes = stats.get("total_size_bytes", 0)
+                size_mb = size_bytes / (1024 * 1024)
+
+                self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
+
+                # Update tooltip
+                sprite_caches = stats.get("sprite_location_caches", 0)
+                rom_caches = stats.get("rom_info_caches", 0)
+                scan_caches = stats.get("scan_progress_caches", 0)
+
+                tooltip = "ROM Cache Statistics:\n"
+                tooltip += f"Total items: {total_files}\n"
+                tooltip += f"- Sprite locations: {sprite_caches}\n"
+                tooltip += f"- ROM info: {rom_caches}\n"
+                tooltip += f"- Scan progress: {scan_caches}\n"
+                tooltip += f"Total size: {size_mb:.1f} MB"
+
+                self.cache_status_widget.setToolTip(tooltip)
+
+            except Exception:
+                # Error getting stats
+                self.cache_icon_label.setText("⚠ Cache:")
+                self.cache_icon_label.setStyleSheet("color: orange;")
+                self.cache_info_label.setText("Error")
+                self.cache_status_widget.setToolTip("Error reading cache statistics")
+        else:
+            # Cache disabled
+            self.cache_icon_label.setText("✗ Cache:")
+            self.cache_icon_label.setStyleSheet("color: gray;")
+            self.cache_info_label.setText("Disabled")
+            self.cache_status_widget.setToolTip("ROM caching is disabled")
+
+    def show_cache_operation_badge(self, operation: str) -> None:
+        """Show cache operation badge in status bar
+
+        Args:
+            operation: Operation description (e.g., "Loading", "Saving", "Reading")
+        """
+        if hasattr(self, "cache_operation_badge"):
+            self.cache_operation_badge.setText(operation)
+            self.cache_operation_badge.setVisible(True)
+
+    def hide_cache_operation_badge(self) -> None:
+        """Hide cache operation badge"""
+        if hasattr(self, "cache_operation_badge"):
+            self.cache_operation_badge.setVisible(False)
 
     def _create_menus(self) -> None:
         """Create application menus"""
@@ -279,6 +399,30 @@ class MainWindow(QMainWindow):
         _ = exit_action.triggered.connect(self.close)
         if file_menu:
             file_menu.addAction(exit_action)
+
+        # Tools menu
+        tools_menu = menubar.addMenu("Tools")
+
+        # Settings
+        settings_action = QAction("Settings...", self)
+        settings_action.setShortcut("Ctrl+,")
+        _ = settings_action.triggered.connect(self._show_settings)
+        if tools_menu:
+            tools_menu.addAction(settings_action)
+            tools_menu.addSeparator()
+
+        # Cache Manager
+        cache_manager_action = QAction("Cache Manager...", self)
+        _ = cache_manager_action.triggered.connect(self._show_cache_manager)
+        if tools_menu:
+            tools_menu.addAction(cache_manager_action)
+            tools_menu.addSeparator()
+
+        # Clear All Caches
+        clear_cache_action = QAction("Clear All Caches", self)
+        _ = clear_cache_action.triggered.connect(self._clear_all_caches)
+        if tools_menu:
+            tools_menu.addAction(clear_cache_action)
 
         # Help menu
         help_menu = menubar.addMenu("Help")
@@ -636,7 +780,101 @@ class MainWindow(QMainWindow):
             shortcuts_text
         )
 
-    def get_extraction_params(self) -> dict[str, Any]:
+    def _show_settings(self) -> None:
+        """Show the settings dialog"""
+        dialog = SettingsDialog(self)
+
+        # Connect signals
+        dialog.settings_changed.connect(self._on_settings_changed)
+        dialog.cache_cleared.connect(self._on_cache_cleared)
+
+        dialog.exec()
+
+    def _show_cache_manager(self) -> None:
+        """Show the cache manager dialog"""
+        # For now, just open settings dialog to cache tab
+        dialog = SettingsDialog(self)
+        dialog.tab_widget.setCurrentIndex(1)  # Switch to cache tab
+
+        # Connect signals
+        dialog.settings_changed.connect(self._on_settings_changed)
+        dialog.cache_cleared.connect(self._on_cache_cleared)
+
+        dialog.exec()
+
+    def _clear_all_caches(self) -> None:
+        """Clear all ROM caches with confirmation"""
+        from spritepal.utils.rom_cache import get_rom_cache
+
+        reply = QMessageBox.question(
+            self,
+            "Clear All Caches",
+            "Are you sure you want to clear all ROM caches?\n\n"
+            "This will remove all cached scan results and sprite locations.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                rom_cache = get_rom_cache()
+                removed_count = rom_cache.clear_cache()
+
+                self.status_bar.showMessage(f"Cleared {removed_count} cache files")
+
+                QMessageBox.information(
+                    self,
+                    "Cache Cleared",
+                    f"Successfully removed {removed_count} cache files."
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to clear cache: {e!s}"
+                )
+
+    def _on_settings_changed(self) -> None:
+        """Handle settings change from settings dialog"""
+        # Reload any settings that affect the main window
+        # For example, cache indicators in status bar
+        from spritepal.utils.rom_cache import get_rom_cache
+        from spritepal.utils.settings_manager import get_settings_manager
+
+        settings_manager = get_settings_manager()
+        cache_enabled = settings_manager.get_cache_enabled()
+        show_indicators = settings_manager.get("cache", "show_indicators", True)
+
+        # Refresh ROM cache settings
+        rom_cache = get_rom_cache()
+        rom_cache.refresh_settings()
+
+        # Update or hide cache status indicators
+        if show_indicators:
+            if not hasattr(self, "cache_status_widget"):
+                # Re-create indicators if they were previously hidden
+                self._setup_status_bar_indicators()
+            else:
+                # Update existing indicators
+                self._update_cache_status()
+        # Hide indicators if disabled
+        elif hasattr(self, "cache_status_widget"):
+            self.status_bar.removeWidget(self.cache_status_widget)
+            self.cache_status_widget.deleteLater()
+            del self.cache_status_widget
+
+        if cache_enabled and show_indicators:
+            self.status_bar.showMessage("Settings updated - cache enabled", 3000)
+        else:
+            self.status_bar.showMessage("Settings updated", 3000)
+
+    def _on_cache_cleared(self) -> None:
+        """Handle cache cleared signal from settings dialog"""
+        self.status_bar.showMessage("ROM cache cleared", 3000)
+        # Update cache status indicator
+        self._update_cache_status()
+
+    def get_extraction_params(self) -> dict[str, Any]:  # TODO: Should return ExtractionParams TypedDict
         """Get extraction parameters from UI"""
         return {
             "vram_path": self.extraction_panel.get_vram_path(),
@@ -743,14 +981,17 @@ class MainWindow(QMainWindow):
         # Save the session to disk
         self.session_manager.save_session()
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle window close event"""
         self._save_session()
         if a0:
             super().closeEvent(a0)
 
-    def keyPressEvent(self, a0) -> None:  # noqa: N802
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         """Handle keyboard shortcuts"""
+        if not a0:
+            return
+
         # Tab navigation
         if a0.modifiers() == Qt.KeyboardModifier.ControlModifier:
             if a0.key() == Qt.Key.Key_Tab:

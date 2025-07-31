@@ -86,7 +86,7 @@ def analyze_sprite_quality(data: bytes) -> float:
 
     return score / (num_tiles * 1.5) if num_tiles > 0 else 0.0
 
-def compare_to_vram(decompressed: bytes, vram_pattern: bytes, offsets: list) -> tuple:
+def compare_to_vram(decompressed: bytes, vram_pattern: bytes, offsets: list[int]) -> tuple[float, int]:
     """Compare decompressed data to VRAM pattern at various offsets."""
     best_match = 0.0
     best_offset = 0
@@ -183,7 +183,7 @@ def scan_rom_comprehensively(rom_path: str, exhal_path: str):
 
     return results
 
-def update_sprite_locations(results: list, rom_path: str):
+def update_sprite_locations(results: list[tuple[int, float, int]], rom_path: str):
     """Update sprite_locations.json with findings."""
     config_path = "config/sprite_locations.json"
 

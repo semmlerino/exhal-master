@@ -12,9 +12,9 @@ class SettingsManager:
     """Manages application settings and session persistence"""
 
     def __init__(self, app_name: str = "SpritePal") -> None:
-        self.app_name = app_name
-        self._settings_file = self._get_settings_file()
-        self._settings = self._load_settings()
+        self.app_name: str = app_name
+        self._settings_file: Path = self._get_settings_file()
+        self._settings: dict[str, Any] = self._load_settings()
 
     def _get_settings_file(self) -> Path:
         """Get the settings file path"""
@@ -60,6 +60,14 @@ class SettingsManager:
             "paths": {
                 "default_dumps_dir": r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger",
                 "last_used_dir": "",
+            },
+            "cache": {
+                "enabled": True,
+                "location": "",  # Empty = default (~/.spritepal_rom_cache)
+                "max_size_mb": 500,
+                "expiration_days": 30,
+                "auto_cleanup": True,
+                "show_indicators": True,
             },
         }
 
@@ -170,6 +178,57 @@ class SettingsManager:
         if directory and os.path.exists(directory):
             self.set("paths", "last_used_dir", directory)
             self.save_settings()
+
+    def get_cache_settings(self) -> dict[str, Any]:
+        """Get all cache settings"""
+        cache = self._settings.get("cache", {})
+        if isinstance(cache, dict):
+            return cache
+        # Return defaults if cache settings are corrupted
+        return {
+            "enabled": True,
+            "location": "",
+            "max_size_mb": 500,
+            "expiration_days": 30,
+            "auto_cleanup": True,
+            "show_indicators": True,
+        }
+
+    def set_cache_enabled(self, enabled: bool) -> None:
+        """Enable or disable caching"""
+        self.set("cache", "enabled", enabled)
+        self.save_settings()
+
+    def get_cache_enabled(self) -> bool:
+        """Check if caching is enabled"""
+        return bool(self.get("cache", "enabled", True))
+
+    def set_cache_location(self, location: str) -> None:
+        """Set custom cache location"""
+        self.set("cache", "location", location)
+        self.save_settings()
+
+    def get_cache_location(self) -> str:
+        """Get custom cache location (empty string means default)"""
+        return str(self.get("cache", "location", ""))
+
+    def get_cache_max_size_mb(self) -> int:
+        """Get maximum cache size in MB"""
+        return int(self.get("cache", "max_size_mb", 500))
+
+    def set_cache_max_size_mb(self, size_mb: int) -> None:
+        """Set maximum cache size in MB"""
+        self.set("cache", "max_size_mb", max(10, min(10000, size_mb)))  # Clamp between 10MB and 10GB
+        self.save_settings()
+
+    def get_cache_expiration_days(self) -> int:
+        """Get cache expiration in days"""
+        return int(self.get("cache", "expiration_days", 30))
+
+    def set_cache_expiration_days(self, days: int) -> None:
+        """Set cache expiration in days"""
+        self.set("cache", "expiration_days", max(1, min(365, days)))  # Clamp between 1 and 365 days
+        self.save_settings()
 
 
 # Global instance variable

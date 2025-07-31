@@ -346,12 +346,8 @@ class TestDataCorruptionErrors:
         injector = ROMInjector()
 
         # Should fail to read header
-        try:
+        with pytest.raises(ValueError, match=r".*header.*"):
             injector.read_rom_header(str(rom_path))
-            # If it somehow succeeds, the injection should still fail
-            raise AssertionError("Should have failed to read corrupted header")
-        except ValueError as e:
-            assert "header" in str(e).lower()
 
 
 class TestCompressionErrors:
@@ -681,14 +677,12 @@ class TestBackupFailureScenarios:
             # Backup should handle space issue gracefully
             from spritepal.core.rom_injector import ROMBackupManager
 
-            try:
-                backup_path = ROMBackupManager.create_backup(str(rom_path))
-                # If backup succeeds despite mock, check it's valid
-                if backup_path:
-                    assert Path(backup_path).exists()
-            except Exception as e:
-                # Should have descriptive error about space
-                assert "space" in str(e).lower() or "disk" in str(e).lower()
+            # Test backup creation - should either succeed or fail with descriptive error
+            backup_path = ROMBackupManager.create_backup(str(rom_path))
+            
+            # If backup succeeds, it should be valid
+            if backup_path:
+                assert Path(backup_path).exists(), "Backup path should exist if returned"
 
 
 class TestMemoryAndSizeErrors:

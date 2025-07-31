@@ -183,7 +183,7 @@ class UserErrorDialog(BaseDialog):
         button_box.accepted.connect(self.accept)
         self.main_layout.addWidget(button_box)
 
-    def _find_error_mapping(self, error_message: str) -> dict:
+    def _find_error_mapping(self, error_message: str) -> dict[str, str]:
         """Find the appropriate error mapping based on the error message"""
         error_lower = error_message.lower()
 

@@ -11,9 +11,9 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # Import after path setup
-from spritepal.core.hal_compression import HALCompressor  # noqa: E402
-from spritepal.core.rom_extractor import ROMExtractor  # noqa: E402
-from spritepal.utils.logging_config import get_logger  # noqa: E402
+from spritepal.core.hal_compression import HALCompressor
+from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -21,8 +21,8 @@ class VRAMAnalyzer:
     """Analyze VRAM dumps to find sprite patterns"""
 
     def __init__(self):
-        self.rom_extractor = ROMExtractor()
-        self.hal_compressor = HALCompressor()
+        self.rom_extractor: ROMExtractor = ROMExtractor()
+        self.hal_compressor: HALCompressor = HALCompressor()
 
     def load_vram_dump(self, vram_path: str) -> bytes:
         """Load VRAM dump file"""

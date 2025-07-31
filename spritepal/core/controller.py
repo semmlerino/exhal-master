@@ -11,7 +11,7 @@ import sys
 from typing import TYPE_CHECKING, Any, TypedDict, override
 
 from PIL import Image
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QMetaObject, QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox
 
 if TYPE_CHECKING:
@@ -21,10 +21,23 @@ if TYPE_CHECKING:
 
 from spritepal.core.managers import (
     ExtractionManager,
+    InjectionManager,
+    SessionManager,
     get_extraction_manager,
     get_injection_manager,
     get_session_manager,
 )
+from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
+from spritepal.ui.injection_dialog import InjectionDialog
+from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from spritepal.utils.constants import (
+    DEFAULT_TILES_PER_ROW,
+    TILE_WIDTH,
+)
+from spritepal.utils.image_utils import pil_to_qpixmap
+from spritepal.utils.logging_config import get_logger
+from spritepal.utils.settings_manager import get_settings_manager
+from spritepal.utils.validation import validate_image_file
 
 
 # Type definitions
@@ -49,15 +62,6 @@ class ROMExtractionParams(TypedDict):
     cgram_path: str | None
 
 
-# UI imports moved to functions to avoid circular dependencies
-from spritepal.utils.constants import (
-    DEFAULT_TILES_PER_ROW,
-    TILE_WIDTH,
-)
-from spritepal.utils.image_utils import pil_to_qpixmap
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.validation import validate_image_file
-
 logger = get_logger(__name__)
 
 
@@ -76,11 +80,12 @@ class ExtractionWorker(QThread):
         super().__init__()
         self.params: ExtractionParams = params
         self.manager: ExtractionManager | None = None
+        self._connections: list[QMetaObject.Connection] = []
 
+    @override
     def run(self) -> None:
         """Run the extraction process using ExtractionManager"""
         # Store connection references for proper disconnection
-        self._connections = []
 
         try:
             # Get the extraction manager
@@ -127,7 +132,7 @@ class ExtractionWorker(QThread):
                 with contextlib.suppress(Exception):
                     for connection in self._connections:
                         if connection:
-                            self.manager.disconnect(connection)
+                            _ = self.manager.disconnect(connection)
 
 
 class ExtractionController(QObject):
@@ -135,30 +140,37 @@ class ExtractionController(QObject):
 
     def __init__(self, main_window: MainWindow) -> None:
         super().__init__()
-        self.main_window = main_window
+        self.main_window: MainWindow = main_window
 
         # Get managers
-        self.session_manager = get_session_manager()
-        self.extraction_manager = get_extraction_manager()
-        self.injection_manager = get_injection_manager()
+        self.session_manager: SessionManager = get_session_manager()
+        self.extraction_manager: ExtractionManager = get_extraction_manager()
+        self.injection_manager: InjectionManager = get_injection_manager()
 
         # Workers still managed locally (thin wrappers)
         self.worker: ExtractionWorker | None = None
         self.rom_worker: ROMExtractionWorker | None = None
 
         # Connect UI signals
-        self.main_window.extract_requested.connect(self.start_extraction)
-        self.main_window.open_in_editor_requested.connect(self.open_in_editor)
-        self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
-        self.main_window.arrange_grid_requested.connect(self.open_grid_arrangement)
-        self.main_window.inject_requested.connect(self.start_injection)
-        self.main_window.extraction_panel.offset_changed.connect(
+        _ = self.main_window.extract_requested.connect(self.start_extraction)
+        _ = self.main_window.open_in_editor_requested.connect(self.open_in_editor)
+        _ = self.main_window.arrange_rows_requested.connect(self.open_row_arrangement)
+        _ = self.main_window.arrange_grid_requested.connect(self.open_grid_arrangement)
+        _ = self.main_window.inject_requested.connect(self.start_injection)
+        _ = self.main_window.extraction_panel.offset_changed.connect(
             self.update_preview_with_offset
         )
 
         # Connect injection manager signals
-        self.injection_manager.injection_progress.connect(self._on_injection_progress)
-        self.injection_manager.injection_finished.connect(self._on_injection_finished)
+        _ = self.injection_manager.injection_progress.connect(self._on_injection_progress)
+        _ = self.injection_manager.injection_finished.connect(self._on_injection_finished)
+        _ = self.injection_manager.cache_saved.connect(self._on_cache_saved)
+
+        # Connect extraction manager cache signals
+        _ = self.extraction_manager.cache_operation_started.connect(self._on_cache_operation_started)
+        _ = self.extraction_manager.cache_hit.connect(self._on_cache_hit)
+        _ = self.extraction_manager.cache_miss.connect(self._on_cache_miss)
+        _ = self.extraction_manager.cache_saved.connect(self._on_cache_saved)
 
     def start_extraction(self) -> None:
         """Start the extraction process"""
@@ -173,14 +185,25 @@ class ExtractionController(QObject):
             return
 
         # Create and start worker thread
-        self.worker = ExtractionWorker(params)
-        self.worker.progress.connect(self._on_progress)
-        self.worker.preview_ready.connect(self._on_preview_ready)
-        self.worker.preview_image_ready.connect(self._on_preview_image_ready)
-        self.worker.palettes_ready.connect(self._on_palettes_ready)
-        self.worker.active_palettes_ready.connect(self._on_active_palettes_ready)
-        self.worker.extraction_finished.connect(self._on_extraction_finished)
-        self.worker.error.connect(self._on_extraction_error)
+        # Convert validated params dict to ExtractionParams TypedDict
+        extraction_params: ExtractionParams = {
+            "vram_path": params["vram_path"],
+            "cgram_path": params.get("cgram_path", ""),
+            "oam_path": params.get("oam_path", ""),
+            "vram_offset": params.get("vram_offset", 0xC000),
+            "output_base": params["output_base"],
+            "create_grayscale": params.get("create_grayscale", True),
+            "create_metadata": params.get("create_metadata", True),
+            "grayscale_mode": params.get("grayscale_mode", False),
+        }
+        self.worker = ExtractionWorker(extraction_params)
+        _ = self.worker.progress.connect(self._on_progress)
+        _ = self.worker.preview_ready.connect(self._on_preview_ready)
+        _ = self.worker.preview_image_ready.connect(self._on_preview_image_ready)
+        _ = self.worker.palettes_ready.connect(self._on_palettes_ready)
+        _ = self.worker.active_palettes_ready.connect(self._on_active_palettes_ready)
+        _ = self.worker.extraction_finished.connect(self._on_extraction_finished)
+        _ = self.worker.error.connect(self._on_extraction_error)
         self.worker.start()
 
     def _on_progress(self, message: str) -> None:
@@ -221,7 +244,7 @@ class ExtractionController(QObject):
             # Wait for thread to finish before dereferencing
             if self.worker.isRunning():
                 self.worker.quit()
-                self._ = worker.wait(3000)  # Wait up to 3 seconds
+                _ = self.worker.wait(3000)  # Wait up to 3 seconds
             self.worker = None
 
     def update_preview_with_offset(self, offset: int) -> None:
@@ -330,7 +353,7 @@ class ExtractionController(QObject):
             try:
                 # Use absolute paths for safety
                 sprite_file_abs = os.path.abspath(sprite_file)
-                subprocess.Popen([sys.executable, launcher_path, sprite_file_abs])
+                _ = subprocess.Popen([sys.executable, launcher_path, sprite_file_abs])
                 self.main_window.status_bar.showMessage(
                     f"Opened {os.path.basename(sprite_file)} in pixel editor"
                 )
@@ -352,9 +375,6 @@ class ExtractionController(QObject):
             tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
             # Open row arrangement dialog
-            from spritepal.ui.row_arrangement_dialog import (  # noqa: PLC0415
-                RowArrangementDialog,
-            )
             dialog = RowArrangementDialog(sprite_file, tiles_per_row, self.main_window)
 
             # Pass palette data from the main window's sprite preview if available
@@ -400,9 +420,6 @@ class ExtractionController(QObject):
         tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
         # Open grid arrangement dialog
-        from spritepal.ui.grid_arrangement_dialog import (  # noqa: PLC0415
-            GridArrangementDialog,
-        )
         dialog = GridArrangementDialog(sprite_file, tiles_per_row, self.main_window)
 
         # Pass palette data from the main window's sprite preview if available
@@ -484,7 +501,6 @@ class ExtractionController(QObject):
         )
 
         # Show injection dialog
-        from spritepal.ui.injection_dialog import InjectionDialog  # noqa: PLC0415
         dialog = InjectionDialog(
             self.main_window,
             sprite_path=sprite_path,
@@ -538,14 +554,72 @@ class ExtractionController(QObject):
         self.session_manager.set("workflow", "current_injection_dialog", None)
         self.session_manager.set("workflow", "current_injection_params", None)
 
+    def _on_cache_operation_started(self, operation: str, cache_type: str) -> None:
+        """Handle cache operation started notification"""
+        settings_manager = get_settings_manager()
+
+        # Only show if indicators are enabled
+        if settings_manager.get("cache", "show_indicators", True):
+            # Show cache operation badge
+            badge_text = f"{operation} {cache_type.replace('_', ' ')}"
+            self.main_window.show_cache_operation_badge(badge_text)
+
+    def _on_cache_hit(self, cache_type: str, time_saved: float) -> None:
+        """Handle cache hit notification"""
+        settings_manager = get_settings_manager()
+
+        # Hide cache operation badge since operation is complete
+        self.main_window.hide_cache_operation_badge()
+
+        # Only show if indicators are enabled
+        if settings_manager.get("cache", "show_indicators", True):
+            # Update status bar with cache hit info
+            message = f"Loaded {cache_type.replace('_', ' ')} from cache (saved {time_saved:.1f}s)"
+            self.main_window.status_bar.showMessage(message, 5000)
+
+            # Update cache status indicator if present
+            if hasattr(self.main_window, "_update_cache_status"):
+                self.main_window._update_cache_status()
+
+    def _on_cache_miss(self, cache_type: str) -> None:
+        """Handle cache miss notification"""
+        # Cache misses are normal - only log them, don't show in UI
+        logger.debug(f"Cache miss for {cache_type}")
+
+    def _on_cache_saved(self, cache_type: str, count: int) -> None:
+        """Handle cache saved notification"""
+        settings_manager = get_settings_manager()
+
+        # Hide cache operation badge since operation is complete
+        self.main_window.hide_cache_operation_badge()
+
+        # Only show if indicators are enabled
+        if settings_manager.get("cache", "show_indicators", True):
+            # Update status bar with cache save info
+            message = f"💾 Saved {count} {cache_type.replace('_', ' ')} to cache"
+            self.main_window.status_bar.showMessage(message, 5000)
+            # Update cache status widget if method exists
+            if hasattr(self.main_window, "update_cache_status"):
+                self.main_window.update_cache_status()  # type: ignore[attr-defined]
+            # Refresh ROM file widget cache display
+            if hasattr(self.main_window, "rom_extraction_panel") and hasattr(self.main_window.rom_extraction_panel, "rom_file_widget"):
+                self.main_window.rom_extraction_panel.rom_file_widget.refresh_cache_status()
 
     def start_rom_extraction(self, params: dict[str, Any]) -> None:
         """Start ROM sprite extraction process"""
+        # Convert validated params dict to ROMExtractionParams TypedDict
+        rom_extraction_params: ROMExtractionParams = {
+            "rom_path": params["rom_path"],
+            "sprite_offset": params["sprite_offset"],
+            "sprite_name": params["sprite_name"],
+            "output_base": params["output_base"],
+            "cgram_path": params.get("cgram_path"),
+        }
         # Create and start ROM extraction worker
-        self.rom_worker = ROMExtractionWorker(params)
-        self.rom_worker.progress.connect(self._on_rom_progress)
-        self.rom_worker.extraction_finished.connect(self._on_rom_extraction_finished)
-        self.rom_worker.error.connect(self._on_rom_extraction_error)
+        self.rom_worker = ROMExtractionWorker(rom_extraction_params)
+        _ = self.rom_worker.progress.connect(self._on_rom_progress)
+        _ = self.rom_worker.extraction_finished.connect(self._on_rom_extraction_finished)
+        _ = self.rom_worker.error.connect(self._on_rom_extraction_error)
         self.rom_worker.start()
 
     def _on_rom_progress(self, message: str) -> None:
@@ -568,7 +642,7 @@ class ExtractionController(QObject):
             # Wait for thread to finish before dereferencing
             if self.rom_worker.isRunning():
                 self.rom_worker.quit()
-                self._ = rom_worker.wait(3000)  # Wait up to 3 seconds
+                _ = self.rom_worker.wait(3000)  # Wait up to 3 seconds
             self.rom_worker = None
 
 
@@ -583,6 +657,7 @@ class ROMExtractionWorker(QThread):
         super().__init__()
         self.params: ROMExtractionParams = params
         self.manager: ExtractionManager | None = None
+        self._connections: list[QMetaObject.Connection] = []
 
     @override
     def run(self) -> None:
@@ -618,4 +693,4 @@ class ROMExtractionWorker(QThread):
                 with contextlib.suppress(Exception):
                     for connection in self._connections:
                         if connection:
-                            self.manager.disconnect(connection)
+                            _ = self.manager.disconnect(connection)

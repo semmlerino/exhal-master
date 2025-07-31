@@ -16,6 +16,7 @@ from spritepal.core.rom_palette_extractor import ROMPaletteExtractor
 from spritepal.core.sprite_config_loader import SpriteConfigLoader
 from spritepal.utils.constants import BYTES_PER_TILE, TILE_HEIGHT, TILE_WIDTH
 from spritepal.utils.logging_config import get_logger
+from spritepal.utils.rom_cache import get_rom_cache
 from spritepal.utils.rom_exceptions import ROMCompressionError
 
 logger = get_logger(__name__)
@@ -310,7 +311,7 @@ class ROMExtractor:
         self, rom_path: str, start_offset: int, end_offset: int, step: int = 0x100
     ) -> list[dict[str, Any]]:
         """
-        Scan ROM for valid sprite data within a range of offsets.
+        Scan ROM for valid sprite data within a range of offsets with resumable caching.
 
         Args:
             rom_path: Path to ROM file
@@ -322,7 +323,32 @@ class ROMExtractor:
             List of dictionaries containing valid sprite locations found
         """
         logger.info(f"Scanning ROM for sprites: 0x{start_offset:X} to 0x{end_offset:X} (step: 0x{step:X})")
+
+        # Set up scan parameters for caching
+        scan_params = {
+            "start_offset": start_offset,
+            "end_offset": end_offset,
+            "step": step,
+            "scan_type": "sprite_scan"
+        }
+
+        # Try to load partial results from cache
+        rom_cache = get_rom_cache()
+        cached_progress = rom_cache.get_partial_scan_results(rom_path, scan_params)
+
         found_sprites = []
+        resume_offset = start_offset
+
+        if cached_progress:
+            # Resume from cached progress
+            if cached_progress.get("completed", False):
+                logger.info("Found completed scan in cache, returning cached results")
+                return cached_progress.get("found_sprites", [])
+
+            found_sprites = cached_progress.get("found_sprites", [])
+            resume_offset = cached_progress.get("current_offset", start_offset)
+            logger.info(f"Resuming scan from cached progress: {len(found_sprites)} sprites found, "
+                       f"resuming from offset 0x{resume_offset:X}")
 
         try:
             # Read ROM data once
@@ -338,14 +364,21 @@ class ROMExtractor:
                 end_offset = rom_size
 
             scan_count = 0
+            save_progress_interval = 50  # Save progress every 50 scans
 
-            # Scan through the range
-            for offset in range(start_offset, end_offset, step):
+            # Scan through the range, starting from resume offset
+            for offset in range(resume_offset, end_offset, step):
                 scan_count += 1
 
                 # Show progress every 100 scans
                 if scan_count % 100 == 0:
                     logger.debug(f"Scanned {scan_count} offsets... (currently at 0x{offset:X})")
+
+                # Save progress periodically
+                if scan_count % save_progress_interval == 0:
+                    rom_cache.save_partial_scan_results(
+                        rom_path, scan_params, found_sprites, offset, completed=False
+                    )
 
                 try:
                     # Try to decompress sprite at this offset
@@ -390,8 +423,21 @@ class ROMExtractor:
             # Sort by quality score (higher is better)
             found_sprites.sort(key=lambda x: x["quality"], reverse=True)
 
+            # Save final completed results to cache
+            rom_cache.save_partial_scan_results(
+                rom_path, scan_params, found_sprites, end_offset, completed=True
+            )
+
         except Exception:
             logger.exception("Failed to scan for sprites")
+            # Save partial results even on failure
+            if found_sprites:
+                try:
+                    rom_cache.save_partial_scan_results(
+                        rom_path, scan_params, found_sprites, resume_offset, completed=False
+                    )
+                except Exception:
+                    logger.warning("Failed to save partial results on scan failure")
             return []
         else:
             return found_sprites

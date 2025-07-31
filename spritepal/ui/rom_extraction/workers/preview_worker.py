@@ -27,33 +27,84 @@ class SpritePreviewWorker(QThread):
 
     def run(self):
         """Load sprite preview in background"""
+
+        def _validate_rom_path(rom_path: str) -> None:
+            """Validate ROM file path exists"""
+            if not rom_path or not os.path.exists(rom_path):
+                raise FileNotFoundError(f"ROM file not found: {rom_path}")
+
+        def _validate_offset(offset: int) -> None:
+            """Validate offset is not negative"""
+            if offset < 0:
+                raise ValueError(f"Invalid offset: 0x{offset:X} (negative)")
+
+        def _validate_rom_file_access(rom_path: str, e: Exception) -> None:
+            """Validate ROM file access and re-raise with context"""
+            if isinstance(e, PermissionError):
+                raise PermissionError(f"Cannot read ROM file: {rom_path}") from e
+            if isinstance(e, OSError):
+                raise OSError(f"Error reading ROM file: {e}") from e
+
+        def _validate_rom_size(rom_size: int) -> None:
+            """Validate ROM file size"""
+            if rom_size < 0x8000:  # Minimum reasonable SNES ROM size
+                raise ValueError(f"ROM file too small: {rom_size} bytes")
+
+        def _validate_offset_bounds(offset: int, rom_size: int) -> None:
+            """Validate offset is within ROM bounds"""
+            if offset >= rom_size:
+                raise ValueError(
+                    f"Offset 0x{offset:X} is beyond ROM size (0x{rom_size:X})"
+                )
+
+        def _validate_sprite_data(tile_data: bytes, offset: int) -> None:
+            """Validate extracted sprite data"""
+            if not tile_data:
+                raise ValueError(f"No sprite data found at offset 0x{offset:X}")
+
+        def _validate_sprite_integrity(tile_data: bytes, offset: int, bytes_per_tile: int) -> None:
+            """Validate sprite data integrity"""
+            extra_bytes = len(tile_data) % bytes_per_tile
+            if extra_bytes > bytes_per_tile // 2:
+                raise ValueError(
+                    f"Invalid sprite data detected at 0x{offset:X}. "
+                    f"Expected multiple of {bytes_per_tile} bytes, got {len(tile_data)} bytes."
+                )
+
+        def _validate_tile_count(num_tiles: int, tile_data_length: int) -> None:
+            """Validate that we have complete tiles"""
+            if num_tiles == 0:
+                raise ValueError(f"No complete tiles found in sprite data ({tile_data_length} bytes)")
+
+        def _handle_decompression_error(error: Exception, offset: int) -> None:
+            """Handle decompression errors with appropriate messages"""
+            if "decompression" in str(error).lower():
+                raise ValueError(
+                    f"Failed to decompress sprite at 0x{offset:X}: "
+                    f"Invalid compressed data format"
+                ) from error
+            raise ValueError(
+                f"Error extracting sprite at 0x{offset:X}: {error}"
+            ) from error
+
         try:
             # Validate inputs
-            if not self.rom_path or not os.path.exists(self.rom_path):
-                raise FileNotFoundError(f"ROM file not found: {self.rom_path}")
-
-            if self.offset < 0:
-                raise ValueError(f"Invalid offset: 0x{self.offset:X} (negative)")
+            _validate_rom_path(self.rom_path)
+            _validate_offset(self.offset)
 
             # Read ROM data with file size validation
             try:
                 with open(self.rom_path, "rb") as f:
                     rom_data = f.read()
-            except PermissionError as e:
-                raise PermissionError(f"Cannot read ROM file: {self.rom_path}") from e
-            except OSError as e:
-                raise OSError(f"Error reading ROM file: {e}") from e
+            except (PermissionError, OSError) as e:
+                _validate_rom_file_access(self.rom_path, e)
 
             # Validate ROM size
             rom_size = len(rom_data)
-            if rom_size < 0x8000:  # Minimum reasonable SNES ROM size
-                raise ValueError(f"ROM file too small: {rom_size} bytes")
+            _validate_rom_size(rom_size)
 
             # Validate offset is within ROM bounds
-            if self.offset >= rom_size:
-                raise ValueError(
-                    f"Offset 0x{self.offset:X} is beyond ROM size (0x{rom_size:X})"
-                )
+            _validate_offset_bounds(self.offset, rom_size)
 
             # Find and decompress sprite with better error handling
             try:
@@ -106,18 +157,10 @@ class SpritePreviewWorker(QThread):
                     )
             except Exception as decomp_error:
                 # Provide more specific error based on the type
-                if "decompression" in str(decomp_error).lower():
-                    raise ValueError(
-                        f"Failed to decompress sprite at 0x{self.offset:X}: "
-                        f"Invalid compressed data or wrong offset"
-                    ) from decomp_error
-                raise ValueError(
-                    f"Error extracting sprite at 0x{self.offset:X}: {decomp_error}"
-                ) from decomp_error
+                _handle_decompression_error(decomp_error, self.offset)
 
             # Validate extracted data
-            if not tile_data:
-                raise ValueError(f"No sprite data found at offset 0x{self.offset:X}")
+            _validate_sprite_data(tile_data, self.offset)
 
             # Check for data alignment issues
             bytes_per_tile = 32
@@ -129,13 +172,7 @@ class SpritePreviewWorker(QThread):
                 )
 
                 # If significant misalignment, likely wrong offset
-                if extra_bytes > bytes_per_tile // 2:
-                    raise ValueError(
-                        f"Invalid sprite data detected at 0x{self.offset:X}. "
-                        f"Data size ({len(tile_data)} bytes) has {extra_bytes} extra bytes, "
-                        f"indicating the offset may be incorrect for this ROM version. "
-                        f"Please verify the sprite offset or ROM version."
-                    )
+                _validate_sprite_integrity(tile_data, self.offset, bytes_per_tile)
 
             # Validate size against expected size if available
             if expected_size:
@@ -158,8 +195,7 @@ class SpritePreviewWorker(QThread):
 
             # Calculate dimensions (assume standard preview size)
             num_tiles = len(tile_data) // 32  # 32 bytes per tile
-            if num_tiles == 0:
-                raise ValueError(f"No complete tiles found in sprite data ({len(tile_data)} bytes)")
+            _validate_tile_count(num_tiles, len(tile_data))
 
             tiles_per_row = 16
             tile_rows = (num_tiles + tiles_per_row - 1) // tiles_per_row

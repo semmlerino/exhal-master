@@ -1,0 +1,797 @@
+{
+  "dependencies": {
+    "analyze_correct_vram_offsets": [
+      "spritepal.core.rom_extractor",
+      "spritepal.utils.logging_config"
+    ],
+    "analyze_vram_dump": [
+      "spritepal.core.hal_compression",
+      "spritepal.core.rom_extractor",
+      "spritepal.utils.logging_config"
+    ],
+    "debug_signal_test": [
+      "spritepal.core.controller",
+      "spritepal.core.managers"
+    ],
+    "extract_sprites_correct_offset": [
+      "spritepal.core.rom_extractor"
+    ],
+    "find_actual_tiles": [
+      "spritepal.core.rom_extractor"
+    ],
+    "find_real_sprites": [
+      "spritepal.core.sprite_finder",
+      "spritepal.utils.logging_config"
+    ],
+    "find_sprites_in_rom": [
+      "spritepal.core.hal_compression"
+    ],
+    "launch_spritepal": [
+      "spritepal.ui.main_window",
+      "spritepal.core.managers",
+      "spritepal.utils.logging_config"
+    ],
+    "verify_config_fix": [
+      "spritepal.core.sprite_config_loader"
+    ],
+    "core.controller": [
+      "spritepal.ui.row_arrangement_dialog",
+      "spritepal.utils.constants",
+      "spritepal.utils.settings_manager",
+      "spritepal.utils.validation",
+      "spritepal.ui.grid_arrangement_dialog",
+      "spritepal.utils.image_utils",
+      "spritepal.core.managers",
+      "spritepal.utils.logging_config",
+      "spritepal.ui.main_window",
+      "spritepal.ui.injection_dialog"
+    ],
+    "core.default_palette_loader": [
+      "spritepal.utils.logging_config"
+    ],
+    "core.extractor": [
+      "spritepal.utils.constants",
+      "spritepal.utils.validation",
+      "spritepal.utils.logging_config"
+    ],
+    "core.hal_compression": [
+      "spritepal.utils.constants",
+      "spritepal.utils.logging_config"
+    ],
+    "core.injector": [
+      "spritepal.utils.constants",
+      "spritepal.utils.logging_config"
+    ],
+    "core.palette_manager": [
+      "spritepal.utils.constants",
+      "spritepal.utils.validation"
+    ],
+    "core.rom_extractor": [
+      "spritepal.utils.constants",
+      "spritepal.utils.rom_cache",
+      "spritepal.core.rom_injector",
+      "spritepal.core.sprite_config_loader",
+      "spritepal.core.hal_compression",
+      "spritepal.utils.rom_exceptions",
+      "spritepal.core.rom_palette_extractor",
+      "spritepal.utils.logging_config",
+      "spritepal.core.default_palette_loader"
+    ],
+    "core.rom_injector": [
+      "spritepal.core.sprite_config_loader",
+      "spritepal.core.hal_compression",
+      "spritepal.core.rom_validator",
+      "spritepal.core.injector",
+      "spritepal.core.sprite_validator",
+      "spritepal.utils.logging_config",
+      "spritepal.utils.rom_backup"
+    ],
+    "core.rom_palette_extractor": [
+      "spritepal.utils.logging_config"
+    ],
+    "core.rom_validator": [
+      "spritepal.utils.rom_exceptions",
+      "spritepal.utils.logging_config"
+    ],
+    "core.sprite_config_loader": [
+      "spritepal.utils.logging_config"
+    ],
+    "core.sprite_finder": [
+      "spritepal.utils.constants",
+      "spritepal.core.rom_extractor",
+      "spritepal.core.sprite_visual_validator",
+      "spritepal.utils.logging_config"
+    ],
+    "core.sprite_validator": [
+      "spritepal.utils.constants",
+      "spritepal.utils.logging_config"
+    ],
+    "core.sprite_visual_validator": [
+      "spritepal.utils.logging_config"
+    ],
+    "tests.conftest": [
+      "spritepal.core.managers",
+      "spritepal.utils.constants"
+    ],
+    "ui.extraction_panel": [
+      "spritepal.ui.styles",
+      "spritepal.utils.settings_manager",
+      "spritepal.utils.constants",
+      "spritepal.utils.logging_config"
+    ],
+    "ui.injection_dialog": [
+      "spritepal.ui.widgets.sprite_preview_widget",
+      "spritepal.core.sprite_validator",
+      "spritepal.core.managers",
+      "spritepal.utils.logging_config",
+      "spritepal.ui.components"
+    ],
+    "ui.main_window": [
+      "spritepal.ui.zoomable_preview",
+      "spritepal.ui.rom_extraction_panel",
+      "spritepal.ui.dialogs",
+      "spritepal.core.managers",
+      "spritepal.ui.extraction_panel",
+      "spritepal.ui.styles",
+      "spritepal.ui.palette_preview"
+    ],
+    "ui.rom_extraction_panel": [
+      "spritepal.ui.rom_extraction.workers",
+      "spritepal.utils.constants",
+      "spritepal.utils.settings_manager",
+      "spritepal.ui.widgets.sprite_preview_widget",
+      "spritepal.ui.dialogs",
+      "spritepal.ui.rom_extraction.state_manager",
+      "spritepal.ui.dialogs.manual_offset_dialog",
+      "spritepal.core.managers",
+      "spritepal.utils.logging_config",
+      "spritepal.ui.rom_extraction.widgets"
+    ],
+    "ui.zoomable_preview": [
+      "spritepal.utils.image_utils"
+    ],
+    "utils.image_utils": [
+      "spritepal.utils.logging_config"
+    ],
+    "utils.rom_backup": [
+      "spritepal.utils.rom_exceptions",
+      "spritepal.utils.logging_config"
+    ],
+    "core.managers.base_manager": [
+      "spritepal.core.managers.exceptions",
+      "spritepal.utils.logging_config"
+    ],
+    "core.managers.extraction_manager": [
+      "spritepal.utils.constants",
+      "spritepal.utils.rom_cache",
+      "spritepal.core.extractor",
+      "spritepal.core.managers.base_manager",
+      "spritepal.core.palette_manager",
+      "spritepal.core.managers.exceptions",
+      "spritepal.core.rom_extractor"
+    ],
+    "core.managers.injection_manager": [
+      "spritepal.core.managers.session_manager",
+      "spritepal.utils.constants",
+      "spritepal.utils.rom_cache",
+      "spritepal.core.rom_injector",
+      "spritepal.core.injector",
+      "spritepal.core.managers.base_manager",
+      "spritepal.core.managers.exceptions"
+    ],
+    "core.managers.registry": [
+      "spritepal.core.managers.session_manager",
+      "spritepal.core.managers.extraction_manager",
+      "spritepal.core.managers.injection_manager",
+      "spritepal.utils.logging_config",
+      "spritepal.core.managers.exceptions"
+    ],
+    "core.managers.session_manager": [
+      "spritepal.core.managers.exceptions",
+      "spritepal.core.managers.base_manager"
+    ],
+    "ui.dialogs.manual_offset_dialog": [
+      "spritepal.ui.rom_extraction.workers",
+      "spritepal.ui.components.base.dialog_base",
+      "spritepal.ui.rom_extraction.widgets.manual_offset_widget",
+      "spritepal.ui.widgets.sprite_preview_widget",
+      "spritepal.core.managers.extraction_manager",
+      "spritepal.ui.components.panels",
+      "spritepal.utils.logging_config",
+      "spritepal.ui.styles",
+      "spritepal.core.rom_extractor",
+      "spritepal.ui.components.visualization"
+    ],
+    "ui.dialogs.resume_scan_dialog": [
+      "spritepal.ui.styles",
+      "spritepal.ui.components"
+    ],
+    "ui.dialogs.settings_dialog": [
+      "spritepal.ui.styles",
+      "spritepal.utils.rom_cache",
+      "spritepal.utils.settings_manager",
+      "spritepal.ui.components"
+    ],
+    "ui.dialogs.user_error_dialog": [
+      "spritepal.ui.styles",
+      "spritepal.ui.components"
+    ],
+    "ui.row_arrangement.grid_image_processor": [
+      "spritepal.utils.exceptions"
+    ],
+    "ui.row_arrangement.image_processor": [
+      "spritepal.utils.exceptions"
+    ],
+    "ui.widgets.row_widgets": [
+      "spritepal.utils.image_utils"
+    ],
+    "ui.widgets.sprite_preview_widget": [
+      "spritepal.ui.styles",
+      "spritepal.core.default_palette_loader",
+      "spritepal.core.managers",
+      "spritepal.utils.logging_config"
+    ],
+    "ui.components.base.dialog_base": [
+      "spritepal.ui.styles"
+    ],
+    "ui.components.inputs.file_selector": [
+      "spritepal.utils.settings_manager"
+    ],
+    "ui.components.inputs.form_row": [
+      "spritepal.ui.styles"
+    ],
+    "ui.components.inputs.hex_offset_input": [
+      "spritepal.utils.logging_config"
+    ],
+    "ui.components.layouts.styled_group_box": [
+      "spritepal.ui.styles"
+    ],
+    "ui.components.layouts.styled_splitter": [
+      "spritepal.ui.styles"
+    ],
+    "ui.components.panels.import_export_panel": [
+      "spritepal.ui.styles",
+      "spritepal.ui.components.visualization"
+    ],
+    "ui.components.panels.scan_controls_panel": [
+      "spritepal.ui.rom_extraction.workers",
+      "spritepal.core.managers.extraction_manager",
+      "spritepal.ui.components.dialogs",
+      "spritepal.utils.logging_config",
+      "spritepal.ui.styles",
+      "spritepal.core.rom_extractor",
+      "spritepal.ui.components.visualization"
+    ],
+    "ui.components.panels.status_panel": [
+      "spritepal.ui.styles"
+    ],
+    "ui.components.visualization.rom_map_widget": [
+      "spritepal.utils.logging_config"
+    ],
+    "ui.rom_extraction.workers.preview_worker": [
+      "spritepal.utils.logging_config"
+    ],
+    "ui.rom_extraction.workers.range_scan_worker": [
+      "spritepal.utils.rom_cache",
+      "spritepal.utils.logging_config"
+    ],
+    "ui.rom_extraction.workers.scan_worker": [
+      "spritepal.utils.logging_config"
+    ],
+    "ui.rom_extraction.workers.search_worker": [
+      "spritepal.utils.logging_config"
+    ]
+  },
+  "conditional_imports": {
+    "debug_signal_test": [
+      {
+        "type": "import",
+        "module": "traceback",
+        "alias": null,
+        "line": 91,
+        "in_function": true,
+        "function": "test_extraction_worker_signals",
+        "in_try": true,
+        "in_except": true
+      },
+      {
+        "type": "import",
+        "module": "traceback",
+        "alias": null,
+        "line": 132,
+        "in_function": true,
+        "function": "test_controller_integration",
+        "in_try": true,
+        "in_except": true
+      }
+    ],
+    "find_real_sprites": [
+      {
+        "type": "import",
+        "module": "cv2",
+        "alias": null,
+        "line": 10,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": false
+      }
+    ],
+    "core.sprite_visual_validator": [
+      {
+        "type": "import",
+        "module": "cv2",
+        "alias": null,
+        "line": 16,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": false
+      }
+    ],
+    "tests.conftest": [
+      {
+        "type": "import",
+        "module": "os",
+        "alias": null,
+        "line": 137,
+        "in_function": true,
+        "function": "temp_files",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.main_window": [
+      {
+        "type": "from",
+        "module": "spritepal.core.controller",
+        "name": "ExtractionController",
+        "alias": null,
+        "line": 59,
+        "in_function": true,
+        "function": "__init__",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 265,
+        "in_function": true,
+        "function": "_setup_status_bar_indicators",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 308,
+        "in_function": true,
+        "function": "_update_cache_status",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 309,
+        "in_function": true,
+        "function": "_update_cache_status",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.core.managers",
+        "name": "get_extraction_manager",
+        "alias": null,
+        "line": 657,
+        "in_function": true,
+        "function": "_on_extract_clicked",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 807,
+        "in_function": true,
+        "function": "_clear_all_caches",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 841,
+        "in_function": true,
+        "function": "_on_settings_changed",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 842,
+        "in_function": true,
+        "function": "_on_settings_changed",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.rom_extraction_panel": [
+      {
+        "type": "from",
+        "module": "spritepal.ui.dialogs",
+        "name": "ResumeScanDialog",
+        "alias": null,
+        "line": 221,
+        "in_function": true,
+        "function": "_on_partial_scan_detected",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "PyQt6.QtWidgets",
+        "name": "QMessageBox",
+        "alias": null,
+        "line": 230,
+        "in_function": true,
+        "function": "_on_partial_scan_detected",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 402,
+        "in_function": true,
+        "function": "_load_rom_sprites",
+        "in_try": true,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 686,
+        "in_function": true,
+        "function": "_find_sprites",
+        "in_try": true,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.ui.dialogs",
+        "name": "ResumeScanDialog",
+        "alias": null,
+        "line": 702,
+        "in_function": true,
+        "function": "_find_sprites",
+        "in_try": true,
+        "in_except": false
+      }
+    ],
+    "utils.rom_cache": [
+      {
+        "type": "from",
+        "module": "spritepal.utils.logging_config",
+        "name": "get_logger",
+        "alias": null,
+        "line": 15,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 16,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": false
+      },
+      {
+        "type": "import",
+        "module": "logging",
+        "alias": null,
+        "line": 19,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": true
+      },
+      {
+        "type": "from",
+        "module": "spritepal.core.rom_injector",
+        "name": "SpritePointer",
+        "alias": null,
+        "line": 359,
+        "in_function": true,
+        "function": "get_sprite_locations",
+        "in_try": true,
+        "in_except": false
+      }
+    ],
+    "core.managers.injection_manager": [
+      {
+        "type": "from",
+        "module": "spritepal.core.managers",
+        "name": "get_session_manager",
+        "alias": null,
+        "line": 62,
+        "in_function": true,
+        "function": "_get_session_manager",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.core.managers",
+        "name": "get_extraction_manager",
+        "alias": null,
+        "line": 421,
+        "in_function": true,
+        "function": "load_rom_info",
+        "in_try": true,
+        "in_except": false
+      }
+    ],
+    "tests.utils.assertions": [
+      {
+        "type": "from",
+        "module": "PIL",
+        "name": "Image",
+        "alias": null,
+        "line": 147,
+        "in_function": true,
+        "function": "assert_image_properties",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "tests.utils.data_generators": [
+      {
+        "type": "import",
+        "module": "colorsys",
+        "alias": null,
+        "line": 236,
+        "in_function": true,
+        "function": "_hsv_to_rgb",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "tests.utils.file_helpers": [
+      {
+        "type": "from",
+        "module": ".data_generators",
+        "name": "create_test_image",
+        "alias": null,
+        "line": 69,
+        "in_function": true,
+        "function": "create_test_files",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "import",
+        "module": "json",
+        "alias": null,
+        "line": 84,
+        "in_function": true,
+        "function": "create_test_files",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": ".data_generators",
+        "name": "generate_palette_data",
+        "alias": null,
+        "line": 86,
+        "in_function": true,
+        "function": "create_test_files",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "import",
+        "module": "json",
+        "alias": null,
+        "line": 103,
+        "in_function": true,
+        "function": "create_test_files",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.constants",
+        "name": "BYTES_PER_TILE",
+        "alias": null,
+        "line": 138,
+        "in_function": true,
+        "function": "_generate_vram_data",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.constants",
+        "name": "VRAM_SPRITE_OFFSET",
+        "alias": null,
+        "line": 138,
+        "in_function": true,
+        "function": "_generate_vram_data",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": ".data_generators",
+        "name": "generate_rom_data",
+        "alias": null,
+        "line": 157,
+        "in_function": true,
+        "function": "_generate_rom_data",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.dialogs.settings_dialog": [
+      {
+        "type": "from",
+        "module": "PyQt6.QtWidgets",
+        "name": "QMessageBox",
+        "alias": null,
+        "line": 391,
+        "in_function": true,
+        "function": "_clear_cache",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.dialogs.user_error_dialog": [
+      {
+        "type": "from",
+        "module": "spritepal.ui.styles",
+        "name": "get_dialog_button_box_style",
+        "alias": null,
+        "line": 181,
+        "in_function": true,
+        "function": "__init__",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.components.layouts.styled_group_box": [
+      {
+        "type": "from",
+        "module": "PyQt6.QtWidgets",
+        "name": "QHBoxLayout",
+        "alias": null,
+        "line": 73,
+        "in_function": true,
+        "function": "add_widget_with_layout",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "PyQt6.QtWidgets",
+        "name": "QVBoxLayout",
+        "alias": null,
+        "line": 73,
+        "in_function": true,
+        "function": "add_widget_with_layout",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.components.panels.status_panel": [
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 70,
+        "in_function": true,
+        "function": "_setup_cache_status",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 112,
+        "in_function": true,
+        "function": "_update_cache_status",
+        "in_try": false,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.settings_manager",
+        "name": "get_settings_manager",
+        "alias": null,
+        "line": 113,
+        "in_function": true,
+        "function": "_update_cache_status",
+        "in_try": false,
+        "in_except": false
+      }
+    ],
+    "ui.rom_extraction.widgets.rom_file_widget": [
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 9,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": false
+      },
+      {
+        "type": "from",
+        "module": "utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 11,
+        "in_function": false,
+        "function": null,
+        "in_try": true,
+        "in_except": true
+      },
+      {
+        "type": "from",
+        "module": "spritepal.utils.logging_config",
+        "name": "get_logger",
+        "alias": null,
+        "line": 150,
+        "in_function": true,
+        "function": "_check_cache_status",
+        "in_try": true,
+        "in_except": true
+      }
+    ],
+    "ui.rom_extraction.workers.scan_worker": [
+      {
+        "type": "from",
+        "module": "spritepal.utils.rom_cache",
+        "name": "get_rom_cache",
+        "alias": null,
+        "line": 57,
+        "in_function": true,
+        "function": "run",
+        "in_try": true,
+        "in_except": false
+      }
+    ]
+  },
+  "circular_imports": []
+}

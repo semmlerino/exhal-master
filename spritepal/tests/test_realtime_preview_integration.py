@@ -472,23 +472,17 @@ class TestPreviewErrorHandling:
         controller = error_test_components["controller"]
         preview_panel = error_test_components["preview_panel"]
 
-        # Test different error scenarios
-        error_offsets = [0x1000, 0x2000, 0x3000, 0x4000]
+        # Test different error scenarios with specific exception types
+        error_scenarios = [
+            (0x1000, FileNotFoundError),
+            (0x2000, PermissionError),
+            (0x3000, MemoryError),
+            (0x4000, ValueError)
+        ]
 
-        for offset in error_offsets:
-            try:
+        for offset, expected_exception in error_scenarios:
+            with pytest.raises(expected_exception):
                 controller.update_preview_with_offset(offset)
-                raise AssertionError(f"Expected error for offset 0x{offset:04X}")
-            except Exception as e:
-                # Verify error types
-                if offset == 0x1000:
-                    assert isinstance(e, FileNotFoundError)
-                elif offset == 0x2000:
-                    assert isinstance(e, PermissionError)
-                elif offset == 0x3000:
-                    assert isinstance(e, MemoryError)
-                elif offset == 0x4000:
-                    assert isinstance(e, ValueError)
 
         # Test recovery with valid offset
         preview_panel.clear_signal_tracking()

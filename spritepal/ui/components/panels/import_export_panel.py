@@ -6,7 +6,8 @@ Handles importing and exporting sprite offsets to/from JSON files.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -70,8 +71,8 @@ class ImportExportPanel(QWidget):
 
     def _connect_signals(self):
         """Connect internal signals"""
-        self._ = export_btn.clicked.connect(self._export_offsets)
-        self._ = import_btn.clicked.connect(self._import_offsets)
+        _ = self.export_btn.clicked.connect(self._export_offsets)
+        _ = self.import_btn.clicked.connect(self._import_offsets)
 
     def set_rom_data(self, rom_path: str, rom_size: int):
         """Set ROM data for import/export operations"""
@@ -98,7 +99,7 @@ class ImportExportPanel(QWidget):
             return
 
         # Get save file path
-        default_name = f"sprite_offsets_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        default_name = f"sprite_offsets_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Sprite Offsets",
@@ -108,6 +109,12 @@ class ImportExportPanel(QWidget):
 
         if not file_path:
             return
+
+        def _validate_export_permissions(file_path: str) -> None:
+            """Validate export directory write permissions"""
+            target_dir = os.path.dirname(file_path)
+            if target_dir and not os.access(target_dir, os.W_OK):
+                raise PermissionError(f"Cannot write to directory: {target_dir}")
 
         try:
             # Validate data before export
@@ -121,16 +128,14 @@ class ImportExportPanel(QWidget):
                 return
 
             # Check directory write permissions
-            target_dir = os.path.dirname(file_path)
-            if target_dir and not os.access(target_dir, os.W_OK):
-                raise PermissionError(f"Cannot write to directory: {target_dir}")
+            _validate_export_permissions(file_path)
 
             # Prepare export data
             export_data = {
                 "metadata": {
                     "rom_path": self.rom_path,
                     "rom_size": self.rom_size,
-                    "export_timestamp": datetime.now().isoformat(),
+                    "export_timestamp": datetime.now(timezone.utc).isoformat(),
                     "spritepal_version": "1.0.0",
                     "total_sprites": len(self.found_sprites)
                 },
@@ -210,30 +215,41 @@ class ImportExportPanel(QWidget):
         if not file_path:
             return
 
-        try:
-            # Validate file accessibility
+        def _validate_import_file_access(file_path: str) -> None:
+            """Validate import file accessibility"""
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"File not found: {file_path}")
-
             if not os.access(file_path, os.R_OK):
                 raise PermissionError(f"Cannot read file: {file_path}")
 
-            # Check file size (prevent loading huge files)
+        def _validate_import_file_size(file_path: str) -> None:
+            """Validate import file size limits"""
             file_size = os.path.getsize(file_path)
             if file_size > 10 * 1024 * 1024:  # 10MB limit
                 raise ValueError(f"File too large: {file_size / 1024 / 1024:.1f}MB (max 10MB)")
+
+        def _validate_import_format(import_data: dict[str, Any]) -> list[Any]:
+            """Validate import data format and return sprites data"""
+            if not isinstance(import_data, dict) or "sprites" not in import_data:
+                raise ValueError("Invalid file format: missing 'sprites' key")
+            sprites_data = import_data["sprites"]
+            if not isinstance(sprites_data, list):
+                raise ValueError("Invalid file format: 'sprites' must be a list")
+            return sprites_data
+
+        try:
+            # Validate file accessibility
+            _validate_import_file_access(file_path)
+
+            # Check file size (prevent loading huge files)
+            _validate_import_file_size(file_path)
 
             # Read and parse JSON file
             with open(file_path, encoding="utf-8") as f:
                 import_data = json.load(f)
 
             # Validate file format
-            if not isinstance(import_data, dict) or "sprites" not in import_data:
-                raise ValueError("Invalid file format: missing 'sprites' key")
-
-            sprites_data = import_data["sprites"]
-            if not isinstance(sprites_data, list):
-                raise ValueError("Invalid file format: 'sprites' must be a list")
+            sprites_data = _validate_import_format(import_data)
 
             # Check ROM compatibility if metadata is present
             if "metadata" in import_data:

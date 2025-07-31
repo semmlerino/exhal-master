@@ -22,7 +22,14 @@ from spritepal.utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 from .fixtures.qt_mocks import (
     create_mock_extraction_worker,
     create_mock_main_window,
-    create_mock_signals
+    create_mock_signals,
+)
+
+# Import Qt test helpers for proper parent widgets
+from .fixtures.qt_test_helpers import (
+    parent_widget,
+    mockable_parent_widget,
+    widget_factory,
 )
 
 

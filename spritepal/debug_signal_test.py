@@ -41,7 +41,7 @@ def test_direct_manager_signals():
 
     # Create receiver
     receiver = DebugReceiver()
-    manager.extraction_progress.connect(receiver.on_progress)
+    _ = manager.extraction_progress.connect(receiver.on_progress)
 
     # Test signal emission
     manager.extraction_progress.emit("Test message")
@@ -79,7 +79,7 @@ def test_extraction_worker_signals():
 
     # Create receiver
     receiver = DebugReceiver()
-    worker.progress.connect(receiver.on_progress)
+    _ = worker.progress.connect(receiver.on_progress)
 
     print("Running worker...")
     try:

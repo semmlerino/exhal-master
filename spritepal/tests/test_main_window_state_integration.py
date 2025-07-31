@@ -1375,7 +1375,7 @@ class TestRealMainWindowStateImplementation:
 
         # Check for error state
         signals = window_helper.get_signal_emissions()
-        len(signals["extraction_failed"]) > 0
+        assert len(signals["extraction_failed"]) > 0
 
         # Clear error state
         window_helper.clear_signal_tracking()

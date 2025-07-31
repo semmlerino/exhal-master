@@ -4,7 +4,6 @@ Base manager class providing common functionality for all managers
 
 import os
 import threading
-from abc import ABCMeta, abstractmethod
 from typing import Any, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -13,12 +12,7 @@ from spritepal.core.managers.exceptions import ValidationError
 from spritepal.utils.logging_config import get_logger
 
 
-# Create a metaclass that combines Qt's meta and ABC's meta
-class ManagerMeta(type(QObject), ABCMeta):
-    """Metaclass that combines QObject and ABCMeta"""
-
-
-class BaseManager(QObject, metaclass=ManagerMeta):
+class BaseManager(QObject):
     """Abstract base class for all manager classes"""
 
     # Common signals that all managers can emit
@@ -52,13 +46,13 @@ class BaseManager(QObject, metaclass=ManagerMeta):
         # Initialize the manager
         self._initialize()
 
-    @abstractmethod
     def _initialize(self) -> None:
         """Initialize the manager - must be implemented by subclasses"""
+        raise NotImplementedError("Subclasses must implement _initialize()")
 
-    @abstractmethod
     def cleanup(self) -> None:
         """Cleanup resources - must be implemented by subclasses"""
+        raise NotImplementedError("Subclasses must implement cleanup()")
 
     def get_name(self) -> str:
         """Get the manager name"""

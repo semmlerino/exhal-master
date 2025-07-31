@@ -106,10 +106,10 @@ class ScanControlsPanel(QWidget):
 
     def _connect_signals(self):
         """Connect internal signals"""
-        self._ = scan_range_btn.clicked.connect(self._scan_range)
-        self._ = scan_all_btn.clicked.connect(self._scan_all)
-        self._ = pause_btn.clicked.connect(self._toggle_pause)
-        self._ = stop_btn.clicked.connect(self._stop_scan)
+        _ = self.scan_range_btn.clicked.connect(self._scan_range)
+        _ = self.scan_all_btn.clicked.connect(self._scan_all)
+        _ = self.pause_btn.clicked.connect(self._toggle_pause)
+        _ = self.stop_btn.clicked.connect(self._stop_scan)
 
     def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: "ExtractionManager"):
         """Set ROM data for scanning operations"""
@@ -261,10 +261,10 @@ class ScanControlsPanel(QWidget):
         if self.range_scan_worker:
             try:
                 self.range_scan_worker.quit()
-                if not self._ = range_scan_worker.wait(3000):  # 3 second timeout
+                if not self.range_scan_worker.wait(3000):  # 3 second timeout
                     logger.warning("Range scan worker cleanup timeout, terminating")
-                    self._ = range_scan_worker.terminate()
-                    if not self._ = range_scan_worker.wait(1000):  # 1 second for termination
+                    self.range_scan_worker.terminate()
+                    if not self.range_scan_worker.wait(1000):  # 1 second for termination
                         logger.error("Range scan worker failed to terminate")
             except RuntimeError as e:
                 logger.warning(f"Error during worker cleanup: {e}")
@@ -388,10 +388,10 @@ class ScanControlsPanel(QWidget):
         """Clean up any running worker threads with timeouts to prevent hangs"""
         if self.range_scan_worker:
             self.range_scan_worker.quit()
-            if not self._ = range_scan_worker.wait(5000):  # 5 second timeout
+            if not self.range_scan_worker.wait(5000):  # 5 second timeout
                 logger.warning("Range scan worker did not stop gracefully, terminating")
-                self._ = range_scan_worker.terminate()
-                if not self._ = range_scan_worker.wait(2000):  # 2 second timeout for termination
+                self.range_scan_worker.terminate()
+                if not self.range_scan_worker.wait(2000):  # 2 second timeout for termination
                     logger.error("Range scan worker failed to terminate")
             self.range_scan_worker = None
 

@@ -192,7 +192,7 @@ def cleanup_test_files(file_paths: Union[list[str], dict[str, str], str]):
 
 def create_test_workspace(
     workspace_name: str = "test_workspace",
-    include_files: list[str | None] = None
+    include_files: list[str | None] | None = None
 ) -> dict[str, str]:
     """
     Create a complete test workspace with common file types.

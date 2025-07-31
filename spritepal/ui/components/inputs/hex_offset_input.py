@@ -7,7 +7,9 @@ exactly replicating the functionality from InjectionDialog.
 
 import builtins
 import contextlib
-from typing import Callablefrom PyQt6.QtCore import pyqtSignal
+from typing import Callable
+
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 from spritepal.utils.logging_config import get_logger
@@ -41,7 +43,7 @@ class HexOffsetInput(QWidget):
         input_width: int = 100,
         decimal_width: int = 60,
         label_prefix: str = "",
-        external_change_callback: Callable[[str | None, None]] = None
+        external_change_callback: Callable[[str | None], None] | None = None
     ):
         super().__init__(parent)
 
@@ -61,7 +63,7 @@ class HexOffsetInput(QWidget):
         self.hex_edit = QLineEdit()
         self.hex_edit.setPlaceholderText(placeholder)
         self.hex_edit.setMaximumWidth(input_width)
-        self._ = hex_edit.textChanged.connect(self._on_text_changed)
+        _ = self.hex_edit.textChanged.connect(self._on_text_changed)
         self.layout.addWidget(self.hex_edit)
 
         # Decimal display components (optional)

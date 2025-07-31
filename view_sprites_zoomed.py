@@ -19,7 +19,7 @@ def main():
 
     # Load and zoom
     img = Image.open(input_file)
-    zoomed = img.resize((img.width * zoom, img.height * zoom), Image.NEAREST)
+    zoomed = img.resize((img.width * zoom, img.height * zoom), Image.Resampling.NEAREST)
 
     output_file = input_file.replace(".png", f"_x{zoom}.png")
     zoomed.save(output_file)

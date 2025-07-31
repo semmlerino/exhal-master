@@ -24,8 +24,9 @@ from spritepal.utils.constants import (
     SETTINGS_KEY_LAST_INPUT_VRAM,
     SETTINGS_KEY_LAST_SPRITE_LOCATION,
     SETTINGS_KEY_VRAM_PATH,
-    SETTINGS_NS_ROM_INJECTION
+    SETTINGS_NS_ROM_INJECTION,
 )
+from spritepal.utils.rom_cache import get_rom_cache
 
 
 class InjectionManager(BaseManager):
@@ -36,6 +37,7 @@ class InjectionManager(BaseManager):
     injection_finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
     compression_info: pyqtSignal = pyqtSignal(dict)  # ROM compression statistics
     progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
+    cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
     def __init__(self) -> None:
         """Initialize the injection manager"""
@@ -84,6 +86,11 @@ class InjectionManager(BaseManager):
         if not self._start_operation(operation):
             return False
 
+        def _validate_injection_mode(mode: str) -> None:
+            """Validate injection mode and raise error if invalid"""
+            if mode not in ("vram", "rom"):
+                raise ValidationError(f"Invalid injection mode: {mode}")
+
         try:
             # Validate parameters
             self.validate_injection_params(params)
@@ -112,7 +119,7 @@ class InjectionManager(BaseManager):
                     params.get("metadata_path")
                 )
             else:
-                raise ValidationError(f"Invalid injection mode: {params['mode']}")
+                _validate_injection_mode(params["mode"])
 
             # Connect worker signals
             self._connect_worker_signals()
@@ -124,11 +131,11 @@ class InjectionManager(BaseManager):
             self._logger.info(f"Started {mode_text} injection: {params['sprite_path']}")
             self.injection_progress.emit(f"Starting {mode_text} injection...")
 
-            return True
-
         except Exception as e:
             self._handle_error(e, operation)
             return False
+        else:
+            return True
 
     def validate_injection_params(self, params: dict[str, Any]) -> None:
         """
@@ -215,18 +222,19 @@ class InjectionManager(BaseManager):
 
         # Common signals for both worker types
         worker = self._current_worker  # Type narrowing for safety
-        worker.progress.connect(self._on_worker_progress)
+        if hasattr(worker, "progress"):
+            worker.progress.connect(self._on_worker_progress)  # type: ignore[attr-defined]
         if hasattr(worker, "injection_finished"):
-            worker.injection_finished.connect(self._on_worker_finished)
+            worker.injection_finished.connect(self._on_worker_finished)  # type: ignore[attr-defined]
         else:
             # Fallback to QThread's finished signal
             worker.finished.connect(lambda: self._on_worker_finished(True, "Completed"))
 
         # ROM-specific signals
         if hasattr(worker, "progress_percent"):
-            worker.progress_percent.connect(self.progress_percent.emit)
+            worker.progress_percent.connect(self.progress_percent.emit)  # type: ignore[attr-defined]
         if hasattr(worker, "compression_info"):
-            worker.compression_info.connect(self.compression_info.emit)
+            worker.compression_info.connect(self.compression_info.emit)  # type: ignore[attr-defined]
 
     def _on_worker_progress(self, message: str) -> None:
         """Handle worker progress updates"""
@@ -357,6 +365,11 @@ class InjectionManager(BaseManager):
                     parsed_info["extraction_vram_offset"] = vram_offset
                     parsed_info["rom_extraction_info"] = None
 
+        except Exception as e:
+            self._logger.warning(f"Failed to load metadata from {metadata_path}: {e}")
+            return None
+        else:
+            if "extraction" in metadata:
                 return parsed_info
             return {
                 "metadata": metadata,
@@ -367,13 +380,9 @@ class InjectionManager(BaseManager):
                 "default_vram_offset": "0xC000"
             }
 
-        except Exception as e:
-            self._logger.warning(f"Failed to load metadata from {metadata_path}: {e}")
-            return None
-
     def load_rom_info(self, rom_path: str) -> dict[str, Any] | None:
         """
-        Load ROM information and sprite locations
+        Load ROM information and sprite locations with caching
 
         Args:
             rom_path: Path to ROM file
@@ -382,72 +391,103 @@ class InjectionManager(BaseManager):
             Dict containing:
                 - header: ROM header info
                 - sprite_locations: Dict of sprite name -> offset
+                - cached: True if loaded from cache
                 - error: Error message if failed
             Or None if loading completely fails
         """
+        def _create_error_result(message: str, error_type: str) -> dict[str, Any]:
+            """Helper to create consistent error result dictionaries"""
+            return {"error": message, "error_type": error_type}
+
         try:
-            # Validate ROM file exists and is readable
-            if not os.path.exists(rom_path):
-                return {
-                    "error": f"ROM file not found: {rom_path}",
-                    "error_type": "FileNotFoundError"
-                }
+            # Validate ROM file
+            error_result = self._validate_rom_file(rom_path)
+            if error_result:
+                return error_result
 
-            if not os.access(rom_path, os.R_OK):
-                return {
-                    "error": f"Cannot read ROM file: {rom_path}",
-                    "error_type": "PermissionError"
-                }
+            # Try to load from cache first
+            rom_cache = get_rom_cache()
+            cached_info = rom_cache.get_rom_info(rom_path)
 
-            # Check file size is reasonable for a SNES ROM
-            file_size = os.path.getsize(rom_path)
-            if file_size < 0x8000:  # Minimum reasonable SNES ROM size (32KB)
-                return {
-                    "error": f"File too small to be a valid SNES ROM: {file_size} bytes",
-                    "error_type": "ValueError"
-                }
-            if file_size > 0x600000:  # Maximum reasonable size (6MB)
-                return {
-                    "error": f"File too large to be a valid SNES ROM: {file_size} bytes",
-                    "error_type": "ValueError"
-                }
+            if cached_info:
+                self._logger.debug(f"Loaded ROM info from cache: {rom_path}")
+                cached_info["cached"] = True
+                return cached_info
+
+            # Cache miss - load from ROM file
+            self._logger.debug(f"Cache miss, loading ROM info from file: {rom_path}")
 
             # Get extraction manager to read ROM header
             from spritepal.core.managers import get_extraction_manager
             extraction_manager = get_extraction_manager()
             header = extraction_manager.read_rom_header(rom_path)
 
-            result = {
+            result: dict[str, Any] = {
                 "header": {
-                    "title": header.title,
-                    "rom_type": header.rom_type,
-                    "checksum": header.checksum
+                    "title": header["title"],
+                    "rom_type": header["rom_type"],
+                    "checksum": header["checksum"]
                 },
-                "sprite_locations": {}
+                "sprite_locations": {},
+                "cached": False
             }
 
             # Get sprite locations if this is Kirby Super Star
-            if "KIRBY" in header.title.upper():
+            if "KIRBY" in header["title"].upper():
                 try:
+                    self._logger.info(f"Scanning ROM for sprite locations: {header['title']}")
                     locations = extraction_manager.get_known_sprite_locations(rom_path)
+
                     # Convert to simple dict of name -> offset
                     sprite_dict = {}
                     for name, pointer in locations.items():
                         display_name = name.replace("_", " ").title()
                         sprite_dict[display_name] = pointer.offset
                     result["sprite_locations"] = sprite_dict
+
+                    self._logger.info(f"Found {len(sprite_dict)} sprite locations")
+
+                    # Cache the results for future use
+                    cache_success = rom_cache.save_rom_info(rom_path, result)
+                    if cache_success:
+                        self._logger.debug(f"Cached ROM info for future use: {rom_path}")
+                        self.cache_saved.emit("rom_info", 1)
+
                 except Exception as sprite_error:
                     self._logger.warning(f"Failed to load sprite locations: {sprite_error}")
                     result["sprite_locations_error"] = str(sprite_error)
-
-            return result
+            # Cache the header info even for non-Kirby ROMs
+            elif rom_cache.save_rom_info(rom_path, result):
+                self.cache_saved.emit("rom_info", 1)
 
         except Exception as e:
             self._logger.exception("Failed to load ROM info")
-            return {
-                "error": str(e),
-                "error_type": type(e).__name__
-            }
+            return _create_error_result(str(e), type(e).__name__)
+        else:
+            return result
+
+    def _validate_rom_file(self, rom_path: str) -> dict[str, Any] | None:
+        """Validate ROM file exists, is readable, and has reasonable size.
+
+        Returns:
+            Error dict if validation fails, None if valid
+        """
+        # Check file exists and is readable
+        if not os.path.exists(rom_path):
+            return {"error": f"ROM file not found: {rom_path}", "error_type": "FileNotFoundError"}
+
+        if not os.access(rom_path, os.R_OK):
+            return {"error": f"Cannot read ROM file: {rom_path}", "error_type": "PermissionError"}
+
+        # Check file size is reasonable for a SNES ROM
+        file_size = os.path.getsize(rom_path)
+        if file_size < 0x8000:  # Minimum reasonable SNES ROM size (32KB)
+            return {"error": f"File too small to be a valid SNES ROM: {file_size} bytes", "error_type": "ValueError"}
+
+        if file_size > 0x600000:  # Maximum reasonable size (6MB)
+            return {"error": f"File too large to be a valid SNES ROM: {file_size} bytes", "error_type": "ValueError"}
+
+        return None
 
     def find_suggested_input_vram(self, sprite_path: str, metadata: dict[str, Any] | None = None,
                                   suggested_vram: str = "") -> str:
@@ -610,9 +650,10 @@ class InjectionManager(BaseManager):
 
             # For other offsets, no direct mapping available
             # Could be extended with more mappings in the future
-            return None
 
         except (ValueError, TypeError):
+            return None
+        else:
             return None
 
     def save_rom_injection_settings(self, input_rom: str, sprite_location_text: str,
@@ -657,7 +698,7 @@ class InjectionManager(BaseManager):
 
         # Save settings to file
         try:
-            session_manager.save()
+            session_manager.save_session()
         except Exception:
             self._logger.exception("Failed to save ROM injection parameters")
 
@@ -680,7 +721,7 @@ class InjectionManager(BaseManager):
                 - fast_compression: Fast compression setting
         """
         session_manager = self._get_session_manager()
-        result = {
+        result: dict[str, Any] = {
             "input_rom": "",
             "output_rom": "",
             "rom_offset": None,
@@ -788,3 +829,80 @@ class InjectionManager(BaseManager):
                     break
 
         return result
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """
+        Get ROM cache statistics
+
+        Returns:
+            Dictionary with cache information
+        """
+        rom_cache = get_rom_cache()
+        return rom_cache.get_cache_stats()
+
+    def clear_rom_cache(self, older_than_days: int | None = None) -> int:
+        """
+        Clear ROM scan cache
+
+        Args:
+            older_than_days: If specified, only clear files older than this many days
+
+        Returns:
+            Number of cache files removed
+        """
+        rom_cache = get_rom_cache()
+        removed_count = rom_cache.clear_cache(older_than_days)
+        self._logger.info(f"ROM cache cleared: {removed_count} files removed")
+        return removed_count
+
+    def get_scan_progress(self, rom_path: str, scan_params: dict[str, Any]) -> dict[str, Any] | None:
+        """
+        Get cached scan progress for resumable scanning
+
+        Args:
+            rom_path: Path to ROM file
+            scan_params: Scan parameters (start_offset, end_offset, step, etc.)
+
+        Returns:
+            Dictionary with scan progress or None if not cached
+        """
+        rom_cache = get_rom_cache()
+        return rom_cache.get_scan_progress(rom_path, scan_params)
+
+    def save_scan_progress(self, rom_path: str, scan_params: dict[str, Any],
+                          found_sprites: list[dict[str, Any]], current_offset: int,
+                          completed: bool = False) -> bool:
+        """
+        Save partial scan results for resumable scanning
+
+        Args:
+            rom_path: Path to ROM file
+            scan_params: Scan parameters (start_offset, end_offset, step)
+            found_sprites: List of sprites found so far
+            current_offset: Current scan position
+            completed: Whether the scan is complete
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        rom_cache = get_rom_cache()
+        return rom_cache.save_partial_scan_results(
+            rom_path, scan_params, found_sprites, current_offset, completed
+        )
+
+    def clear_scan_progress(self, rom_path: str | None = None,
+                           scan_params: dict[str, Any] | None = None) -> int:
+        """
+        Clear scan progress caches
+
+        Args:
+            rom_path: If specified, only clear caches for this ROM
+            scan_params: If specified, only clear cache for this specific scan
+
+        Returns:
+            Number of files removed
+        """
+        rom_cache = get_rom_cache()
+        removed_count = rom_cache.clear_scan_progress_cache(rom_path, scan_params)
+        self._logger.info(f"Scan progress cache cleared: {removed_count} files removed")
+        return removed_count

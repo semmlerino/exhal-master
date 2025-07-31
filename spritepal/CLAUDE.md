@@ -2,6 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Widget Initialization Pattern
+
+**IMPORTANT**: Always follow this initialization order in `__init__` methods to avoid bugs:
+
+1. **Declare ALL instance variables with type hints FIRST**
+2. **Call super().__init__() second**  
+3. **Call setup methods (_setup_ui, etc) AFTER variable declaration**
+4. **NEVER assign instance variables to None after setup methods**
+
+### ❌ Bad Pattern (causes AttributeError)
+```python
+def __init__(self):
+    super().__init__()
+    self._setup_ui()  # Creates self.widget = QWidget()
+    
+    # BUG: This overwrites the widget with None!
+    self.widget: QWidget | None = None
+```
+
+### ✅ Good Pattern
+```python
+def __init__(self):
+    # Step 1: Declare instance variables
+    self.widget: QWidget | None = None
+    self.data: list[str] = []
+    
+    # Step 2: Initialize parent
+    super().__init__()
+    
+    # Step 3: Setup methods that create widgets
+    self._setup_ui()  # Now safely creates self.widget = QWidget()
+```
+
+This prevents the common bug where widgets are created in setup methods but then overwritten with None due to late instance variable declarations.
+
 ## Commands
 
 ### Development Environment
@@ -44,12 +79,19 @@ pytest -k "test_palette"                 # Run tests matching keyword
 source venv/bin/activate                 # Activate virtual environment first (REQUIRED)
 ruff check .                             # Check for linting issues
 ruff check . --fix --unsafe-fixes        # Auto-fix linting issues
-pyright                                  # Type check with pyright (npm package available)
+.venv/bin/basedpyright                   # Type check with basedpyright (installed in venv)
+
+# Type Checking Analysis Tools
+python scripts/show_critical_errors.py   # Quick view of critical type errors
+python scripts/typecheck_analysis.py     # Comprehensive type error analysis
+python scripts/typecheck_analysis.py --critical   # Show only critical errors
+python scripts/typecheck_analysis.py --save       # Save analysis report to JSON
 
 # IMPORTANT: Always run linting tools from virtual environment
-# - ruff is installed in venv/, not globally
+# - ruff and basedpyright are installed in venv/, not globally
 # - Commands will fail with "command not found" without venv activation
-# - Install linting tools: pip install ruff pyright
+# - Install linting tools: pip install ruff basedpyright
+# - basedpyright must be run with full path: .venv/bin/basedpyright
 
 # Test Coverage
 pytest tests/ --cov=core --cov=ui --cov=utils    # Run tests with coverage
@@ -77,6 +119,42 @@ pytest tests/ --no-xvfb -m "not gui"
 # Run mock-based tests (works anywhere)
 pytest tests/test_integration_mock.py
 ```
+
+### Development Tools
+
+#### Type Checking Analysis Scripts
+SpritePal includes development scripts for analyzing type checking results:
+
+**Quick Critical Errors View:**
+```bash
+python scripts/show_critical_errors.py
+```
+Shows only the most critical basedpyright errors that should be fixed first:
+- General type issues
+- Missing type arguments  
+- Import cycles
+- Argument/assignment type errors
+
+**Comprehensive Type Analysis:**
+```bash
+python scripts/typecheck_analysis.py [options]
+
+# Examples:
+python scripts/typecheck_analysis.py               # Full analysis
+python scripts/typecheck_analysis.py --critical    # Critical errors only
+python scripts/typecheck_analysis.py --save        # Save JSON report
+python scripts/typecheck_analysis.py --limit 10    # Limit errors shown
+python scripts/typecheck_analysis.py core/*.py     # Check specific files
+```
+
+Features:
+- Groups errors by type with counts
+- Shows files with most errors
+- Prioritizes critical issues
+- Can save JSON reports for tracking progress
+- Provides actionable summaries
+
+These tools help maintain code quality by making it easier to identify and fix the most important type issues.
 
 ## Architecture
 
@@ -171,3 +249,31 @@ Settings saved to `.spritepal_settings.json` include:
 - **ROM Extraction UI**: Modular widget architecture in `ui/rom_extraction/`
 - **Error Handling**: Centralized exception hierarchy in `core/managers/exceptions.py`
 - **Thread Safety**: Manager operations are thread-safe with proper locking
+
+### ROM Cache System
+
+#### Overview
+SpritePal includes a high-performance ROM caching system that dramatically speeds up repeated sprite scans. The cache stores scan results in a SQLite database, eliminating the need to re-scan ROMs for the same parameters.
+
+#### Key Features
+- **Automatic Cache Detection**: When loading a ROM, SpritePal automatically checks for cached scan results
+- **Resume Partial Scans**: If a scan was interrupted, SpritePal offers to resume from where it left off
+- **Visual Indicators**: Cache status is shown throughout the UI:
+  - ROM file widget shows cache status badges
+  - Scan dialog displays cache hit/miss status
+  - Sprite selector indicates cached vs fresh results
+  - Manual offset dialog shows when using cached data
+
+#### Cache Operations
+- **Automatic Saving**: Scan results are automatically cached after completion
+- **Smart Invalidation**: Cache entries are invalidated when ROM modification time changes
+- **Clear Cache**: Available through the Settings dialog to free up disk space
+- **Performance**: Typical cache hits reduce load time from minutes to milliseconds
+
+#### Technical Details
+- **Storage**: SQLite database at `~/.cache/spritepal/rom_cache.db`
+- **Key Components**:
+  - `utils/rom_cache.py`: Core cache implementation with thread-safe singleton
+  - `ui/dialogs/resume_scan_dialog.py`: UI for resuming partial scans
+  - Cache integration in `ExtractionManager` and UI components
+- **Cache Keys**: Based on ROM path, scan parameters, and file modification time

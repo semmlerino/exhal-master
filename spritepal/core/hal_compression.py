@@ -289,47 +289,47 @@ class HALCompressor:
     def test_tools(self) -> tuple[bool, str]:
         """Test if HAL compression tools are available and working"""
         logger.info("Testing HAL compression tools")
-        try:
-            # Test exhal
-            logger.debug(f"Testing exhal at: {self.exhal_path}")
-            result = subprocess.run(
-                [self.exhal_path], check=False, capture_output=True, text=True
-            )
-            # Check both stdout and stderr for tool output
-            output = (result.stdout + result.stderr).lower()
-            if "exhal" not in output and "usage" not in output:
-                logger.error(f"exhal tool not working correctly. Output: {output[:100]}")
-                return False, "exhal tool not working correctly"
 
-            # Test inhal
-            logger.debug(f"Testing inhal at: {self.inhal_path}")
+        def _test_tool(tool_path: str, tool_name: str) -> str | None:
+            """Helper to test a single HAL tool. Returns error message or None if success."""
+            logger.debug(f"Testing {tool_name} at: {tool_path}")
             result = subprocess.run(
-                [self.inhal_path], check=False, capture_output=True, text=True
+                [tool_path], check=False, capture_output=True, text=True
             )
             # Check both stdout and stderr for tool output
             output = (result.stdout + result.stderr).lower()
-            if "inhal" not in output and "usage" not in output:
-                logger.error(f"inhal tool not working correctly. Output: {output[:100]}")
-                return False, "inhal tool not working correctly"
+            if tool_name.lower() not in output and "usage" not in output:
+                logger.error(f"{tool_name} tool not working correctly. Output: {output[:100]}")
+                return f"{tool_name} tool not working correctly"
+            return None
+
+        try:
+            # Test both tools
+            error_msg = _test_tool(self.exhal_path, "exhal")
+            if error_msg:
+                return False, error_msg
+
+            error_msg = _test_tool(self.inhal_path, "inhal")
+            if error_msg:
+                return False, error_msg
 
         except FileNotFoundError:
             logger.exception("HAL tools not found")
-            return (
-                False,
-                f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}"
-            )
+            error_msg = f"HAL tools not found. Please run 'python compile_hal_tools.py' to build for {platform.system()}"
         except OSError as e:
-            if platform.system() == "Windows" and hasattr(e, "winerror") and getattr(e, "winerror", None) == 193:
-                logger.exception("Wrong platform binaries detected")
-                return (
-                    False,
-                    "Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows"
-                )
             logger.exception("OS error testing tools")
-            return False, f"Error testing tools: {e!s}"
-        except Exception as e:
-            logger.exception("Unexpected error testing tools")
-            return False, f"Error testing tools: {e!s}"
+            if platform.system() == "Windows" and hasattr(e, "winerror") and getattr(e, "winerror", None) == 193:
+                error_msg = "Wrong platform binaries. Please run 'python compile_hal_tools.py' to build for Windows"
+            else:
+                error_msg = f"Error testing tools: {e!s}"
+        except subprocess.SubprocessError as e:
+            logger.exception("Subprocess error testing tools")
+            error_msg = f"Error running tools: {e!s}"
+        except ValueError as e:
+            logger.exception("Value error testing tools")
+            error_msg = f"Invalid tool configuration: {e!s}"
         else:
             logger.info("HAL compression tools are working correctly")
             return True, "HAL compression tools are working correctly"
+
+        return False, error_msg

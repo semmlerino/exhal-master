@@ -1,8 +1,11 @@
 """Worker thread for comprehensive range scanning of ROM data"""
 
+from typing import Any
+
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from spritepal.utils.logging_config import get_logger
+from spritepal.utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 
@@ -45,6 +48,12 @@ class RangeScanWorker(QThread):
         self._is_paused = False
         self._should_stop = False
 
+        # Cache integration
+        self.rom_cache = get_rom_cache()
+        self.found_sprites: list[dict[str, Any]] = []
+        self.current_offset = start_offset
+        self.scan_params: dict[str, Any] = {}
+
     def run(self):
         """Scan the entire specified range for valid sprites"""
         try:
@@ -52,15 +61,40 @@ class RangeScanWorker(QThread):
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()
 
-            sprites_found = 0
+            # Check for cached partial results
+            self.scan_params = {
+                "start_offset": self.start_offset,
+                "end_offset": self.end_offset,
+                "step": self.step_size,
+                "quality_threshold": self.quality_threshold,
+                "min_sprite_size": self.min_sprite_size,
+                "max_sprite_size": self.max_sprite_size
+            }
 
-            logger.info(f"Starting range scan: 0x{self.start_offset:06X} to 0x{self.end_offset:06X}")
+            cached_progress = self.rom_cache.get_partial_scan_results(self.rom_path, self.scan_params)
+            if cached_progress and not cached_progress.get("completed", False):
+                # Resume from cached progress
+                self.found_sprites = cached_progress.get("found_sprites", [])
+                self.current_offset = cached_progress.get("current_offset", self.start_offset)
+                logger.info(f"Resuming scan from cached progress: 0x{self.current_offset:06X}, {len(self.found_sprites)} sprites found")
+            else:
+                self.current_offset = self.start_offset
+                self.found_sprites = []
+                if cached_progress and cached_progress.get("completed", False):
+                    logger.info("Found completed scan in cache, but rescanning per user request")
 
-            # Scan through the entire range
-            for offset in range(self.start_offset, self.end_offset + 1, self.step_size):
+            sprites_found = len(self.found_sprites)
+
+            logger.info(f"Starting range scan: 0x{self.current_offset:06X} to 0x{self.end_offset:06X}")
+
+            # Scan through the range starting from current_offset
+            for offset in range(self.current_offset, self.end_offset + 1, self.step_size):
+                self.current_offset = offset
                 # Check if we should stop
                 if self._should_stop:
                     logger.info("Range scan stopped by user")
+                    # Save progress to cache before stopping
+                    self._save_progress(self.scan_params, completed=False)
                     self.scan_stopped.emit()
                     return
 
@@ -71,12 +105,16 @@ class RangeScanWorker(QThread):
                 # Check stop again after potential pause
                 if self._should_stop:
                     logger.info("Range scan stopped by user")
+                    # Save progress to cache before stopping
+                    self._save_progress(self.scan_params, completed=False)
                     self.scan_stopped.emit()
                     return
 
                 # Emit progress update periodically (every 1024 steps to avoid too many signals)
                 if (offset - self.start_offset) % (self.step_size * 1024) == 0:
                     self.progress_update.emit(offset)
+                    # Also save progress to cache periodically
+                    self._save_progress(self.scan_params, completed=False)
 
                 # Boundary check
                 if offset < 0 or offset >= len(rom_data):
@@ -97,6 +135,13 @@ class RangeScanWorker(QThread):
                         if quality >= self.quality_threshold:
                             self.sprite_found.emit(offset, quality)
                             sprites_found += 1
+                            # Add to cached sprites list
+                            sprite_info = {
+                                "offset": offset,
+                                "quality": quality,
+                                "size": len(sprite_data)
+                            }
+                            self.found_sprites.append(sprite_info)
                             logger.debug(f"Found sprite at 0x{offset:06X} with quality {quality:.2f}")
 
                 except (ValueError, IndexError, KeyError):
@@ -117,6 +162,9 @@ class RangeScanWorker(QThread):
             logger.info(f"Range scan complete. Found {sprites_found} sprites in range "
                        f"0x{self.start_offset:06X} to 0x{self.end_offset:06X}")
 
+            # Save completed scan to cache
+            self._save_progress(self.scan_params, completed=True)
+
             # Emit completion signal
             self.scan_complete.emit(True)
 
@@ -135,6 +183,9 @@ class RangeScanWorker(QThread):
         if not self._is_paused:
             self._is_paused = True
             logger.info("Range scan paused")
+            # Save progress when pausing
+            if self.scan_params:  # Only save if scan has started
+                self._save_progress(self.scan_params, completed=False)
             self.scan_paused.emit()
 
     def resume_scan(self):
@@ -157,3 +208,16 @@ class RangeScanWorker(QThread):
     def is_stopping(self) -> bool:
         """Check if scan is currently stopping"""
         return self._should_stop
+
+    def _save_progress(self, scan_params: dict[str, Any], completed: bool = False) -> None:
+        """Save current scan progress to cache"""
+        try:
+            self.rom_cache.save_partial_scan_results(
+                self.rom_path,
+                scan_params,
+                self.found_sprites,
+                self.current_offset,
+                completed
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save scan progress to cache: {e}")

@@ -21,7 +21,7 @@ class PaletteColorWidget(QWidget):
         self.setToolTip(f"Color {index}: RGB({color[0]}, {color[1]}, {color[2]})")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-    def paintEvent(self, a0):  # noqa: N802
+    def paintEvent(self, a0):
         """Paint the color swatch"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -61,7 +61,7 @@ class PaletteColorWidget(QWidget):
         )
         painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, str(self.index))
 
-    def mousePressEvent(self, a0: QMouseEvent | None):  # noqa: N802
+    def mousePressEvent(self, a0: QMouseEvent | None):
         """Handle mouse press"""
         if a0 and a0.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.index)

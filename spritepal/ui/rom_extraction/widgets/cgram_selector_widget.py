@@ -73,7 +73,7 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
         self.browse_cgram_btn = QPushButton("Browse...")
         self.browse_cgram_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.browse_cgram_btn.setFixedWidth(BUTTON_MAX_WIDTH)
-        self._ = browse_cgram_btn.clicked.connect(self.browse_clicked.emit)
+        _ = self.browse_cgram_btn.clicked.connect(self.browse_clicked.emit)
         cgram_row.addWidget(self.browse_cgram_btn)
 
         cgram_layout.addLayout(cgram_row)

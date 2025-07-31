@@ -3,10 +3,12 @@ ROM extraction panel for SpritePal
 """
 
 import os
+from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -18,7 +20,7 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QTextEdit,
     QVBoxLayout,
-    QWidget
+    QWidget,
 )
 
 from spritepal.core.managers import get_extraction_manager
@@ -26,23 +28,20 @@ from spritepal.ui.dialogs import UserErrorDialog
 from spritepal.ui.dialogs.manual_offset_dialog import ManualOffsetDialog
 from spritepal.ui.rom_extraction.state_manager import (
     ExtractionState,
-    ExtractionStateManager
+    ExtractionStateManager,
 )
 from spritepal.ui.rom_extraction.widgets import (
     CGRAMSelectorWidget,
     ModeSelectorWidget,
     OutputNameWidget,
     ROMFileWidget,
-    SpriteSelectorWidget
+    SpriteSelectorWidget,
 )
-from spritepal.ui.rom_extraction.workers import (
-    SpritePreviewWorker,
-    SpriteScanWorker
-)
+from spritepal.ui.rom_extraction.workers import SpritePreviewWorker, SpriteScanWorker
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from spritepal.utils.constants import (
     SETTINGS_KEY_LAST_INPUT_ROM,
-    SETTINGS_NS_ROM_INJECTION
+    SETTINGS_NS_ROM_INJECTION,
 )
 from spritepal.utils.logging_config import get_logger
 from spritepal.utils.settings_manager import get_settings_manager
@@ -111,6 +110,7 @@ class ROMExtractionPanel(QWidget):
         # ROM file selection widget
         self.rom_file_widget = ROMFileWidget()
         self.rom_file_widget.browse_clicked.connect(self._browse_rom)
+        self.rom_file_widget.partial_scan_detected.connect(self._on_partial_scan_detected)
         layout.addWidget(self.rom_file_widget)
 
         # Mode selector widget
@@ -128,7 +128,7 @@ class ROMExtractionPanel(QWidget):
         # Manual offset control button (replaces embedded widget)
         self.manual_offset_button = QPushButton("Open Manual Offset Control")
         self.manual_offset_button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
-        self._ = manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
+        _ = self.manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
         self.manual_offset_button.setVisible(True)  # Show by default (manual mode)
         self.manual_offset_button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
         self.manual_offset_button.setStyleSheet("""
@@ -214,6 +214,27 @@ class ROMExtractionPanel(QWidget):
 
         if filename:
             self._load_rom_file(filename)
+
+    def _on_partial_scan_detected(self, scan_info: dict[str, Any]):
+        """Handle detection of partial scan cache"""
+        # Show resume dialog to ask user what to do
+        from spritepal.ui.dialogs import ResumeScanDialog
+        user_choice = ResumeScanDialog.show_resume_dialog(scan_info, self)
+
+        if user_choice == ResumeScanDialog.RESUME:
+            # User wants to resume - trigger scan dialog
+            self._find_sprites()
+        elif user_choice == ResumeScanDialog.START_FRESH:
+            # User wants fresh scan - will be handled when they click Find Sprites
+            # Just inform them
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                "Fresh Scan",
+                "The partial scan cache will be ignored. \n"
+                "Click 'Find Sprites' to start a fresh scan."
+            )
+        # If CANCEL, do nothing
 
     def _load_last_rom(self):
         """Load the last used ROM file from settings"""
@@ -377,13 +398,20 @@ class ROMExtractionPanel(QWidget):
             return
 
         try:
+            # Check if sprites come from cache
+            from spritepal.utils.rom_cache import get_rom_cache
+            rom_cache = get_rom_cache()
+            cached_locations = rom_cache.get_sprite_locations(self.rom_path)
+            is_from_cache = bool(cached_locations)
+
             # Get known sprite locations
             locations = self.extraction_manager.get_known_sprite_locations(self.rom_path)
 
             if locations:
                 # Show count of known sprites to make it clear they're available
+                cache_text = " (cached)" if is_from_cache else ""
                 self.sprite_selector_widget.add_sprite(
-                    f"-- {len(locations)} Known Sprites Available --", None
+                    f"-- {len(locations)} Known Sprites Available{cache_text} --", None
                 )
 
                 # Add separator for clarity
@@ -391,8 +419,10 @@ class ROMExtractionPanel(QWidget):
 
                 for name, pointer in locations.items():
                     display_name = name.replace("_", " ").title()
+                    # Add cache indicator if sprites came from cache
+                    cache_indicator = " 💾" if is_from_cache else ""
                     self.sprite_selector_widget.add_sprite(
-                        f"{display_name} (0x{pointer.offset:06X})",
+                        f"{display_name} (0x{pointer.offset:06X}){cache_indicator}",
                         (name, pointer.offset)
                     )
                 self.sprite_locations = locations
@@ -488,7 +518,7 @@ class ROMExtractionPanel(QWidget):
             logger.exception("Error in _check_extraction_ready")
             self.extraction_ready.emit(False)
 
-    def get_extraction_params(self) -> dict | None:
+    def get_extraction_params(self) -> dict[str, Any] | None:
         """Get parameters for ROM extraction"""
         if not self.rom_path:
             return None
@@ -610,6 +640,20 @@ class ROMExtractionPanel(QWidget):
 
             layout = QVBoxLayout()
 
+            # Cache status label
+            cache_status_label = QLabel("Checking cache...")
+            cache_status_label.setStyleSheet("""
+                QLabel {
+                    background-color: #e3f2fd;
+                    border: 1px solid #2196f3;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                    color: #1976d2;
+                }
+            """)
+            layout.addWidget(cache_status_label)
+
             # Progress bar
             progress_bar = QProgressBar()
             progress_bar.setTextVisible(True)
@@ -638,11 +682,75 @@ class ROMExtractionPanel(QWidget):
                 self.scan_worker.quit()
                 self.scan_worker.wait()
 
-            # Run scan in worker thread
-            self.scan_worker = SpriteScanWorker(self.rom_path, self.rom_extractor)
+            # Check for cached scan results
+            from spritepal.utils.rom_cache import get_rom_cache
+            rom_cache = get_rom_cache()
+
+            # Define scan parameters (must match SpriteScanWorker)
+            scan_params = {
+                "start_offset": 0xC0000,
+                "end_offset": 0xF0000,
+                "alignment": 0x100
+            }
+            partial_cache = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+
+            # Determine whether to use cache based on user choice
+            use_cache = True  # Default to using cache
+
+            if partial_cache and not partial_cache.get("completed", False):
+                # Show resume dialog to ask user
+                from spritepal.ui.dialogs import ResumeScanDialog
+                user_choice = ResumeScanDialog.show_resume_dialog(partial_cache, self)
+
+                if user_choice == ResumeScanDialog.CANCEL:
+                    # User cancelled - close scan dialog and return
+                    dialog.reject()
+                    return
+                if user_choice == ResumeScanDialog.START_FRESH:
+                    use_cache = False
+                    cache_status_label.setText("Starting fresh scan (ignoring cache)")
+                    cache_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #fff3e0;
+                            border: 1px solid #ff9800;
+                            border-radius: 4px;
+                            padding: 8px;
+                            font-weight: bold;
+                            color: #e65100;
+                        }
+                    """)
+                else:  # RESUME
+                    cache_status_label.setText("📊 Resuming from cached progress...")
+                    cache_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #e8f5e9;
+                            border: 1px solid #4caf50;
+                            border-radius: 4px;
+                            padding: 8px;
+                            font-weight: bold;
+                            color: #2e7d32;
+                        }
+                    """)
+            else:
+                cache_status_label.setText("No cache found - starting fresh scan")
+                cache_status_label.setStyleSheet("""
+                    QLabel {
+                        background-color: #fff3e0;
+                        border: 1px solid #ff9800;
+                        border-radius: 4px;
+                        padding: 8px;
+                        font-weight: bold;
+                        color: #e65100;
+                    }
+                """)
+
+            # Run scan in worker thread with cache preference
+            self.scan_worker = SpriteScanWorker(self.rom_path, self.rom_extractor, use_cache=use_cache)
 
             found_offsets = []
             selected_offset = None
+
+            # Make scan_params accessible to all handler functions
 
             def on_progress(current, total):
                 progress_bar.setValue(int((current / total) * 100))
@@ -681,6 +789,48 @@ class ROMExtractionPanel(QWidget):
                     for i, sprite in enumerate(sorted_sprites[:5]):
                         size_info = f", {sprite['size_limit_used']/1024:.0f}KB limit" if "size_limit_used" in sprite else ""
                         text += f"{i+1}. {sprite['offset_hex']} - Quality: {sprite['quality']:.2f}, {sprite['tile_count']} tiles{size_info}\n"
+
+                    # Save to cache with visual feedback
+                    cache_status_label.setText("💾 Saving results to cache...")
+                    cache_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #e1f5fe;
+                            border: 1px solid #039be5;
+                            border-radius: 4px;
+                            padding: 8px;
+                            font-weight: bold;
+                            color: #01579b;
+                        }
+                    """)
+                    QApplication.processEvents()
+
+                    # Convert found sprites to cache format
+                    sprite_locations = {}
+                    for sprite in found_offsets:
+                        name = f"scanned_0x{sprite['offset']:X}"
+                        sprite_locations[name] = {
+                            "offset": sprite["offset"],
+                            "compressed_size": sprite.get("compressed_size"),
+                            "quality": sprite.get("quality", 0.0)
+                        }
+
+                    # Save to cache (rom_cache is from outer scope)
+                    if rom_cache and rom_cache.save_sprite_locations(self.rom_path, sprite_locations):
+                        cache_status_label.setText(f"✅ Saved {len(found_offsets)} sprites to cache")
+                        cache_status_label.setStyleSheet("""
+                            QLabel {
+                                background-color: #c8e6c9;
+                                border: 1px solid #4caf50;
+                                border-radius: 4px;
+                                padding: 8px;
+                                font-weight: bold;
+                                color: #1b5e20;
+                            }
+                        """)
+                        text += "\n✅ Results saved to cache for faster future scans.\n"
+                    else:
+                        cache_status_label.setText("⚠️ Could not save to cache")
+                        text += "\n⚠️ Could not save results to cache.\n"
                 else:
                     text += "\nNo valid sprites found in scanned range.\n"
                     if apply_btn:
@@ -695,10 +845,43 @@ class ROMExtractionPanel(QWidget):
                     selected_offset = found_offsets[0]["offset"]
                     dialog.accept()
 
+            def on_cache_status(status):
+                cache_status_label.setText(f"💾 {status}")
+                # Update style based on status
+                if "Saving" in status:
+                    cache_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #e1f5fe;
+                            border: 1px solid #039be5;
+                            border-radius: 4px;
+                            padding: 8px;
+                            font-weight: bold;
+                            color: #01579b;
+                        }
+                    """)
+                elif "Resuming" in status:
+                    cache_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #e8f5e9;
+                            border: 1px solid #4caf50;
+                            border-radius: 4px;
+                            padding: 8px;
+                            font-weight: bold;
+                            color: #2e7d32;
+                        }
+                    """)
+
+            def on_cache_progress(progress):
+                # Update cache save progress indicator
+                if progress > 0:
+                    cache_status_label.setText(f"💾 Saving progress ({progress}%)...")
+
             # Connect signals
             self.scan_worker.progress.connect(on_progress)
             self.scan_worker.sprite_found.connect(on_sprite_found)
             self.scan_worker.finished.connect(on_scan_complete)
+            self.scan_worker.cache_status.connect(on_cache_status)
+            self.scan_worker.cache_progress.connect(on_cache_progress)
 
             def on_dialog_finished(result):
                 # Clean up worker
@@ -744,9 +927,10 @@ class ROMExtractionPanel(QWidget):
                                 break
 
                         if not has_scanner_section:
-                            self.sprite_selector_widget.add_sprite("-- Scanner Results --", None)
+                            self.sprite_selector_widget.add_sprite("-- Scanner Results (now cached) --", None)
 
-                    self.sprite_selector_widget.add_sprite(display_name, (sprite_name, selected_offset))
+                    # Add new sprite with cache indicator since it was just saved
+                    self.sprite_selector_widget.add_sprite(f"{display_name} 💾", (sprite_name, selected_offset))
                     self.sprite_selector_widget.set_current_index(self.sprite_selector_widget.count() - 1)
 
                 logger.info(f"User selected custom sprite offset: 0x{selected_offset:X}")
@@ -936,7 +1120,7 @@ class ROMExtractionPanel(QWidget):
             self.scan_worker.wait()
             self.scan_worker = None
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle panel close event"""
         # Clean up workers before closing
         self._cleanup_workers()

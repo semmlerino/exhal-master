@@ -17,6 +17,7 @@ from spritepal.core.managers import (
     get_session_manager,
     initialize_managers,
 )
+from spritepal.core.managers.exceptions import ValidationError
 
 
 @pytest.fixture(autouse=True)
@@ -198,7 +199,7 @@ class TestManagerCommunication:
             "output_base": "/invalid/output",
         }
 
-        with pytest.raises(Exception):  # Should raise validation error
+        with pytest.raises(ValidationError):  # Should raise validation error
             extraction_manager.validate_extraction_params(invalid_params)
 
         # Test injection with invalid parameters
@@ -208,7 +209,7 @@ class TestManagerCommunication:
             "offset": -100,
         }
 
-        with pytest.raises(Exception):  # Should raise validation error
+        with pytest.raises(ValidationError):  # Should raise validation error
             injection_manager.validate_injection_params(invalid_injection_params)
 
     def test_rom_injection_workflow_integration(self, tmp_path):

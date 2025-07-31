@@ -77,7 +77,7 @@ class SpriteSelectorWidget(BaseExtractionWidget):
         self.find_sprites_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.find_sprites_btn.setFixedWidth(BUTTON_MAX_WIDTH)
         self.find_sprites_btn.setToolTip("Scan ROM for valid sprite offsets")
-        self._ = find_sprites_btn.clicked.connect(self.find_sprites_clicked.emit)
+        _ = self.find_sprites_btn.clicked.connect(self.find_sprites_clicked.emit)
         self.find_sprites_btn.setEnabled(False)
         offset_row.addWidget(self.find_sprites_btn)
 

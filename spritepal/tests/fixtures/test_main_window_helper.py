@@ -4,7 +4,9 @@ Helper for testing with real MainWindow components in a controlled environment
 
 import tempfile
 from pathlib import Path
-from typing import Anyfrom PyQt6.QtCore import QObject, pyqtSignal
+from typing import Any
+
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QStatusBar
 
 from spritepal.ui.palette_preview import PalettePreviewWidget

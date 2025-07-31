@@ -2,6 +2,8 @@
 Image processing for sprite row extraction
 """
 
+from typing import Any
+
 from PIL import Image
 
 from spritepal.utils.exceptions import FileFormatError
@@ -66,7 +68,7 @@ class RowImageProcessor:
 
         return tile_width, tile_height
 
-    def extract_rows(self, image: Image.Image, tiles_per_row: int) -> list[dict]:
+    def extract_rows(self, image: Image.Image, tiles_per_row: int) -> list[dict[str, Any]]:
         """Extract individual rows from sprite sheet
 
         Args:
@@ -106,7 +108,7 @@ class RowImageProcessor:
 
     def process_sprite_sheet(
         self, sprite_path: str, tiles_per_row: int
-    ) -> tuple[Image.Image, list[dict]]:
+    ) -> tuple[Image.Image, list[dict[str, Any]]]:
         """Complete sprite processing pipeline
 
         Args:

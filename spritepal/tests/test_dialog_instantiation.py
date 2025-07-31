@@ -44,12 +44,9 @@ class TestDialogInstantiation:
         assert dialog.preview_widget is not None
         
         # Test that we can call methods that use these components
-        try:
-            dialog.set_rom_data("test.rom", 1024 * 1024)
-            # Should not raise AttributeError on None
-        except Exception as e:
-            # Other exceptions are OK, we're just testing for None attributes
-            assert "NoneType" not in str(e), f"Got NoneType error: {e}"
+        # If any widget is None, this will raise AttributeError naturally
+        # We're not expecting any specific exception here
+        dialog.set_rom_data("test.rom", 1024 * 1024)
 
     def test_settings_dialog_creation(self, qtbot):
         """Test SettingsDialog can be created."""
@@ -157,12 +154,10 @@ class TestDialogMethodCalls:
         for method_name, args in methods_to_test:
             method = getattr(dialog, method_name, None)
             if method and callable(method):
-                try:
-                    method(*args)
-                except Exception as e:
-                    # We only care about NoneType errors
-                    assert "NoneType" not in str(e), \
-                        f"Method {method_name} failed with NoneType: {e}"
+                # If widgets are not properly initialized (None), 
+                # calling these methods will raise AttributeError
+                # No need to catch and assert - let it fail naturally
+                method(*args)
 
 
 class TestInitializationOrder:

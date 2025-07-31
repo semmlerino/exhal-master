@@ -4,7 +4,8 @@ Simplified helper for testing MainWindow functionality without creating Qt widge
 
 import tempfile
 from pathlib import Path
-from typing import Anyfrom unittest.mock import Mock
+from typing import Any
+from unittest.mock import Mock
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -31,6 +32,13 @@ class TestMainWindowHelperSimple(QObject):
         self._extraction_params: dict[str, Any] = {}
         self._status_message = "Ready to extract sprites"
         self._preview_info_text = "No sprites loaded"
+
+        # Initialize mock components to None
+        self._mock_status_bar: Any | None = None
+        self._mock_sprite_preview: Any | None = None
+        self._mock_palette_preview: Any | None = None
+        self._mock_preview_info: Any | None = None
+        self._mock_extraction_panel: Any | None = None
 
         # Track signal emissions for testing
         self.signal_emissions: dict[str, list[Any]] = {
@@ -193,35 +201,35 @@ class TestMainWindowHelperSimple(QObject):
     @property
     def status_bar(self):
         """Get mock status bar"""
-        if not hasattr(self, "_mock_status_bar"):
+        if self._mock_status_bar is None:
             self._mock_status_bar = self.MockStatusBar(self)
         return self._mock_status_bar
 
     @property
     def sprite_preview(self):
         """Get mock sprite preview"""
-        if not hasattr(self, "_mock_sprite_preview"):
+        if self._mock_sprite_preview is None:
             self._mock_sprite_preview = self.MockSpritePreview(self)
         return self._mock_sprite_preview
 
     @property
     def palette_preview(self):
         """Get mock palette preview"""
-        if not hasattr(self, "_mock_palette_preview"):
+        if self._mock_palette_preview is None:
             self._mock_palette_preview = self.MockPalettePreview(self)
         return self._mock_palette_preview
 
     @property
     def preview_info(self):
         """Get mock preview info"""
-        if not hasattr(self, "_mock_preview_info"):
+        if self._mock_preview_info is None:
             self._mock_preview_info = self.MockPreviewInfo(self)
         return self._mock_preview_info
 
     @property
     def extraction_panel(self):
         """Get mock extraction panel"""
-        if not hasattr(self, "_mock_extraction_panel"):
+        if self._mock_extraction_panel is None:
             self._mock_extraction_panel = self.MockExtractionPanel(self)
         return self._mock_extraction_panel
 

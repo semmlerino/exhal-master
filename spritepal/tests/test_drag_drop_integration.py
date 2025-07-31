@@ -439,11 +439,8 @@ class TestDragDropErrorHandling:
         drop_event.mimeData.return_value.urls.return_value = [url]
 
         # Test drop event with file system error
-        try:
+        with pytest.raises(OSError, match="File system error"):
             mock_drop_zone.dropEvent(drop_event)
-            raise AssertionError("Should have raised OSError")
-        except OSError as e:
-            assert "File system error" in str(e)
 
         # Verify error was handled (file not set)
         assert mock_drop_zone.file_path == ""
@@ -546,9 +543,9 @@ class TestDragDropSignalIntegration:
         extraction_ready_signal.connect = Mock(side_effect=lambda handler: handler)
 
         # Simulate connecting the signals
-        file_dropped_signal.connect(handle_file_dropped)
-        files_changed_signal.connect(handle_files_changed)
-        extraction_ready_signal.connect(handle_extraction_ready)
+        _ = file_dropped_signal.connect(handle_file_dropped)
+        _ = files_changed_signal.connect(handle_files_changed)
+        _ = extraction_ready_signal.connect(handle_extraction_ready)
 
         # Test signal flow
         file_dropped_signal.emit("/path/to/file.dmp")

@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from spritepal.core.managers import ExtractionManager, InjectionManager, SessionManager
 from spritepal.ui.row_arrangement.grid_arrangement_manager import (
     GridArrangementManager,
-    TilePosition
+    TilePosition,
 )
 from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
 from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator

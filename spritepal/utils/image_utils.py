@@ -32,7 +32,7 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
         buffer = io.BytesIO()
         pil_image.save(buffer, format="PNG")
         buffer_size = buffer.tell()
-        buffer.seek(0)
+        _ = buffer.seek(0)
 
         logger.debug(f"PIL image saved to buffer: {buffer_size} bytes")
 
@@ -55,7 +55,6 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
             return pixmap
         logger.error(f"QPixmap.loadFromData() failed. Data size: {len(buffer_data)} bytes")
         logger.error(f"PNG header check: {buffer_data[:16].hex() if len(buffer_data) >= 16 else 'too short'}")
-        return None
 
     except Exception:
         logger.exception(
@@ -63,6 +62,8 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
             getattr(pil_image, "size", "unknown"),
             getattr(pil_image, "mode", "unknown")
         )
+        return None
+    else:
         return None
 
 

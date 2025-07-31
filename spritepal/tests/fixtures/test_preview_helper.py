@@ -6,7 +6,9 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Anyfrom PyQt6.QtCore import QObject, pyqtSignal
+from typing import Any
+
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication
 
@@ -124,7 +126,7 @@ class TestPreviewPanelHelper(QObject):
         self.palette_mode_changed.connect(lambda mode: self.signal_emissions["palette_mode_changed"].append(mode))
         self.palette_index_changed.connect(lambda index: self.signal_emissions["palette_index_changed"].append(index))
 
-    def _create_test_palettes(self) -> dict[int, list[tuple]]:
+    def _create_test_palettes(self) -> dict[int, list[tuple[int, int, int]]]:
         """Create test palette data"""
         palettes = {}
         for i in range(8, 16):  # Sprite palettes 8-15

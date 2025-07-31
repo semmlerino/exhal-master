@@ -37,7 +37,7 @@ class RowPreviewWidget(QWidget):
         self.row_image = new_image
         self.update()
 
-    def paintEvent(self, a0) -> None:  # noqa: N802
+    def paintEvent(self, a0) -> None:
         """Paint the row thumbnail with enhanced visuals"""
         painter = QPainter(self)
 
@@ -141,12 +141,12 @@ class RowPreviewWidget(QWidget):
             painter.setPen(QColor(70, 140, 200))  # Match border color
             painter.drawText(image_end_x, 70, "● Selected")
 
-    def enterEvent(self, event) -> None:  # noqa: N802
+    def enterEvent(self, event) -> None:
         """Handle mouse enter"""
         self.is_hovered = True
         self.update()
 
-    def leaveEvent(self, a0) -> None:  # noqa: N802
+    def leaveEvent(self, a0) -> None:
         """Handle mouse leave"""
         self.is_hovered = False
         self.update()
@@ -171,7 +171,7 @@ class DragDropListWidget(QListWidget):
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
 
-    def dragEnterEvent(self, e) -> None:  # noqa: N802
+    def dragEnterEvent(self, e) -> None:
         """Handle drag enter"""
         if e:
             mime_data = e.mimeData()
@@ -180,7 +180,7 @@ class DragDropListWidget(QListWidget):
             else:
                 super().dragEnterEvent(e)
 
-    def dragMoveEvent(self, e) -> None:  # noqa: N802
+    def dragMoveEvent(self, e) -> None:
         """Handle drag move"""
         if e:
             mime_data = e.mimeData()
@@ -189,7 +189,7 @@ class DragDropListWidget(QListWidget):
             else:
                 super().dragMoveEvent(e)
 
-    def dropEvent(self, event) -> None:  # noqa: N802
+    def dropEvent(self, event) -> None:
         """Handle drop events"""
         if event:
             mime_data = event.mimeData()
@@ -208,7 +208,7 @@ class DragDropListWidget(QListWidget):
                 super().dropEvent(event)
                 self.item_dropped.emit(0, 0)  # Signal for refresh
 
-    def startDrag(self, supportedActions) -> None:  # noqa: N802
+    def startDrag(self, supportedActions) -> None:
         """Start drag operation"""
         item = self.currentItem()
         if item:

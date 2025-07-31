@@ -6,7 +6,10 @@ conditions across tests, reducing duplication and improving consistency.
 """
 
 from pathlib import Path
-from typing import Anydef assert_valid_sprite_data(data: bytes, expected_size: int | None = None):
+from typing import Any
+
+
+def assert_valid_sprite_data(data: bytes, expected_size: int | None = None):
     """
     Assert that sprite data is valid and well-formed.
 

@@ -15,7 +15,7 @@ from PyQt6.QtGui import (
     QDropEvent,
     QKeyEvent,
     QPainter,
-    QPen
+    QPen,
 )
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QVBoxLayout,
-    QWidget
+    QWidget,
 )
 
 from spritepal.ui.styles import (
@@ -36,7 +36,7 @@ from spritepal.ui.styles import (
     get_link_text_style,
     get_muted_text_style,
     get_slider_style,
-    get_success_text_style
+    get_success_text_style,
 )
 from spritepal.utils.constants import VRAM_SPRITE_OFFSET
 from spritepal.utils.logging_config import get_logger
@@ -86,10 +86,10 @@ class DropZone(QWidget):
         # Browse button
         self.browse_button = QPushButton("Browse")
         self.browse_button.setMaximumWidth(100)
-        self._ = browse_button.clicked.connect(self._browse_file)
+        _ = self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def dragEnterEvent(self, a0: QDragEnterEvent | None):  # noqa: N802
+    def dragEnterEvent(self, a0: QDragEnterEvent | None):
         """Handle drag enter events"""
         if a0:
             mime_data = a0.mimeData()
@@ -105,7 +105,7 @@ class DropZone(QWidget):
                 """
                 )
 
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):  # noqa: N802
+    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):
         """Handle drag leave events"""
         self.setStyleSheet(
             """
@@ -117,7 +117,7 @@ class DropZone(QWidget):
         """
         )
 
-    def dropEvent(self, a0: QDropEvent | None):  # noqa: N802
+    def dropEvent(self, a0: QDropEvent | None):
         """Handle drop events"""
         if a0:
             mime_data = a0.mimeData()
@@ -127,7 +127,7 @@ class DropZone(QWidget):
                     self.set_file(files[0])
         self.dragLeaveEvent(None)  # Just reset the style
 
-    def paintEvent(self, a0):  # noqa: N802
+    def paintEvent(self, a0):
         """Custom paint event to show status"""
         super().paintEvent(a0)
 
@@ -207,16 +207,18 @@ class ExtractionPanel(QGroupBox):
 
     def __init__(self):
         super().__init__("Input Files")
-        self._setup_ui()
-        self._connect_signals()
-
         # Timer for debouncing offset changes
         self._offset_timer = QTimer()
         self._offset_timer.setInterval(16)  # 16ms delay for ~60fps updates
         self._offset_timer.setSingleShot(True)
-        self._offset_timer.timeout.connect(self._emit_offset_changed)
-        self._pending_offset = None
+        self._pending_offset: int | None = None
         self._slider_changing = False  # Track if change is from slider
+
+        self._setup_ui()
+        self._connect_signals()
+
+        # Connect timer after UI setup
+        _ = self._offset_timer.timeout.connect(self._emit_offset_changed)
 
         # Enable keyboard focus for shortcuts
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -231,7 +233,7 @@ class ExtractionPanel(QGroupBox):
 
         self.preset_combo = QComboBox()
         self.preset_combo.addItems(["Kirby Sprites (0xC000)", "Custom Range"])
-        self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
+        _ = self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_layout.addWidget(self.preset_combo)
         preset_layout.addStretch()
 
@@ -274,7 +276,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_slider.setTickInterval(0x1000)  # Visual ticks at 4KB intervals
         self.offset_slider.setSingleStep(0x20)  # Single tile step
         self.offset_slider.setPageStep(0x100)  # Page step
-        self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
+        _ = self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
         self.offset_slider.setStyleSheet(get_slider_style("extract"))
         offset_layout.addWidget(self.offset_slider)
 
@@ -290,7 +292,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_spinbox.setDisplayIntegerBase(16)
         self.offset_spinbox.setPrefix("0x")
         self.offset_spinbox.setMinimumWidth(100)
-        self.offset_spinbox.valueChanged.connect(self._on_offset_spinbox_changed)
+        _ = self.offset_spinbox.valueChanged.connect(self._on_offset_spinbox_changed)
         self.offset_spinbox.setToolTip("Enter offset in hex (0x prefix) or decimal")
         offset_controls_layout.addWidget(self.offset_spinbox)
 
@@ -304,7 +306,7 @@ class ExtractionPanel(QGroupBox):
             "0x4000 (512 tiles)"
         ])
         self.step_combo.setCurrentIndex(0)  # Default to tile-aligned
-        self.step_combo.currentIndexChanged.connect(self._on_step_changed)
+        _ = self.step_combo.currentIndexChanged.connect(self._on_step_changed)
         self.step_combo.setToolTip("Select step size for navigation")
         offset_controls_layout.addWidget(self.step_combo)
 
@@ -319,7 +321,7 @@ class ExtractionPanel(QGroupBox):
             "0xC000 - Kirby sprites",
             "0x10000 - End"
         ])
-        self.jump_combo.currentIndexChanged.connect(self._on_jump_selected)
+        _ = self.jump_combo.currentIndexChanged.connect(self._on_jump_selected)
         self.jump_combo.setMinimumWidth(150)
         offset_controls_layout.addWidget(self.jump_combo)
 
@@ -336,7 +338,7 @@ class ExtractionPanel(QGroupBox):
 
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["Full Color (requires CGRAM)", "Grayscale Only"])
-        self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+        _ = self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
         mode_layout.addWidget(self.mode_combo)
         mode_layout.addStretch()
         layout.addLayout(mode_layout)
@@ -356,16 +358,16 @@ class ExtractionPanel(QGroupBox):
 
         # Auto-detect button
         self.auto_detect_button = QPushButton("Auto-detect Files")
-        self._ = auto_detect_button.clicked.connect(self._auto_detect_files)
+        _ = self.auto_detect_button.clicked.connect(self._auto_detect_files)
         layout.addWidget(self.auto_detect_button)
 
         self.setLayout(layout)
 
     def _connect_signals(self):
         """Connect internal signals"""
-        self.vram_drop.file_dropped.connect(self._on_file_changed)
-        self.cgram_drop.file_dropped.connect(self._on_file_changed)
-        self.oam_drop.file_dropped.connect(self._on_file_changed)
+        _ = self.vram_drop.file_dropped.connect(self._on_file_changed)
+        _ = self.cgram_drop.file_dropped.connect(self._on_file_changed)
+        _ = self.oam_drop.file_dropped.connect(self._on_file_changed)
 
     def _on_file_changed(self, file_path):
         """Handle when a file is dropped"""
@@ -763,7 +765,7 @@ class ExtractionPanel(QGroupBox):
         """Check if grayscale extraction mode is selected"""
         return self.mode_combo.currentIndex() == 1
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle keyboard shortcuts for offset navigation"""
         # Only handle shortcuts in custom range mode
         if self.preset_combo.currentIndex() != 1:

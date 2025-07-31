@@ -51,7 +51,7 @@ class StyledGroupBox(QGroupBox):
         """Get the current panel type"""
         return self._panel_type
 
-    def set_layout_with_margins(self, layout: QLayout, margins: tuple = (12, 12, 12, 12)):
+    def set_layout_with_margins(self, layout: QLayout, margins: tuple[int, int, int, int] = (12, 12, 12, 12)):
         """
         Set layout with consistent margins.
 

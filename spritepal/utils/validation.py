@@ -43,35 +43,48 @@ def validate_file_path(
         if not path.exists():
             return True, ""  # Non-existent files are OK, will be handled by caller
 
-        # Check if it's a file (not directory)
-        if not path.is_file():
-            return False, f"Path is not a file: {file_path}"
-
-        # Check extension if specified
-        if allowed_extensions and path.suffix.lower() not in allowed_extensions:
-            return (
-                False,
-                f"Invalid file extension: {path.suffix}. Allowed: {allowed_extensions}",
-            )
-
-        # Check file size if specified
-        if max_size is not None:
-            file_size = path.stat().st_size
-            if file_size > max_size:
-                return False, f"File too large: {file_size} bytes (max: {max_size})"
-
-        # Check if within base directory if specified
-        if base_dir:
-            base = Path(base_dir).resolve()
-            try:
-                path.relative_to(base)
-            except ValueError:
-                return False, f"File is outside allowed directory: {base_dir}"
+        # Perform all validation checks
+        error_msg = _validate_path_properties(path, file_path, allowed_extensions, max_size, base_dir)
+        if error_msg:
+            return False, error_msg
 
     except Exception as e:
         return False, f"Path validation error: {e!s}"
-    else:
-        return True, ""
+
+    return True, ""
+
+
+def _validate_path_properties(
+    path: Path,
+    file_path: str,
+    allowed_extensions: set[str] | None,
+    max_size: int | None,
+    base_dir: str | None
+) -> str:
+    """Helper function to validate path properties. Returns error message or empty string."""
+    # Check if it's a file (not directory)
+    if not path.is_file():
+        return f"Path is not a file: {file_path}"
+
+    # Check extension if specified
+    if allowed_extensions and path.suffix.lower() not in allowed_extensions:
+        return f"Invalid file extension: {path.suffix}. Allowed: {allowed_extensions}"
+
+    # Check file size if specified
+    if max_size is not None:
+        file_size = path.stat().st_size
+        if file_size > max_size:
+            return f"File too large: {file_size} bytes (max: {max_size})"
+
+    # Check if within base directory if specified
+    if base_dir:
+        base = Path(base_dir).resolve()
+        try:
+            _ = path.relative_to(base)
+        except ValueError:
+            return f"File is outside allowed directory: {base_dir}"
+
+    return ""
 
 
 def validate_vram_file(file_path: str) -> tuple[bool, str]:

@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, parent_dir)
 
 # Import after path setup
-from spritepal.core.hal_compression import HALCompressor  # noqa: E402
+from spritepal.core.hal_compression import HALCompressor
 
 
 def extract_kirby_patterns(vram_path: str):
@@ -43,7 +43,7 @@ def extract_kirby_patterns(vram_path: str):
     return patterns
 
 
-def search_rom_compressed(rom_path: str, patterns: list):
+def search_rom_compressed(rom_path: str, patterns: list[bytes]):
     """Search for patterns in compressed ROM data"""
 
     print(f"\nSearching ROM: {rom_path}")

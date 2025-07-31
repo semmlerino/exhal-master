@@ -49,7 +49,7 @@ def setup_logging(
     # Clear the log file on startup by opening in write mode first
     try:
         with open(log_file, "w") as f:
-            f.write("")  # Clear the file
+            _ = f.write("")  # Clear the file
     except Exception:
         # If we can't clear it, that's okay, just continue
         pass

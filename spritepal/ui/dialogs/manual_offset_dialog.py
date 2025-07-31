@@ -16,7 +16,7 @@ from PyQt6.QtCore import QMutex, QMutexLocker, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QHideEvent, QKeyEvent, QMouseEvent
 from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QVBoxLayout, QWidget
 
-from spritepal.ui.components.base.dialog_base import SplitterDialog
+from spritepal.ui.components import SplitterDialog
 from spritepal.ui.components.panels import (
     ImportExportPanel,
     ScanControlsPanel,

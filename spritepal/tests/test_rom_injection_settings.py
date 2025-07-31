@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.core.managers import get_injection_manager, InjectionManager
+from spritepal.core.managers import InjectionManager
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
@@ -69,7 +69,7 @@ class TestROMInjectionSettingsPersistence:
         dialog.input_rom_selector = Mock()
         dialog.output_rom_selector = Mock()
         dialog.rom_offset_input = Mock()
-        
+
         # Add the actual method from the class
         dialog.save_rom_injection_parameters = (
             InjectionDialog.save_rom_injection_parameters.__get__(dialog)
@@ -287,7 +287,7 @@ class TestROMInjectionSettingsPersistence:
             3: "Boss Sprite (0x345678)",
         }
         mock_dialog.sprite_location_combo.itemText.side_effect = lambda i: item_texts.get(i, "")
-        
+
         # Define the item data by index
         item_data = {0: None, 1: 0x123456, 2: 0x234567, 3: 0x345678}
         mock_dialog.sprite_location_combo.itemData.side_effect = lambda i: item_data.get(i)

@@ -3,6 +3,7 @@ Manager for handling all extraction operations
 """
 
 import os
+import time
 from dataclasses import asdict
 from typing import Any
 
@@ -17,8 +18,9 @@ from spritepal.core.rom_extractor import ROMExtractor
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,
-    SPRITE_PALETTE_START
+    SPRITE_PALETTE_START,
 )
+from spritepal.utils.rom_cache import get_rom_cache
 
 
 class ExtractionManager(BaseManager):
@@ -30,6 +32,10 @@ class ExtractionManager(BaseManager):
     palettes_extracted: pyqtSignal = pyqtSignal(dict)  # Palette data
     active_palettes_found: pyqtSignal = pyqtSignal(list)  # Active palette indices
     files_created: pyqtSignal = pyqtSignal(list)  # List of created files
+    cache_operation_started: pyqtSignal = pyqtSignal(str, str)  # Operation type, cache type
+    cache_hit: pyqtSignal = pyqtSignal(str, float)  # Cache type, time saved in seconds
+    cache_miss: pyqtSignal = pyqtSignal(str)  # Cache type
+    cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
     def __init__(self) -> None:
         """Initialize the extraction manager"""
@@ -45,7 +51,10 @@ class ExtractionManager(BaseManager):
 
     def cleanup(self) -> None:
         """Cleanup extraction resources"""
-        # Currently no resources to cleanup
+        # Clear any active operations to prevent "already active" warnings
+        with self._lock:
+            self._active_operations.clear()
+        # Currently no other resources to cleanup
 
     def extract_from_vram(self, vram_path: str, output_base: str,
                          cgram_path: str | None = None,
@@ -447,7 +456,7 @@ class ExtractionManager(BaseManager):
 
     def get_known_sprite_locations(self, rom_path: str) -> dict[str, Any]:
         """
-        Get known sprite locations for a ROM
+        Get known sprite locations for a ROM with caching
 
         Args:
             rom_path: Path to ROM file
@@ -460,10 +469,43 @@ class ExtractionManager(BaseManager):
         """
         try:
             self._validate_file_exists(rom_path, "rom_path")
-            return self._rom_extractor.get_known_sprite_locations(rom_path)
+
+            # Try to load from cache first
+            start_time = time.time()
+            rom_cache = get_rom_cache()
+
+            # Signal that cache loading operation is starting
+            self.cache_operation_started.emit("Loading", "sprite_locations")
+            cached_locations = rom_cache.get_sprite_locations(rom_path)
+
+            if cached_locations:
+                time_saved = 2.5  # Estimated time saved by not scanning ROM
+                self._logger.debug(f"Loaded sprite locations from cache: {rom_path}")
+                self.cache_hit.emit("sprite_locations", time_saved)
+                # Convert cached dict back to SpritePointer-like objects if needed
+                # For now, return the cached dict directly since the callers expect a dict
+                return cached_locations
+
+            # Cache miss - scan ROM file
+            self._logger.debug(f"Cache miss, scanning ROM for sprite locations: {rom_path}")
+            self.cache_miss.emit("sprite_locations")
+            locations = self._rom_extractor.get_known_sprite_locations(rom_path)
+            scan_time = time.time() - start_time
+
+            # Save to cache for future use
+            if locations:
+                # Signal that cache saving operation is starting
+                self.cache_operation_started.emit("Saving", "sprite_locations")
+                cache_success = rom_cache.save_sprite_locations(rom_path, locations)
+                if cache_success:
+                    self._logger.debug(f"Cached {len(locations)} sprite locations for future use (scan took {scan_time:.1f}s)")
+                    self.cache_saved.emit("sprite_locations", len(locations))
+
         except Exception as e:
             self._handle_error(e, "get_known_sprite_locations")
             raise ExtractionError(f"Failed to get sprite locations: {e}") from e
+        else:
+            return locations
 
     def read_rom_header(self, rom_path: str) -> dict[str, Any]:
         """

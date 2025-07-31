@@ -65,7 +65,7 @@ class ZoomablePreviewWidget(QWidget):
         """
         )
 
-    def paintEvent(self, a0: Any) -> None:  # noqa: N802
+    def paintEvent(self, a0: Any) -> None:
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))
@@ -176,7 +176,7 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:  # noqa: N802
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
         """Handle mouse wheel for zooming"""
         if not self._pixmap or not a0:
             return
@@ -236,7 +236,7 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse press for panning"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = True
@@ -246,13 +246,13 @@ class ZoomablePreviewWidget(QWidget):
             # Right click to reset view
             self.reset_view()
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse release"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:  # noqa: N802
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse move for panning"""
         if a0 and self._is_panning and self._last_mouse_pos is not None:
             delta = a0.position() - self._last_mouse_pos
@@ -260,7 +260,7 @@ class ZoomablePreviewWidget(QWidget):
             self._last_mouse_pos = a0.position()
             self.update()
 
-    def keyPressEvent(self, a0: Any) -> None:  # noqa: N802
+    def keyPressEvent(self, a0: Any) -> None:
         """Handle keyboard input"""
         if a0.key() == Qt.Key.Key_G:
             self._grid_visible = not self._grid_visible
@@ -346,10 +346,10 @@ class PreviewPanel(QWidget):
         self.colorizer = PaletteColorizer()
 
         # Connect colorizer signals
-        self.colorizer.palette_mode_changed.connect(
+        _ = self.colorizer.palette_mode_changed.connect(
             self._on_colorizer_palette_mode_changed
         )
-        self.colorizer.palette_index_changed.connect(
+        _ = self.colorizer.palette_index_changed.connect(
             self._on_colorizer_palette_index_changed
         )
 
@@ -376,12 +376,12 @@ class PreviewPanel(QWidget):
         # Palette application controls
         self.palette_toggle = QCheckBox("Apply Palette")
         self.palette_toggle.setChecked(False)
-        self.palette_toggle.toggled.connect(self._on_palette_toggle)
+        _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
 
         self.palette_selector = QComboBox()
         self.palette_selector.setMinimumWidth(80)
         self.palette_selector.setEnabled(False)
-        self.palette_selector.currentTextChanged.connect(self._on_palette_changed)
+        _ = self.palette_selector.currentTextChanged.connect(self._on_palette_changed)
 
         # Populate palette selector
         for i in range(8, 16):
@@ -389,11 +389,11 @@ class PreviewPanel(QWidget):
 
         # Zoom controls
         self.zoom_fit_btn = QPushButton("Fit")
-        self._ = zoom_fit_btn.clicked.connect(self.preview.zoom_to_fit)
+        _ = self.zoom_fit_btn.clicked.connect(self.preview.zoom_to_fit)
         self.zoom_fit_btn.setMaximumWidth(60)
 
         self.zoom_reset_btn = QPushButton("1:1")
-        self._ = zoom_reset_btn.clicked.connect(self.preview.reset_view)
+        _ = self.zoom_reset_btn.clicked.connect(self.preview.reset_view)
         self.zoom_reset_btn.setMaximumWidth(60)
 
         # Help text
@@ -546,7 +546,7 @@ class PreviewPanel(QWidget):
         """Convert PIL image to QPixmap using enhanced utility function"""
         return pil_to_qpixmap(pil_image)
 
-    def keyPressEvent(self, a0: Any) -> None:  # noqa: N802
+    def keyPressEvent(self, a0: Any) -> None:
         """Handle keyboard input"""
         if a0.key() == Qt.Key.Key_C:
             # Toggle palette application
@@ -568,7 +568,7 @@ class PreviewPanel(QWidget):
                 self.palette_selector.setCurrentIndex(i)
                 break
 
-    def mousePressEvent(self, a0: Any) -> None:  # noqa: N802
+    def mousePressEvent(self, a0: Any) -> None:
         """Handle mouse press to ensure focus"""
         self.setFocus()
         super().mousePressEvent(a0)

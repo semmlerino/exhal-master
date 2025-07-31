@@ -71,7 +71,7 @@ def analyze_vram_at_correct_offsets(vram_path: str):
         # Convert to PNG for visual inspection
         output_path = f"vram_{os.path.basename(vram_path)}_{offset:04X}.png"
         try:
-            extractor._convert_4bpp_to_png(sprite_data, output_path)
+            _ = extractor._convert_4bpp_to_png(sprite_data, output_path)
             logger.info(f"\nSaved preview: {output_path}")
         except Exception:
             logger.exception("Failed to convert to PNG")

@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core.sprite_config_loader import SpriteConfigLoader
+from spritepal.core.sprite_config_loader import SpriteConfigLoader
 
 
 def test_config_loading():

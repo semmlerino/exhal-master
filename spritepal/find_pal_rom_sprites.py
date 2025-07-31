@@ -20,7 +20,7 @@ def find_all_compressed(rom_data: bytes) -> list[tuple[int, bytes]]:
     return []
 
 
-def search_for_vram_patterns(rom_path: str, vram_samples: list):
+def search_for_vram_patterns(rom_path: str, vram_samples: list[bytes]):
     """Search ROM for patterns matching VRAM sprite data."""
     print(f"Searching ROM: {rom_path}")
 

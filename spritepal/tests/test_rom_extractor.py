@@ -163,20 +163,18 @@ class TestROMExtractor4bppConversion:
         tile_data = b""
         output_path = tmp_path / "empty_sprite.png"
 
-        # Empty data should be handled gracefully - may raise error or create minimal image
-        try:
-            tile_count = extractor._convert_4bpp_to_png(tile_data, str(output_path))
-            assert tile_count == 0
-
-            if output_path.exists():
-                # If image was created, verify it has reasonable dimensions
-                img = Image.open(output_path)
-                assert img.size[0] > 0  # Width should be positive
-                assert img.size[1] >= 0  # Height should be non-negative
-        except (SystemError, ValueError) as e:
-            # Empty data might cause PIL errors - this is acceptable behavior
-            # The real-world usage would never have truly empty sprite data
-            assert "tile cannot extend outside image" in str(e) or "invalid image size" in str(e)
+        # Empty data should be handled gracefully
+        # Test that it either succeeds with 0 tiles or raises a specific error
+        tile_count = extractor._convert_4bpp_to_png(tile_data, str(output_path))
+        
+        # Should return 0 tiles for empty data
+        assert tile_count == 0
+        
+        # If image was created, verify it has reasonable dimensions
+        if output_path.exists():
+            img = Image.open(output_path)
+            assert img.size[0] > 0  # Width should be positive
+            assert img.size[1] >= 0  # Height should be non-negative
 
 
 class TestROMExtractorSpriteLocations:

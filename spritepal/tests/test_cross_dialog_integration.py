@@ -270,7 +270,7 @@ class TestMainWindowToArrangementDialog:
                 mock_dialog_instance.exec.assert_called_once()
 
     @pytest.mark.integration
-    def test_dialog_result_handling(self):
+    def test_dialog_result_handling(self, qtbot):
         """Test dialog result handling and UI updates"""
         # Create temporary test file
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
@@ -278,6 +278,11 @@ class TestMainWindowToArrangementDialog:
             sprite_file = temp_file.name
 
         try:
+            # Create a real QWidget to act as parent
+            from PyQt6.QtWidgets import QWidget
+            parent_widget = QWidget()
+            qtbot.addWidget(parent_widget)
+            
             # Create mock window
             window = Mock()
             window.status_bar = Mock()
@@ -292,50 +297,45 @@ class TestMainWindowToArrangementDialog:
             window.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
 
             # FIX: Create real controller instead of using window.controller
+            # Patch the main_window to return the real parent widget when accessed
             controller = ExtractionController(window)
+            controller.main_window = parent_widget  # Use real QWidget instead of Mock
 
+            # Mock file operations, image loading, and pixel editor launcher
+            mock_image = Mock()
+            mock_image.width = 128  # 16 tiles * 8 pixels per tile
+            mock_image.height = 128
+            mock_image.__enter__ = Mock(return_value=mock_image)
+            mock_image.__exit__ = Mock(return_value=None)
+
+            # Create mock dialog instance before patching
+            mock_dialog_instance = Mock()
+            mock_dialog_instance.exec.return_value = 1  # QDialog.DialogCode.Accepted
+            mock_dialog_instance.get_arranged_path.return_value = "/tmp/test_arranged.png"
+            mock_dialog_instance.set_palettes = Mock()
+            
             # Test successful arrangement dialog
             with (
-                    patch(
-                        "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
-                    ) as mock_dialog,
+                    patch("spritepal.core.controller.RowArrangementDialog", return_value=mock_dialog_instance) as mock_dialog,
+                    patch("spritepal.core.controller.Image.open", return_value=mock_image),
+                    patch("os.path.exists") as mock_exists,
+                    patch("spritepal.core.controller.validate_image_file", return_value=(True, None)),
+                    patch("subprocess.Popen") as mock_popen,
                 ):
 
-                    mock_dialog_instance = Mock()
-                    mock_dialog_instance.exec.return_value = (
-                        1  # QDialog.DialogCode.Accepted
-                    )
-                    mock_dialog_instance.get_arranged_path.return_value = (
-                        "/tmp/test_arranged.png"
-                    )
-                    mock_dialog_instance.set_palettes = Mock()
-                    mock_dialog.return_value = mock_dialog_instance
+                    # Mock os.path.exists to return True for launcher and arranged file
+                    def mock_exists_func(path):
+                        # Return True for launcher files and arranged output file
+                        return True
+                    mock_exists.side_effect = mock_exists_func
 
-                    # Mock file operations, image loading, and pixel editor launcher
-                    mock_image = Mock()
-                    mock_image.width = 128  # 16 tiles * 8 pixels per tile
-                    mock_image.__enter__ = Mock(return_value=mock_image)
-                    mock_image.__exit__ = Mock(return_value=None)
+                    # Trigger arrange rows
+                    controller.open_row_arrangement(sprite_file)
 
-                    with (
-                        patch("subprocess.Popen") as mock_popen,
-                        patch("spritepal.core.controller.Image.open", return_value=mock_image),
-                        patch("os.path.exists") as mock_exists,
-                        patch("spritepal.core.controller.validate_image_file", return_value=(True, None)),
-                    ):
-                        # Mock os.path.exists to return True for launcher and arranged file
-                        def mock_exists_func(path):
-                            # Return True for launcher files and arranged output file
-                            return True
-                        mock_exists.side_effect = mock_exists_func
-
-                        # Trigger arrange rows
-                        controller.open_row_arrangement(sprite_file)
-
-                        # Verify dialog was executed and pixel editor was opened
-                        mock_dialog_instance.exec.assert_called_once()
-                        mock_dialog_instance.get_arranged_path.assert_called_once()
-                        mock_popen.assert_called_once()
+                    # Verify dialog was executed and pixel editor was opened
+                    mock_dialog_instance.exec.assert_called_once()
+                    mock_dialog_instance.get_arranged_path.assert_called_once()
+                    mock_popen.assert_called_once()
 
         finally:
             # Clean up temp file
@@ -343,7 +343,7 @@ class TestMainWindowToArrangementDialog:
                 os.unlink(sprite_file)
 
     @pytest.mark.integration
-    def test_dialog_cancellation_handling(self):
+    def test_dialog_cancellation_handling(self, qtbot):
         """Test dialog cancellation handling"""
         # Create temporary test file
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
@@ -351,6 +351,11 @@ class TestMainWindowToArrangementDialog:
             sprite_file = temp_file.name
 
         try:
+            # Create a real QWidget to act as parent
+            from PyQt6.QtWidgets import QWidget
+            parent_widget = QWidget()
+            qtbot.addWidget(parent_widget)
+            
             # Create mock window
             window = Mock()
             window.status_bar = Mock()
@@ -366,41 +371,37 @@ class TestMainWindowToArrangementDialog:
 
             # FIX: Create real controller instead of using window.controller
             controller = ExtractionController(window)
+            controller.main_window = parent_widget  # Use real QWidget instead of Mock
 
+            # Create mock dialog instance before patching
+            mock_dialog_instance = Mock()
+            mock_dialog_instance.exec.return_value = 0  # QDialog.DialogCode.Rejected
+            mock_dialog_instance.set_palettes = Mock()
+            
+            # Mock image for _get_tiles_per_row_from_sprite
+            mock_image = Mock()
+            mock_image.width = 128
+            mock_image.height = 128
+            mock_image.__enter__ = Mock(return_value=mock_image)
+            mock_image.__exit__ = Mock(return_value=None)
+            
             # Test cancelled dialog
             with (
-                    patch(
-                        "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
-                    ) as mock_dialog,
+                    patch("spritepal.core.controller.RowArrangementDialog", return_value=mock_dialog_instance) as mock_dialog,
                     patch("spritepal.ui.main_window.QMessageBox") as mock_msgbox,
+                    patch("spritepal.core.controller.Image.open", return_value=mock_image),
+                    patch("os.path.exists", return_value=True),
                 ):
 
-                    mock_dialog_instance = Mock()
-                    mock_dialog_instance.exec.return_value = (
-                        0  # QDialog.DialogCode.Rejected
-                    )
-                    mock_dialog_instance.set_palettes = Mock()
-                    mock_dialog.return_value = mock_dialog_instance
+                    # Trigger arrange rows - use the actual controller method
+                    controller.open_row_arrangement(sprite_file)
 
-                    # Mock Image.open for _get_tiles_per_row_from_sprite
-                    with (
-                        patch("spritepal.core.controller.Image.open") as mock_image_open,
-                    ):
-                        mock_image = Mock()
-                        mock_image.width = 128
-                        mock_image.__enter__ = Mock(return_value=mock_image)
-                        mock_image.__exit__ = Mock(return_value=None)
-                        mock_image_open.return_value = mock_image
+                    # Verify no success message was shown
+                    mock_msgbox.information.assert_not_called()
 
-                        # Trigger arrange rows - use the actual controller method
-                        controller.open_row_arrangement(sprite_file)
-
-                        # Verify no success message was shown
-                        mock_msgbox.information.assert_not_called()
-
-                        # Verify dialog was still created and executed
-                        mock_dialog.assert_called_once()
-                        mock_dialog_instance.exec.assert_called_once()
+                    # Verify dialog was still created and executed
+                    mock_dialog.assert_called_once()
+                    mock_dialog_instance.exec.assert_called_once()
 
         finally:
             # Clean up temp file
@@ -412,7 +413,7 @@ class TestArrangementDialogToPixelEditor:
     """Test ArrangementDialog → Pixel Editor integration"""
 
     @pytest.mark.integration
-    def test_arrangement_dialog_editor_launch(self):
+    def test_arrangement_dialog_editor_launch(self, qtbot):
         """Test pixel editor launch from arrangement dialog"""
         # Create temporary test files
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -425,35 +426,46 @@ class TestArrangementDialogToPixelEditor:
             with open(arranged_file, "w") as f:
                 f.write("mock arranged data")
 
+            # Create a real QWidget to act as parent
+            from PyQt6.QtWidgets import QWidget
+            parent_widget = QWidget()
+            qtbot.addWidget(parent_widget)
+
+            # Create mock window
+            # Use proper test helper instead of Mock
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
+            controller.main_window = parent_widget  # Use real QWidget instead of Mock
+
+            # Set up mock dialog
+            mock_dialog_instance = Mock()
+            mock_dialog_instance.exec.return_value = 1  # Accepted
+            mock_dialog_instance.get_arranged_path.return_value = arranged_file
+            
+            # Mock image
+            mock_image = Mock()
+            mock_image.width = 128
+            mock_image.height = 128
+            mock_image.__enter__ = Mock(return_value=mock_image)
+            mock_image.__exit__ = Mock(return_value=None)
+
             # Mock dialog workflow
             with (
-                patch(
-                    "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
-                ) as mock_dialog,
+                patch("spritepal.core.controller.RowArrangementDialog", return_value=mock_dialog_instance) as mock_dialog,
                 patch("subprocess.Popen") as mock_popen,
                 patch("sys.executable", return_value="/usr/bin/python"),
+                patch("spritepal.core.controller.Image.open", return_value=mock_image),
+                patch("os.path.exists", return_value=True),
+                patch("spritepal.core.controller.validate_image_file", return_value=(True, None)),
             ):
-
-                # Set up mock dialog
-                mock_dialog_instance = Mock()
-                mock_dialog_instance.exec.return_value = 1  # Accepted
-                mock_dialog_instance.get_arranged_path.return_value = arranged_file
-                mock_dialog.return_value = mock_dialog_instance
 
                 # Mock successful subprocess
                 mock_process = Mock()
                 mock_popen.return_value = mock_process
 
-                # Test the workflow: arrangement → editor launch
-
-                # Create mock window
-                mock_window = Mock()
-
-                controller = ExtractionController(mock_window)
-
                 # Test arrange rows with editor launch
-                with patch("os.path.exists", return_value=True):
-                    controller.open_row_arrangement(sprite_file)
+                controller.open_row_arrangement(sprite_file)
 
                 # Verify dialog was created
                 mock_dialog.assert_called_once()
@@ -467,7 +479,7 @@ class TestArrangementDialogToPixelEditor:
                 assert arranged_file in call_args
 
     @pytest.mark.integration
-    def test_arrangement_dialog_palette_integration(self):
+    def test_arrangement_dialog_palette_integration(self, qtbot):
         """Test palette file integration with arrangement dialog"""
         # Create temporary test files including palette files
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -480,41 +492,68 @@ class TestArrangementDialogToPixelEditor:
             with open(palette_file, "w") as f:
                 f.write('{"palette": [255, 0, 0]}')
 
+            # Create a real QWidget to act as parent
+            from PyQt6.QtWidgets import QWidget
+            parent_widget = QWidget()
+            qtbot.addWidget(parent_widget)
+
             # Mock dialog with palette support
-            with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
-            ) as mock_dialog:
+            mock_dialog_instance = Mock()
+            mock_dialog_instance.exec.return_value = 1  # Accepted
+            mock_dialog_instance.get_arranged_path.return_value = sprite_file
+            mock_dialog_instance.set_palettes = Mock()
+            
+            # Mock image
+            mock_image = Mock()
+            mock_image.width = 128
+            mock_image.height = 128
+            mock_image.__enter__ = Mock(return_value=mock_image)
+            mock_image.__exit__ = Mock(return_value=None)
 
-                mock_dialog_instance = Mock()
-                mock_dialog_instance.exec.return_value = 1  # Accepted
-                mock_dialog_instance.get_arranged_path.return_value = sprite_file
-                mock_dialog_instance.set_palettes = Mock()
-                mock_dialog.return_value = mock_dialog_instance
-
-                # Test arrangement with palette loading
-
-                mock_window = Mock()
-                # Mock sprite preview with palettes
-                mock_window.sprite_preview = Mock()
-                mock_window.sprite_preview.get_palettes.return_value = {"8": [255, 0, 0]}
-                controller = ExtractionController(mock_window)
-
+            # Test arrangement with palette loading
+            # Use proper test helper instead of Mock
+            window_helper = TestMainWindowHelperSimple()
+            # Mock sprite preview with palettes
+            window_helper.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
+            
+            # Create controller with test helper
+            controller = ExtractionController(window_helper)
+            
+            # Override the dialog constructor to use parent_widget when needed
+            original_init = mock_dialog_instance.__init__
+            def patched_init(self, sprite_file, tiles_per_row, parent):
+                # Use the real widget for parent parameter
+                return original_init(sprite_file, tiles_per_row, parent_widget if parent is window_helper else parent)
+            
+            with (
+                patch("spritepal.core.controller.RowArrangementDialog") as mock_dialog_class,
+                patch("spritepal.core.controller.Image.open", return_value=mock_image),
+                patch("os.path.exists") as mock_exists,
+                patch("subprocess.Popen") as mock_popen,
+                patch("spritepal.core.controller.validate_image_file", return_value=(True, None)),
+                patch("spritepal.core.controller.QMessageBox") as mock_msgbox,  # Patch QMessageBox to prevent errors
+            ):
+                # Configure the dialog class to return our mock instance
+                mock_dialog_class.return_value = mock_dialog_instance
+                
                 # Mock file existence
-                with patch("os.path.exists") as mock_exists:
-                    mock_exists.side_effect = lambda path: path in [
-                        sprite_file,
-                        palette_file,
-                    ]
+                mock_exists.side_effect = lambda path: path in [
+                    sprite_file,
+                    palette_file,
+                ]
 
-                    # Trigger arrangement
-                    controller.open_row_arrangement(sprite_file)
+                # Trigger arrangement
+                controller.open_row_arrangement(sprite_file)
 
-                    # Verify palettes were passed to dialog
-                    mock_dialog_instance.set_palettes.assert_called_once_with({"8": [255, 0, 0]})
+                # Verify palettes were passed to dialog
+                mock_dialog_instance.set_palettes.assert_called_once_with({"8": [255, 0, 0]})
 
     @pytest.mark.integration
     def test_arrangement_dialog_metadata_persistence(self):
         """Test metadata persistence through arrangement dialog"""
+        # Use the proper test helper instead of Mock
+        from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
+        
         # Create temporary test files
         with tempfile.TemporaryDirectory() as temp_dir:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
@@ -536,10 +575,9 @@ class TestArrangementDialogToPixelEditor:
                 mock_dialog_instance.get_arranged_path.return_value = sprite_file
                 mock_dialog.return_value = mock_dialog_instance
 
-                # Mock controller
-
-                mock_window = Mock()
-                controller = ExtractionController(mock_window)
+                # Use proper test helper instead of Mock
+                window_helper = TestMainWindowHelperSimple(temp_dir)
+                controller = ExtractionController(window_helper)
 
                 # Test arrangement with metadata
                 with patch("os.path.exists") as mock_exists:
@@ -553,6 +591,9 @@ class TestArrangementDialogToPixelEditor:
 
                     # Verify dialog was created (metadata would be used internally)
                     mock_dialog.assert_called_once()
+                    
+                # Cleanup
+                window_helper.cleanup()
 
 
 class TestInjectionDialogWorkflow:
@@ -588,8 +629,11 @@ class TestInjectionDialogWorkflow:
 
                 # Test injection workflow
 
-                mock_window = Mock()
-                controller = ExtractionController(mock_window)
+                # Use proper test helper instead of Mock
+
+
+                window_helper = TestMainWindowHelperSimple()
+                controller = ExtractionController(window_helper)
 
                 # Mock injection manager
                 with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
@@ -638,8 +682,11 @@ class TestInjectionDialogWorkflow:
 
                 # Test ROM injection workflow
 
-                mock_window = Mock()
-                controller = ExtractionController(mock_window)
+                # Use proper test helper instead of Mock
+
+
+                window_helper = TestMainWindowHelperSimple()
+                controller = ExtractionController(window_helper)
 
                 # Mock injection manager
                 with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
@@ -689,12 +736,14 @@ class TestInjectionDialogWorkflow:
 
                 # Test injection with metadata
 
-                mock_window = Mock()
+                # Using window_helper instead of mock_window
+                window_helper = TestMainWindowHelperSimple()
+                controller = ExtractionController(window_helper)
+                
                 # Set up window state - this is what start_injection() uses
                 # Use the full path without the .png extension
                 output_base = os.path.join(temp_dir, "test_sprite")
-                mock_window._output_path = output_base
-                controller = ExtractionController(mock_window)
+                controller._output_path = output_base
 
                 # Mock file existence checks
                 with patch("os.path.exists") as mock_exists:
@@ -726,8 +775,11 @@ class TestInjectionDialogWorkflow:
 
             # Test injection with invalid parameters
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Set up controller state
             controller._output_path = "test_sprite"
@@ -762,8 +814,11 @@ class TestDialogDataPersistence:
 
             # Test sprite path flow: MainWindow → ArrangementDialog → InjectionDialog
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock arrangement dialog
             with patch(
@@ -796,11 +851,11 @@ class TestDialogDataPersistence:
 
                         # Verify arrangement dialog was created with original sprite
                         mock_arrange_dialog.assert_called_once_with(
-                            sprite_file, 16, mock_window
+                            sprite_file, 16, window_helper
                         )
 
                         # Step 2: Inject arranged sprite
-                        mock_window._output_path = "test_arranged"
+                        controller._output_path = "test_arranged"
                         controller.start_injection()
 
                         # Verify injection dialog was created with arranged sprite
@@ -824,8 +879,11 @@ class TestDialogDataPersistence:
 
             # Test palette persistence through multiple operations
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock arrangement dialog with palette support
             with patch(
@@ -845,8 +903,8 @@ class TestDialogDataPersistence:
                     ]
 
                     # Set up sprite preview to provide palettes
-                    mock_window.sprite_preview = Mock()
-                    mock_window.sprite_preview.get_palettes.return_value = {"8": [255, 0, 0]}
+                    # Sprite preview already available via window_helper
+                    window_helper.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
 
                     # Trigger arrangement
                     controller.open_row_arrangement(sprite_file)
@@ -872,8 +930,11 @@ class TestDialogDataPersistence:
 
             # Test metadata persistence through workflow
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock injection dialog
             with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
@@ -896,7 +957,7 @@ class TestDialogDataPersistence:
                     ]
 
                     # Set up window state - this is what start_injection() uses
-                    mock_window._output_path = os.path.join(temp_dir, "test_sprite")
+                    controller._output_path = os.path.join(temp_dir, "test_sprite")
 
                     # Trigger injection
                     controller.start_injection()
@@ -937,10 +998,11 @@ class TestDialogDataPersistence:
 
                 # Mock controller
 
-                mock_window = Mock()
+                # Using window_helper instead of mock_window
+                window_helper = TestMainWindowHelperSimple()
+                controller = ExtractionController(window_helper)
                 # Set up window state - this is what start_injection() uses
-                mock_window._output_path = "test_sprite"
-                controller = ExtractionController(mock_window)
+                controller._output_path = "test_sprite"
 
                 # Trigger injection
                 controller.start_injection()
@@ -968,8 +1030,11 @@ class TestDialogCancellationHandling:
 
             # Test cancellation handling
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock cancelled dialog
             with patch(
@@ -996,8 +1061,11 @@ class TestDialogCancellationHandling:
         """Test injection dialog cancellation"""
         # Test injection cancellation handling
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock cancelled injection dialog
         with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
@@ -1023,8 +1091,11 @@ class TestDialogCancellationHandling:
         """Test resource cleanup when dialogs are cancelled"""
         # Test that resources are properly cleaned up on cancellation
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock cancelled dialog with resource cleanup
         with patch(
@@ -1054,8 +1125,11 @@ class TestDialogCancellationHandling:
         """Test multiple consecutive dialog cancellations"""
         # Test multiple cancellations don't leave system in bad state
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock cancelled dialogs
         with (
@@ -1107,8 +1181,11 @@ class TestModalDialogInteraction:
         """Test modal dialog blocking behavior"""
         # Test that modal dialogs properly block interaction
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock modal dialog
         with patch(
@@ -1129,15 +1206,18 @@ class TestModalDialogInteraction:
                 call_args = mock_dialog.call_args
 
                 # Verify parent window was set (for modal behavior)
-                assert call_args[0][2] == mock_window  # parent parameter
+                assert call_args[0][2] == window_helper  # parent parameter
 
     @pytest.mark.integration
     def test_dialog_focus_management(self):
         """Test dialog focus and window management"""
         # Test that dialogs properly manage focus
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock dialog with focus management
         with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
@@ -1163,15 +1243,18 @@ class TestModalDialogInteraction:
             call_args = mock_dialog.call_args
 
             # Verify parent window was set
-            assert call_args[0][0] == mock_window  # parent parameter
+            assert call_args[0][2] == window_helper  # parent parameter
 
     @pytest.mark.integration
     def test_dialog_memory_management(self):
         """Test dialog memory management and cleanup"""
         # Test that dialogs are properly cleaned up after use
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock dialog with memory management
         with patch(
@@ -1201,8 +1284,11 @@ class TestModalDialogInteraction:
         """Test dialog stacking and nested modal behavior"""
         # Test behavior when multiple dialogs might be opened
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock multiple dialogs
         with (
@@ -1271,8 +1357,11 @@ class TestCrossDialogIntegration:
 
             # Test complete workflow
 
-            mock_window = Mock()
-            controller = ExtractionController(mock_window)
+            # Use proper test helper instead of Mock
+
+
+            window_helper = TestMainWindowHelperSimple()
+            controller = ExtractionController(window_helper)
 
             # Mock all dialogs in the workflow
             with (
@@ -1309,12 +1398,12 @@ class TestCrossDialogIntegration:
                     controller.open_row_arrangement(sprite_file)
 
                     # Step 2: Inject arranged sprite
-                    mock_window._output_path = "test_arranged"
+                    controller._output_path = "test_arranged"
                     controller.start_injection()
 
                     # Verify complete workflow
                     mock_arrange_dialog.assert_called_once_with(
-                        sprite_file, 16, mock_window
+                        sprite_file, 16, window_helper
                     )
                     mock_popen.assert_called_once()
                     mock_inject_dialog.assert_called_once()
@@ -1328,8 +1417,11 @@ class TestCrossDialogIntegration:
         """Test error propagation and handling across dialogs"""
         # Test error handling in cross-dialog scenarios
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock arrangement dialog with error
         with patch(
@@ -1355,8 +1447,11 @@ class TestCrossDialogIntegration:
         """Test prevention of concurrent dialog operations"""
         # Test that multiple dialogs don't interfere with each other
 
-        mock_window = Mock()
-        controller = ExtractionController(mock_window)
+        # Use proper test helper instead of Mock
+
+
+        window_helper = TestMainWindowHelperSimple()
+        controller = ExtractionController(window_helper)
 
         # Mock slow dialog execution
         with patch(

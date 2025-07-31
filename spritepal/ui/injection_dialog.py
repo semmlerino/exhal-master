@@ -4,6 +4,7 @@ Allows users to configure sprite injection parameters
 """
 
 import os
+from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -44,6 +45,39 @@ class InjectionDialog(TabbedDialog):
         metadata_path: str = "",
         input_vram: str = "",
     ):
+        # Step 1: Declare instance variables BEFORE super().__init__()
+        self.sprite_path = sprite_path
+        self.metadata_path = metadata_path
+        self.suggested_input_vram = input_vram
+        self.metadata = None
+        self.extraction_vram_offset = None
+        self.rom_extraction_info = None
+        
+        # Initialize UI components that will be created in setup methods
+        self.extraction_group: QGroupBox | None = None
+        self.extraction_info: QTextEdit | None = None
+        self.tab_widget: QTabWidget | None = None
+        self.preview_widget: SpritePreviewWidget | None = None
+        self.rom_info_group: QGroupBox | None = None
+        self.rom_info_text: QTextEdit | None = None
+        
+        # File selectors
+        self.sprite_file_selector: FileSelector | None = None
+        self.input_vram_selector: FileSelector | None = None
+        self.output_vram_selector: FileSelector | None = None
+        self.input_rom_selector: FileSelector | None = None
+        self.output_rom_selector: FileSelector | None = None
+
+        # Input widgets
+        self.vram_offset_input: HexOffsetInput | None = None
+        self.rom_offset_input: HexOffsetInput | None = None
+        self.sprite_location_combo: QComboBox | None = None
+        self.fast_compression_check: QCheckBox | None = None
+        
+        # Get injection manager instance
+        self.injection_manager = get_injection_manager()
+        
+        # Step 2: Call parent init (this will call _setup_ui)
         super().__init__(
             parent=parent,
             title="Inject Sprite",
@@ -53,37 +87,6 @@ class InjectionDialog(TabbedDialog):
             with_status_bar=False,
             default_tab=1,  # ROM injection tab as default
         )
-        self.sprite_path = sprite_path
-        self.metadata_path = metadata_path
-        self.suggested_input_vram = input_vram
-        self.metadata = None
-        self.extraction_vram_offset = None
-        self.rom_extraction_info = None
-
-        # Get injection manager instance
-        self.injection_manager = get_injection_manager()
-
-        # Initialize UI components that will be created in setup methods
-        self.extraction_group: QGroupBox
-        self.extraction_info: QTextEdit
-        self.preview_widget: SpritePreviewWidget
-        self.rom_info_group: QGroupBox
-        self.rom_info_text: QTextEdit
-
-        # File selectors
-        self.sprite_file_selector: FileSelector
-        self.input_vram_selector: FileSelector
-        self.output_vram_selector: FileSelector
-        self.input_rom_selector: FileSelector
-        self.output_rom_selector: FileSelector
-
-        # Input widgets
-        self.vram_offset_input: HexOffsetInput
-        self.rom_offset_input: HexOffsetInput
-        self.sprite_location_combo: QComboBox
-        self.fast_compression_check: QCheckBox
-
-        self._setup_ui()
         self._load_metadata()
         self._set_initial_paths()
 
@@ -511,7 +514,7 @@ class InjectionDialog(TabbedDialog):
                 finally:
                     self.rom_offset_input.hex_edit.blockSignals(False)
 
-    def get_parameters(self) -> dict | None:
+    def get_parameters(self) -> dict[str, Any] | None:
         """Get injection parameters if dialog accepted"""
         if self.result() != QDialog.DialogCode.Accepted:
             return None

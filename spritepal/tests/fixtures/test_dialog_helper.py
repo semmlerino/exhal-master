@@ -6,7 +6,9 @@ import contextlib
 import json
 import tempfile
 from pathlib import Path
-from typing import Anyfrom PyQt6.QtCore import QObject
+from typing import Any
+
+from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
 
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog

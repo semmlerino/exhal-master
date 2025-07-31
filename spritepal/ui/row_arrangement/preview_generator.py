@@ -3,6 +3,7 @@ Preview generation for arranged sprite rows
 """
 
 import os
+from typing import Any
 
 from PIL import Image
 
@@ -23,7 +24,7 @@ class PreviewGenerator:
     def create_arranged_image(
         self,
         original_image: Image.Image,
-        tile_rows: list[dict],
+        tile_rows: list[dict[str, Any]],
         arranged_indices: list[int],
         tile_height: int,
         row_spacing_ratio: float = 0.75

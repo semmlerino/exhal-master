@@ -8,6 +8,7 @@ predetermined responses for testing without user interaction.
 import os
 import tempfile
 from contextlib import contextmanager
+from typing import Any
 
 from PyQt6.QtWidgets import QFileDialog
 
@@ -102,7 +103,7 @@ class TestFileDialogHelper:
             QFileDialog.getOpenFileName = original_get_open_filename
             QFileDialog.getSaveFileName = original_get_save_filename
 
-    def get_last_dialog_config(self, dialog_type: str) -> dict:
+    def get_last_dialog_config(self, dialog_type: str) -> dict[str, Any]:
         """Get the configuration of the last dialog of the specified type"""
         return self.last_dialog_config.get(dialog_type, {})
 
@@ -110,7 +111,7 @@ class TestFileDialogHelper:
         """Check if a dialog of the specified type was called"""
         return dialog_type in self.last_dialog_config
 
-    def validate_dialog_config(self, dialog_type: str, expected_config: dict):
+    def validate_dialog_config(self, dialog_type: str, expected_config: dict[str, Any]):
         """Validate that the dialog was called with expected configuration"""
         actual_config = self.get_last_dialog_config(dialog_type)
 

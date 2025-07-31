@@ -26,7 +26,7 @@ class TestBaseManager:
 
     def test_abstract_class_cannot_be_instantiated(self):
         """Test that BaseManager cannot be instantiated directly"""
-        with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+        with pytest.raises(NotImplementedError, match="Subclasses must implement _initialize"):
             BaseManager("test")
 
     def test_concrete_manager_creation(self):

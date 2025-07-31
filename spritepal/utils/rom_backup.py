@@ -5,6 +5,7 @@ ROM backup utilities for SpritePal
 import os
 import shutil
 from datetime import datetime, timezone
+from typing import Any
 
 from spritepal.utils.logging_config import get_logger
 from spritepal.utils.rom_exceptions import ROMBackupError
@@ -53,7 +54,7 @@ class ROMBackupManager:
 
         try:
             # Copy ROM to backup
-            shutil.copy2(rom_path, backup_path)
+            _ = shutil.copy2(rom_path, backup_path)
             logger.info(f"Created backup: {backup_name}")
 
             # Clean up old backups
@@ -140,7 +141,7 @@ class ROMBackupManager:
             raise ROMBackupError(f"Backup file not found: {backup_path}")
 
         try:
-            shutil.copy2(backup_path, target_path)
+            _ = shutil.copy2(backup_path, target_path)
             logger.info(f"Restored backup to: {target_path}")
         except Exception as e:
             raise ROMBackupError(f"Failed to restore backup: {e}") from e
@@ -148,7 +149,7 @@ class ROMBackupManager:
     @classmethod
     def list_backups(
         cls, rom_path: str, backup_dir: str | None = None
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         List all backups for a ROM.
 

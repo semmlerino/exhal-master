@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QWidget
+    QWidget,
 )
 
 from spritepal.utils.settings_manager import get_settings_manager
@@ -77,12 +77,12 @@ class FileSelector(QWidget):
         self.path_edit = QLineEdit(initial_path)
         self.path_edit.setPlaceholderText(placeholder)
         self.path_edit.setReadOnly(read_only)
-        self._ = path_edit.textChanged.connect(self._on_path_changed)
+        _ = self.path_edit.textChanged.connect(self._on_path_changed)
         self.layout.addWidget(self.path_edit)
 
         # Browse button
         self.browse_button = QPushButton(browse_text)
-        self._ = browse_button.clicked.connect(self._browse_file)
+        _ = self.browse_button.clicked.connect(self._browse_file)
         self.layout.addWidget(self.browse_button)
 
     def _on_path_changed(self, text: str):

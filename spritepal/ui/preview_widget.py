@@ -25,7 +25,7 @@ class SpritePreviewWidget(QWidget):
         """
         )
 
-    def paintEvent(self, a0):  # noqa: N802
+    def paintEvent(self, a0):
         """Paint the preview"""
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))

@@ -1,0 +1,20 @@
+[
+  {
+    "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/extraction_panel.py",
+    "class": "ExtractionPanel",
+    "line": 218,
+    "attribute": "_pending_offset",
+    "issue": "Instance variable 'self._pending_offset' assigned None after setup methods called",
+    "setup_methods": [
+      "_setup_ui"
+    ]
+  },
+  {
+    "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/main_window.py",
+    "class": "MainWindow",
+    "line": 60,
+    "attribute": "controller",
+    "issue": "Instance variable 'self.controller' assigned after setup methods (value: ExtractionController(self))",
+    "severity": "warning"
+  }
+]

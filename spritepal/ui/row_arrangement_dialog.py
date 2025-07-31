@@ -4,6 +4,7 @@ Intuitive drag-and-drop interface for arranging sprite rows
 """
 
 import os
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImage, QPixmap
@@ -26,11 +27,37 @@ from .row_arrangement import (
 )
 from .widgets.row_widgets import DragDropListWidget, RowPreviewWidget
 
+if TYPE_CHECKING:
+    from PIL import Image
+
 
 class RowArrangementDialog(SplitterDialog):
     """Dialog for arranging sprite rows with intuitive drag-and-drop interface"""
 
     def __init__(self, sprite_path, tiles_per_row=16, parent=None):
+        # Step 1: Declare instance variables BEFORE super().__init__()
+        self.sprite_path: str | None = sprite_path
+        self.tiles_per_row: int = tiles_per_row
+        self.original_image: Image.Image | None = None
+        self.tile_rows: list[Image.Image] = []
+        self.output_path: str | None = None
+        self.tile_width: int | None = None  # Will be calculated based on image width
+        self.tile_height: int | None = None  # Will be calculated based on tile width
+
+        # Initialize components
+        self.image_processor: RowImageProcessor = RowImageProcessor()
+        self.arrangement_manager: ArrangementManager = ArrangementManager()
+        self.colorizer: PaletteColorizer = PaletteColorizer()
+        self.preview_generator: PreviewGenerator = PreviewGenerator(self.colorizer)
+        
+        # Initialize UI components that will be created in _setup_ui
+        self.available_rows_widget: RowListWidget | None = None
+        self.arranged_rows_widget: RowListWidget | None = None
+        
+        # Load sprite data before creating UI
+        self._load_sprite_data()
+        
+        # Step 2: Call parent init (this will call _setup_ui)
         super().__init__(
             parent=parent,
             title="Arrange Sprite Rows - Grayscale",
@@ -40,29 +67,14 @@ class RowArrangementDialog(SplitterDialog):
             orientation=Qt.Orientation.Vertical,
             splitter_handle_width=8,
         )
-        self.sprite_path = sprite_path
-        self.tiles_per_row = tiles_per_row
-        self.original_image = None
-        self.tile_rows = []
-        self.output_path = None
-        self.tile_width = None  # Will be calculated based on image width
-        self.tile_height = None  # Will be calculated based on tile width
 
-        # Initialize components
-        self.image_processor = RowImageProcessor()
-        self.arrangement_manager = ArrangementManager()
-        self.colorizer = PaletteColorizer()
-        self.preview_generator = PreviewGenerator(self.colorizer)
-
-        # Connect signals
+        # Connect signals after UI is created
         self.arrangement_manager.arrangement_changed.connect(
             self._on_arrangement_changed
         )
         self.colorizer.palette_mode_changed.connect(self._on_palette_mode_changed)
         self.colorizer.palette_index_changed.connect(self._on_palette_index_changed)
 
-        self._load_sprite_data()
-        self._setup_ui()
         self._update_panel_titles()
         self.update_status(
             "Drag rows from left to right to arrange them | Press C to toggle palette, P to cycle palettes"
@@ -82,7 +94,7 @@ class RowArrangementDialog(SplitterDialog):
             self.tile_width = self.image_processor.tile_width
             self.tile_height = self.image_processor.tile_height
 
-        except Exception as e:
+        except (OSError, ValueError) as e:
             print(f"Error loading sprite data: {e}")
 
     def _setup_ui(self):
@@ -91,16 +103,16 @@ class RowArrangementDialog(SplitterDialog):
         content_splitter = self.add_horizontal_splitter(handle_width=8)
 
         # Left panel - Available rows
-        self.left_panel = QGroupBox("Available Rows")
+        self.left_panel: QGroupBox = QGroupBox("Available Rows")
         self.left_panel.setMinimumWidth(
             380
         )  # Increased to accommodate wider thumbnails
         left_layout = QVBoxLayout(self.left_panel)
 
         # Available rows list
-        self.available_list = DragDropListWidget(accept_external_drops=False)
+        self.available_list: DragDropListWidget = DragDropListWidget(accept_external_drops=False)
         self.available_list.itemDoubleClicked.connect(self._add_row_to_arrangement)
-        self._ = available_list.itemSelectionChanged.connect(
+        _ = self.available_list.itemSelectionChanged.connect(
             self._on_available_selection_changed
         )
         # Add spacing between list items
@@ -113,29 +125,29 @@ class RowArrangementDialog(SplitterDialog):
         # Quick action buttons
         buttons_layout = QHBoxLayout()
 
-        self.add_all_btn = QPushButton("Add All →")
-        self._ = add_all_btn.clicked.connect(self._add_all_rows)
+        self.add_all_btn: QPushButton = QPushButton("Add All →")
+        _ = self.add_all_btn.clicked.connect(self._add_all_rows)
         buttons_layout.addWidget(self.add_all_btn)
 
-        self.add_selected_btn = QPushButton("Add Selected →")
-        self._ = add_selected_btn.clicked.connect(self._add_selected_rows)
+        self.add_selected_btn: QPushButton = QPushButton("Add Selected →")
+        _ = self.add_selected_btn.clicked.connect(self._add_selected_rows)
         buttons_layout.addWidget(self.add_selected_btn)
 
         left_layout.addLayout(buttons_layout)
 
         # Right panel - Arranged rows
-        self.right_panel = QGroupBox("Arranged Rows")
+        self.right_panel: QGroupBox = QGroupBox("Arranged Rows")
         self.right_panel.setMinimumWidth(
             380
         )  # Increased to accommodate wider thumbnails
         right_layout = QVBoxLayout(self.right_panel)
 
         # Arranged rows list
-        self.arranged_list = DragDropListWidget(accept_external_drops=True)
+        self.arranged_list: DragDropListWidget = DragDropListWidget(accept_external_drops=True)
         self.arranged_list.external_drop.connect(self._add_row_to_arrangement)
         self.arranged_list.item_dropped.connect(self._refresh_arrangement)
         self.arranged_list.itemDoubleClicked.connect(self._remove_row_from_arrangement)
-        self._ = arranged_list.itemSelectionChanged.connect(
+        _ = self.arranged_list.itemSelectionChanged.connect(
             self._on_arranged_selection_changed
         )
         # Add spacing between list items
@@ -145,12 +157,12 @@ class RowArrangementDialog(SplitterDialog):
         # Arrangement controls
         controls_layout = QHBoxLayout()
 
-        self.clear_btn = QPushButton("Clear All")
-        self._ = clear_btn.clicked.connect(self._clear_arrangement)
+        self.clear_btn: QPushButton = QPushButton("Clear All")
+        _ = self.clear_btn.clicked.connect(self._clear_arrangement)
         controls_layout.addWidget(self.clear_btn)
 
-        self.remove_selected_btn = QPushButton("← Remove Selected")
-        self._ = remove_selected_btn.clicked.connect(self._remove_selected_rows)
+        self.remove_selected_btn: QPushButton = QPushButton("← Remove Selected")
+        _ = self.remove_selected_btn.clicked.connect(self._remove_selected_rows)
         controls_layout.addWidget(self.remove_selected_btn)
 
         right_layout.addLayout(controls_layout)
@@ -168,7 +180,7 @@ class RowArrangementDialog(SplitterDialog):
 
         # Preview scroll area (now resizable)
         scroll_area = QScrollArea()
-        self.preview_label = QLabel()
+        self.preview_label: QLabel = QLabel()
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(
             "background-color: #2d2d2d; border: 1px solid #555;"
@@ -184,7 +196,7 @@ class RowArrangementDialog(SplitterDialog):
         self.add_panel(preview_group, stretch_factor=3)     # 30% for preview
 
         # Add custom buttons using SplitterDialog's button system
-        self.export_btn = self.add_button("Export Arranged", callback=self._export_arranged)
+        self.export_btn: QPushButton = self.add_button("Export Arranged", callback=self._export_arranged)
         self.export_btn.setEnabled(False)
 
         # Initial preview
@@ -583,7 +595,7 @@ class RowArrangementDialog(SplitterDialog):
             f"Palette mode: Palette {new_palette_idx} applied | Press C to toggle, P to cycle"
         )
 
-    def keyPressEvent(self, a0):  # noqa: N802
+    def keyPressEvent(self, a0):
         """Handle keyboard shortcuts"""
         if a0 and a0.key() == Qt.Key.Key_Delete:
             # Delete selected rows from arrangement
