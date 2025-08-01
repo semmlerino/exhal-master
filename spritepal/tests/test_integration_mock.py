@@ -9,15 +9,16 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Imports handled by centralized conftest.py path setup
-from spritepal.core.controller import ExtractionController, ExtractionWorker
+from spritepal.core.controller import ExtractionController
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 
 # Manager setup handled by centralized conftest.py
 
 
-class TestExtractionWorkerMocked:
-    """Test ExtractionWorker with mocked Qt components"""
+class TestVRAMExtractionWorkerMocked:
+    """Test VRAMExtractionWorker with mocked Qt components"""
 
     # Mock signals and worker params now provided by centralized fixtures
     # No need for local fixture definitions
@@ -38,7 +39,7 @@ class TestExtractionWorkerMocked:
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
             # Create worker with centralized test parameters
-            worker = ExtractionWorker(standard_test_params)
+            worker = VRAMExtractionWorker(standard_test_params)
 
             # Replace signals with our mocks
             for signal_name, mock_signal_obj in mock_extraction_signals.items():
@@ -105,7 +106,7 @@ class TestControllerMocked:
     """Test ExtractionController with mocked components"""
 
     @patch("spritepal.core.controller.QObject")
-    @patch("spritepal.core.controller.ExtractionWorker")
+    @patch("spritepal.core.controller.VRAMExtractionWorker")
     def test_controller_workflow(
         self, mock_worker_class, mock_qobject,
         mock_main_window_configured, standard_test_params

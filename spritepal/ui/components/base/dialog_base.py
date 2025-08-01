@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Dict, List, Type
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QWidget
 
-from spritepal.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -81,7 +81,7 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         "rom_map", "offset_widget", "scan_controls", "import_export",
         "status_panel", "preview_widget", "mode_selector", "status_label",
         "dumps_dir_edit", "cache_enabled_check", "source_list", "arranged_list",
-        "available_rows_widget", "arranged_rows_widget"
+        "available_list"
     ]
     
     def __init__(
@@ -318,10 +318,12 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(handle_width)
-        self.main_layout.addWidget(splitter)
         
-        # Set main_splitter for tests
-        if self.main_splitter is None:
+        # If main_splitter already exists, add to it instead of main_layout
+        if self.main_splitter is not None:
+            self.main_splitter.addWidget(splitter)
+        else:
+            self.main_layout.addWidget(splitter)
             self.main_splitter = splitter
             
         return splitter
@@ -380,6 +382,17 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         """
         if self._tab_widget:
             self._tab_widget.setCurrentIndex(index)
+    
+    def get_current_tab_index(self) -> int:
+        """
+        Get the current tab index for tabbed dialogs.
+        
+        Returns:
+            Current tab index, or -1 if no tabs exist
+        """
+        if self._tab_widget:
+            return self._tab_widget.currentIndex()
+        return -1
     
     def show_error(self, title: str, message: str) -> None:
         """

@@ -157,11 +157,34 @@ class TestComprehensiveDialogMigrations:
         row_dialog = RowArrangementDialog(test_sprite_image)
         qtbot.addWidget(row_dialog)
         assert hasattr(row_dialog, "main_splitter")
+        
+        # Debug output
+        print(f"\nDEBUG: main_splitter = {row_dialog.main_splitter}")
+        print(f"DEBUG: main_splitter type = {type(row_dialog.main_splitter)}")
+        if row_dialog.main_splitter:
+            print(f"DEBUG: main_splitter count = {row_dialog.main_splitter.count()}")
+            for i in range(row_dialog.main_splitter.count()):
+                widget = row_dialog.main_splitter.widget(i)
+                print(f"DEBUG: Widget {i}: {widget} (type: {type(widget).__name__})")
+        
         assert row_dialog.main_splitter.count() == 2  # Content and preview panels
 
-        grid_dialog = GridArrangementDialog(test_sprite_image)
+        # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
+        from unittest.mock import patch
+        with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            grid_dialog = GridArrangementDialog(test_sprite_image)
         qtbot.addWidget(grid_dialog)
         assert hasattr(grid_dialog, "main_splitter")
+        
+        # Debug output for GridArrangementDialog
+        print(f"\nDEBUG GridArrangementDialog: main_splitter = {grid_dialog.main_splitter}")
+        print(f"DEBUG GridArrangementDialog: main_splitter type = {type(grid_dialog.main_splitter)}")
+        if grid_dialog.main_splitter:
+            print(f"DEBUG GridArrangementDialog: main_splitter count = {grid_dialog.main_splitter.count()}")
+            for i in range(grid_dialog.main_splitter.count()):
+                widget = grid_dialog.main_splitter.widget(i)
+                print(f"DEBUG GridArrangementDialog: Widget {i}: {widget} (type: {type(widget).__name__})")
+        
         assert grid_dialog.main_splitter.count() == 2  # Left and right panels
 
     def test_dialog_signal_integration_preservation(self, qtbot, test_sprite_image):
@@ -195,7 +218,10 @@ class TestComprehensiveDialogMigrations:
         assert memory_error_dialog.windowTitle() == "Memory Error"
 
         # Test error state handling in other dialogs
-        grid_dialog = GridArrangementDialog("/non/existent/file.png")
+        # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
+        from unittest.mock import patch
+        with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            grid_dialog = GridArrangementDialog("/non/existent/file.png")
         qtbot.addWidget(grid_dialog)
 
         # Should handle error gracefully and maintain structure

@@ -12,7 +12,8 @@ import pytest
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.controller import ExtractionController, ExtractionWorker
+from spritepal.core.controller import ExtractionController
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.utils.constants import (
@@ -141,12 +142,12 @@ class TestEndToEndWorkflow:
         assert len(set(indices)) == 8
 
 
-class TestExtractionWorker:
-    """Test the ExtractionWorker thread integration"""
+class TestVRAMExtractionWorker:
+    """Test the VRAMExtractionWorker thread integration"""
 
     @pytest.fixture
     def worker_params(self, tmp_path):
-        """Create parameters for ExtractionWorker"""
+        """Create parameters for VRAMExtractionWorker"""
         # Create minimal test files
         vram_data = bytearray(0x10000)
         # Add one test tile
@@ -175,13 +176,13 @@ class TestExtractionWorker:
 
     @pytest.mark.gui
     def test_worker_signals(self, worker_params, qtbot):
-        """Test ExtractionWorker signal emission"""
+        """Test VRAMExtractionWorker signal emission"""
         # Initialize managers for this test
         from spritepal.core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
-            worker = ExtractionWorker(worker_params)
+            worker = VRAMExtractionWorker(worker_params)
 
             # Connect signal handlers
             progress_messages = []
@@ -220,7 +221,7 @@ class TestExtractionWorker:
 
     @pytest.mark.gui
     def test_worker_error_handling(self, qtbot):
-        """Test ExtractionWorker error handling"""
+        """Test VRAMExtractionWorker error handling"""
         # Initialize managers for this test
         from spritepal.core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
@@ -236,7 +237,7 @@ class TestExtractionWorker:
                 "oam_path": None,
             }
 
-            worker = ExtractionWorker(bad_params)
+            worker = VRAMExtractionWorker(bad_params)
 
             # Connect error handler
             errors = []
@@ -526,7 +527,7 @@ class TestFullWorkflowIntegration:
                 mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with mock signals
-                worker = ExtractionWorker(
+                worker = VRAMExtractionWorker(
                     mock_main_window.get_extraction_params.return_value
                 )
 
@@ -622,7 +623,7 @@ class TestFullWorkflowIntegration:
                 mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with invalid params
-                worker = ExtractionWorker(invalid_params)
+                worker = VRAMExtractionWorker(invalid_params)
 
                 # Replace worker signals with our mocks
                 for signal_name, mock_signal in mock_qt_signals.items():
@@ -681,7 +682,7 @@ class TestFullWorkflowIntegration:
                     mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                     # Create worker with valid params
-                    recovery_worker = ExtractionWorker(valid_params)
+                    recovery_worker = VRAMExtractionWorker(valid_params)
 
                     # Replace worker signals with our mocks
                     for signal_name, mock_signal in mock_qt_signals.items():
@@ -754,7 +755,7 @@ class TestFullWorkflowIntegration:
                 mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
                 # Create worker directly with OAM analysis parameters
-                worker = ExtractionWorker(
+                worker = VRAMExtractionWorker(
                     mock_main_window.get_extraction_params.return_value
                 )
 

@@ -5,11 +5,11 @@ Registry for accessing manager instances
 import threading
 from typing import Any
 
-from spritepal.core.managers.exceptions import ManagerError
-from spritepal.core.managers.extraction_manager import ExtractionManager
-from spritepal.core.managers.injection_manager import InjectionManager
-from spritepal.core.managers.session_manager import SessionManager
-from spritepal.utils.logging_config import get_logger
+from .exceptions import ManagerError
+from .extraction_manager import ExtractionManager
+from .injection_manager import InjectionManager
+from .session_manager import SessionManager
+from utils.logging_config import get_logger
 
 
 class ManagerRegistry:
@@ -37,12 +37,13 @@ class ManagerRegistry:
         self._initialized = True
         self._logger.info("ManagerRegistry initialized")
 
-    def initialize_managers(self, app_name: str = "SpritePal") -> None:
+    def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None) -> None:
         """
         Initialize all managers
 
         Args:
             app_name: Application name for settings
+            settings_path: Optional custom settings path (for testing)
         """
         with self._lock:  # Ensure thread-safe initialization
             # Skip if already initialized
@@ -52,12 +53,23 @@ class ManagerRegistry:
 
             self._logger.info("Initializing managers...")
 
-            # Initialize session manager first as others may depend on it
-            self._managers["session"] = SessionManager(app_name)
+            # Get Qt application instance for proper parent management
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if not app:
+                self._logger.warning("No QApplication instance found - managers will have no Qt parent")
+                qt_parent = None
+            else:
+                qt_parent = app
+                self._logger.debug("Using QApplication as Qt parent for managers")
 
-            # Initialize other managers
-            self._managers["extraction"] = ExtractionManager()
-            self._managers["injection"] = InjectionManager()
+            # Initialize session manager first as others may depend on it
+            # Note: SessionManager doesn't inherit from QObject, so no parent needed
+            self._managers["session"] = SessionManager(app_name, settings_path)
+
+            # Initialize Qt-based managers with proper parent to prevent lifecycle issues
+            self._managers["extraction"] = ExtractionManager(parent=qt_parent)
+            self._managers["injection"] = InjectionManager(parent=qt_parent)
 
             # Future managers will be added here
 
@@ -203,14 +215,15 @@ def get_injection_manager() -> InjectionManager:
     return _registry.get_injection_manager()
 
 
-def initialize_managers(app_name: str = "SpritePal") -> None:
+def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None) -> None:
     """
     Initialize all managers
 
     Args:
         app_name: Application name for settings
+        settings_path: Optional custom settings path (for testing)
     """
-    _registry.initialize_managers(app_name)
+    _registry.initialize_managers(app_name, settings_path)
 
 
 def cleanup_managers() -> None:

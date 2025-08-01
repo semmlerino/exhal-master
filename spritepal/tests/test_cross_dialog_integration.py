@@ -278,28 +278,19 @@ class TestMainWindowToArrangementDialog:
             sprite_file = temp_file.name
 
         try:
-            # Create a real QWidget to act as parent
-            from PyQt6.QtWidgets import QWidget
-            parent_widget = QWidget()
-            qtbot.addWidget(parent_widget)
+            # Use TestMainWindowHelperSimple instead of plain QWidget
+            from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
+            window_helper = TestMainWindowHelperSimple()
+            # Don't add TestMainWindowHelperSimple to qtbot since it's a QObject, not QWidget
             
-            # Create mock window
-            window = Mock()
-            window.status_bar = Mock()
-            window.status_bar.showMessage = Mock()
-            window.extraction_failed = Mock()
-            window.extraction_complete = Mock()
-            window._output_path = "test_sprites"
-            window._extracted_files = []
-
-            # Add sprite_preview mock for palette data
-            window.sprite_preview = Mock()
-            window.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
-
-            # FIX: Create real controller instead of using window.controller
-            # Patch the main_window to return the real parent widget when accessed
-            controller = ExtractionController(window)
-            controller.main_window = parent_widget  # Use real QWidget instead of Mock
+            # Create controller with window helper
+            controller = ExtractionController(window_helper)
+            
+            # Set up additional mocks on window_helper
+            window_helper._output_path = "test_sprites"
+            window_helper._extracted_files = []
+            # Access sprite_preview property and mock its methods
+            window_helper.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
 
             # Mock file operations, image loading, and pixel editor launcher
             mock_image = Mock()
@@ -351,27 +342,19 @@ class TestMainWindowToArrangementDialog:
             sprite_file = temp_file.name
 
         try:
-            # Create a real QWidget to act as parent
-            from PyQt6.QtWidgets import QWidget
-            parent_widget = QWidget()
-            qtbot.addWidget(parent_widget)
+            # Use TestMainWindowHelperSimple instead of plain QWidget
+            from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
+            window_helper = TestMainWindowHelperSimple()
+            # Don't add TestMainWindowHelperSimple to qtbot since it's a QObject, not QWidget
             
-            # Create mock window
-            window = Mock()
-            window.status_bar = Mock()
-            window.status_bar.showMessage = Mock()
-            window.extraction_failed = Mock()
-            window.extraction_complete = Mock()
-            window._output_path = "test_sprites"
-            window._extracted_files = []
-
-            # Add sprite_preview mock for palette data
-            window.sprite_preview = Mock()
-            window.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
-
-            # FIX: Create real controller instead of using window.controller
-            controller = ExtractionController(window)
-            controller.main_window = parent_widget  # Use real QWidget instead of Mock
+            # Create controller with window helper
+            controller = ExtractionController(window_helper)
+            
+            # Set up additional mocks on window_helper
+            window_helper._output_path = "test_sprites"
+            window_helper._extracted_files = []
+            # Access sprite_preview property and mock its methods
+            window_helper.sprite_preview.get_palettes = Mock(return_value={"8": [255, 0, 0]})
 
             # Create mock dialog instance before patching
             mock_dialog_instance = Mock()
@@ -420,23 +403,21 @@ class TestArrangementDialogToPixelEditor:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             arranged_file = os.path.join(temp_dir, "test_arranged.png")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(arranged_file, "w") as f:
                 f.write("mock arranged data")
 
-            # Create a real QWidget to act as parent
-            from PyQt6.QtWidgets import QWidget
-            parent_widget = QWidget()
-            qtbot.addWidget(parent_widget)
-
-            # Create mock window
             # Use proper test helper instead of Mock
-
             window_helper = TestMainWindowHelperSimple()
             controller = ExtractionController(window_helper)
-            controller.main_window = parent_widget  # Use real QWidget instead of Mock
 
             # Set up mock dialog
             mock_dialog_instance = Mock()
@@ -458,6 +439,7 @@ class TestArrangementDialogToPixelEditor:
                 patch("spritepal.core.controller.Image.open", return_value=mock_image),
                 patch("os.path.exists", return_value=True),
                 patch("spritepal.core.controller.validate_image_file", return_value=(True, None)),
+                patch("spritepal.core.controller.QMessageBox") as mock_msgbox,  # Patch QMessageBox to prevent blocking dialogs
             ):
 
                 # Mock successful subprocess
@@ -486,9 +468,15 @@ class TestArrangementDialogToPixelEditor:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             palette_file = os.path.join(temp_dir, "test_sprite.pal.json")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(palette_file, "w") as f:
                 f.write('{"palette": [255, 0, 0]}')
 
@@ -559,15 +547,23 @@ class TestArrangementDialogToPixelEditor:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             metadata_file = os.path.join(temp_dir, "test_sprite.metadata.json")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
+            
+            # Create metadata file
             with open(metadata_file, "w") as f:
                 f.write('{"extraction": {"vram_offset": "0xC000"}}')
 
             # Test metadata handling
             with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_dialog:
 
                 mock_dialog_instance = Mock()
@@ -613,8 +609,8 @@ class TestInjectionDialogWorkflow:
                 with open(file_path, "w") as f:
                     f.write("mock data")
 
-            # Mock injection dialog
-            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+            # Mock injection dialog - patch where it's imported in controller
+            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -635,12 +631,18 @@ class TestInjectionDialogWorkflow:
                 window_helper = TestMainWindowHelperSimple()
                 controller = ExtractionController(window_helper)
 
-                # Mock injection manager
-                with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
+                # Mock injection manager methods
+                with (
+                    patch.object(controller.injection_manager, "start_injection") as mock_start_injection,
+                    patch.object(controller.injection_manager, "get_smart_vram_suggestion") as mock_get_suggestion,
+                    patch("os.path.exists") as mock_exists
+                ):
                     mock_start_injection.return_value = True
+                    mock_get_suggestion.return_value = ""
+                    mock_exists.return_value = True  # Make metadata path exist
 
-                    # Set up controller state
-                    controller._output_path = "test_sprite"
+                    # Set up main window state (controller reads from main_window._output_path)
+                    window_helper._output_path = os.path.join(temp_dir, "test_sprite")
 
                     # Trigger injection
                     controller.start_injection()
@@ -665,8 +667,8 @@ class TestInjectionDialogWorkflow:
                 with open(file_path, "w") as f:
                     f.write("mock data")
 
-            # Mock injection dialog
-            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+            # Mock injection dialog - patch where it's imported in controller
+            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -688,12 +690,18 @@ class TestInjectionDialogWorkflow:
                 window_helper = TestMainWindowHelperSimple()
                 controller = ExtractionController(window_helper)
 
-                # Mock injection manager
-                with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
+                # Mock injection manager methods
+                with (
+                    patch.object(controller.injection_manager, "start_injection") as mock_start_injection,
+                    patch.object(controller.injection_manager, "get_smart_vram_suggestion") as mock_get_suggestion,
+                    patch("os.path.exists") as mock_exists
+                ):
                     mock_start_injection.return_value = True
+                    mock_get_suggestion.return_value = ""
+                    mock_exists.return_value = True  # Make metadata path exist
 
-                    # Set up controller state
-                    controller._output_path = "test_sprite"
+                    # Set up main window state (controller reads from main_window._output_path)
+                    window_helper._output_path = os.path.join(temp_dir, "test_sprite")
 
                     # Trigger injection
                     controller.start_injection()
@@ -712,16 +720,22 @@ class TestInjectionDialogWorkflow:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             metadata_file = os.path.join(temp_dir, "test_sprite.metadata.json")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(metadata_file, "w") as f:
                 f.write(
                     '{"extraction": {"vram_offset": "0xC000", "vram_source": "test.dmp"}}'
                 )
 
-            # Mock injection dialog
-            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+            # Mock injection dialog - patch where it's imported in controller
+            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
 
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -743,10 +757,14 @@ class TestInjectionDialogWorkflow:
                 # Set up window state - this is what start_injection() uses
                 # Use the full path without the .png extension
                 output_base = os.path.join(temp_dir, "test_sprite")
-                controller._output_path = output_base
+                window_helper._output_path = output_base
 
-                # Mock file existence checks
-                with patch("os.path.exists") as mock_exists:
+                # Mock injection manager methods and file existence checks
+                with (
+                    patch.object(controller.injection_manager, "get_smart_vram_suggestion") as mock_get_suggestion,
+                    patch("os.path.exists") as mock_exists
+                ):
+                    mock_get_suggestion.return_value = ""
                     mock_exists.side_effect = lambda path: path in [
                         sprite_file,
                         metadata_file,
@@ -764,7 +782,8 @@ class TestInjectionDialogWorkflow:
     def test_injection_dialog_parameter_validation(self):
         """Test injection dialog parameter validation"""
         # Mock injection dialog with invalid parameters
-        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+        # Patch where it's imported in controller
+        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
 
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -781,19 +800,25 @@ class TestInjectionDialogWorkflow:
             window_helper = TestMainWindowHelperSimple()
             controller = ExtractionController(window_helper)
 
-            # Set up controller state
-            controller._output_path = "test_sprite"
+            # Set up window state (controller reads from main_window._output_path)
+            window_helper._output_path = "test_sprite"
 
-            # Trigger injection
-            controller.start_injection()
+            # Mock injection manager methods and run injection
+            with (
+                patch.object(controller.injection_manager, "get_smart_vram_suggestion") as mock_get_suggestion,
+                patch.object(controller.injection_manager, "start_injection") as mock_start_injection,
+                patch("os.path.exists") as mock_exists
+            ):
+                mock_get_suggestion.return_value = ""
+                mock_exists.return_value = True  # Make metadata path exist
 
-            # Verify dialog was created but no injection occurred
-            mock_dialog.assert_called_once()
+                # Trigger injection
+                controller.start_injection()
 
-            # Verify no injection operations were called
-            with patch.object(controller.injection_manager, "start_injection") as mock_start_injection:
-                # Since the test is run after the controller.start_injection() call above,
-                # we verify that start_injection was never called due to invalid parameters
+                # Verify dialog was created
+                mock_dialog.assert_called_once()
+
+                # Verify injection was NOT called because get_parameters returned None
                 mock_start_injection.assert_not_called()
 
 
@@ -808,9 +833,15 @@ class TestDialogDataPersistence:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             arranged_file = os.path.join(temp_dir, "test_arranged.png")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
 
             # Test sprite path flow: MainWindow → ArrangementDialog → InjectionDialog
 
@@ -820,18 +851,18 @@ class TestDialogDataPersistence:
             window_helper = TestMainWindowHelperSimple()
             controller = ExtractionController(window_helper)
 
-            # Mock arrangement dialog
+            # Mock arrangement dialog - patch where it's imported in controller
             with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_arrange_dialog:
                 mock_arrange_instance = Mock()
                 mock_arrange_instance.exec.return_value = 1  # Accepted
                 mock_arrange_instance.get_arranged_path.return_value = arranged_file
                 mock_arrange_dialog.return_value = mock_arrange_instance
 
-                # Mock injection dialog
+                # Mock injection dialog - patch where it's imported in controller
                 with patch(
-                    "spritepal.ui.injection_dialog.InjectionDialog"
+                    "spritepal.core.controller.InjectionDialog"
                 ) as mock_inject_dialog:
                     mock_inject_instance = Mock()
                     mock_inject_instance.exec.return_value = 1  # Accepted
@@ -844,19 +875,34 @@ class TestDialogDataPersistence:
                     }
                     mock_inject_dialog.return_value = mock_inject_instance
 
-                    # Mock file operations
-                    with patch("os.path.exists", return_value=True):
+                    # Mock file operations and QMessageBox for error handling
+                    with (
+                        patch("os.path.exists", return_value=True),
+                        patch("PyQt6.QtWidgets.QMessageBox.critical"),
+                        patch("spritepal.core.controller.validate_image_file", return_value=(True, None))
+                    ):
                         # Step 1: Arrange sprite
                         controller.open_row_arrangement(sprite_file)
 
                         # Verify arrangement dialog was created with original sprite
+                        # Use ANY for tiles_per_row since it's calculated from the image
+                        from unittest.mock import ANY
                         mock_arrange_dialog.assert_called_once_with(
-                            sprite_file, 16, window_helper
+                            sprite_file, ANY, window_helper
                         )
 
                         # Step 2: Inject arranged sprite
-                        controller._output_path = "test_arranged"
-                        controller.start_injection()
+                        window_helper._output_path = "test_arranged"
+                        
+                        # Mock injection manager methods
+                        with (
+                            patch.object(controller.injection_manager, "get_smart_vram_suggestion") as mock_get_suggestion,
+                            patch.object(controller.injection_manager, "start_injection") as mock_start_injection
+                        ):
+                            mock_get_suggestion.return_value = ""
+                            mock_start_injection.return_value = True
+                            
+                            controller.start_injection()
 
                         # Verify injection dialog was created with arranged sprite
                         mock_inject_dialog.assert_called_once()
@@ -871,9 +917,15 @@ class TestDialogDataPersistence:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             palette_file = os.path.join(temp_dir, "test_sprite.pal.json")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(palette_file, "w") as f:
                 f.write('{"8": [255, 0, 0]}')
 
@@ -922,9 +974,15 @@ class TestDialogDataPersistence:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             metadata_file = os.path.join(temp_dir, "test_sprite.metadata.json")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(metadata_file, "w") as f:
                 f.write('{"extraction": {"vram_offset": "0xC000"}}')
 
@@ -936,8 +994,8 @@ class TestDialogDataPersistence:
             window_helper = TestMainWindowHelperSimple()
             controller = ExtractionController(window_helper)
 
-            # Mock injection dialog
-            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+            # Mock injection dialog - patch where it's imported in controller
+            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
                 mock_dialog_instance.get_parameters.return_value = {
@@ -1024,9 +1082,15 @@ class TestDialogCancellationHandling:
         with tempfile.TemporaryDirectory() as temp_dir:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
 
-            # Create mock file
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
 
             # Test cancellation handling
 
@@ -1349,9 +1413,15 @@ class TestCrossDialogIntegration:
             sprite_file = os.path.join(temp_dir, "test_sprite.png")
             arranged_file = os.path.join(temp_dir, "test_arranged.png")
 
-            # Create mock files
-            with open(sprite_file, "w") as f:
-                f.write("mock sprite data")
+            # Create a valid PNG file
+            from PIL import Image
+            import numpy as np
+            
+            # Create a simple 32x32 test image
+            img_data = np.zeros((32, 32, 4), dtype=np.uint8)
+            img_data[:, :] = [255, 0, 0, 255]  # Red image
+            img = Image.fromarray(img_data, 'RGBA')
+            img.save(sprite_file)
             with open(arranged_file, "w") as f:
                 f.write("mock arranged data")
 

@@ -5,10 +5,10 @@ Test worker helpers for synchronous execution in tests
 from pathlib import Path
 from typing import Any
 
-from spritepal.core.controller import ExtractionWorker, ROMExtractionWorker
+from spritepal.core.workers import VRAMExtractionWorker, ROMExtractionWorker
 
 
-class TestExtractionWorker(ExtractionWorker):
+class TestExtractionWorker(VRAMExtractionWorker):
     """Test-specific ExtractionWorker that runs synchronously"""
 
     def start(self) -> None:

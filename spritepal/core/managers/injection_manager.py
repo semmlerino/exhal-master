@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QThread, pyqtSignal
 
 if TYPE_CHECKING:
-    from spritepal.core.managers.session_manager import SessionManager
+    from .session_manager import SessionManager
 
-from spritepal.core.injector import InjectionWorker
-from spritepal.core.managers.base_manager import BaseManager
-from spritepal.core.managers.exceptions import ValidationError
-from spritepal.core.rom_injector import ROMInjectionWorker
-from spritepal.utils.constants import (
+from core.injector import InjectionWorker
+from .base_manager import BaseManager
+from .exceptions import ValidationError
+from core.rom_injector import ROMInjectionWorker
+from utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
@@ -26,7 +26,7 @@ from spritepal.utils.constants import (
     SETTINGS_KEY_VRAM_PATH,
     SETTINGS_NS_ROM_INJECTION,
 )
-from spritepal.utils.rom_cache import get_rom_cache
+from utils.rom_cache import get_rom_cache
 
 
 class InjectionManager(BaseManager):
@@ -39,9 +39,9 @@ class InjectionManager(BaseManager):
     progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
     cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
-    def __init__(self) -> None:
+    def __init__(self, parent=None) -> None:
         """Initialize the injection manager"""
-        super().__init__("InjectionManager")
+        super().__init__("InjectionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize injection components"""
@@ -59,7 +59,7 @@ class InjectionManager(BaseManager):
 
     def _get_session_manager(self) -> "SessionManager":
         """Get session manager with late import to avoid circular dependencies"""
-        from spritepal.core.managers import get_session_manager
+        from . import get_session_manager
         return get_session_manager()
 
     def start_injection(self, params: dict[str, Any]) -> bool:
@@ -418,7 +418,7 @@ class InjectionManager(BaseManager):
             self._logger.debug(f"Cache miss, loading ROM info from file: {rom_path}")
 
             # Get extraction manager to read ROM header
-            from spritepal.core.managers import get_extraction_manager
+            from . import get_extraction_manager
             extraction_manager = get_extraction_manager()
             header = extraction_manager.read_rom_header(rom_path)
 

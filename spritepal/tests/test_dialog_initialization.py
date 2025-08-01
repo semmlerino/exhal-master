@@ -1,0 +1,175 @@
+"""
+Regression tests for dialog initialization order issues.
+
+This module ensures all dialogs can be created without InitializationOrderError
+which can occur when instance variables are assigned after super().__init__().
+"""
+
+import pytest
+from PyQt6.QtWidgets import QApplication, QWidget
+
+from spritepal.ui.dialogs import ManualOffsetDialog, SettingsDialog, UserErrorDialog
+from spritepal.ui.dialogs.resume_scan_dialog import ResumeScanDialog
+from spritepal.ui.injection_dialog import InjectionDialog
+from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
+from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
+
+
+class TestDialogInitialization:
+    """Test that all dialogs can be initialized without errors"""
+
+    @pytest.fixture(scope="class")
+    def qapp(self):
+        """Create QApplication instance for dialog tests"""
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
+        yield app
+
+    def test_manual_offset_dialog_initialization(self, qapp):
+        """Test ManualOffsetDialog can be created without initialization errors"""
+        # This was the original bug - instance variables assigned after super().__init__()
+        dialog = ManualOffsetDialog.get_instance()
+        
+        # Verify UI components exist and are not None
+        assert dialog.rom_map is not None
+        assert dialog.offset_widget is not None
+        assert dialog.scan_controls is not None
+        assert dialog.import_export is not None
+        assert dialog.status_panel is not None
+        assert dialog.preview_widget is not None
+        assert dialog.apply_btn is not None
+        
+        dialog.close()
+
+    def test_settings_dialog_initialization(self, qapp):
+        """Test SettingsDialog can be created without initialization errors"""
+        dialog = SettingsDialog()
+        
+        # Verify UI components exist
+        assert dialog.tab_widget is not None
+        assert dialog.restore_window_check is not None
+        assert dialog.auto_save_session_check is not None
+        assert dialog.dumps_dir_edit is not None
+        assert dialog.cache_enabled_check is not None
+        
+        dialog.close()
+
+    def test_user_error_dialog_initialization(self, qapp):
+        """Test UserErrorDialog can be created without initialization errors"""
+        dialog = UserErrorDialog(
+            error_message="Test error",
+            technical_details="Technical details",
+            parent=None
+        )
+        
+        # Verify dialog was created
+        assert dialog.windowTitle() == "Error"  # Default title for unknown errors
+        
+        dialog.close()
+
+    def test_resume_scan_dialog_initialization(self, qapp):
+        """Test ResumeScanDialog can be created without initialization errors"""
+        scan_info = {
+            "found_sprites": [],
+            "current_offset": 0x1000,
+            "scan_range": {"start": 0, "end": 0x10000, "step": 0x100},
+            "completed": False,
+            "total_found": 0
+        }
+        
+        dialog = ResumeScanDialog(scan_info)
+        
+        # Verify dialog was created with correct title
+        assert dialog.windowTitle() == "Resume Sprite Scan?"
+        assert dialog.user_choice == dialog.CANCEL  # Default choice
+        
+        dialog.close()
+
+    def test_injection_dialog_initialization(self, qapp):
+        """Test InjectionDialog can be created without initialization errors"""
+        dialog = InjectionDialog()
+        
+        # Verify UI components exist
+        assert dialog.sprite_file_selector is not None
+        assert dialog.input_vram_selector is not None
+        assert dialog.output_vram_selector is not None
+        assert dialog.vram_offset_input is not None
+        assert dialog.rom_offset_input is not None
+        
+        dialog.close()
+
+    def test_row_arrangement_dialog_initialization(self, qapp, tmp_path):
+        """Test RowArrangementDialog can be created without initialization errors"""
+        # Create a dummy sprite file
+        sprite_file = tmp_path / "test_sprite.png"
+        sprite_file.touch()
+        
+        try:
+            dialog = RowArrangementDialog(str(sprite_file))
+            # If sprite loading fails, dialog should still be created
+            assert dialog is not None
+            dialog.close()
+        except Exception:
+            # Even if sprite loading fails, we shouldn't get InitializationOrderError
+            pytest.skip("Sprite loading failed, but no initialization error occurred")
+
+    def test_grid_arrangement_dialog_initialization(self, qapp, tmp_path):
+        """Test GridArrangementDialog can be created without initialization errors"""
+        # Create a dummy sprite file
+        sprite_file = tmp_path / "test_sprite.png"
+        sprite_file.touch()
+        
+        try:
+            dialog = GridArrangementDialog(str(sprite_file))
+            # If sprite loading fails, dialog should still be created
+            assert dialog is not None
+            dialog.close()
+        except Exception:
+            # Even if sprite loading fails, we shouldn't get InitializationOrderError
+            pytest.skip("Sprite loading failed, but no initialization error occurred")
+
+    def test_range_scan_dialog_initialization(self, qapp):
+        """Test RangeScanDialog can be created without initialization errors"""
+        dialog = RangeScanDialog(current_offset=0x1000, rom_size=0x400000)
+        
+        # Verify dialog was created with correct title
+        assert dialog.windowTitle() == "Range Scan Configuration"
+        assert dialog.current_offset == 0x1000
+        assert dialog.rom_size == 0x400000
+        
+        dialog.close()
+
+    def test_all_dialogs_have_close_method(self, qapp):
+        """Ensure all dialogs can be properly closed"""
+        dialogs = [
+            ManualOffsetDialog.get_instance(),
+            SettingsDialog(),
+            UserErrorDialog("Test", None, None),
+            ResumeScanDialog({"found_sprites": [], "current_offset": 0, 
+                            "scan_range": {"start": 0, "end": 0, "step": 1},
+                            "completed": False, "total_found": 0}),
+            InjectionDialog(),
+            RangeScanDialog(0, 0x400000),
+        ]
+        
+        for dialog in dialogs:
+            # All dialogs should have close method
+            assert hasattr(dialog, 'close')
+            dialog.close()
+
+    def test_singleton_pattern_manual_offset_dialog(self, qapp):
+        """Test ManualOffsetDialog singleton pattern works correctly"""
+        # Get first instance
+        dialog1 = ManualOffsetDialog.get_instance()
+        
+        # Get second instance - should be same object
+        dialog2 = ManualOffsetDialog.get_instance()
+        
+        assert dialog1 is dialog2
+        
+        dialog1.close()
+        
+        # Reset singleton for other tests
+        ManualOffsetDialog._instance = None

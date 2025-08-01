@@ -10,17 +10,17 @@ from typing import Any
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal
 
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.managers.base_manager import BaseManager
-from spritepal.core.managers.exceptions import ExtractionError, ValidationError
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.utils.constants import (
+from core.extractor import SpriteExtractor
+from .base_manager import BaseManager
+from .exceptions import ExtractionError, ValidationError
+from core.palette_manager import PaletteManager
+from core.rom_extractor import ROMExtractor
+from utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
 )
-from spritepal.utils.rom_cache import get_rom_cache
+from utils.rom_cache import get_rom_cache
 
 
 class ExtractionManager(BaseManager):
@@ -37,9 +37,9 @@ class ExtractionManager(BaseManager):
     cache_miss: pyqtSignal = pyqtSignal(str)  # Cache type
     cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
-    def __init__(self) -> None:
+    def __init__(self, parent=None) -> None:
         """Initialize the extraction manager"""
-        super().__init__("ExtractionManager")
+        super().__init__("ExtractionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize extraction components"""
@@ -295,12 +295,15 @@ class ExtractionManager(BaseManager):
         finally:
             self._finish_operation(operation)
 
-    def validate_extraction_params(self, params: dict[str, Any]) -> None:
+    def validate_extraction_params(self, params: dict[str, Any]) -> bool:
         """
         Validate extraction parameters
 
         Args:
             params: Parameters to validate
+
+        Returns:
+            True if validation passes
 
         Raises:
             ValidationError: If validation fails
@@ -332,21 +335,18 @@ class ExtractionManager(BaseManager):
                     "Please provide a CGRAM file or switch to Grayscale Only mode."
                 )
 
-            # Validate CGRAM file exists if provided
-            if cgram_path:
-                self._validate_file_exists(cgram_path, "CGRAM file")
-
-            # Validate VRAM file exists (after CGRAM validation)
-            self._validate_file_exists(params["vram_path"], "VRAM file")
+            # Note: File existence validation is now handled by controller
+            # to provide better fail-fast behavior and avoid blocking I/O
 
         # Validate output_base is provided and not empty
         output_base = params.get("output_base", "")
         if not output_base or not output_base.strip():
             raise ValidationError("Output name is required for extraction")
 
-        # Validate optional files
-        if params.get("oam_path"):
-            self._validate_file_exists(params["oam_path"], "OAM file")
+        # Note: Optional file existence validation is now handled by controller
+        
+        # Return True if all validation passes
+        return True
 
     def _extract_palettes(self, cgram_path: str, output_base: str,
                          png_file: str, oam_path: str | None,

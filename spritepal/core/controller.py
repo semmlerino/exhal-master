@@ -204,10 +204,16 @@ class ExtractionController(QObject):
         """Handle progress updates"""
         self.main_window.status_bar.showMessage(message)
 
-    def _on_preview_ready(self, pixmap: QPixmap, tile_count: int) -> None:
-        """Handle preview ready"""
-        self.main_window.sprite_preview.set_preview(pixmap, tile_count)
-        self.main_window.preview_info.setText(f"Tiles: {tile_count}")
+    def _on_preview_ready(self, pil_image: Image.Image, tile_count: int) -> None:
+        """Handle preview ready - convert PIL Image to QPixmap in main thread"""
+        # CRITICAL FIX FOR BUG #26: Convert PIL Image to QPixmap in main thread (safe!)
+        # Worker now emits PIL Image to avoid Qt threading violations
+        pixmap = pil_to_qpixmap(pil_image)
+        if pixmap is not None:
+            self.main_window.sprite_preview.set_preview(pixmap, tile_count)
+            self.main_window.preview_info.setText(f"Tiles: {tile_count}")
+        else:
+            logger.error("Failed to convert PIL image to QPixmap for preview")
 
     def _on_preview_image_ready(self, pil_image: Image.Image) -> None:
         """Handle preview PIL image ready"""

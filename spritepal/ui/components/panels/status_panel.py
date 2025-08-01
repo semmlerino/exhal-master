@@ -23,17 +23,18 @@ class StatusPanel(QWidget):
         layout.setContentsMargins(8, 6, 8, 6)  # Reduced padding
         layout.setSpacing(3)  # Tighter spacing
 
-        status_label = QLabel("Detection Status")
+        # CRITICAL FIX: Set proper parent for all child widgets to prevent Qt lifecycle bugs
+        status_label = QLabel("Detection Status", parent=self)
         status_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 3px;")  # Smaller and tighter
         layout.addWidget(status_label)
 
-        self.detection_info = QLabel("Ready to search for sprites")
+        self.detection_info = QLabel("Ready to search for sprites", parent=self)
         self.detection_info.setWordWrap(True)
         self.detection_info.setStyleSheet("color: #cccccc;")
         layout.addWidget(self.detection_info)
 
-        # Progress bar (initially hidden)
-        self.scan_progress = QProgressBar()
+        # Progress bar (initially hidden) - set proper parent
+        self.scan_progress = QProgressBar(parent=self)
         self.scan_progress.setVisible(False)
         layout.addWidget(self.scan_progress)
 
@@ -75,23 +76,23 @@ class StatusPanel(QWidget):
         if not settings_manager.get("cache", "show_indicators", True):
             return
 
-        # Cache status widget
-        self.cache_status_widget = QWidget()
+        # Cache status widget - CRITICAL FIX: Set proper parent for all widgets
+        self.cache_status_widget = QWidget(parent=self)
         cache_layout = QHBoxLayout()
         cache_layout.setContentsMargins(0, 3, 0, 0)  # Small top margin to separate from progress
         cache_layout.setSpacing(4)
 
-        # Cache status label
-        cache_label = QLabel("ROM Cache:")
+        # Cache status label - set proper parent
+        cache_label = QLabel("ROM Cache:", parent=self.cache_status_widget)
         cache_label.setStyleSheet("font-weight: bold; font-size: 11px;")
         cache_layout.addWidget(cache_label)
 
-        # Cache icon
-        self.cache_icon_label = QLabel()
+        # Cache icon - set proper parent
+        self.cache_icon_label = QLabel(parent=self.cache_status_widget)
         cache_layout.addWidget(self.cache_icon_label)
 
-        # Cache info label
-        self.cache_info_label = QLabel()
+        # Cache info label - set proper parent
+        self.cache_info_label = QLabel(parent=self.cache_status_widget)
         self.cache_info_label.setStyleSheet(get_muted_text_style())
         cache_layout.addWidget(self.cache_info_label)
 

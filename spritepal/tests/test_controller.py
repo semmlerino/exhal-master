@@ -6,7 +6,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 
 import pytest
 
@@ -179,14 +179,18 @@ class TestExtractionController:
         mock_main_window.status_bar.showMessage.assert_called_once_with(test_message)
 
     def test_on_preview_ready_handler(self, controller, mock_main_window):
-        """Test preview ready handler"""
-        mock_pixmap = Mock()
+        """Test preview ready handler - now expects PIL Image due to Qt threading fix"""
+        # CRITICAL UPDATE FOR BUG #26: Method now accepts PIL Image, not QPixmap
+        mock_pil_image = Mock()
         tile_count = 42
 
-        controller._on_preview_ready(mock_pixmap, tile_count)
+        # Mock pil_to_qpixmap to return a mock QPixmap
+        mock_qpixmap = Mock()
+        with patch("spritepal.core.controller.pil_to_qpixmap", return_value=mock_qpixmap):
+            controller._on_preview_ready(mock_pil_image, tile_count)
 
         mock_main_window.sprite_preview.set_preview.assert_called_once_with(
-            mock_pixmap, tile_count
+            mock_qpixmap, tile_count
         )
         mock_main_window.preview_info.setText.assert_called_once_with("Tiles: 42")
 
@@ -705,12 +709,15 @@ class TestRealControllerImplementation:
     @pytest.mark.integration
     def test_real_preview_handling(self, real_controller, window_helper):
         """Test real preview handling"""
-        # Create a simple mock pixmap for testing
-        mock_pixmap = Mock()
+        # UPDATED FOR BUG #26: Create a PIL Image mock and mock the conversion function
+        mock_pil_image = Mock()  # Mock PIL Image for Qt threading safety
         tile_count = 42
 
-        # Test preview ready handler
-        real_controller._on_preview_ready(mock_pixmap, tile_count)
+        # Mock pil_to_qpixmap to return a mock QPixmap since we're testing with mock PIL Image
+        mock_qpixmap = Mock()
+        with patch("spritepal.core.controller.pil_to_qpixmap", return_value=mock_qpixmap):
+            # Test preview ready handler - now expects PIL Image
+            real_controller._on_preview_ready(mock_pil_image, tile_count)
 
         # Verify preview was handled (check if preview_info was updated)
         preview_text = window_helper.get_preview_info_text()
@@ -807,13 +814,8 @@ class TestControllerWorkerIntegration:
 
     @pytest.fixture
     def mock_main_window(self):
-        """Create mock main window with realistic test data files"""
-        from .infrastructure.test_data_repository import get_test_data_repository
-        
-        # Create realistic test data using TestDataRepository
-        repo = get_test_data_repository()
-        test_data = repo.get_vram_extraction_data("medium")  # Creates 64KB VRAM file
-
+        """Create mock main window WITHOUT real file dependencies for perfect isolation"""
+        # CRITICAL FIX FOR BUG #27: No real files in mocked tests to avoid contamination
         window = Mock()
         window.extract_requested = Mock()
         window.open_in_editor_requested = Mock()
@@ -823,51 +825,60 @@ class TestControllerWorkerIntegration:
         window.palette_preview = Mock()
         window.extraction_complete = Mock()
         window.extraction_failed = Mock()
+        # Use fake paths with grayscale_mode=True to bypass CGRAM validation
         window.get_extraction_params.return_value = {
-            "vram_path": test_data["vram_path"],
-            "cgram_path": test_data["cgram_path"],
-            "output_base": test_data["output_base"],
+            "vram_path": "/fake/test/path/vram.bin",
+            "output_base": "/fake/test/path/output",
             "create_grayscale": True,
             "create_metadata": True,
+            "grayscale_mode": True,  # This bypasses CGRAM requirement
         }
-
-        # Store repository for cleanup
-        window._test_repo = repo
-
         return window
 
     @pytest.fixture
     def controller(self, mock_main_window):
-        """Create controller instance"""
-        # Initialize managers for this test
-        initialize_managers("TestApp")
-
-        try:
-            controller = ExtractionController(mock_main_window)
-            yield controller
-        finally:
-            # Clean up managers
-            cleanup_managers()
-
-            # Clean up test data repository
-            if hasattr(mock_main_window, "_test_repo"):
-                mock_main_window._test_repo.cleanup()
+        """Create controller instance for mocked tests - no real managers"""
+        # CRITICAL FIX FOR BUG #27: Don't initialize real managers in mocked tests
+        # Create controller with mocked window
+        controller = ExtractionController(mock_main_window)
+        
+        # Mock all manager dependencies to ensure complete isolation
+        controller.extraction_manager = Mock()
+        controller.injection_manager = Mock()
+        controller.session_manager = Mock()
+        
+        # Mock validation to always pass for mocked tests
+        controller.extraction_manager.validate_extraction_params = Mock(return_value=None)
+        
+        return controller
 
     @patch("spritepal.core.controller.VRAMExtractionWorker")
+    @patch("os.path.exists")
+    @patch("os.path.getsize")
     def test_worker_signals_connected_to_controller(
-        self, mock_worker_class, controller, mock_main_window
+        self, mock_getsize, mock_exists, mock_worker_class, controller, mock_main_window
     ):
         """Test that worker signals are properly connected to controller handlers"""
-        # mock_main_window fixture already provides realistic test data via TestDataRepository
-        # Update the parameters to include grayscale_mode for easier testing
-        current_params = mock_main_window.get_extraction_params.return_value.copy()
-        current_params["grayscale_mode"] = True
-        mock_main_window.get_extraction_params.return_value = current_params
+        # CRITICAL FIX FOR BUG #27: Pure mocked test - NO real file dependencies
         
+        # Mock file system checks to pass validation
+        mock_exists.return_value = True
+        mock_getsize.return_value = 65536  # 64KB valid VRAM size
+        
+        # Configure mock main window with fake parameters (already set in fixture)
+        mock_main_window.reset_mock()
+        
+        # Create mock worker  
         mock_worker = Mock()
         mock_worker_class.return_value = mock_worker
-
-        controller.start_extraction()
+        
+        # Mock file reading for validation
+        with patch("builtins.open", mock_open(read_data=b"x" * 16)):
+            # The extraction manager validation is already mocked in the fixture
+            controller.start_extraction()
+            
+        # Verify the worker class was called to create an instance
+        mock_worker_class.assert_called_once()
 
         # Verify all signals were connected
         mock_worker.progress.connect.assert_called_once_with(controller._on_progress)
@@ -889,12 +900,19 @@ class TestControllerWorkerIntegration:
         mock_worker.error.connect.assert_called_once_with(
             controller._on_extraction_error
         )
+        
+        # Verify worker was started
+        mock_worker.start.assert_called_once()
 
     def test_full_signal_chain_simulation(self, controller, mock_main_window):
         """Test full signal chain from worker to UI"""
         # Simulate worker signals
         controller._on_progress(10, "Starting extraction...")
-        controller._on_preview_ready(Mock(), 10)
+        # UPDATED FOR BUG #26: Pass PIL Image mock and mock conversion function
+        mock_pil_image = Mock()  # Mock PIL Image for Qt threading safety
+        mock_qpixmap = Mock()
+        with patch("spritepal.core.controller.pil_to_qpixmap", return_value=mock_qpixmap):
+            controller._on_preview_ready(mock_pil_image, 10)
         controller._on_preview_image_ready(Mock())
         controller._on_palettes_ready({8: [[0, 0, 0]]})
         controller._on_active_palettes_ready([8, 9])
@@ -940,22 +958,34 @@ class TestControllerWorkerIntegration:
         assert controller.worker is None
 
     @patch("spritepal.core.controller.VRAMExtractionWorker")
+    @patch("os.path.exists")
+    @patch("os.path.getsize")
     def test_concurrent_extraction_handling(
-        self, mock_worker_class, controller, mock_main_window
+        self, mock_getsize, mock_exists, mock_worker_class, controller, mock_main_window
     ):
         """Test handling of concurrent extraction requests"""
+        # CRITICAL FIX FOR BUG #27: Pure mocked test - NO real file dependencies
+        # Mock file system checks to pass validation
+        mock_exists.return_value = True
+        mock_getsize.return_value = 65536  # 64KB valid VRAM size
+        
+        # Reset mock to ensure clean state
+        mock_main_window.reset_mock()
+        
         # Create different mock instances for each call
         first_mock_worker = Mock()
         second_mock_worker = Mock()
         mock_worker_class.side_effect = [first_mock_worker, second_mock_worker]
 
-        # Start first extraction
-        controller.start_extraction()
-        first_worker = controller.worker
+        # Mock file reading for validation
+        with patch("builtins.open", mock_open(read_data=b"x" * 16)):
+            # Start first extraction
+            controller.start_extraction()
+            first_worker = controller.worker
 
-        # Start second extraction (should replace first)
-        controller.start_extraction()
-        second_worker = controller.worker
+            # Start second extraction (should replace first)
+            controller.start_extraction()
+            second_worker = controller.worker
 
         # Should have different workers (test concurrency handling)
         assert first_worker != second_worker

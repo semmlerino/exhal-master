@@ -158,9 +158,15 @@ class FileSelector(QWidget):
         """Get the current file path"""
         return self.path_edit.text()
 
-    def set_path(self, path: str):
+    def set_path(self, path: str | None):
         """Set the file path"""
-        self.path_edit.setText(path)
+        if path is None:
+            converted_path = ""
+        else:
+            # Convert any type to string
+            converted_path = str(path)
+        
+        self.path_edit.setText(converted_path)
 
     def clear_path(self):
         """Clear the file path"""

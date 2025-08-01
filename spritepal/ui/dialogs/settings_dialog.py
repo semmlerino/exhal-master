@@ -37,6 +37,29 @@ class SettingsDialog(BaseDialog):
     cache_cleared = pyqtSignal()
 
     def __init__(self, parent=None):
+        # Initialize UI components - declare BEFORE super().__init__() to avoid overwriting
+        self.tab_widget: QTabWidget | None = None
+        self.restore_window_check: QCheckBox | None = None
+        self.auto_save_session_check: QCheckBox | None = None
+        self.dumps_dir_edit: QLineEdit | None = None
+        self.dumps_dir_button: QPushButton | None = None
+        self.cache_enabled_check: QCheckBox | None = None
+        self.cache_location_edit: QLineEdit | None = None
+        self.cache_location_button: QPushButton | None = None
+        self.cache_size_spin: QSpinBox | None = None
+        self.cache_expiry_spin: QSpinBox | None = None
+        self.auto_cleanup_check: QCheckBox | None = None
+        self.clear_cache_button: QPushButton | None = None
+        self.clear_old_button: QPushButton | None = None
+        self.cache_dir_label: QLabel | None = None
+        self.cache_files_label: QLabel | None = None
+        self.cache_size_label: QLabel | None = None
+        self.show_indicators_check: QCheckBox | None = None
+        self.refresh_stats_button: QPushButton | None = None
+
+        # Store original settings to detect changes
+        self._original_settings: dict[str, Any] = {}
+
         super().__init__(
             parent=parent,
             title="SpritePal Settings",
@@ -49,29 +72,6 @@ class SettingsDialog(BaseDialog):
 
         self.settings_manager = get_settings_manager()
         self.rom_cache = get_rom_cache()
-
-        # Initialize UI components - set to temporary None, will be properly initialized in _setup_ui()
-        self.tab_widget: QTabWidget
-        self.restore_window_check: QCheckBox
-        self.auto_save_session_check: QCheckBox
-        self.dumps_dir_edit: QLineEdit
-        self.dumps_dir_button: QPushButton
-        self.cache_enabled_check: QCheckBox
-        self.cache_location_edit: QLineEdit
-        self.cache_location_button: QPushButton
-        self.cache_size_spin: QSpinBox
-        self.cache_expiry_spin: QSpinBox
-        self.auto_cleanup_check: QCheckBox
-        self.clear_cache_button: QPushButton
-        self.clear_old_button: QPushButton
-        self.cache_dir_label: QLabel
-        self.cache_files_label: QLabel
-        self.cache_size_label: QLabel
-        self.show_indicators_check: QCheckBox
-        self.refresh_stats_button: QPushButton
-
-        # Store original settings to detect changes
-        self._original_settings: dict[str, Any] = {}
         self._load_original_settings()
 
         # Set up the dialog content
@@ -264,20 +264,29 @@ class SettingsDialog(BaseDialog):
         """Load current settings into UI"""
         # General settings
         self.restore_window_check.setChecked(
-            self._original_settings["restore_window"]
+            self.settings_manager.get("ui", "restore_position", True)
         )
         self.auto_save_session_check.setChecked(
-            self._original_settings["auto_save_session"]
+            self.settings_manager.get("session", "auto_save", True)
         )
-        self.dumps_dir_edit.setText(self._original_settings["dumps_dir"])
+        self.dumps_dir_edit.setText(
+            self.settings_manager.get("paths", "default_dumps_dir", "")
+        )
 
         # Cache settings
-        self.cache_enabled_check.setChecked(self._original_settings["cache_enabled"])
-        self.cache_location_edit.setText(self._original_settings["cache_location"])
-        self.cache_size_spin.setValue(self._original_settings["cache_max_size"])
-        self.cache_expiry_spin.setValue(self._original_settings["cache_expiry"])
-        self.auto_cleanup_check.setChecked(self._original_settings["auto_cleanup"])
-        self.show_indicators_check.setChecked(self._original_settings["show_indicators"])
+        self.cache_enabled_check.setChecked(self.settings_manager.get_cache_enabled())
+        self.cache_location_edit.setText(self.settings_manager.get_cache_location())
+        self.cache_size_spin.setValue(self.settings_manager.get_cache_max_size_mb())
+        self.cache_expiry_spin.setValue(self.settings_manager.get_cache_expiration_days())
+        self.auto_cleanup_check.setChecked(
+            self.settings_manager.get("cache", "auto_cleanup", True)
+        )
+        self.show_indicators_check.setChecked(
+            self.settings_manager.get("cache", "show_indicators", True)
+        )
+
+        # Update original settings to reflect what was just loaded
+        self._load_original_settings()
 
     def _save_settings(self):
         """Save settings from UI"""

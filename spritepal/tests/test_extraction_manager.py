@@ -76,11 +76,9 @@ class TestExtractionManager:
         with pytest.raises(ValidationError, match="Missing required parameters"):
             extraction_manager.validate_extraction_params(invalid_params)
 
-        # Non-existent file
-        invalid_params = params.copy()
-        invalid_params["vram_path"] = "/non/existent/file.vram"
-        with pytest.raises(ValidationError, match="VRAM file does not exist"):
-            extraction_manager.validate_extraction_params(invalid_params)
+        # Note: File existence validation moved to controller for defensive validation
+        # validate_extraction_params now only validates parameter requirements
+        # File existence is checked by controller before calling manager methods
 
     def test_validate_extraction_params_rom(self, extraction_manager, temp_files):
         """Test ROM extraction parameter validation"""

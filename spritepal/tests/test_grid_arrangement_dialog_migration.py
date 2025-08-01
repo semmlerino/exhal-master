@@ -176,7 +176,10 @@ class TestGridArrangementDialogMigration:
     def test_grid_arrangement_dialog_error_state_handling(self, qtbot):
         """Test that error state handling works correctly"""
         # Test with non-existent file
-        dialog = GridArrangementDialog("/non/existent/file.png", tiles_per_row=16)
+        # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
+        from unittest.mock import patch
+        with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            dialog = GridArrangementDialog("/non/existent/file.png", tiles_per_row=16)
         qtbot.addWidget(dialog)
 
         # Should handle error gracefully and maintain SplitterDialog structure

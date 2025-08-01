@@ -10,7 +10,7 @@ from PIL import Image
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.controller import ExtractionWorker
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.utils.constants import (
@@ -22,8 +22,8 @@ from spritepal.utils.constants import (
 )
 
 
-class TestExtractionWorkerHeadless:
-    """Test ExtractionWorker in headless environment"""
+class TestVRAMExtractionWorkerHeadless:
+    """Test VRAMExtractionWorker in headless environment"""
 
     @pytest.fixture
     def mock_qt_imports(self):
@@ -55,7 +55,7 @@ class TestExtractionWorkerHeadless:
 
     @pytest.fixture
     def worker_params(self, tmp_path):
-        """Create parameters for ExtractionWorker"""
+        """Create parameters for VRAMExtractionWorker"""
         # Create minimal test files
         vram_data = bytearray(0x10000)
         # Add test tiles
@@ -92,7 +92,7 @@ class TestExtractionWorkerHeadless:
 
         try:
             # Create worker first
-            worker = ExtractionWorker(worker_params)
+            worker = VRAMExtractionWorker(worker_params)
 
             # Create test image
             Image.new("P", (128, 64), 0)
@@ -185,7 +185,7 @@ class TestExtractionWorkerHeadless:
                 "oam_path": None,
             }
 
-            worker = ExtractionWorker(bad_params)
+            worker = VRAMExtractionWorker(bad_params)
 
             # Mock signals
             worker.error = Mock()

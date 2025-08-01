@@ -185,9 +185,17 @@ class HexOffsetInput(QWidget):
         """Get the current raw text value"""
         return self.hex_edit.text()
 
-    def set_text(self, text: str):
+    def set_text(self, text: str | int | None):
         """Set the input text (triggers validation)"""
-        self.hex_edit.setText(text)
+        if text is None:
+            converted_text = ""
+        elif isinstance(text, int):
+            converted_text = f"0x{text:X}"
+        else:
+            # Convert any other type to string
+            converted_text = str(text)
+        
+        self.hex_edit.setText(converted_text)
 
     def set_placeholder(self, placeholder: str):
         """Set the placeholder text"""

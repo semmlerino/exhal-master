@@ -9,8 +9,8 @@ from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
 
-from spritepal.core.managers.base_manager import BaseManager
-from spritepal.core.managers.exceptions import SessionError, ValidationError
+from .base_manager import BaseManager
+from .exceptions import SessionError, ValidationError
 
 
 class SessionManager(BaseManager):
@@ -22,16 +22,20 @@ class SessionManager(BaseManager):
     settings_saved: pyqtSignal = pyqtSignal()  # Emitted when settings are saved
     session_restored: pyqtSignal = pyqtSignal(dict)  # Emitted when session is restored
 
-    def __init__(self, app_name: str = "SpritePal") -> None:
+    def __init__(self, app_name: str = "SpritePal", settings_path: Path | None = None) -> None:
         """
         Initialize session manager
 
         Args:
             app_name: Application name for settings file
+            settings_path: Optional custom path for settings file (for testing)
         """
         # Initialize attributes needed by _initialize() before calling super()
         self._app_name = app_name
-        self._settings_file = Path.cwd() / f".{app_name.lower()}_settings.json"
+        if settings_path:
+            self._settings_file = settings_path
+        else:
+            self._settings_file = Path.cwd() / f".{app_name.lower()}_settings.json"
         self._settings: dict[str, Any] = {}
         self._session_dirty = False
 
@@ -58,13 +62,65 @@ class SessionManager(BaseManager):
                     data = json.load(f)
                     if isinstance(data, dict):
                         self._logger.info("Settings loaded successfully")
-                        return data
+                        # Check if this is old format (flat structure without categories)
+                        if not any(key in data for key in ["session", "ui", "cache", "paths"]):
+                            self._logger.info("Detected old settings format, migrating...")
+                            return self._migrate_old_settings(data)
+                        # Merge with defaults to ensure all keys exist
+                        return self._merge_with_defaults(data)
                     self._logger.warning("Invalid settings file format, using defaults")
             except (OSError, json.JSONDecodeError) as e:
                 self._logger.warning(f"Could not load settings: {e}")
 
         # Return default settings
         return self._get_default_settings()
+    
+    def _merge_with_defaults(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Merge loaded settings with defaults to ensure all keys exist"""
+        defaults = self._get_default_settings()
+        
+        # Deep merge - ensure all default categories and keys exist
+        for category, values in defaults.items():
+            if category not in data:
+                data[category] = values
+            elif isinstance(values, dict):
+                for key, default_value in values.items():
+                    if key not in data[category]:
+                        data[category][key] = default_value
+        
+        return data
+    
+    def _migrate_old_settings(self, old_data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate old flat settings format to new categorized format"""
+        # Start with defaults
+        new_settings = self._get_default_settings()
+        
+        # Map old keys to new structure
+        if "vram_path" in old_data:
+            new_settings["session"]["vram_path"] = old_data["vram_path"]
+        if "cgram_path" in old_data:
+            new_settings["session"]["cgram_path"] = old_data["cgram_path"]
+        if "oam_path" in old_data:
+            new_settings["session"]["oam_path"] = old_data["oam_path"]
+        if "output_name" in old_data:
+            new_settings["session"]["output_name"] = old_data["output_name"]
+        
+        if "window_width" in old_data:
+            new_settings["ui"]["window_width"] = old_data["window_width"]
+        if "window_height" in old_data:
+            new_settings["ui"]["window_height"] = old_data["window_height"]
+        if "window_x" in old_data:
+            new_settings["ui"]["window_x"] = old_data["window_x"]
+        if "window_y" in old_data:
+            new_settings["ui"]["window_y"] = old_data["window_y"]
+        if "theme" in old_data:
+            new_settings["ui"]["theme"] = old_data["theme"]
+        
+        if "last_export_dir" in old_data:
+            new_settings["paths"]["last_used_dir"] = old_data["last_export_dir"]
+        
+        self._logger.info("Settings migration completed")
+        return new_settings
 
     def _get_default_settings(self) -> dict[str, Any]:
         """Get default settings structure"""

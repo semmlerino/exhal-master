@@ -8,8 +8,8 @@ from typing import Any, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from spritepal.core.managers.exceptions import ValidationError
-from spritepal.utils.logging_config import get_logger
+from .exceptions import ValidationError
+from utils.logging_config import get_logger
 
 
 class BaseManager(QObject):
@@ -22,14 +22,15 @@ class BaseManager(QObject):
     operation_finished: pyqtSignal = pyqtSignal(str)  # Operation name
     progress_updated: pyqtSignal = pyqtSignal(str, int, int)  # Operation name, current, total
 
-    def __init__(self, name: str | None = None) -> None:
+    def __init__(self, name: str | None = None, parent: QObject | None = None) -> None:
         """
         Initialize base manager
 
         Args:
             name: manager name for logging
+            parent: Qt parent object for proper lifecycle management
         """
-        super().__init__()
+        super().__init__(parent)
 
         # Set up logger with module-specific naming
         self._name = name or self.__class__.__name__

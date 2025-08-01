@@ -20,7 +20,7 @@ from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.controller import ExtractionWorker
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.rom_extractor import ROMExtractor
 from spritepal.ui.rom_extraction.workers.scan_worker import SpriteScanWorker
@@ -369,7 +369,7 @@ class TestConcurrentExtraction:
         }
 
         # Create extraction worker
-        worker = ExtractionWorker(params)
+        worker = VRAMExtractionWorker(params)
 
         def on_finished(files):
             results["extraction_done"] = True
@@ -447,7 +447,7 @@ class TestConcurrentExtraction:
             }
 
             # Create and run worker
-            worker = ExtractionWorker(params)
+            worker = VRAMExtractionWorker(params)
             
             def on_finished(files, idx=i):
                 completed_extractions.append(idx)

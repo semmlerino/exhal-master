@@ -1099,7 +1099,9 @@ class TestCascadingErrorPrevention:
 
             # Simulate preview ready signal (which would trigger the failing preview)
             with contextlib.suppress(Exception):
-                controller._on_preview_ready(Mock(), 100)  # Error should be handled gracefully
+                # UPDATED FOR BUG #26: Pass PIL Image mock instead of generic Mock
+                mock_pil_image = Mock()  # Mock PIL Image for Qt threading safety
+                controller._on_preview_ready(mock_pil_image, 100)  # Error should be handled gracefully
 
             # Simulate successful extraction
             extracted_files = ["test_output.png"]

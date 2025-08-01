@@ -15,7 +15,8 @@
     "window_y": 180
   },
   "paths": {
-    "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal"
+    "last_used_dir": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal",
+    "default_dumps_dir": "C:\\Users\\gabri\\Documents\\Mesen2\\Debugger"
   },
   "test": {
     "key": "value",
@@ -26,7 +27,8 @@
     "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
     "last_sprite_location": "Kirby Sprite (0x123456)",
     "last_custom_offset": "0x123456",
-    "fast_compression": true
+    "fast_compression": true,
+    "last_output_rom": ""
   },
   "extraction": {
     "default_tile_width": 256,
@@ -49,6 +51,17 @@
   },
   "cache": {
     "enabled": true,
-    "location": "/tmp/pytest-of-gabrielh/pytest-78/test_cache_location_change_dur0/cache/cache2"
+    "location": "/tmp/pytest-of-gabrielh/pytest-21/test_cache_location_change_dur0/cache/cache2",
+    "max_size_mb": 500,
+    "expiration_days": 30,
+    "auto_cleanup": true,
+    "show_indicators": true
+  },
+  "recent_files": {
+    "vram": [],
+    "cgram": [],
+    "oam": [],
+    "rom": [],
+    "max_recent": 10
   }
 }

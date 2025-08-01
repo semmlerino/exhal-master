@@ -13,13 +13,20 @@ from typing import Any
 
 try:
     from spritepal.utils.logging_config import get_logger
-    from spritepal.utils.settings_manager import get_settings_manager
 except ImportError:
-    # Ultimate fallback - create a simple logger and settings
+    # Fallback logger
     import logging
     def get_logger(name: str) -> logging.Logger:
         return logging.getLogger(name)
-    def get_settings_manager() -> Any:
+
+# Delayed import to avoid circular dependency
+def get_settings_manager():
+    """Get settings manager with delayed import to avoid circular dependency"""
+    try:
+        from spritepal.utils.settings_manager import get_settings_manager as _gsm
+        return _gsm()
+    except ImportError:
+        logger.warning("Could not import settings manager")
         return None
 
 logger = get_logger(__name__)
@@ -38,8 +45,12 @@ class ROMCache:
             cache_dir: Optional custom cache directory. If None, uses settings or default
 
         """
-        # Get settings manager
-        self.settings_manager = get_settings_manager()
+        # Get settings manager (might be None if managers not initialized yet)
+        try:
+            self.settings_manager = get_settings_manager()
+        except Exception:
+            logger.warning("Could not get settings manager during ROM cache initialization")
+            self.settings_manager = None
 
         # Check if caching is enabled in settings
         if self.settings_manager:
@@ -532,6 +543,14 @@ class ROMCache:
 
     def refresh_settings(self) -> None:
         """Refresh cache settings from settings manager."""
+        # Try to get settings manager if we don't have one
+        if not self.settings_manager:
+            try:
+                self.settings_manager = get_settings_manager()
+            except Exception:
+                logger.warning("Could not get settings manager for cache refresh")
+                return
+        
         if not self.settings_manager:
             return
 

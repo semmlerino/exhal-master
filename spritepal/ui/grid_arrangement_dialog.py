@@ -498,7 +498,8 @@ class GridArrangementDialog(SplitterDialog):
             modal=True,
             size=(1600, 900),
             with_status_bar=True,
-            orientation=Qt.Orientation.Horizontal,
+            # Don't use automatic splitter creation - create explicitly in _setup_ui
+            orientation=None,
             splitter_handle_width=8,
         )
 
@@ -519,6 +520,9 @@ class GridArrangementDialog(SplitterDialog):
 
     def _setup_ui(self):
         """Set up the dialog UI using SplitterDialog panels"""
+        # Create horizontal splitter for left and right panels
+        self.main_splitter = self.add_horizontal_splitter(handle_width=8)
+        
         # Left panel - Grid view and controls
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
@@ -655,9 +659,12 @@ class GridArrangementDialog(SplitterDialog):
         preview_group.setLayout(preview_layout)
         right_layout.addWidget(preview_group, 1)
 
-        # Add panels to main splitter using SplitterDialog
-        self.add_panel(left_widget, stretch_factor=2)    # 67% for left panel
-        self.add_panel(right_widget, stretch_factor=1)   # 33% for right panel
+        # Add panels to main horizontal splitter directly
+        self.main_splitter.addWidget(left_widget)
+        self.main_splitter.setStretchFactor(0, 2)    # 67% for left panel
+        
+        self.main_splitter.addWidget(right_widget)
+        self.main_splitter.setStretchFactor(1, 1)   # 33% for right panel
 
         # Add custom buttons using SplitterDialog's button system
         self.export_btn = self.add_button("Export Arrangement", callback=self._export_arrangement)

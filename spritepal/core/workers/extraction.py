@@ -83,14 +83,15 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
         connection3 = extraction_manager.active_palettes_found.connect(self.active_palettes_ready.emit)
         self._connections.extend([connection2, connection3])
         
-        # Handle preview generation with PIL to QPixmap conversion
+        # Handle preview generation - emit PIL Image directly, let main thread convert to QPixmap
         def on_preview_generated(img: Image.Image, tile_count: int) -> None:
             try:
-                pixmap = pil_to_qpixmap(img)
-                self.preview_ready.emit(pixmap, tile_count)
+                # CRITICAL FIX FOR BUG #26: Don't create Qt GUI objects (QPixmap) in worker thread
+                # Let the main thread handle pil_to_qpixmap conversion to avoid Qt threading violations
+                self.preview_ready.emit(img, tile_count)  # Changed: emit PIL Image, not QPixmap
                 self.preview_image_ready.emit(img)
             except Exception as e:
-                logger.error(f"Failed to convert preview image: {e}")
+                logger.error(f"Failed to emit preview image: {e}")
                 self.emit_warning(f"Preview generation failed: {e}")
         
         connection4 = extraction_manager.preview_generated.connect(on_preview_generated)
@@ -273,14 +274,15 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase):
         connection3 = extraction_manager.active_palettes_found.connect(self.active_palettes_ready.emit)
         self._connections.extend([connection2, connection3])
         
-        # Handle preview generation with PIL to QPixmap conversion
+        # Handle preview generation - emit PIL Image directly, let main thread convert to QPixmap
         def on_preview_generated(img: Image.Image, tile_count: int) -> None:
             try:
-                pixmap = pil_to_qpixmap(img)
-                self.preview_ready.emit(pixmap, tile_count)
+                # CRITICAL FIX FOR BUG #26: Don't create Qt GUI objects (QPixmap) in worker thread
+                # Let the main thread handle pil_to_qpixmap conversion to avoid Qt threading violations
+                self.preview_ready.emit(img, tile_count)  # Changed: emit PIL Image, not QPixmap
                 self.preview_image_ready.emit(img)
             except Exception as e:
-                logger.error(f"Failed to convert preview image: {e}")
+                logger.error(f"Failed to emit preview image: {e}")
                 self.emit_warning(f"Preview generation failed: {e}")
         
         connection4 = extraction_manager.preview_generated.connect(on_preview_generated)

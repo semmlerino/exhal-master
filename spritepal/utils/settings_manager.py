@@ -1,5 +1,8 @@
 """
 Settings manager for SpritePal application
+
+This manager now delegates to SessionManager for actual storage to avoid
+conflicts when both managers save to the same file.
 """
 
 import json
@@ -7,77 +10,41 @@ import os
 from pathlib import Path
 from typing import Any
 
+from spritepal.core.managers import get_session_manager
+
 
 class SettingsManager:
     """Manages application settings and session persistence"""
 
     def __init__(self, app_name: str = "SpritePal") -> None:
         self.app_name: str = app_name
-        self._settings_file: Path = self._get_settings_file()
-        self._settings: dict[str, Any] = self._load_settings()
+        # Use SessionManager for all storage operations
+        self._session_manager = get_session_manager()
+        # Initialize default settings if not present
+        self._ensure_default_settings()
 
-    def _get_settings_file(self) -> Path:
-        """Get the settings file path"""
-        # Use current directory for now (could be user config dir in future)
-        return Path.cwd() / f".{self.app_name.lower()}_settings.json"
-
-    def _load_settings(self) -> dict[str, Any]:
-        """Load settings from file"""
-        if self._settings_file.exists():
-            try:
-                with open(self._settings_file) as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        return data
-                    print("Warning: Invalid settings file format")
-                    return {}
-            except (OSError, json.JSONDecodeError) as e:
-                print(f"Warning: Could not load settings: {e}")
-
-        # Return default settings
-        return {
-            "session": {
-                "vram_path": "",
-                "cgram_path": "",
-                "oam_path": "",
-                "output_name": "",
-                "create_grayscale": True,
-                "create_metadata": True,
-            },
-            "rom_injection": {
-                "last_input_rom": "",
-                "last_output_rom": "",
-                "last_sprite_location": "",
-                "last_custom_offset": "",
-                "fast_compression": False,
-            },
-            "ui": {
-                "window_width": 900,
-                "window_height": 600,
-                "window_x": -1,
-                "window_y": -1,
-            },
-            "paths": {
-                "default_dumps_dir": r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger",
-                "last_used_dir": "",
-            },
-            "cache": {
-                "enabled": True,
-                "location": "",  # Empty = default (~/.spritepal_rom_cache)
-                "max_size_mb": 500,
-                "expiration_days": 30,
-                "auto_cleanup": True,
-                "show_indicators": True,
-            },
-        }
+    def _ensure_default_settings(self) -> None:
+        """Ensure default settings exist in SessionManager"""
+        # Check and set default cache settings if not present
+        if self._session_manager.get("cache", "enabled") is None:
+            self._session_manager.set("cache", "enabled", True)
+        if self._session_manager.get("cache", "max_size_mb") is None:
+            self._session_manager.set("cache", "max_size_mb", 500)
+        if self._session_manager.get("cache", "expiration_days") is None:
+            self._session_manager.set("cache", "expiration_days", 30)
+        if self._session_manager.get("cache", "auto_cleanup") is None:
+            self._session_manager.set("cache", "auto_cleanup", True)
+        if self._session_manager.get("cache", "show_indicators") is None:
+            self._session_manager.set("cache", "show_indicators", True)
+        
+        # Set default paths if not present
+        if self._session_manager.get("paths", "default_dumps_dir") is None:
+            default_dir = str(Path.home() / "Documents" / "Mesen2" / "Debugger")
+            self._session_manager.set("paths", "default_dumps_dir", default_dir)
 
     def save_settings(self) -> None:
         """Save settings to file"""
-        try:
-            with open(self._settings_file, "w") as f:
-                json.dump(self._settings, f, indent=2)
-        except OSError as e:
-            print(f"Warning: Could not save settings: {e}")
+        self._session_manager.save_session()
 
     def save(self) -> None:
         """Save settings to file (alias for save_settings)"""
@@ -85,7 +52,7 @@ class SettingsManager:
 
     def get(self, category: str, key: str, default: Any = None) -> Any:
         """Get a setting value"""
-        return self._settings.get(category, {}).get(key, default)
+        return self._session_manager.get(category, key, default)
 
     def get_value(self, category: str, key: str, default: Any = None) -> Any:
         """Get a setting value (alias for get method)"""
@@ -93,9 +60,7 @@ class SettingsManager:
 
     def set(self, category: str, key: str, value: Any) -> None:
         """Set a setting value"""
-        if category not in self._settings:
-            self._settings[category] = {}
-        self._settings[category][key] = value
+        self._session_manager.set(category, key, value)
 
     def set_value(self, category: str, key: str, value: Any) -> None:
         """Set a setting value (alias for set method)"""
@@ -103,22 +68,26 @@ class SettingsManager:
 
     def get_session_data(self) -> dict[str, Any]:
         """Get all session data"""
-        session = self._settings.get("session", {})
-        return session if isinstance(session, dict) else {}
+        return self._session_manager.get_session_data()
 
     def save_session_data(self, session_data: dict[str, Any]) -> None:
         """Save session data"""
-        self._settings["session"] = session_data
-        self.save_settings()
+        self._session_manager.update_session_data(session_data)
 
     def get_ui_data(self) -> dict[str, Any]:
         """Get UI settings"""
-        ui_data = self._settings.get("ui", {})
-        return ui_data if isinstance(ui_data, dict) else {}
+        # Get all UI settings from SessionManager
+        ui_data = {}
+        for key in ["window_width", "window_height", "window_x", "window_y", "restore_position", "theme"]:
+            value = self._session_manager.get("ui", key)
+            if value is not None:
+                ui_data[key] = value
+        return ui_data
 
     def save_ui_data(self, ui_data: dict[str, Any]) -> None:
         """Save UI settings"""
-        self._settings["ui"] = ui_data
+        for key, value in ui_data.items():
+            self._session_manager.set("ui", key, value)
         self.save_settings()
 
     def validate_file_paths(self) -> dict[str, str]:
@@ -142,15 +111,7 @@ class SettingsManager:
 
     def clear_session(self) -> None:
         """Clear session data"""
-        self._settings["session"] = {
-            "vram_path": "",
-            "cgram_path": "",
-            "oam_path": "",
-            "output_name": "",
-            "create_grayscale": True,
-            "create_metadata": True,
-        }
-        self.save_settings()
+        self._session_manager.clear_session()
 
     def get_default_directory(self) -> str:
         """Get the default directory for file operations"""
@@ -181,17 +142,13 @@ class SettingsManager:
 
     def get_cache_settings(self) -> dict[str, Any]:
         """Get all cache settings"""
-        cache = self._settings.get("cache", {})
-        if isinstance(cache, dict):
-            return cache
-        # Return defaults if cache settings are corrupted
         return {
-            "enabled": True,
-            "location": "",
-            "max_size_mb": 500,
-            "expiration_days": 30,
-            "auto_cleanup": True,
-            "show_indicators": True,
+            "enabled": self.get("cache", "enabled", True),
+            "location": self.get("cache", "location", ""),
+            "max_size_mb": self.get("cache", "max_size_mb", 500),
+            "expiration_days": self.get("cache", "expiration_days", 30),
+            "auto_cleanup": self.get("cache", "auto_cleanup", True),
+            "show_indicators": self.get("cache", "show_indicators", True),
         }
 
     def set_cache_enabled(self, enabled: bool) -> None:

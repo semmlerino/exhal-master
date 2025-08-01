@@ -263,3 +263,156 @@ class TestSessionManager:
         # Create new manager and verify saved
         new_manager = SessionManager("TestApp")
         assert new_manager.get("session", "vram_path") == "/test/path.dmp"
+
+    def test_recent_files_limit(self, session_manager, tmp_path):
+        """Test recent files limit is respected"""
+        # Create many test files
+        files = []
+        for i in range(15):
+            file = tmp_path / f"file{i}.dmp"
+            file.touch()
+            files.append(str(file))
+
+        # Add all files
+        for file in files:
+            session_manager._add_recent_file("vram", file)
+
+        # Should only keep max_recent (10 by default)
+        recent = session_manager.get_recent_files("vram")
+        assert len(recent) == 10
+
+        # Most recent files should be kept
+        expected = list(reversed(files[-10:]))
+        assert recent == expected
+
+    def test_empty_and_null_values(self, session_manager):
+        """Test handling of empty and null values"""
+        # Empty string
+        session_manager.set("session", "vram_path", "")
+        assert session_manager.get("session", "vram_path") == ""
+
+        # None value
+        session_manager.set("session", "output_name", None)
+        assert session_manager.get("session", "output_name") is None
+
+        # Empty dict
+        session_manager.update_session_data({})
+        # Should not crash, values unchanged
+        assert session_manager.get("session", "vram_path") == ""
+
+    def test_invalid_file_paths(self, session_manager):
+        """Test handling of invalid file paths"""
+        # Non-existent file
+        session_manager.update_file_paths(vram="/non/existent/path.dmp")
+        # Should accept it (path validation is done elsewhere)
+        assert session_manager.get("session", "vram_path") == "/non/existent/path.dmp"
+
+        # Empty path
+        session_manager.update_file_paths(vram="", cgram=None)
+        assert session_manager.get("session", "vram_path") == ""
+        # None should not update
+        assert session_manager.get("session", "cgram_path") is not None
+
+    def test_concurrent_modifications(self, session_manager):
+        """Test concurrent modifications don't cause issues"""
+        # Simulate rapid changes
+        for i in range(100):
+            session_manager.set("session", "counter", i)
+
+        assert session_manager.get("session", "counter") == 99
+        assert session_manager._session_dirty
+
+    def test_corrupted_settings_file_recovery(self, temp_settings_dir):
+        """Test recovery from corrupted settings file"""
+        # Create corrupted settings file
+        settings_file = temp_settings_dir / ".testapp_settings.json"
+        settings_file.write_text('{"session": {"vram_path": "/test"')  # Incomplete JSON
+
+        # Should load defaults without crashing
+        manager = SessionManager("TestApp")
+        assert manager.get("session", "vram_path") == ""  # Default value
+
+    def test_large_settings_file(self, session_manager, tmp_path):
+        """Test handling of large settings"""
+        # Add many recent files
+        for i in range(100):
+            file = tmp_path / f"large_file_{i}.dmp"
+            file.touch()
+            for file_type in ["vram", "cgram", "oam", "rom"]:
+                session_manager._add_recent_file(file_type, str(file))
+
+        # Add large custom data
+        large_data = {f"key_{i}": f"value_{i}" * 100 for i in range(100)}
+        session_manager.set("large_category", "data", large_data)
+
+        # Save and reload
+        session_manager.save_session()
+
+        # Should handle large file without issues
+        new_manager = SessionManager("TestApp")
+        assert new_manager.get("large_category", "data") == large_data
+
+    def test_special_characters_in_paths(self, session_manager, tmp_path):
+        """Test handling of special characters in file paths"""
+        # Create file with special characters
+        special_file = tmp_path / "file with spaces & special!@#$%.dmp"
+        special_file.touch()
+
+        session_manager.update_file_paths(vram=str(special_file))
+        assert session_manager.get("session", "vram_path") == str(special_file)
+
+        # Add to recent files
+        session_manager._add_recent_file("vram", str(special_file))
+        recent = session_manager.get_recent_files("vram")
+        assert str(special_file) in recent
+
+    def test_export_to_invalid_location(self, session_manager):
+        """Test exporting to invalid location"""
+        with pytest.raises(SessionError, match="Could not export settings"):
+            session_manager.export_settings("/invalid/path/that/does/not/exist/settings.json")
+
+    def test_import_missing_sections(self, session_manager, tmp_path):
+        """Test importing settings with missing sections"""
+        # Create settings with only partial data
+        partial_file = tmp_path / "partial.json"
+        partial_file.write_text('{"session": {"vram_path": "/custom/path.dmp"}}')
+
+        # Should import and merge with defaults
+        session_manager.import_settings(str(partial_file))
+        assert session_manager.get("session", "vram_path") == "/custom/path.dmp"
+        assert session_manager.get("ui", "window_width") == 900  # Default
+
+    def test_window_state_partial_update(self, session_manager):
+        """Test partial window state updates"""
+        # Set initial state
+        session_manager.update_window_state({"width": 1000, "height": 700})
+
+        # Partial update
+        session_manager.update_window_state({"x": 50, "y": 100})
+
+        # All values should be present
+        geometry = session_manager.get_window_geometry()
+        assert geometry == {"width": 1000, "height": 700, "x": 50, "y": 100}
+
+    def test_session_changed_signal_batching(self, session_manager, qtbot):
+        """Test that multiple changes in update_session_data emit single signal"""
+        data = {
+            "vram_path": "/new/vram.dmp",
+            "cgram_path": "/new/cgram.dmp",
+            "oam_path": "/new/oam.dmp",
+            "output_name": "new_output"
+        }
+
+        # Should emit only one session_changed signal
+        with qtbot.waitSignal(session_manager.session_changed, timeout=100) as blocker:
+            session_manager.update_session_data(data)
+
+        # Should emit files_updated with all file changes
+        with qtbot.waitSignal(session_manager.files_updated) as blocker:
+            # Need to change values for signal to be emitted
+            session_manager.update_session_data({
+                "vram_path": "/another/vram.dmp",
+                "cgram_path": "/another/cgram.dmp",
+                "oam_path": "/another/oam.dmp"
+            })
+        assert len(blocker.args[0]) == 3  # vram, cgram, oam paths

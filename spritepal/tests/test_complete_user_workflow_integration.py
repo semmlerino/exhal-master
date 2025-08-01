@@ -16,7 +16,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
-from spritepal.core.controller import ExtractionController, ExtractionWorker
+from spritepal.core.controller import ExtractionController
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.managers.registry import (
     cleanup_managers as cleanup_managers_registry,
@@ -177,7 +178,7 @@ class TestCompleteUserWorkflow:
 
                 # Manually create the worker to have more control in test
                 params = mock_main_window.get_extraction_params()
-                worker = ExtractionWorker(params)
+                worker = VRAMExtractionWorker(params)
 
                 # Connect worker signals directly to controller methods
                 # This simulates what happens in start_extraction()
@@ -386,7 +387,7 @@ class TestCompleteUserWorkflow:
             mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Create and run worker
-            worker = ExtractionWorker(
+            worker = VRAMExtractionWorker(
                 mock_main_window.get_extraction_params()
             )
             controller = ExtractionController(mock_main_window)
@@ -484,7 +485,7 @@ class TestCompleteUserWorkflow:
                 mock_pyqt_signal.side_effect = lambda *args: Mock()
 
                 # Create and run worker
-                worker = ExtractionWorker(
+                worker = VRAMExtractionWorker(
                     mock_main_window.get_extraction_params()
                 )
 
@@ -556,7 +557,7 @@ class TestCompleteUserWorkflow:
 
             # Create controller and worker
             controller = ExtractionController(mock_main_window)
-            worker = ExtractionWorker(invalid_params)
+            worker = VRAMExtractionWorker(invalid_params)
 
             # Replace worker signals with mocks
             for signal_name, mock_signal in mock_qt_signals.items():
@@ -606,7 +607,7 @@ class TestCompleteUserWorkflow:
             mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Create recovery worker
-            recovery_worker = ExtractionWorker(valid_params)
+            recovery_worker = VRAMExtractionWorker(valid_params)
 
             # Replace worker signals with mocks
             for signal_name, mock_signal in mock_qt_signals.items():
