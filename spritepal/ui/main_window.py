@@ -881,7 +881,7 @@ class MainWindow(QMainWindow):
             "cgram_path": self.extraction_panel.get_cgram_path() if not self.extraction_panel.is_grayscale_mode() else "",
             "oam_path": self.extraction_panel.get_oam_path(),
             "vram_offset": self.extraction_panel.get_vram_offset(),
-            "output_base": self._output_path,
+            "output_base": self.output_name_edit.text(),  # CRITICAL FIX FOR BUG #8: Use single source of truth
             "create_grayscale": self.grayscale_check.isChecked(),
             "create_metadata": self.metadata_check.isChecked(),
             "grayscale_mode": self.extraction_panel.is_grayscale_mode(),
@@ -890,19 +890,31 @@ class MainWindow(QMainWindow):
     def extraction_complete(self, extracted_files: list[str]) -> None:
         """Called when extraction is complete"""
         self._extracted_files = extracted_files
-        self.extract_button.setEnabled(True)
-        self.open_editor_button.setEnabled(True)
-        self.arrange_rows_button.setEnabled(True)
-        self.arrange_grid_button.setEnabled(True)
-        self.inject_button.setEnabled(True)
-
-        # Update preview info
-        sprite_file = f"{self._output_path}.png"
-        if sprite_file in extracted_files:
+        
+        # CRITICAL FIX FOR BUG #7: Update _output_path based on actual extracted files
+        # This ensures UI state consistency with what was actually extracted
+        sprite_file = None
+        for file_path in extracted_files:
+            if file_path.endswith(".png"):
+                sprite_file = file_path
+                # Derive the actual output base path by removing .png extension
+                self._output_path = file_path[:-4]  # Remove ".png"
+                break
+        
+        # Enable buttons only if we successfully found a sprite file
+        if sprite_file:
+            self.extract_button.setEnabled(True)
+            self.open_editor_button.setEnabled(True)
+            self.arrange_rows_button.setEnabled(True)
+            self.arrange_grid_button.setEnabled(True)
+            self.inject_button.setEnabled(True)
+            
+            # Update preview info with successful extraction
             self.preview_info.setText(f"Extracted {len(extracted_files)} files")
             self.status_bar.showMessage("Extraction complete!")
         else:
-            self.status_bar.showMessage("Extraction failed")
+            # No PNG file found - this shouldn't happen with successful extraction
+            self.status_bar.showMessage("Extraction failed: No sprite file created")
 
     def extraction_failed(self, error_message: str) -> None:
         """Called when extraction fails"""
@@ -942,15 +954,18 @@ class MainWindow(QMainWindow):
             self.grayscale_check.setChecked(session_data.get("create_grayscale", True))
             self.metadata_check.setChecked(session_data.get("create_metadata", True))
 
-            # Restore window size/position
+            self.status_bar.showMessage("Previous session restored")
+        
+        # Always restore window size/position if enabled (regardless of session validity)
+        from spritepal.utils.settings_manager import get_settings_manager
+        settings_manager = get_settings_manager()
+        if settings_manager.get("ui", "restore_position", False):
             window_geometry = self.session_manager.get_window_geometry()
             if window_geometry["width"] > 0:
                 self.resize(window_geometry["width"], window_geometry["height"])
 
             if window_geometry["x"] >= 0:
                 self.move(window_geometry["x"], window_geometry["y"])
-
-            self.status_bar.showMessage("Previous session restored")
 
     def _save_session(self) -> None:
         """Save the current session"""

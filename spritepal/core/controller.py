@@ -27,6 +27,7 @@ from spritepal.core.managers import (
     get_injection_manager,
     get_session_manager,
 )
+from spritepal.core.workers import VRAMExtractionWorker, ROMExtractionWorker
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
@@ -65,75 +66,6 @@ class ROMExtractionParams(TypedDict):
 logger = get_logger(__name__)
 
 
-class ExtractionWorker(QThread):
-    """Worker thread for extraction process - thin wrapper around ExtractionManager"""
-
-    progress: pyqtSignal = pyqtSignal(str)  # status message
-    preview_ready: pyqtSignal = pyqtSignal(object, int)  # pixmap, tile_count
-    preview_image_ready: pyqtSignal = pyqtSignal(object)  # PIL image for palette application
-    palettes_ready: pyqtSignal = pyqtSignal(dict)  # palette data
-    active_palettes_ready: pyqtSignal = pyqtSignal(list)  # active palette indices
-    extraction_finished: pyqtSignal = pyqtSignal(list)  # extracted files
-    error: pyqtSignal = pyqtSignal(str)  # error message
-
-    def __init__(self, params: ExtractionParams) -> None:
-        super().__init__()
-        self.params: ExtractionParams = params
-        self.manager: ExtractionManager | None = None
-        self._connections: list[QMetaObject.Connection] = []
-
-    @override
-    def run(self) -> None:
-        """Run the extraction process using ExtractionManager"""
-        # Store connection references for proper disconnection
-
-        try:
-            # Get the extraction manager
-            self.manager = get_extraction_manager()
-
-            # Connect manager signals to worker signals BEFORE starting extraction
-            # to prevent race condition where signals are emitted before connections
-            connection1 = self.manager.extraction_progress.connect(self.progress.emit)
-            connection2 = self.manager.palettes_extracted.connect(self.palettes_ready.emit)
-            connection3 = self.manager.active_palettes_found.connect(self.active_palettes_ready.emit)
-
-            # Store connections for proper cleanup
-            self._connections.extend([connection1, connection2, connection3])
-
-            # Handle preview generation
-            def on_preview_generated(img: Image.Image, tile_count: int) -> None:
-                # Convert PIL image to QPixmap
-                pixmap = pil_to_qpixmap(img)
-                self.preview_ready.emit(pixmap, tile_count)
-                self.preview_image_ready.emit(img)
-
-            connection4 = self.manager.preview_generated.connect(on_preview_generated)
-            self._connections.append(connection4)
-
-            # Perform extraction using manager
-            extracted_files = self.manager.extract_from_vram(
-                vram_path=self.params["vram_path"],
-                output_base=self.params["output_base"],
-                cgram_path=self.params.get("cgram_path"),
-                oam_path=self.params.get("oam_path"),
-                vram_offset=self.params.get("vram_offset"),
-                create_grayscale=self.params.get("create_grayscale", True),
-                create_metadata=self.params.get("create_metadata", True),
-                grayscale_mode=self.params.get("grayscale_mode", False),
-            )
-
-            self.extraction_finished.emit(extracted_files)
-
-        except Exception as e:
-            self.error.emit(str(e))
-        finally:
-            # Disconnect only this worker's specific connections to avoid affecting other components
-            if self.manager and hasattr(self, "_connections"):
-                with contextlib.suppress(Exception):
-                    for connection in self._connections:
-                        if connection:
-                            _ = self.manager.disconnect(connection)
-
 
 class ExtractionController(QObject):
     """Controller for the extraction workflow"""
@@ -148,7 +80,7 @@ class ExtractionController(QObject):
         self.injection_manager: InjectionManager = get_injection_manager()
 
         # Workers still managed locally (thin wrappers)
-        self.worker: ExtractionWorker | None = None
+        self.worker: VRAMExtractionWorker | None = None
         self.rom_worker: ROMExtractionWorker | None = None
 
         # Connect UI signals
@@ -177,12 +109,74 @@ class ExtractionController(QObject):
         # Get parameters from UI
         params = self.main_window.get_extraction_params()
 
-        # Validate parameters using extraction manager
+        # PARAMETER VALIDATION: Check requirements first for better UX
+        # Users should get helpful parameter guidance before file system errors
         try:
             self.extraction_manager.validate_extraction_params(params)
         except Exception as e:
             self.main_window.extraction_failed(str(e))
             return
+
+        # DEFENSIVE VALIDATION: Prevent blocking I/O operations with invalid files
+        # This ensures fail-fast behavior before expensive worker thread operations
+        import os
+        vram_path = params.get("vram_path", "")
+        if not vram_path or not os.path.exists(vram_path):
+            self.main_window.extraction_failed(f"VRAM file does not exist: {vram_path}")
+            return
+            
+        # CRITICAL FIX FOR BUG #11: Add file format validation to prevent 2+ minute blocking
+        # Validate VRAM file format and size to prevent expensive processing of invalid files
+        try:
+            # Check VRAM file size (should be at least 64KB for valid SNES VRAM dump)
+            vram_size = os.path.getsize(vram_path)
+            if vram_size < 0x10000:  # 64KB minimum
+                self.main_window.extraction_failed(f"VRAM file too small ({vram_size} bytes). Expected at least 64KB.")
+                return
+            if vram_size > 0x100000:  # 1MB maximum (reasonable upper bound)
+                self.main_window.extraction_failed(f"VRAM file too large ({vram_size} bytes). Expected at most 1MB.")
+                return
+                
+            # Quick validation: try to read first few bytes to ensure file is readable
+            with open(vram_path, 'rb') as f:
+                header = f.read(16)  # Read first 16 bytes
+                if len(header) < 16:
+                    self.main_window.extraction_failed(f"VRAM file appears corrupted or truncated.")
+                    return
+        except (OSError, IOError) as e:
+            self.main_window.extraction_failed(f"Cannot read VRAM file: {e}")
+            return
+            
+        cgram_path = params.get("cgram_path", "")
+        grayscale_mode = params.get("grayscale_mode", False)
+        if not grayscale_mode and cgram_path:
+            if not os.path.exists(cgram_path):
+                self.main_window.extraction_failed(f"CGRAM file does not exist: {cgram_path}")
+                return
+            # Validate CGRAM file size (should be 512 bytes for SNES CGRAM)
+            try:
+                cgram_size = os.path.getsize(cgram_path)
+                if cgram_size != 512:
+                    self.main_window.extraction_failed(f"CGRAM file size invalid ({cgram_size} bytes). Expected 512 bytes.")
+                    return
+            except (OSError, IOError) as e:
+                self.main_window.extraction_failed(f"Cannot read CGRAM file: {e}")
+                return
+            
+        oam_path = params.get("oam_path", "")
+        if oam_path:
+            if not os.path.exists(oam_path):
+                self.main_window.extraction_failed(f"OAM file does not exist: {oam_path}")
+                return
+            # Validate OAM file size (should be 544 bytes for SNES OAM)
+            try:
+                oam_size = os.path.getsize(oam_path)
+                if oam_size != 544:
+                    self.main_window.extraction_failed(f"OAM file size invalid ({oam_size} bytes). Expected 544 bytes.")
+                    return
+            except (OSError, IOError) as e:
+                self.main_window.extraction_failed(f"Cannot read OAM file: {e}")
+                return
 
         # Create and start worker thread
         # Convert validated params dict to ExtractionParams TypedDict
@@ -196,7 +190,7 @@ class ExtractionController(QObject):
             "create_metadata": params.get("create_metadata", True),
             "grayscale_mode": params.get("grayscale_mode", False),
         }
-        self.worker = ExtractionWorker(extraction_params)
+        self.worker = VRAMExtractionWorker(extraction_params)
         _ = self.worker.progress.connect(self._on_progress)
         _ = self.worker.preview_ready.connect(self._on_preview_ready)
         _ = self.worker.preview_image_ready.connect(self._on_preview_image_ready)
@@ -206,7 +200,7 @@ class ExtractionController(QObject):
         _ = self.worker.error.connect(self._on_extraction_error)
         self.worker.start()
 
-    def _on_progress(self, message: str) -> None:
+    def _on_progress(self, percent: int, message: str) -> None:
         """Handle progress updates"""
         self.main_window.status_bar.showMessage(message)
 
@@ -233,7 +227,7 @@ class ExtractionController(QObject):
         self.main_window.extraction_complete(extracted_files)
         self._cleanup_worker()
 
-    def _on_extraction_error(self, error_message: str) -> None:
+    def _on_extraction_error(self, error_message: str, exception: Exception | None = None) -> None:
         """Handle extraction error"""
         self.main_window.extraction_failed(error_message)
         self._cleanup_worker()
@@ -622,7 +616,7 @@ class ExtractionController(QObject):
         _ = self.rom_worker.error.connect(self._on_rom_extraction_error)
         self.rom_worker.start()
 
-    def _on_rom_progress(self, message: str) -> None:
+    def _on_rom_progress(self, percent: int, message: str) -> None:
         """Handle ROM extraction progress"""
         self.main_window.status_bar.showMessage(message)
 
@@ -646,51 +640,3 @@ class ExtractionController(QObject):
             self.rom_worker = None
 
 
-class ROMExtractionWorker(QThread):
-    """Worker thread for ROM extraction process - thin wrapper around ExtractionManager"""
-
-    progress: pyqtSignal = pyqtSignal(str)  # status message
-    extraction_finished: pyqtSignal = pyqtSignal(list)  # extracted files
-    error: pyqtSignal = pyqtSignal(str)  # error message
-
-    def __init__(self, params: ROMExtractionParams) -> None:
-        super().__init__()
-        self.params: ROMExtractionParams = params
-        self.manager: ExtractionManager | None = None
-        self._connections: list[QMetaObject.Connection] = []
-
-    @override
-    def run(self) -> None:
-        """Run the ROM extraction process using ExtractionManager"""
-        # Store connection references for proper disconnection
-        self._connections = []
-
-        try:
-            # Get the extraction manager
-            self.manager = get_extraction_manager()
-
-            # Connect manager signals to worker signals BEFORE starting extraction
-            # to prevent race condition where signals are emitted before connections
-            connection = self.manager.extraction_progress.connect(self.progress.emit)
-            self._connections.append(connection)
-
-            # Perform extraction using manager
-            extracted_files = self.manager.extract_from_rom(
-                rom_path=self.params["rom_path"],
-                offset=self.params["sprite_offset"],
-                output_base=self.params["output_base"],
-                sprite_name=self.params["sprite_name"],
-                cgram_path=self.params.get("cgram_path"),
-            )
-
-            self.extraction_finished.emit(extracted_files)
-
-        except Exception as e:
-            self.error.emit(str(e))
-        finally:
-            # Disconnect only this worker's specific connections to avoid affecting other components
-            if self.manager and hasattr(self, "_connections"):
-                with contextlib.suppress(Exception):
-                    for connection in self._connections:
-                        if connection:
-                            _ = self.manager.disconnect(connection)

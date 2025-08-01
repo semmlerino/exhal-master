@@ -6,7 +6,7 @@ Refactored to use component-based architecture with SplitterDialog base.
 """
 
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 if TYPE_CHECKING:
     from spritepal.core.managers.extraction_manager import ExtractionManager
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 from PyQt6.QtCore import QMutex, QMutexLocker, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QHideEvent, QKeyEvent, QMouseEvent
-from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from spritepal.ui.components import SplitterDialog
 from spritepal.ui.components.panels import (
@@ -45,22 +45,26 @@ class ManualOffsetDialog(SplitterDialog):
 
     @classmethod
     def get_instance(cls, parent: "QWidget | None" = None) -> "ManualOffsetDialog":
-        """Get or create singleton instance"""
+        """Get or create singleton instance
+        
+        Note: Singleton dialogs are created without a parent to prevent
+        deletion when the parent is destroyed. The parent parameter is
+        ignored to ensure singleton persistence.
+        """
         if cls._instance is None:
-            cls._instance = cls(parent)
+            # Always create with parent=None for singletons
+            cls._instance = cls(parent=None)
         return cls._instance
 
     def __init__(self, parent: "QWidget | None" = None) -> None:
-        super().__init__(
-            parent=parent,
-            title="Manual Offset Control - SpritePal",
-            modal=False,
-            size=(1200, 700),  # Reduced default height
-            min_size=(1000, 600),  # Reduced minimum height
-            with_status_bar=False,
-            orientation=Qt.Orientation.Horizontal,
-            splitter_handle_width=6
-        )
+        # UI Components - declare BEFORE super().__init__() to avoid overwriting
+        self.rom_map: ROMMapWidget | None = None
+        self.offset_widget: ManualOffsetWidget | None = None
+        self.scan_controls: ScanControlsPanel | None = None
+        self.import_export: ImportExportPanel | None = None
+        self.status_panel: StatusPanel | None = None
+        self.preview_widget: SpritePreviewWidget | None = None
+        self.apply_btn: QPushButton | None = None
 
         # State
         self.rom_path: str = ""
@@ -82,16 +86,18 @@ class ManualOffsetDialog(SplitterDialog):
         self._is_fullscreen: bool = False
         self._normal_geometry: QRect | None = None
 
-        # UI Components - declare before _setup_dialog_ui() to avoid overwriting
-        self.rom_map: ROMMapWidget | None = None
-        self.offset_widget: ManualOffsetWidget | None = None
-        self.scan_controls: ScanControlsWidget | None = None
-        self.import_export: ImportExportControls | None = None
-        self.status_panel: StatusPanel | None = None
-        self.preview_widget: SpritePreviewWidget | None = None
-        self.apply_btn: QPushButton | None = None
+        super().__init__(
+            parent=parent,
+            title="Manual Offset Control - SpritePal",
+            modal=False,
+            size=(1200, 700),  # Reduced default height
+            min_size=(1000, 600),  # Reduced minimum height
+            with_status_bar=False,
+            orientation=Qt.Orientation.Horizontal,
+            splitter_handle_width=6
+        )
 
-        self._setup_dialog_ui()
+        self._setup_ui()
         self._connect_signals()
 
         # Add window flags to keep it on top if desired
@@ -102,8 +108,62 @@ class ManualOffsetDialog(SplitterDialog):
         )
         # Store original flags for fullscreen toggle
         self._original_window_flags = self.windowFlags()
+        
+        # IMPORTANT: Disable WA_DeleteOnClose for singleton dialogs
+        # BaseDialog sets this to True, but singletons must persist
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+        
+        # Set window modality appropriately for parentless singleton
+        if parent is None:
+            self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
-    def _setup_dialog_ui(self):
+    def _is_widget_valid(self, widget) -> bool:
+        """Check if a Qt widget still has its underlying C++ object"""
+        if widget is None:
+            return False
+        try:
+            # Try to access a basic Qt property - this will raise RuntimeError if deleted
+            _ = widget.objectName()
+            return True
+        except RuntimeError:
+            # "wrapped C/C++ object has been deleted"
+            return False
+
+    def _widgets_are_valid(self) -> bool:
+        """Check if all critical widgets are still valid"""
+        critical_widgets = [
+            self.rom_map, self.offset_widget, self.scan_controls,
+            self.import_export, self.status_panel, self.preview_widget
+        ]
+        return all(self._is_widget_valid(widget) for widget in critical_widgets)
+
+    def _reinitialize_ui(self) -> None:
+        """Reinitialize UI components when widgets have been garbage collected"""
+        logger.warning("Reinitializing ManualOffsetDialog UI due to Qt widget lifecycle cleanup")
+        
+        # Clear existing references to deleted widgets
+        self.rom_map = None
+        self.offset_widget = None
+        self.scan_controls = None
+        self.import_export = None
+        self.status_panel = None
+        self.preview_widget = None
+        self.apply_btn = None
+        
+        # Recreate the UI
+        self._setup_ui()
+        self._connect_signals()
+        
+        # Restore ROM data if it was set
+        if self.rom_path and self.extraction_manager:
+            self.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
+
+    def ensure_widgets_valid(self) -> None:
+        """Ensure widgets are valid, reinitializing if necessary (public method for tests)"""
+        if not self._widgets_are_valid():
+            self._reinitialize_ui()
+
+    def _setup_ui(self):
         """Initialize the dialog-specific UI components"""
         # Create left panel with controls
         left_panel = self._create_left_panel()
@@ -137,26 +197,27 @@ class ManualOffsetDialog(SplitterDialog):
         rom_map_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 2px;")  # Smaller font and margin
         rom_map_layout.addWidget(rom_map_label)
 
-        self.rom_map = ROMMapWidget()
+        self.rom_map = ROMMapWidget(parent=rom_map_group)
         rom_map_layout.addWidget(self.rom_map)
 
         rom_map_group.setLayout(rom_map_layout)
         layout.addWidget(rom_map_group)
 
-        # Manual offset widget (reusing existing widget)
-        self.offset_widget = ManualOffsetWidget()
+        # Manual offset widget (reusing existing widget) - set proper parent
+        self.offset_widget = ManualOffsetWidget(parent=panel)
         layout.addWidget(self.offset_widget)
 
-        # Scan controls panel
-        self.scan_controls = ScanControlsPanel()
+        # Scan controls panel - set proper parent
+        self.scan_controls = ScanControlsPanel(parent=panel)
         layout.addWidget(self.scan_controls)
 
-        # Import/Export panel
-        self.import_export = ImportExportPanel()
+        # Import/Export panel - set proper parent
+        self.import_export = ImportExportPanel(parent=panel)
         layout.addWidget(self.import_export)
 
-        # Status panel
-        self.status_panel = StatusPanel()
+        # Status panel - CRITICAL FIX: Pass parent to prevent Qt lifecycle bug
+        # Bug #25: StatusPanel QLabel was being deleted prematurely due to missing parent
+        self.status_panel = StatusPanel(parent=panel)
         layout.addWidget(self.status_panel)
 
         # Smaller stretch to reduce empty space
@@ -175,8 +236,8 @@ class ManualOffsetDialog(SplitterDialog):
         layout.setContentsMargins(3, 3, 3, 3)  # Small margins
         layout.setSpacing(4)  # Tighter spacing
 
-        # Sprite preview
-        self.preview_widget = SpritePreviewWidget("Live Preview")
+        # Sprite preview - set proper parent to prevent Qt lifecycle bugs
+        self.preview_widget = SpritePreviewWidget("Live Preview", parent=panel)
         self.preview_widget.setStyleSheet(get_preview_panel_style())
         layout.addWidget(self.preview_widget)
 
@@ -260,6 +321,9 @@ class ManualOffsetDialog(SplitterDialog):
 
     def _on_cache_hit(self, cache_type: str, time_saved: float) -> None:
         """Handle cache hit - update status panel"""
+        # Ensure widgets are valid before accessing them
+        self.ensure_widgets_valid()
+        
         # Update cache status to reflect any changes
         self.status_panel.update_cache_status()
 
@@ -273,6 +337,9 @@ class ManualOffsetDialog(SplitterDialog):
 
     def _on_cache_saved(self, cache_type: str, count: int) -> None:
         """Handle cache saved - update status panel"""
+        # Ensure widgets are valid before accessing them
+        self.ensure_widgets_valid()
+        
         # Update cache status to reflect new cached items
         self.status_panel.update_cache_status()
 
@@ -287,10 +354,14 @@ class ManualOffsetDialog(SplitterDialog):
 
     def get_current_offset(self) -> int:
         """Get the current offset value"""
+        # Ensure widgets are valid before accessing them
+        self.ensure_widgets_valid() 
         return self.offset_widget.get_current_offset()
 
     def set_offset(self, offset: int):
         """Set the current offset"""
+        # Ensure widgets are valid before accessing them
+        self.ensure_widgets_valid()
         self.offset_widget.set_offset(offset)
 
     def _on_offset_changed(self, offset: int):
