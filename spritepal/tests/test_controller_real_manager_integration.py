@@ -23,6 +23,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict
+from unittest.mock import patch, Mock
 
 import pytest
 from PyQt6.QtTest import QSignalSpy
@@ -236,48 +237,52 @@ class TestRealControllerManagerIntegration:
         """
         initialize_managers(app_name="SpritePal-Test")
         
-        with qt_widget_test(MainWindow) as main_window:
-            controller = ExtractionController(main_window)
+        # CRITICAL FIX FOR BUG #29: Mock UserErrorDialog to prevent blocking modal dialogs in tests
+        with patch("spritepal.ui.dialogs.user_error_dialog.UserErrorDialog.show_error") as mock_error_dialog:
+            mock_error_dialog.return_value = None  # Non-blocking
             
-            # ARCHITECTURAL DISCOVERY: extraction_failed is a METHOD, not a signal!
-            # This is the kind of real architecture understanding that mocks hide
-            # We can't spy on method calls with QSignalSpy - need different approach
+            with qt_widget_test(MainWindow) as main_window:
+                controller = ExtractionController(main_window)
             
-            # Test real error propagation with invalid parameters
-            invalid_params = {
-                "vram_path": "/nonexistent/path.dmp",  # This will cause real file I/O error
-                "cgram_path": "/nonexistent/cgram.dmp",
-                "output_base": "/invalid/output/path",
-                "create_grayscale": True,
-            }
-            
-            # Mock MainWindow to return invalid params
-            original_get_params = main_window.get_extraction_params
-            main_window.get_extraction_params = lambda: invalid_params
-            
-            try:
-                # Start extraction with invalid params - should trigger real error chain
-                controller.start_extraction()
+                # ARCHITECTURAL DISCOVERY: extraction_failed is a METHOD, not a signal!
+                # This is the kind of real architecture understanding that mocks hide
+                # We can't spy on method calls with QSignalSpy - need different approach
                 
-                # Process events to allow error propagation
-                self.qt_app.processEvents()
+                # Test real error propagation with invalid parameters
+                invalid_params = {
+                    "vram_path": "/nonexistent/path.dmp",  # This will cause real file I/O error
+                    "cgram_path": "/nonexistent/cgram.dmp",
+                    "output_base": "/invalid/output/path",
+                    "create_grayscale": True,
+                }
                 
-                # Real error should propagate through manager to controller to UI
-                # This tests the full error chain vs individual mock error simulation
+                # Mock MainWindow to return invalid params
+                original_get_params = main_window.get_extraction_params
+                main_window.get_extraction_params = lambda: invalid_params
                 
-                # Since extraction_failed is a method, not a signal, we test the real workflow:
-                # Controller should call main_window.extraction_failed() on error
-                # We can verify this by checking that the controller handles errors gracefully
-                
-                # Test that controller remains functional after error attempt
-                print("Testing real error propagation through controller-manager chain")
-                
-                # Controller should remain in valid state after real error
-                assert controller is not None, "Controller should handle real errors gracefully"
-                
-            finally:
-                # Restore method
-                main_window.get_extraction_params = original_get_params
+                try:
+                    # Start extraction with invalid params - should trigger real error chain
+                    controller.start_extraction()
+                    
+                    # Process events to allow error propagation
+                    self.qt_app.processEvents()
+                    
+                    # Real error should propagate through manager to controller to UI
+                    # This tests the full error chain vs individual mock error simulation
+                    
+                    # Since extraction_failed is a method, not a signal, we test the real workflow:
+                    # Controller should call main_window.extraction_failed() on error
+                    # We can verify this by checking that the controller handles errors gracefully
+                    
+                    # Test that controller remains functional after error attempt
+                    print("Testing real error propagation through controller-manager chain")
+                    
+                    # Controller should remain in valid state after real error
+                    assert controller is not None, "Controller should handle real errors gracefully"
+                    
+                finally:
+                    # Restore method
+                    main_window.get_extraction_params = original_get_params
     
     def test_real_manager_lifecycle_coordination_vs_mocked_lifecycle(self):
         """
@@ -339,41 +344,47 @@ class TestRealControllerManagerIntegration:
         """
         initialize_managers(app_name="SpritePal-Test")
         
-        with qt_widget_test(MainWindow) as main_window:
-            controller = ExtractionController(main_window)
+        # CRITICAL FIX FOR BUG #29: Mock UserErrorDialog to prevent blocking modal dialogs in tests
+        with patch("spritepal.ui.dialogs.user_error_dialog.UserErrorDialog.show_error") as mock_error_dialog:
+            mock_error_dialog.return_value = None  # Non-blocking
             
-            # Get real managers for state testing
-            extraction_manager = get_extraction_manager()
-            session_manager = get_session_manager()
-            
-            # Test manager state consistency
-            # Real managers should maintain consistent state
-            # Mock managers operate independently and can't test real state sync
-            
-            # Simulate state change through controller
-            controller._on_progress(75, "Testing state synchronization")
-            
-            # Test extraction completion state propagation
-            test_files = ["state_test.png", "state_test.pal.json"]
-            controller._on_extraction_finished(test_files)
-            
-            # Process events to allow state propagation
-            self.qt_app.processEvents()
-            
-            # Validate controller state updated correctly
-            assert controller.worker is None, "Worker should be cleaned up after completion"
-            
-            # Test error state synchronization
-            controller.worker = object()  # Set fake worker to test cleanup
-            controller._on_extraction_error("State synchronization test error")
-            
-            # Validate error state cleanup
-            assert controller.worker is None, "Worker should be cleaned up after error"
-            
-            # Test that managers remain in consistent state
-            # This would expose state synchronization bugs between managers
-            assert extraction_manager is not None, "ExtractionManager should remain accessible"
-            assert session_manager is not None, "SessionManager should remain accessible"
+            with qt_widget_test(MainWindow) as main_window:
+                controller = ExtractionController(main_window)
+                
+                # Get real managers for state testing
+                extraction_manager = get_extraction_manager()
+                session_manager = get_session_manager()
+                
+                # Test manager state consistency
+                # Real managers should maintain consistent state
+                # Mock managers operate independently and can't test real state sync
+                
+                # Simulate state change through controller
+                controller._on_progress(75, "Testing state synchronization")
+                
+                # Test extraction completion state propagation
+                test_files = ["state_test.png", "state_test.pal.json"]
+                controller._on_extraction_finished(test_files)
+                
+                # Process events to allow state propagation
+                self.qt_app.processEvents()
+                
+                # Validate controller state updated correctly
+                assert controller.worker is None, "Worker should be cleaned up after completion"
+                
+                # Test error state synchronization
+                mock_worker = Mock()
+                mock_worker.isRunning.return_value = False
+                controller.worker = mock_worker  # Set mock worker to test cleanup
+                controller._on_extraction_error("State synchronization test error")
+                
+                # Validate error state cleanup
+                assert controller.worker is None, "Worker should be cleaned up after error"
+                
+                # Test that managers remain in consistent state
+                # This would expose state synchronization bugs between managers
+                assert extraction_manager is not None, "ExtractionManager should remain accessible"
+                assert session_manager is not None, "SessionManager should remain accessible"
 
 
 class TestRealControllerWorkerManagerChain:
@@ -421,8 +432,10 @@ class TestRealControllerWorkerManagerChain:
                 "grayscale_mode": True,  # Simpler mode for integration testing
             }
             
-            # Set up signal spies for full chain monitoring
-            ui_spy = QSignalSpy(main_window.extraction_complete) if hasattr(main_window, 'extraction_complete') else None
+            # CRITICAL FIX: extraction_complete is a METHOD, not a signal (Bug #10)
+            # Track method calls instead of signal emissions
+            extraction_complete_calls = []
+            main_window.extraction_complete = lambda files: extraction_complete_calls.append(files)
             
             # Mock MainWindow parameter gathering
             original_get_params = main_window.get_extraction_params
@@ -450,9 +463,9 @@ class TestRealControllerWorkerManagerChain:
                 # The key is that all layers coordinate without errors
                 assert controller is not None, "Controller should remain valid after full chain"
                 
-                if ui_spy and len(ui_spy) > 0:
-                    # If completion signal was emitted, validate it
-                    completion_args = ui_spy[0]
+                if extraction_complete_calls:
+                    # If completion method was called, validate it
+                    completion_args = extraction_complete_calls[0]
                     print(f"REAL FULL CHAIN SUCCESS: {completion_args}")
                 
                 # Test that full chain left system in clean state

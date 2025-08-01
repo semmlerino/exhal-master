@@ -247,7 +247,7 @@ class TestMainWindowToArrangementDialog:
 
             # Test arrange rows dialog creation
             with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = (
@@ -938,8 +938,9 @@ class TestDialogDataPersistence:
             controller = ExtractionController(window_helper)
 
             # Mock arrangement dialog with palette support
+            # Patch where it's used in controller, not where it's defined
             with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1015,7 +1016,7 @@ class TestDialogDataPersistence:
                     ]
 
                     # Set up window state - this is what start_injection() uses
-                    controller._output_path = os.path.join(temp_dir, "test_sprite")
+                    window_helper._output_path = os.path.join(temp_dir, "test_sprite")
 
                     # Trigger injection
                     controller.start_injection()
@@ -1041,7 +1042,7 @@ class TestDialogDataPersistence:
             mock_get_session.return_value = mock_settings
 
             # Test settings usage in injection dialog
-            with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
                 mock_dialog_instance.get_parameters.return_value = {
@@ -1060,7 +1061,7 @@ class TestDialogDataPersistence:
                 window_helper = TestMainWindowHelperSimple()
                 controller = ExtractionController(window_helper)
                 # Set up window state - this is what start_injection() uses
-                controller._output_path = "test_sprite"
+                window_helper._output_path = "test_sprite"
 
                 # Trigger injection
                 controller.start_injection()
@@ -1102,7 +1103,7 @@ class TestDialogCancellationHandling:
 
             # Mock cancelled dialog
             with patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
@@ -1132,13 +1133,13 @@ class TestDialogCancellationHandling:
         controller = ExtractionController(window_helper)
 
         # Mock cancelled injection dialog
-        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
             mock_dialog.return_value = mock_dialog_instance
 
             # Set up controller state
-            controller._output_path = "test_sprite"
+            window_helper._output_path = "test_sprite"
 
             # Trigger injection
             controller.start_injection()
@@ -1163,7 +1164,7 @@ class TestDialogCancellationHandling:
 
         # Mock cancelled dialog with resource cleanup
         with patch(
-            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+            "spritepal.core.controller.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 0  # Rejected/Cancelled
@@ -1198,10 +1199,10 @@ class TestDialogCancellationHandling:
         # Mock cancelled dialogs
         with (
             patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_arrange_dialog,
             patch(
-                "spritepal.ui.injection_dialog.InjectionDialog"
+                "spritepal.core.controller.InjectionDialog"
             ) as mock_inject_dialog,
         ):
 
@@ -1221,7 +1222,7 @@ class TestDialogCancellationHandling:
                 controller.open_row_arrangement("test_sprite.png")
 
                 # Cancel injection dialog
-                controller._output_path = "test_sprite"
+                window_helper._output_path = "test_sprite"
                 controller.start_injection()
 
                 # Verify both dialogs were created
@@ -1253,7 +1254,7 @@ class TestModalDialogInteraction:
 
         # Mock modal dialog
         with patch(
-            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+            "spritepal.core.controller.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1284,7 +1285,7 @@ class TestModalDialogInteraction:
         controller = ExtractionController(window_helper)
 
         # Mock dialog with focus management
-        with patch("spritepal.ui.injection_dialog.InjectionDialog") as mock_dialog:
+        with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
             mock_dialog_instance.get_parameters.return_value = {
@@ -1297,7 +1298,7 @@ class TestModalDialogInteraction:
             mock_dialog.return_value = mock_dialog_instance
 
             # Set up controller state
-            controller._output_path = "test_sprite"
+            window_helper._output_path = "test_sprite"
 
             # Trigger injection
             controller.start_injection()
@@ -1307,7 +1308,7 @@ class TestModalDialogInteraction:
             call_args = mock_dialog.call_args
 
             # Verify parent window was set
-            assert call_args[0][2] == window_helper  # parent parameter
+            assert call_args[0][0] == window_helper  # parent is first parameter
 
     @pytest.mark.integration
     def test_dialog_memory_management(self):
@@ -1322,7 +1323,7 @@ class TestModalDialogInteraction:
 
         # Mock dialog with memory management
         with patch(
-            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+            "spritepal.core.controller.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
@@ -1357,10 +1358,10 @@ class TestModalDialogInteraction:
         # Mock multiple dialogs
         with (
             patch(
-                "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                "spritepal.core.controller.RowArrangementDialog"
             ) as mock_arrange_dialog,
             patch(
-                "spritepal.ui.injection_dialog.InjectionDialog"
+                "spritepal.core.controller.InjectionDialog"
             ) as mock_inject_dialog,
         ):
 
@@ -1391,7 +1392,7 @@ class TestModalDialogInteraction:
                 mock_arrange_dialog.assert_called_once()
 
                 # Simulate arranged sprite being used for injection
-                controller._output_path = "arranged"
+                window_helper._output_path = "arranged"
                 controller.start_injection()
 
                 # Verify injection dialog was created
@@ -1436,10 +1437,10 @@ class TestCrossDialogIntegration:
             # Mock all dialogs in the workflow
             with (
                 patch(
-                    "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+                    "spritepal.core.controller.RowArrangementDialog"
                 ) as mock_arrange_dialog,
                 patch(
-                    "spritepal.ui.injection_dialog.InjectionDialog"
+                    "spritepal.core.controller.InjectionDialog"
                 ) as mock_inject_dialog,
                 patch("subprocess.Popen") as mock_popen,
             ):
@@ -1468,7 +1469,7 @@ class TestCrossDialogIntegration:
                     controller.open_row_arrangement(sprite_file)
 
                     # Step 2: Inject arranged sprite
-                    controller._output_path = "test_arranged"
+                    window_helper._output_path = "test_arranged"
                     controller.start_injection()
 
                     # Verify complete workflow
@@ -1495,7 +1496,7 @@ class TestCrossDialogIntegration:
 
         # Mock arrangement dialog with error
         with patch(
-            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+            "spritepal.core.controller.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.side_effect = Exception("Dialog error")
@@ -1525,7 +1526,7 @@ class TestCrossDialogIntegration:
 
         # Mock slow dialog execution
         with patch(
-            "spritepal.ui.row_arrangement_dialog.RowArrangementDialog"
+            "spritepal.core.controller.RowArrangementDialog"
         ) as mock_dialog:
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = 1  # Accepted
