@@ -211,6 +211,11 @@ class ROMExtractor:
         num_tiles = len(tile_data) // BYTES_PER_TILE
         tiles_per_row = 16  # Standard width for sprite sheets
 
+        # Handle empty data gracefully
+        if num_tiles == 0:
+            logger.info("No tile data to convert (0 bytes)")
+            return 0
+
         # Check if we have partial tile data
         if len(tile_data) % BYTES_PER_TILE != 0:
             logger.warning(f"Tile data not aligned: {len(tile_data)} bytes ({len(tile_data) % BYTES_PER_TILE} extra bytes)")

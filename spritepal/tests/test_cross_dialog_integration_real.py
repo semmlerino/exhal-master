@@ -35,6 +35,7 @@ from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 
 
+@pytest.mark.gui
 class TestRealCrossDialogIntegration:
     """
     Real cross-dialog integration tests.

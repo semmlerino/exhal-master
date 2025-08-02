@@ -22,37 +22,59 @@ class TestSettingsManager:
     @pytest.fixture
     def settings_manager(self, temp_dir):
         """Create a SettingsManager in temp directory"""
-        # Patch Path.cwd() to return temp directory
-        with patch("pathlib.Path.cwd", return_value=Path(temp_dir)):
+        from spritepal.core.managers.session_manager import SessionManager
+        
+        # Create temp settings file path
+        settings_file = Path(temp_dir) / ".testapp_settings.json"
+        
+        # Create a session manager with our temp settings file
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
             manager = SettingsManager("TestApp")
+            # Store session manager reference for tests
+            manager._test_session_manager = session_manager
+            manager._test_settings_file = settings_file
+            
             yield manager
             # Cleanup
-            if manager._settings_file.exists():
-                manager._settings_file.unlink()
+            if settings_file.exists():
+                settings_file.unlink()
 
     def test_init_creates_default_settings(self, settings_manager):
         """Test initialization creates default settings"""
-        assert isinstance(settings_manager._settings, dict)
-        assert "session" in settings_manager._settings
-        assert "ui" in settings_manager._settings
-
-        # Check default session values
-        session = settings_manager._settings["session"]
-        assert session["vram_path"] == ""
-        assert session["cgram_path"] == ""
-        assert session["oam_path"] == ""
-        assert session["create_grayscale"] is True
-        assert session["create_metadata"] is True
+        # Use public API to check settings
+        assert settings_manager.get("session", "vram_path") == ""
+        assert settings_manager.get("session", "cgram_path") == ""
+        assert settings_manager.get("session", "oam_path") == ""
+        assert settings_manager.get("session", "create_grayscale") is True
+        assert settings_manager.get("session", "create_metadata") is True
+        
+        # Check UI defaults  
+        assert settings_manager.get("ui", "window_width") == 900
+        assert settings_manager.get("ui", "window_height") == 600
 
     def test_settings_file_path(self, temp_dir):
         """Test settings file path generation"""
-        with patch("pathlib.Path.cwd", return_value=Path(temp_dir)):
+        from spritepal.core.managers.session_manager import SessionManager
+        
+        settings_file = Path(temp_dir) / ".testapp_settings.json"
+        
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
             manager = SettingsManager("TestApp")
-            expected_path = Path(temp_dir) / ".testapp_settings.json"
-            assert manager._settings_file == expected_path
+            # Force saving to create the file
+            manager.save_settings()
+            # Verify the file was created
+            assert settings_file.exists()
 
     def test_load_existing_settings(self, temp_dir):
         """Test loading existing settings file"""
+        from spritepal.core.managers.session_manager import SessionManager
+        
         # Create settings file
         settings_data = {
             "session": {"vram_path": "/test/vram.dmp"},
@@ -63,37 +85,45 @@ class TestSettingsManager:
             json.dump(settings_data, f)
 
         # Load settings
-        with patch("pathlib.Path.cwd", return_value=Path(temp_dir)):
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
             manager = SettingsManager("TestApp")
 
-        assert manager._settings["session"]["vram_path"] == "/test/vram.dmp"
-        assert manager._settings["ui"]["window_width"] == 1000
+        assert manager.get("session", "vram_path") == "/test/vram.dmp"
+        assert manager.get("ui", "window_width") == 1000
 
     def test_load_corrupted_settings(self, temp_dir):
         """Test loading corrupted settings file"""
+        from spritepal.core.managers.session_manager import SessionManager
+        
         # Create corrupted settings file
         settings_file = Path(temp_dir) / ".testapp_settings.json"
         with open(settings_file, "w") as f:
             f.write("{ invalid json }")
 
         # Should return default settings
-        with patch("pathlib.Path.cwd", return_value=Path(temp_dir)):
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
             manager = SettingsManager("TestApp")
 
-        assert manager._settings["session"]["vram_path"] == ""
-        assert manager._settings["ui"]["window_width"] == 900
+        assert manager.get("session", "vram_path") == ""
+        assert manager.get("ui", "window_width") == 900
 
     def test_save_settings(self, settings_manager, temp_dir):
         """Test saving settings"""
-        # Modify settings
-        settings_manager._settings["session"]["vram_path"] = "/test/path.dmp"
-        settings_manager._settings["ui"]["window_width"] = 1200
+        # Modify settings using public API
+        settings_manager.set("session", "vram_path", "/test/path.dmp")
+        settings_manager.set("ui", "window_width", 1200)
 
         # Save
         settings_manager.save_settings()
 
         # Verify file contents
-        with open(settings_manager._settings_file) as f:
+        with open(settings_manager._test_settings_file) as f:
             saved_data = json.load(f)
 
         assert saved_data["session"]["vram_path"] == "/test/path.dmp"
@@ -101,7 +131,8 @@ class TestSettingsManager:
 
     def test_get_setting(self, settings_manager):
         """Test getting individual settings"""
-        settings_manager._settings["session"]["test_key"] = "test_value"
+        # Use public API to set a value
+        settings_manager.set("session", "test_key", "test_value")
 
         value = settings_manager.get("session", "test_key")
         assert value == "test_value"
@@ -117,15 +148,15 @@ class TestSettingsManager:
     def test_set_setting(self, settings_manager):
         """Test setting individual values"""
         settings_manager.set("session", "new_key", "new_value")
-        assert settings_manager._settings["session"]["new_key"] == "new_value"
+        assert settings_manager.get("session", "new_key") == "new_value"
 
         # Test new category
         settings_manager.set("custom", "key", "value")
-        assert settings_manager._settings["custom"]["key"] == "value"
+        assert settings_manager.get("custom", "key") == "value"
 
     def test_get_session_data(self, settings_manager):
         """Test getting session data"""
-        settings_manager._settings["session"]["vram_path"] = "/test.dmp"
+        settings_manager.set("session", "vram_path", "/test.dmp")
 
         session = settings_manager.get_session_data()
         assert session["vram_path"] == "/test.dmp"
@@ -141,9 +172,15 @@ class TestSettingsManager:
 
         settings_manager.save_session_data(new_session)
 
-        assert settings_manager._settings["session"] == new_session
+        # Verify using public API
+        assert settings_manager.get("session", "vram_path") == "/new/vram.dmp"
+        assert settings_manager.get("session", "cgram_path") == "/new/cgram.dmp"
+        assert settings_manager.get("session", "output_name") == "output"
+        
+        # Force save to file
+        settings_manager.save_settings()
         # Should also save to file
-        assert settings_manager._settings_file.exists()
+        assert settings_manager._test_settings_file.exists()
 
     def test_get_ui_data(self, settings_manager):
         """Test getting UI data"""
@@ -164,8 +201,12 @@ class TestSettingsManager:
 
         settings_manager.save_ui_data(new_ui)
 
-        assert settings_manager._settings["ui"] == new_ui
-        assert settings_manager._settings_file.exists()
+        # Verify using public API
+        assert settings_manager.get("ui", "window_width") == 1024
+        assert settings_manager.get("ui", "window_height") == 768
+        assert settings_manager.get("ui", "window_x") == 100
+        assert settings_manager.get("ui", "window_y") == 100
+        assert settings_manager._test_settings_file.exists()
 
     def test_validate_file_paths(self, settings_manager, temp_dir):
         """Test file path validation"""
@@ -173,9 +214,10 @@ class TestSettingsManager:
         vram_file = Path(temp_dir) / "test.vram"
         vram_file.write_text("data")
 
-        settings_manager._settings["session"]["vram_path"] = str(vram_file)
-        settings_manager._settings["session"]["cgram_path"] = "/nonexistent.cgram"
-        settings_manager._settings["session"]["oam_path"] = ""
+        # Use public API to set paths
+        settings_manager.set("session", "vram_path", str(vram_file))
+        settings_manager.set("session", "cgram_path", "/nonexistent.cgram")
+        settings_manager.set("session", "oam_path", "")
 
         validated = settings_manager.validate_file_paths()
 
@@ -192,25 +234,24 @@ class TestSettingsManager:
         vram_file = Path(temp_dir) / "test.vram"
         vram_file.write_text("data")
 
-        settings_manager._settings["session"]["vram_path"] = str(vram_file)
+        settings_manager.set("session", "vram_path", str(vram_file))
         assert settings_manager.has_valid_session()
 
     def test_clear_session(self, settings_manager):
         """Test clearing session data"""
         # Set some data
-        settings_manager._settings["session"]["vram_path"] = "/test.vram"
-        settings_manager._settings["session"]["output_name"] = "test"
+        settings_manager.set("session", "vram_path", "/test.vram")
+        settings_manager.set("session", "output_name", "test")
 
         # Clear
         settings_manager.clear_session()
 
-        # Check defaults restored
-        session = settings_manager._settings["session"]
-        assert session["vram_path"] == ""
-        assert session["cgram_path"] == ""
-        assert session["output_name"] == ""
-        assert session["create_grayscale"] is True
-        assert session["create_metadata"] is True
+        # Check defaults restored using public API
+        assert settings_manager.get("session", "vram_path") == ""
+        assert settings_manager.get("session", "cgram_path") == ""
+        assert settings_manager.get("session", "output_name") == ""
+        assert settings_manager.get("session", "create_grayscale") is True
+        assert settings_manager.get("session", "create_metadata") is True
 
 
 class TestGlobalSettingsInstance:

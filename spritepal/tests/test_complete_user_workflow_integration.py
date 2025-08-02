@@ -324,13 +324,16 @@ class TestCompleteUserWorkflow:
         assert Path(sprite_file).exists()
 
         # Patch dialog creation to avoid Qt widget issues in tests
+        # Must patch BEFORE emitting the signal since dialog creation is synchronous
         with (
             patch("spritepal.ui.row_arrangement_dialog.RowArrangementDialog") as mock_dialog_class,
-            patch("spritepal.ui.common.error_handler.QMessageBox.critical")):
+            patch("spritepal.ui.common.error_handler.QMessageBox.critical"),
+            patch("spritepal.core.controller.RowArrangementDialog") as mock_controller_dialog):
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = True
             mock_dialog_instance.get_arranged_path.return_value = sprite_file + "_arranged"
             mock_dialog_class.return_value = mock_dialog_instance
+            mock_controller_dialog.return_value = mock_dialog_instance
 
             # Simulate arrangement request using helper
             mock_main_window.simulate_arrange_rows_request(sprite_file)

@@ -212,13 +212,21 @@ class TestSettingsIntegration:
         with open(settings_file, "w") as f:
             json.dump(old_settings, f)
 
-        # Load with new settings manager
-        settings = SettingsManager()
-
-        # Should migrate old flat structure to new categorized structure
-        # (This would be implemented in the actual SettingsManager)
-        # For now, verify it can at least load without error
-        assert settings._settings is not None
+        # Need to ensure SessionManager loads from our temp file
+        from spritepal.core.managers.session_manager import SessionManager
+        
+        # Create a session manager with our temp settings file
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
+            # Now create SettingsManager which will use our mocked SessionManager
+            settings = SettingsManager()
+            
+            # Verify migration worked through the public API
+            assert settings.get("session", "vram_path") == "/old/path.dmp"
+            assert settings.get("ui", "window_width") == 800
+            assert settings.get("ui", "window_height") == 600
 
     def test_concurrent_settings_access(self, temp_settings_dir):
         """Test concurrent access to settings"""
@@ -239,16 +247,24 @@ class TestSettingsIntegration:
         with open(settings_file, "w") as f:
             f.write("{ corrupted json }")
 
-        # Should load defaults without crashing
-        settings = SettingsManager()
-
-        # Verify defaults loaded
-        assert settings.get("session", "vram_path") == ""
-        assert settings.get("ui", "window_width") == 900
-
-        # Should be able to save valid settings
-        settings.set("session", "vram_path", "/new/path.dmp")
-        settings.save_settings()
+        # Need to ensure SessionManager loads from our temp file
+        from spritepal.core.managers.session_manager import SessionManager
+        
+        # Create a session manager with our temp settings file
+        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+            session_manager = SessionManager(settings_path=settings_file)
+            mock_get_sm.return_value = session_manager
+            
+            # Should load defaults without crashing
+            settings = SettingsManager()
+            
+            # Verify defaults loaded (since file was corrupted)
+            assert settings.get("session", "vram_path") == ""
+            assert settings.get("ui", "window_width") == 900
+            
+            # Should be able to save valid settings
+            settings.set("session", "vram_path", "/new/path.dmp")
+            settings.save_settings()
 
         # Verify file is now valid JSON
         with open(settings_file) as f:
@@ -286,19 +302,21 @@ class TestSettingsIntegration:
         # Export to dict (for backup/sharing)
         export_data = {
             "session": settings.get_session_data(),
-            "extraction": settings._settings.get("extraction", {}),
-            "appearance": settings._settings.get("appearance", {}),
+            "extraction": {"tile_width": settings.get("extraction", "tile_width", 256)},
+            "appearance": {"theme": settings.get("appearance", "theme", "dark")},
         }
 
         # Clear settings
         settings.clear_session()
-        settings._settings["extraction"] = {}
-        settings._settings["appearance"] = {}
+        settings.set("extraction", "tile_width", 128)  # Set to different value
+        settings.set("appearance", "theme", "light")  # Set to different value
 
-        # Import back
-        settings._settings["session"] = export_data["session"]
-        settings._settings["extraction"] = export_data["extraction"]
-        settings._settings["appearance"] = export_data["appearance"]
+        # Import back - use the public API to restore settings
+        # Session data has its own method
+        settings.save_session_data(export_data["session"])
+        # Other settings use set method
+        settings.set("extraction", "tile_width", export_data["extraction"]["tile_width"])
+        settings.set("appearance", "theme", export_data["appearance"]["theme"])
 
         # Verify imported correctly
         assert settings.get("session", "vram_path") == "/test/vram.dmp"

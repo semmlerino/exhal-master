@@ -166,14 +166,16 @@ class TestROMInjectionDialog(unittest.TestCase):
         dialog = InjectionDialog()
         self.qtbot.addWidget(dialog)
 
-        # Check tabs exist
-        assert dialog.tabs.count() == 2
-        assert dialog.tabs.tabText(0) == "VRAM Injection"
-        assert dialog.tabs.tabText(1) == "ROM Injection"
+        # Check tabs exist - tab_widget is created when add_tab is called
+        assert hasattr(dialog, "tab_widget")
+        assert dialog.tab_widget is not None
+        assert dialog.tab_widget.count() == 2
+        assert dialog.tab_widget.tabText(0) == "VRAM Injection"
+        assert dialog.tab_widget.tabText(1) == "ROM Injection"
 
         # Check ROM-specific widgets exist
-        assert hasattr(dialog, "input_rom_edit")
-        assert hasattr(dialog, "output_rom_edit")
+        assert hasattr(dialog, "input_rom_selector")
+        assert hasattr(dialog, "output_rom_selector")
         assert hasattr(dialog, "sprite_location_combo")
         assert hasattr(dialog, "fast_compression_check")
 
