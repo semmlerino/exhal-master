@@ -89,28 +89,37 @@ class SpritePreviewWidget(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.setLayout(layout)
 
-    def _get_efficient_scale_size(self, original_width: int, original_height: int) -> tuple[int, int]:
-        """Get efficient scale size that minimizes wasted space"""
-        # For very small sprites, use 2x scale minimum for visibility
+    def _scale_pixmap_efficiently(self, pixmap: QPixmap) -> QPixmap:
+        """Scale pixmap efficiently to minimize wasted space"""
+        original_width = pixmap.width()
+        original_height = pixmap.height()
+        
+        # Determine efficient scale size
         if original_width <= 32 and original_height <= 32:
-            return original_width * 2, original_height * 2
+            # Very small sprites: 2x scale for visibility
+            scale_width, scale_height = original_width * 2, original_height * 2
+        elif original_width <= 64 and original_height <= 64:
+            # Small sprites: 1.5x scale
+            scale_width, scale_height = int(original_width * 1.5), int(original_height * 1.5)
+        elif original_width <= 128 and original_height <= 128:
+            # Medium sprites: original size
+            scale_width, scale_height = original_width, original_height
+        else:
+            # Large sprites: scale down to reasonable size
+            max_dimension = max(original_width, original_height)
+            if max_dimension > 200:
+                scale_factor = 200 / max_dimension
+                scale_width, scale_height = int(original_width * scale_factor), int(original_height * scale_factor)
+            else:
+                scale_width, scale_height = original_width, original_height
         
-        # For small sprites, use 1.5x scale
-        if original_width <= 64 and original_height <= 64:
-            return int(original_width * 1.5), int(original_height * 1.5)
-        
-        # For medium sprites, use original size or slight scale
-        if original_width <= 128 and original_height <= 128:
-            return original_width, original_height
-        
-        # For larger sprites, scale down to reasonable size
-        max_dimension = max(original_width, original_height)
-        if max_dimension > 200:
-            scale_factor = 200 / max_dimension
-            return int(original_width * scale_factor), int(original_height * scale_factor)
-        
-        # Default: use original size
-        return original_width, original_height
+        # Apply scaling
+        return pixmap.scaled(
+            scale_width,
+            scale_height,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
 
     def load_sprite_from_png(self, png_path: str, sprite_name: str | None = None):
         """Load sprite from PNG file"""
@@ -189,13 +198,7 @@ class SpritePreviewWidget(QWidget):
         pixmap = QPixmap.fromImage(qimg)
 
         # Scale for preview - adaptive sizing for space efficiency
-        scale_width, scale_height = self._get_efficient_scale_size(pixmap.width(), pixmap.height())
-        scaled = pixmap.scaled(
-            scale_width,
-            scale_height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.FastTransformation,
-        )
+        scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
         self.sprite_pixmap = pixmap
@@ -242,13 +245,7 @@ class SpritePreviewWidget(QWidget):
         pixmap = QPixmap.fromImage(qimg)
 
         # Scale for preview - adaptive sizing for space efficiency
-        scale_width, scale_height = self._get_efficient_scale_size(pixmap.width(), pixmap.height())
-        scaled = pixmap.scaled(
-            scale_width,
-            scale_height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.FastTransformation,
-        )
+        scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
         self.sprite_pixmap = pixmap

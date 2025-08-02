@@ -37,7 +37,7 @@ from spritepal.ui.components.visualization import ROMMapWidget
 from spritepal.ui.dialogs.services import ViewStateManager
 from spritepal.ui.rom_extraction.widgets.manual_offset_widget import ManualOffsetWidget
 from spritepal.ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
-from spritepal.ui.styles import get_panel_style, get_preview_panel_style
+from spritepal.ui.styles import get_panel_style, get_borderless_preview_style
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from spritepal.utils.logging_config import get_logger
 
@@ -194,12 +194,13 @@ class ManualOffsetDialogSimplified(DialogBase):
         """Create the right preview panel"""
         panel = QWidget()
         layout = QVBoxLayout()
-        layout.setContentsMargins(3, 3, 3, 3)  # Small margins
-        layout.setSpacing(4)  # Tighter spacing
+        layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum space efficiency
+        layout.setSpacing(0)  # Zero spacing for maximum space efficiency
 
-        # Sprite preview - set proper parent to prevent Qt lifecycle bugs
+        # Sprite preview - set proper parent to prevent Qt lifecycle bugs  
+        # SPACE EFFICIENCY: Use borderless style to eliminate wasted space
         self.preview_widget = SpritePreviewWidget("Live Preview", parent=panel)
-        self.preview_widget.setStyleSheet(get_preview_panel_style())
+        self.preview_widget.setStyleSheet(get_borderless_preview_style())
         layout.addWidget(self.preview_widget)
 
         panel.setLayout(layout)
