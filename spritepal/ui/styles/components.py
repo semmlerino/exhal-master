@@ -504,9 +504,24 @@ def get_preview_panel_style() -> str:
     """
     return f"""
     QLabel {{
-        border: {DIMENSIONS["border_width_thick"]}px solid {COLORS["border"]};
-        background-color: {COLORS["light_gray"]};
-        border-radius: {DIMENSIONS["border_radius"]}px;
+        border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
+        background-color: {COLORS["background"]};
+        border-radius: {DIMENSIONS["border_radius_small"]}px;
+    }}
+    """
+
+def get_minimal_preview_style() -> str:
+    """
+    Get minimal preview styling CSS for compact displays
+
+    Returns:
+        CSS string for minimal preview styling
+    """
+    return f"""
+    QLabel {{
+        border: 1px solid {COLORS["border"]};
+        background-color: {COLORS["background"]};
+        border-radius: 2px;
     }}
     """
 

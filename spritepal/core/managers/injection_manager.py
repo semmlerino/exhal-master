@@ -8,16 +8,15 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
 if TYPE_CHECKING:
     from .session_manager import SessionManager
 
-from core.injector import InjectionWorker
-from .base_manager import BaseManager
-from .exceptions import ValidationError
-from core.rom_injector import ROMInjectionWorker
-from utils.constants import (
+from spritepal.core.injector import InjectionWorker
+from spritepal.core.rom_injector import ROMInjectionWorker
+from spritepal.ui.common import WorkerManager
+from spritepal.utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
@@ -26,7 +25,10 @@ from utils.constants import (
     SETTINGS_KEY_VRAM_PATH,
     SETTINGS_NS_ROM_INJECTION,
 )
-from utils.rom_cache import get_rom_cache
+from spritepal.utils.rom_cache import get_rom_cache
+
+from .base_manager import BaseManager
+from .exceptions import ValidationError
 
 
 class InjectionManager(BaseManager):
@@ -39,22 +41,21 @@ class InjectionManager(BaseManager):
     progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
     cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the injection manager"""
         super().__init__("InjectionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize injection components"""
         self._current_worker: QThread | None = None
-        self._is_initialized = True
+        self._is_initialized: bool = True
         self._logger.info("InjectionManager initialized")
 
     def cleanup(self) -> None:
         """Cleanup injection resources"""
-        if self._current_worker and self._current_worker.isRunning():
+        if self._current_worker:
             self._logger.info("Stopping active injection worker")
-            _ = self._current_worker.terminate()
-            _ = self._current_worker.wait(5000)  # Wait up to 5 seconds
+            WorkerManager.cleanup_worker(self._current_worker, timeout=5000)
         self._current_worker = None
 
     def _get_session_manager(self) -> "SessionManager":
@@ -96,9 +97,7 @@ class InjectionManager(BaseManager):
             self.validate_injection_params(params)
 
             # Stop any existing worker
-            if self._current_worker and self._current_worker.isRunning():
-                _ = self._current_worker.terminate()
-                _ = self._current_worker.wait(1000)
+            WorkerManager.cleanup_worker(self._current_worker, timeout=1000)
 
             # Create appropriate worker based on mode
             if params["mode"] == "vram":

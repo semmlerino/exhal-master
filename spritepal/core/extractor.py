@@ -24,9 +24,9 @@ class SpriteExtractor:
 
     def __init__(self) -> None:
         self.vram_data: bytes | None = None
-        self.offset = VRAM_SPRITE_OFFSET
-        self.size = VRAM_SPRITE_SIZE
-        self.tiles_per_row = DEFAULT_TILES_PER_ROW
+        self.offset: int = VRAM_SPRITE_OFFSET
+        self.size: int = VRAM_SPRITE_SIZE
+        self.tiles_per_row: int = DEFAULT_TILES_PER_ROW
         logger.debug(f"SpriteExtractor initialized: offset=0x{self.offset:04X}, size={self.size}, tiles_per_row={self.tiles_per_row}")
 
     def load_vram(self, vram_path: str) -> None:
@@ -85,7 +85,7 @@ class SpriteExtractor:
         logger.info(f"Extracting {num_tiles} tiles from {len(sprite_data)} bytes of sprite data")
 
         # Extract each tile
-        tiles = []
+        tiles: list[list[list[int]]] = []
         log_interval = 100  # Log progress every 100 tiles
 
         for tile_idx in range(num_tiles):
@@ -108,11 +108,11 @@ class SpriteExtractor:
         if len(tile_data) < BYTES_PER_TILE:
             logger.warning(f"Tile data is incomplete: {len(tile_data)} bytes (expected {BYTES_PER_TILE})")
 
-        pixels = []
+        pixels: list[list[int]] = []
 
         # 4bpp SNES format: 32 bytes per 8x8 tile
         for y in range(8):
-            row = []
+            row: list[int] = []
             # Get the 4 bytes for this row
             b0 = tile_data[y * 2] if y * 2 < len(tile_data) else 0
             b1 = tile_data[y * 2 + 1] if y * 2 + 1 < len(tile_data) else 0

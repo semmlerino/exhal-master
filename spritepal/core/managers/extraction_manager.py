@@ -7,20 +7,20 @@ import time
 from dataclasses import asdict
 from typing import Any
 
+from spritepal.core.extractor import SpriteExtractor
+from spritepal.core.palette_manager import PaletteManager
+from spritepal.core.rom_extractor import ROMExtractor
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal
-
-from core.extractor import SpriteExtractor
-from .base_manager import BaseManager
-from .exceptions import ExtractionError, ValidationError
-from core.palette_manager import PaletteManager
-from core.rom_extractor import ROMExtractor
-from utils.constants import (
+from PyQt6.QtCore import pyqtSignal, QObject
+from spritepal.utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
 )
-from utils.rom_cache import get_rom_cache
+from spritepal.utils.rom_cache import get_rom_cache
+
+from .base_manager import BaseManager
+from .exceptions import ExtractionError, ValidationError
 
 
 class ExtractionManager(BaseManager):
@@ -37,16 +37,16 @@ class ExtractionManager(BaseManager):
     cache_miss: pyqtSignal = pyqtSignal(str)  # Cache type
     cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the extraction manager"""
         super().__init__("ExtractionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize extraction components"""
-        self._sprite_extractor = SpriteExtractor()
-        self._rom_extractor = ROMExtractor()
-        self._palette_manager = PaletteManager()
-        self._is_initialized = True
+        self._sprite_extractor: SpriteExtractor = SpriteExtractor()
+        self._rom_extractor: ROMExtractor = ROMExtractor()
+        self._palette_manager: PaletteManager = PaletteManager()
+        self._is_initialized: bool = True
         self._logger.info("ExtractionManager initialized")
 
     def cleanup(self) -> None:
@@ -344,7 +344,7 @@ class ExtractionManager(BaseManager):
             raise ValidationError("Output name is required for extraction")
 
         # Note: Optional file existence validation is now handled by controller
-        
+
         # Return True if all validation passes
         return True
 

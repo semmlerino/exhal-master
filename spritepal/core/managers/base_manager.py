@@ -5,11 +5,12 @@ Base manager class providing common functionality for all managers
 import os
 import threading
 from typing import Any, Callable
+import logging
 
 from PyQt6.QtCore import QObject, pyqtSignal
+from spritepal.utils.logging_config import get_logger
 
 from .exceptions import ValidationError
-from utils.logging_config import get_logger
 
 
 class BaseManager(QObject):
@@ -33,15 +34,15 @@ class BaseManager(QObject):
         super().__init__(parent)
 
         # Set up logger with module-specific naming
-        self._name = name or self.__class__.__name__
-        self._logger = get_logger(f"managers.{self._name}")
+        self._name: str = name or self.__class__.__name__
+        self._logger: logging.Logger = get_logger(f"managers.{self._name}")
 
         # Thread safety
-        self._lock = threading.RLock()
+        self._lock: threading.RLock = threading.RLock()
         self._operation_locks: dict[str, threading.Lock] = {}
 
         # State tracking
-        self._is_initialized = False
+        self._is_initialized: bool = False
         self._active_operations: set[str] = set()
 
         # Initialize the manager

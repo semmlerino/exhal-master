@@ -5,11 +5,12 @@ Registry for accessing manager instances
 import threading
 from typing import Any
 
+from utils.logging_config import get_logger
+
 from .exceptions import ManagerError
 from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager
 from .session_manager import SessionManager
-from utils.logging_config import get_logger
 
 
 class ManagerRegistry:
