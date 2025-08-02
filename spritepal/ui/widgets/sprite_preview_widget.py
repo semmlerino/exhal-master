@@ -46,13 +46,13 @@ class SpritePreviewWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
         layout.setSpacing(0)  # Zero spacing for maximum efficiency
 
-        # Preview label - adaptive sizing for maximum space efficiency
+        # Preview label - MAXIMUM space efficiency: size exactly to content
         self.preview_label = QLabel()
-        # Remove rigid size constraints - let content determine size
-        self.preview_label.setMinimumSize(64, 64)  # Very small minimum for tiny sprites
-        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum, not excessive
+        # NO minimum size - let tiny sprites be tiny for maximum space efficiency
+        self.preview_label.setMinimumSize(1, 1)  # Absolute minimum for any content
+        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum only
         self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Size to content, not expanding
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed  # Fixed size = exact content size
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(get_borderless_preview_style())
@@ -201,6 +201,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
+        # SPACE EFFICIENCY: Resize label to exact pixmap size for no wasted space
+        self.preview_label.adjustSize()  # Shrink to exact content size
         self.sprite_pixmap = pixmap
 
         # No palette selection for indexed sprites
@@ -248,6 +250,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
+        # SPACE EFFICIENCY: Resize label to exact pixmap size for no wasted space
+        self.preview_label.adjustSize()  # Shrink to exact content size
         self.sprite_pixmap = pixmap
 
     def _on_palette_changed(self, index: int):
