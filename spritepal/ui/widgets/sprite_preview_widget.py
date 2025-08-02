@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 
 from spritepal.core.default_palette_loader import DefaultPaletteLoader
 from spritepal.core.managers import get_extraction_manager
-from spritepal.ui.styles import get_muted_text_style, get_preview_panel_style
+from spritepal.ui.styles import get_muted_text_style, get_borderless_preview_style
 from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -41,14 +41,12 @@ class SpritePreviewWidget(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        """Initialize the user interface"""
+        """Initialize the user interface - optimized for maximum space efficiency"""
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
+        layout.setSpacing(0)  # Zero spacing for maximum efficiency
 
-        # Group box
-        group = QGroupBox(self.title)
-        group_layout = QVBoxLayout()
-
-        # Preview label
+        # Preview label - maximum space efficiency
         self.preview_label = QLabel()
         self.preview_label.setMinimumSize(256, 256)
         self.preview_label.setMaximumSize(512, 512)
@@ -56,11 +54,19 @@ class SpritePreviewWidget(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setStyleSheet(get_preview_panel_style())
-        group_layout.addWidget(self.preview_label)
+        self.preview_label.setStyleSheet(get_borderless_preview_style())
+        layout.addWidget(self.preview_label)
 
-        # Palette selector
+        # Compact controls container - minimal space
+        controls_widget = QWidget()
+        controls_layout = QVBoxLayout()
+        controls_layout.setContentsMargins(2, 2, 2, 2)  # Minimal margins only for controls
+        controls_layout.setSpacing(2)  # Minimal spacing only for controls
+
+        # Palette selector - compact
         palette_layout = QHBoxLayout()
+        palette_layout.setContentsMargins(0, 0, 0, 0)
+        palette_layout.setSpacing(4)
         palette_layout.addWidget(QLabel("Palette:"))
         self.palette_combo = QComboBox()
         self.palette_combo.setMinimumWidth(150)
@@ -68,15 +74,15 @@ class SpritePreviewWidget(QWidget):
         palette_layout.addWidget(self.palette_combo)
         palette_layout.addStretch()
 
-        group_layout.addLayout(palette_layout)
+        controls_layout.addLayout(palette_layout)
 
-        # Info label
+        # Info label - compact
         self.info_label = QLabel("No sprite loaded")
         self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
-        group_layout.addWidget(self.info_label)
+        controls_layout.addWidget(self.info_label)
 
-        group.setLayout(group_layout)
-        layout.addWidget(group)
+        controls_widget.setLayout(controls_layout)
+        layout.addWidget(controls_widget)
 
         self.setLayout(layout)
 

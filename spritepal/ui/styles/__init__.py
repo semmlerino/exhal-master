@@ -6,6 +6,7 @@ Centralized styling system for consistent UI appearance and maintainability.
 
 from .components import (
     get_bold_text_style,
+    get_borderless_preview_style,
     get_button_style,
     get_dialog_button_box_style,
     get_error_text_style,
@@ -35,6 +36,7 @@ __all__ = [
     "DIMENSIONS",
     "FONTS",
     "get_bold_text_style",
+    "get_borderless_preview_style",
     "get_button_style",
     "get_dialog_button_box_style",
     "get_error_text_style",
