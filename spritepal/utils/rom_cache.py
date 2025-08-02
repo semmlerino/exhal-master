@@ -176,6 +176,9 @@ class ROMCache:
             return False
 
         try:
+            # Ensure cache directory exists before saving (thread-safe)
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            
             # Write to temp file then move to avoid corruption
             temp_file = cache_file.with_suffix(".tmp")
             with open(temp_file, "w") as f:
@@ -575,11 +578,16 @@ class ROMCache:
 
 
 # Global cache instance
+import threading
 _rom_cache_instance: ROMCache | None = None
+_rom_cache_lock = threading.Lock()
 
 def get_rom_cache() -> ROMCache:
-    """Get the global ROM cache instance."""
+    """Get the global ROM cache instance (thread-safe)."""
     global _rom_cache_instance
     if _rom_cache_instance is None:
-        _rom_cache_instance = ROMCache()
+        with _rom_cache_lock:
+            # Double-check locking pattern
+            if _rom_cache_instance is None:
+                _rom_cache_instance = ROMCache()
     return _rom_cache_instance
