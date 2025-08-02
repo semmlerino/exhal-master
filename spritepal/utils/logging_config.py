@@ -5,7 +5,7 @@ import logging.handlers
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, IO
+from typing import Any
 
 
 def setup_logging(
@@ -100,7 +100,7 @@ def setup_logging(
                 return 0
             def tell(self) -> int:
                 return 0
-            def __enter__(self) -> 'PermanentNullStream':
+            def __enter__(self) -> "PermanentNullStream":
                 return self
             def __exit__(self, *args: Any) -> None:
                 pass

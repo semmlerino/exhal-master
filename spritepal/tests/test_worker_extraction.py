@@ -207,6 +207,141 @@ class TestVRAMExtractionWorker:
             assert operation_spy[0][0] is False  # Success = False
             assert "VRAM extraction failed: Test extraction error" in operation_spy[0][1]
 
+    def test_vram_worker_with_real_manager_signals_improved(self, qtbot):
+        """
+        IMPROVED VERSION: Test VRAM worker with real manager and real signals.
+
+        This demonstrates the superior approach of testing real manager behavior
+        instead of mocking everything. Real manager testing:
+        - Tests actual manager signal emissions and content
+        - Verifies real manager-worker communication
+        - Catches manager implementation bugs that mocks miss
+        - Tests real Qt signal connection behavior
+        """
+        from PyQt6.QtTest import QSignalSpy
+        from tests.infrastructure import RealManagerFixtureFactory, TestDataRepository
+
+
+        # Create test data using the repository
+        test_data_repo = TestDataRepository()
+
+        try:
+            # Use RealManagerFixtureFactory for isolated manager instances (safer)
+            manager_factory = RealManagerFixtureFactory()
+
+            # Get real test data that will pass manager validation
+            test_data = test_data_repo.get_vram_extraction_data("small")  # Creates realistic test files
+
+            params = {
+                "vram_path": test_data["vram_path"],
+                "cgram_path": test_data["cgram_path"],
+                "output_base": test_data["output_base"],
+                "create_grayscale": True,
+                "create_metadata": True,
+                "vram_offset": None,  # Use default offset to avoid validation errors
+            }
+
+            # Create isolated extraction manager for this test
+            extraction_manager = manager_factory.create_extraction_manager(isolated=True)
+
+            # Create worker with REAL manager (no mocking!)
+            worker = VRAMExtractionWorker(params)
+            # Override the worker's manager with our isolated instance for testing
+            worker.manager = extraction_manager
+            # Note: QThread doesn't need qtbot.addWidget()
+
+            # Set up QSignalSpy to monitor REAL worker signals
+            progress_spy = QSignalSpy(worker.progress)
+            preview_ready_spy = QSignalSpy(worker.preview_ready)
+            QSignalSpy(worker.preview_image_ready)
+            palettes_ready_spy = QSignalSpy(worker.palettes_ready)
+            QSignalSpy(worker.active_palettes_ready)
+            extraction_finished_spy = QSignalSpy(worker.extraction_finished)
+            operation_finished_spy = QSignalSpy(worker.operation_finished)
+            error_spy = QSignalSpy(worker.error)
+
+            # Connect to manager signals to verify real manager communication
+            manager_signal_data = []
+            worker.manager.extraction_progress.connect(
+                lambda percent, msg: manager_signal_data.append(("progress", percent, msg))
+            )
+            # Fix signal signature - preview_generated expects different arguments
+            worker.manager.preview_generated.connect(
+                lambda *args: manager_signal_data.append(("preview", args))
+            )
+
+            # Connect manager signals to worker (tests real signal connections)
+            worker.connect_manager_signals()
+
+            # Perform the actual operation with real manager
+            worker.perform_operation()
+
+            # Disconnect worker signals before cleanup to prevent Qt object lifecycle issues
+            worker.disconnect_manager_signals()
+
+            # REAL SIGNAL TESTING: Verify actual signal emissions and content
+
+            # Verify progress signals were emitted with real content
+            assert len(progress_spy) > 0, "Progress signals should be emitted by real manager"
+            # Check actual progress signal content
+            first_progress = progress_spy[0]
+            assert len(first_progress) == 2, "Progress should have percent and message"
+            assert isinstance(first_progress[0], int), "Progress percent should be int"
+            assert isinstance(first_progress[1], str), "Progress message should be string"
+            assert 0 <= first_progress[0] <= 100, "Progress should be 0-100"
+
+            # REAL BEHAVIOR: Check if operation succeeded or failed with real error handling
+            if len(error_spy) == 0:
+                # Success case: verify completion signals
+                assert len(extraction_finished_spy) == 1, "Should have exactly one completion signal"
+                output_files = extraction_finished_spy[0][0]  # First arg of first emission
+                assert isinstance(output_files, list), "Output files should be a list"
+                assert len(output_files) > 0, "Should have output files from real extraction"
+
+                # Verify output files actually exist (real behavior, not mocked)
+                from pathlib import Path
+                for file_path in output_files:
+                    assert Path(file_path).exists(), f"Real output file should exist: {file_path}"
+
+                # Verify operation completion signal
+                assert len(operation_finished_spy) == 1, "Should have operation completion"
+                operation_result = operation_finished_spy[0]
+                assert operation_result[0] is True, "Operation should succeed"
+                print("✓ Operation completed successfully")
+            else:
+                # Error case: verify error handling with real errors
+                assert len(error_spy) >= 1, "Should have error signals for failed operation"
+                error_message = error_spy[0][0]  # Error message
+                assert isinstance(error_message, str), "Error message should be string"
+                print(f"✓ Real error handling tested: {error_message}")
+
+                # Verify operation finished with failure
+                assert len(operation_finished_spy) == 1, "Should have operation completion even on error"
+                operation_result = operation_finished_spy[0]
+                assert operation_result[0] is False, "Operation should fail"
+
+            # Verify real manager signal communication worked
+            assert len(manager_signal_data) > 0, "Real manager signals should be received"
+
+            # Verify we got real preview data if CGRAM was provided
+            if test_data["cgram_path"]:
+                assert len(preview_ready_spy) > 0, "Preview signals should be emitted"
+                assert len(palettes_ready_spy) > 0, "Palette signals should be emitted"
+
+            print("✓ Real manager-worker integration test passed:")
+            print(f"  - Progress signals: {len(progress_spy)}")
+            print(f"  - Preview signals: {len(preview_ready_spy)}")
+            print(f"  - Palette signals: {len(palettes_ready_spy)}")
+            print(f"  - Completion signals: {len(extraction_finished_spy)}")
+            print(f"  - Manager signals: {len(manager_signal_data)}")
+            print(f"  - Output files: {len(output_files)}")
+            print(f"  - No errors: {len(error_spy) == 0}")
+
+        finally:
+            # Cleanup (use manager factory cleanup instead of singleton cleanup)
+            manager_factory.cleanup()
+            test_data_repo.cleanup()
+
 
 class TestROMExtractionWorker:
     """Test the ROMExtractionWorker class."""

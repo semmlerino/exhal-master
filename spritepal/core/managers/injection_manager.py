@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QThread, pyqtSignal, QObject
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 if TYPE_CHECKING:
     from .session_manager import SessionManager

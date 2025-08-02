@@ -43,6 +43,7 @@ class ScanControlsPanel(QWidget):
     scan_started = pyqtSignal()
     scan_finished = pyqtSignal()
     partial_scan_detected = pyqtSignal(dict)  # cache info for resume dialog
+    sprites_detected = pyqtSignal(list)  # List of (offset, quality) tuples for region detection
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -343,8 +344,11 @@ class ScanControlsPanel(QWidget):
         if self.rom_map:
             self.rom_map.add_found_sprite(offset, quality)
 
-        # Emit progress update
-        self.progress_update.emit(offset)
+        # Calculate progress percentage based on current offset
+        progress_pct = int((offset / self.rom_size) * 100) if self.rom_size > 0 else 0
+
+        # Emit progress update with both arguments
+        self.progress_update.emit(offset, progress_pct)
 
         # Emit sprite found signal
         self.sprite_found.emit(offset, quality)
@@ -411,6 +415,10 @@ class ScanControlsPanel(QWidget):
         self.scan_all_btn.setEnabled(True)
         self.pause_btn.setVisible(False)
         self.stop_btn.setVisible(False)
+
+        # Emit sprites for smart mode processing if any were found
+        if self.found_sprites:
+            self.sprites_detected.emit(self.found_sprites)
 
         # Emit scan finished signal
         self.scan_finished.emit()

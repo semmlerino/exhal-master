@@ -7,10 +7,11 @@ Visual representation of ROM with sprite locations for manual offset exploration
 from typing import override
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
 from spritepal.utils.logging_config import get_logger
+from spritepal.utils.sprite_regions import SpriteRegion
 
 logger = get_logger(__name__)
 
@@ -31,6 +32,12 @@ class ROMMapWidget(QWidget):
         self.current_offset: int = 0
         self.found_sprites: list[tuple[int, float]] = []  # List of (offset, quality) tuples
         self._needs_update: bool = False  # Track if widget needs visual update
+
+        # Smart mode region visualization
+        self.sprite_regions: list[SpriteRegion] = []
+        self.current_region_index: int = -1
+        self.highlight_regions: bool = True
+
         self.setMinimumHeight(60)
         self.setMaximumHeight(80)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -97,6 +104,22 @@ class ROMMapWidget(QWidget):
         """Get the current number of sprites in the map"""
         return len(self.found_sprites)
 
+    def set_sprite_regions(self, regions: list[SpriteRegion]):
+        """Set sprite regions for visualization"""
+        self.sprite_regions = regions
+        self.update()
+
+    def set_current_region(self, region_index: int):
+        """Highlight the current region"""
+        if self.current_region_index != region_index:
+            self.current_region_index = region_index
+            self.update()
+
+    def toggle_region_highlight(self, enabled: bool):
+        """Toggle region highlighting on/off"""
+        self.highlight_regions = enabled
+        self.update()
+
     def _cleanup_sprites(self):
         """Clean up sprites when memory usage gets too high"""
         if len(self.found_sprites) <= SPRITE_CLEANUP_TARGET:
@@ -151,6 +174,36 @@ class ROMMapWidget(QWidget):
                     x_start = int((start / self.rom_size) * width)
                     x_end = int((min(end, self.rom_size) / self.rom_size) * width)
                     painter.fillRect(x_start, 20, x_end - x_start, height - 40, QColor(color))
+
+            # Draw sprite regions if in smart mode
+            if self.sprite_regions and self.highlight_regions:
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+                for i, region in enumerate(self.sprite_regions):
+                    if 0 <= region.start_offset < self.rom_size:
+                        x_start = int((region.start_offset / self.rom_size) * width)
+                        x_end = int((min(region.end_offset, self.rom_size) / self.rom_size) * width)
+
+                        # Different colors for current/other regions
+                        if i == self.current_region_index:
+                            # Highlighted current region
+                            painter.fillRect(x_start, 10, x_end - x_start, height - 20,
+                                           QColor(100, 150, 255, 60))  # Highlighted blue
+                            painter.setPen(QPen(QColor(100, 150, 255), 2))
+                        else:
+                            # Other regions
+                            painter.fillRect(x_start, 10, x_end - x_start, height - 20,
+                                           QColor(80, 80, 80, 40))  # Subtle gray
+                            painter.setPen(QPen(QColor(120, 120, 120), 1))
+
+                        # Draw region boundaries
+                        painter.drawRect(x_start, 10, x_end - x_start, height - 20)
+
+                        # Draw region number if space permits
+                        if x_end - x_start > 20:
+                            painter.setPen(Qt.GlobalColor.white)
+                            painter.setFont(QFont("Arial", 8))
+                            painter.drawText(x_start + 2, 25, f"R{i+1}")
 
             # Draw found sprites with bounds checking
             painter.setPen(Qt.PenStyle.NoPen)

@@ -10,7 +10,7 @@ Qt lifecycle issues and eliminate "buggy and janky" behavior.
 """
 
 import os
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 if TYPE_CHECKING:
     from spritepal.core.managers.extraction_manager import ExtractionManager
@@ -37,7 +37,7 @@ from spritepal.ui.components.visualization import ROMMapWidget
 from spritepal.ui.dialogs.services import ViewStateManager
 from spritepal.ui.rom_extraction.widgets.manual_offset_widget import ManualOffsetWidget
 from spritepal.ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
-from spritepal.ui.styles import get_panel_style, get_borderless_preview_style
+from spritepal.ui.styles import get_borderless_preview_style, get_panel_style
 from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from spritepal.utils.logging_config import get_logger
 
@@ -197,7 +197,7 @@ class ManualOffsetDialogSimplified(DialogBase):
         layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum space efficiency
         layout.setSpacing(0)  # Zero spacing for maximum space efficiency
 
-        # Sprite preview - set proper parent to prevent Qt lifecycle bugs  
+        # Sprite preview - set proper parent to prevent Qt lifecycle bugs
         # SPACE EFFICIENCY: Use borderless style to eliminate wasted space
         self.preview_widget = SpritePreviewWidget("Live Preview", parent=panel)
         self.preview_widget.setStyleSheet(get_borderless_preview_style())
@@ -228,6 +228,8 @@ class ManualOffsetDialogSimplified(DialogBase):
             self.offset_widget.offset_changed.connect(self._on_offset_changed)
             self.offset_widget.find_next_clicked.connect(self._find_next_sprite)
             self.offset_widget.find_prev_clicked.connect(self._find_prev_sprite)
+            self.offset_widget.smart_mode_changed.connect(self._on_smart_mode_changed)
+            self.offset_widget.region_changed.connect(self._on_region_changed)
 
         # Connect ROM map
         if self.rom_map:
@@ -241,6 +243,7 @@ class ManualOffsetDialogSimplified(DialogBase):
             self.scan_controls.scan_started.connect(self._on_scan_started)
             self.scan_controls.scan_finished.connect(self._on_scan_finished)
             self.scan_controls.partial_scan_detected.connect(self._on_partial_scan_detected)
+            self.scan_controls.sprites_detected.connect(self._on_sprites_detected)
 
         # Connect import/export directly (no controller layer)
         if self.import_export:
@@ -557,16 +560,17 @@ class ManualOffsetDialogSimplified(DialogBase):
         if self.status_panel:
             self.status_panel.show_progress(0, 100)  # Start at 0% out of 100%
 
-    def _on_scan_finished(self, found_sprites: list) -> None:
+    def _on_scan_finished(self) -> None:
         """Handle scan finished"""
         if self.status_panel:
             self.status_panel.hide_progress()
 
-        # Update import/export with found sprites
-        if self.import_export:
+        # Get found sprites from scan controls and update import/export
+        if self.import_export and self.scan_controls:
+            found_sprites = self.scan_controls.get_found_sprites()
             self.import_export.set_found_sprites(found_sprites)
 
-    def _on_partial_scan_detected(self, scan_info: dict) -> None:
+    def _on_partial_scan_detected(self, scan_info: dict[str, Any]) -> None:
         """Handle detection of partial scan cache - show ResumeScanDialog"""
         try:
             from spritepal.ui.dialogs import ResumeScanDialog
@@ -590,6 +594,17 @@ class ManualOffsetDialogSimplified(DialogBase):
         for offset, quality in sprites:
             self.add_found_sprite(offset, quality)
 
+    def _on_sprites_detected(self, sprites: list[tuple[int, float]]) -> None:
+        """Handle sprites detected from scan for smart mode"""
+        if sprites and self.offset_widget:
+            # Update offset widget with sprite regions
+            self.offset_widget.set_sprite_regions(sprites)
+
+            # Update ROM map with regions
+            if self.rom_map and hasattr(self.rom_map, "set_sprite_regions"):
+                regions = self.offset_widget.get_sprite_regions()
+                self.rom_map.set_sprite_regions(regions)
+
     def _on_cache_hit(self, cache_type: str, time_saved: float) -> None:
         """Handle cache hit"""
         message = f"Loaded {cache_type.replace('_', ' ')} from cache (saved {time_saved:.1f}s)"
@@ -611,6 +626,16 @@ class ManualOffsetDialogSimplified(DialogBase):
     def _on_fullscreen_toggled(self, is_fullscreen: bool) -> None:
         """Handle fullscreen toggle"""
         # UI can react to fullscreen changes if needed
+
+    def _on_smart_mode_changed(self, enabled: bool) -> None:
+        """Handle smart mode toggle"""
+        if self.rom_map:
+            self.rom_map.toggle_region_highlight(enabled)
+
+    def _on_region_changed(self, region_index: int) -> None:
+        """Handle region change in smart mode"""
+        if self.rom_map:
+            self.rom_map.set_current_region(region_index)
 
     # Main Operations
 

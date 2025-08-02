@@ -4,13 +4,16 @@ Base manager class providing common functionality for all managers
 
 import os
 import threading
-from typing import Any, Callable
-import logging
+from typing import TYPE_CHECKING, Any, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
+
 from spritepal.utils.logging_config import get_logger
 
 from .exceptions import ValidationError
+
+if TYPE_CHECKING:
+    import logging
 
 
 class BaseManager(QObject):

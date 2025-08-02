@@ -9,7 +9,6 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QComboBox,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -19,7 +18,7 @@ from PyQt6.QtWidgets import (
 
 from spritepal.core.default_palette_loader import DefaultPaletteLoader
 from spritepal.core.managers import get_extraction_manager
-from spritepal.ui.styles import get_muted_text_style, get_borderless_preview_style
+from spritepal.ui.styles import get_borderless_preview_style, get_muted_text_style
 from spritepal.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -93,7 +92,7 @@ class SpritePreviewWidget(QWidget):
         """Scale pixmap efficiently to minimize wasted space"""
         original_width = pixmap.width()
         original_height = pixmap.height()
-        
+
         # Determine efficient scale size
         if original_width <= 32 and original_height <= 32:
             # Very small sprites: 2x scale for visibility
@@ -112,7 +111,7 @@ class SpritePreviewWidget(QWidget):
                 scale_width, scale_height = int(original_width * scale_factor), int(original_height * scale_factor)
             else:
                 scale_width, scale_height = original_width, original_height
-        
+
         # Apply scaling
         return pixmap.scaled(
             scale_width,

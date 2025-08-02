@@ -27,6 +27,12 @@
     "**/.*",
     "test_transparency_headless.py",
     "view_sprites_zoomed.py",
-    "archive/**"
+    "archive/**",
+    "../analyze_*.py",
+    "../comprehensive_test_check.py",
+    "../conftest.py",
+    "../launch_*.py",
+    "../test_*.py",
+    "../view_*.py"
   ]
 }

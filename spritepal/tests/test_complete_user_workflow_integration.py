@@ -625,6 +625,125 @@ class TestCompleteUserWorkflow:
         # Clean up managers
         cleanup_managers_registry()
 
+    @pytest.mark.integration
+    @pytest.mark.gui
+    def test_multi_file_workflow_with_real_signals_improved(
+        self, sample_files, mock_main_window, qtbot
+    ):
+        """
+        IMPROVED VERSION: Test workflow using real Qt signals with QSignalSpy.
+
+        This demonstrates the superior approach of testing real signal behavior
+        instead of mocking signals. Real signal testing:
+        - Catches Qt lifecycle bugs that mocks miss
+        - Tests actual signal connection behavior
+        - Verifies real signal content and timing
+        - Is more reliable and maintainable
+        """
+        from PyQt6.QtTest import QSignalSpy
+
+        # Initialize managers for clean state
+        initialize_managers_registry()
+
+        try:
+            # Set up extraction parameters with all files
+            output_base = str(Path(sample_files["temp_dir"]) / "real_signals_test")
+            extraction_params = {
+                "vram_path": sample_files["vram_path"],
+                "cgram_path": sample_files["cgram_path"],
+                "output_base": output_base,
+                "create_grayscale": True,
+                "create_metadata": True,
+                "oam_path": sample_files["oam_path"],
+            }
+            mock_main_window.set_extraction_params(extraction_params)
+
+            # Mock only external dependencies, keep real Qt signals
+            mock_pixmap_instance = Mock()
+            mock_pixmap_instance.loadFromData = Mock(return_value=True)
+
+            with (
+                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("spritepal.core.workers.base.QThread"),
+            ):
+                # Configure external mocks only
+                mock_qpixmap_utils.return_value = mock_pixmap_instance
+                mock_pil_to_qpixmap.return_value = mock_pixmap_instance
+
+                # Create worker with REAL Qt signals (no replacement!)
+                worker = VRAMExtractionWorker(extraction_params)
+                # Note: QThread doesn't need addWidget, that's for QWidgets only
+
+                controller = ExtractionController(mock_main_window)
+
+                # Set up QSignalSpy to monitor REAL signal emissions
+                progress_spy = QSignalSpy(worker.progress)
+                QSignalSpy(worker.preview_ready)
+                palettes_ready_spy = QSignalSpy(worker.palettes_ready)
+                active_palettes_ready_spy = QSignalSpy(worker.active_palettes_ready)
+                extraction_finished_spy = QSignalSpy(worker.extraction_finished)
+                error_spy = QSignalSpy(worker.error)
+
+                # Connect controller to worker signals (tests real signal connections)
+                worker.palettes_ready.connect(controller._on_palettes_ready)
+                worker.active_palettes_ready.connect(controller._on_active_palettes_ready)
+                worker.extraction_finished.connect(controller._on_extraction_finished)
+                worker.error.connect(controller._on_extraction_error)
+
+                # Track active palette analysis with real signal data
+                active_palette_data = []
+                worker.active_palettes_ready.connect(
+                    lambda palettes: active_palette_data.append(palettes)
+                )
+
+                # Run the worker
+                worker.run()
+
+                # REAL SIGNAL TESTING: Verify actual signal emissions and content
+
+                # Verify progress signals were emitted
+                assert len(progress_spy) > 0, "Progress signals should be emitted"
+                # Check progress signal content (percent, message)
+                first_progress = progress_spy[0]
+                assert len(first_progress) == 2, "Progress signal should have percent and message"
+                assert isinstance(first_progress[0], int), "Progress percent should be int"
+                assert isinstance(first_progress[1], str), "Progress message should be string"
+
+                # Verify extraction completion signal
+                assert len(extraction_finished_spy) == 1, "Should have exactly one completion signal"
+                output_files = extraction_finished_spy[0][0]  # First arg of first emission
+                assert isinstance(output_files, list), "Output files should be a list"
+                assert len(output_files) > 0, "Should have output files"
+
+                # Verify output files actually exist (real behavior, not mocked)
+                for file_path in output_files:
+                    assert Path(file_path).exists(), f"Output file should exist: {file_path}"
+
+                # Verify OAM analysis worked with real signal data
+                assert len(active_palette_data) == 1, "Should have active palette analysis"
+                active_palettes = active_palette_data[0]
+                assert 8 in active_palettes, "Should detect palette 8 from OAM analysis"
+
+                # Verify no errors occurred
+                assert len(error_spy) == 0, "No error signals should be emitted"
+
+                # Verify palette signals for multi-file workflow
+                if sample_files["cgram_path"]:  # If CGRAM provided
+                    assert len(palettes_ready_spy) > 0, "Palette signals should be emitted"
+
+                print("✓ Real signal testing passed:")
+                print(f"  - Progress signals: {len(progress_spy)}")
+                print(f"  - Palette signals: {len(palettes_ready_spy)}")
+                print(f"  - Active palette signals: {len(active_palettes_ready_spy)}")
+                print(f"  - Completion signals: {len(extraction_finished_spy)}")
+                print(f"  - Error signals: {len(error_spy)}")
+                print(f"  - Output files: {len(output_files)}")
+
+        finally:
+            # Clean up managers
+            cleanup_managers_registry()
+
 
 class TestWorkflowIntegrationPoints:
     """Test specific integration points in the workflow"""

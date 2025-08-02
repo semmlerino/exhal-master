@@ -7,7 +7,9 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -171,33 +173,51 @@ class ROMCache:
             return rom_mtime <= cache_mtime
 
     def _save_cache_data(self, cache_file: Path, cache_data: dict[str, Any]) -> bool:
-        """Safely save cache data with error handling."""
+        """Safely save cache data with error handling and unique temp files."""
         if not self._cache_enabled:
             return False
 
         try:
             # Ensure cache directory exists before saving (thread-safe)
             cache_file.parent.mkdir(parents=True, exist_ok=True)
-            
+
+            # Create unique temp file name to prevent collisions
+            temp_suffix = f".tmp.{os.getpid()}.{threading.get_ident()}.{uuid.uuid4().hex[:8]}"
+            temp_file = cache_file.with_suffix(temp_suffix)
+
             # Write to temp file then move to avoid corruption
-            temp_file = cache_file.with_suffix(".tmp")
             with open(temp_file, "w") as f:
                 json.dump(cache_data, f, indent=2)
             temp_file.replace(cache_file)
         except Exception as e:
+            # Clean up temp file if it exists
+            try:
+                if "temp_file" in locals() and temp_file.exists():
+                    temp_file.unlink(missing_ok=True)
+            except Exception:
+                pass  # Ignore cleanup errors
             logger.warning(f"Failed to save cache file {cache_file}: {e}")
             return False
         else:
             return True
 
-    def _load_cache_data(self, cache_file: Path) -> dict[str, Any] | None:
-        """Safely load cache data with error handling."""
-        try:
-            with open(cache_file) as f:
-                return json.load(f)
-        except Exception as e:
-            logger.warning(f"Failed to load cache file {cache_file}: {e}")
-            return None
+    def _load_cache_data(self, cache_file: Path, max_retries: int = 3) -> dict[str, Any] | None:
+        """Safely load cache data with error handling and retry logic."""
+        for attempt in range(max_retries):
+            try:
+                with open(cache_file) as f:
+                    return json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                if attempt == max_retries - 1:
+                    logger.warning(f"Failed to load cache file {cache_file} after {max_retries} attempts: {e}")
+                    return None
+                # Exponential backoff for retry
+                time.sleep(0.01 * (2 ** attempt))
+            except Exception as e:
+                # For other errors, don't retry
+                logger.warning(f"Failed to load cache file {cache_file}: {e}")
+                return None
+        return None
 
     def save_partial_scan_results(self, rom_path: str, scan_params: dict[str, int],
                                  found_sprites: list[dict[str, Any]],
@@ -578,7 +598,6 @@ class ROMCache:
 
 
 # Global cache instance
-import threading
 _rom_cache_instance: ROMCache | None = None
 _rom_cache_lock = threading.Lock()
 

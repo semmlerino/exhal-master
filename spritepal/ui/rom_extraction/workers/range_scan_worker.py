@@ -168,7 +168,7 @@ class RangeScanWorker(QThread):
                     logger.debug(f"Unexpected error at offset 0x{offset:06X}: {e}")
 
             # Final progress update
-            self.progress_update.emit(self.end_offset)
+            self.progress_update.emit(self.end_offset, 100)
 
             logger.info(f"Range scan complete. Found {sprites_found} sprites in range "
                        f"0x{self.start_offset:06X} to 0x{self.end_offset:06X}")

@@ -1,8 +1,10 @@
 """Manual offset control widget for ROM extraction"""
 
+
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -11,9 +13,15 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
+from spritepal.utils.logging_config import get_logger
+from spritepal.utils.sprite_regions import SpriteRegion, SpriteRegionDetector
+
 from .base_widget import BaseExtractionWidget
+
+logger = get_logger(__name__)
 
 # UI Spacing Constants (matching main panel)
 SPACING_SMALL = 6
@@ -27,17 +35,29 @@ LABEL_MIN_WIDTH = 120
 
 
 class ManualOffsetWidget(BaseExtractionWidget):
-    """Widget for manual ROM offset exploration"""
+    """Widget for manual ROM offset exploration with smart region-based navigation"""
 
     # Signals
     offset_changed = pyqtSignal(int)  # Emitted when offset changes (debounced)
     find_next_clicked = pyqtSignal()  # Find next valid sprite
     find_prev_clicked = pyqtSignal()  # Find previous valid sprite
+    smart_mode_changed = pyqtSignal(bool)  # Emitted when smart mode is toggled
+    region_changed = pyqtSignal(int)  # Emitted when current region changes
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._found_sprites = []  # Track found sprite offsets
         self._is_searching = False
+
+        # Smart mode attributes
+        self._smart_mode_enabled = False
+        self._sprite_regions: list[SpriteRegion] = []
+        self._current_region_index = 0
+        self._region_detector = SpriteRegionDetector()
+        self._region_boundaries: list[int] = []  # Slider positions for region boundaries
+        self._region_weights: list[float] = []  # Relative sizes of regions
+        self._sprite_data: list[tuple[int, float]] = []  # Raw sprite data
+
         self._setup_ui()
         self._setup_timer()
 
@@ -148,6 +168,59 @@ class ManualOffsetWidget(BaseExtractionWidget):
         offset_row.addStretch()
         manual_layout.addLayout(offset_row)
 
+        # Smart mode controls
+        smart_mode_row = QHBoxLayout()
+        smart_mode_row.setSpacing(SPACING_MEDIUM)
+
+        self.smart_mode_checkbox = QCheckBox("Smart Navigation")
+        self.smart_mode_checkbox.setToolTip(
+            "Navigate only through sprite-containing regions\n"
+            "Removes empty areas from the slider range"
+        )
+        self.smart_mode_checkbox.stateChanged.connect(self._on_smart_mode_toggled)
+        smart_mode_row.addWidget(self.smart_mode_checkbox)
+
+        # Region indicator
+        self.region_indicator_label = QLabel("Linear Mode")
+        self.region_indicator_label.setStyleSheet("""
+            color: #66aaff;
+            font-weight: bold;
+            padding: 2px 6px;
+            background: #1a1a1a;
+            border: 1px solid #444444;
+            border-radius: 3px;
+        """)
+        smart_mode_row.addWidget(self.region_indicator_label)
+
+        smart_mode_row.addStretch()
+        manual_layout.addLayout(smart_mode_row)
+
+        # Region navigation controls (initially hidden)
+        self.region_nav_widget = QWidget()
+        region_nav_layout = QHBoxLayout()
+        region_nav_layout.setContentsMargins(0, 0, 0, 0)
+        region_nav_layout.setSpacing(SPACING_MEDIUM)
+
+        self.prev_region_btn = QPushButton("← Prev Region")
+        self.prev_region_btn.setToolTip("Jump to previous sprite region (Ctrl+Left)")
+        self.prev_region_btn.clicked.connect(self._navigate_prev_region)
+        region_nav_layout.addWidget(self.prev_region_btn)
+
+        self.region_info_label = QLabel("")
+        self.region_info_label.setStyleSheet("color: #888888;")
+        region_nav_layout.addWidget(self.region_info_label)
+
+        self.next_region_btn = QPushButton("Next Region →")
+        self.next_region_btn.setToolTip("Jump to next sprite region (Ctrl+Right)")
+        self.next_region_btn.clicked.connect(self._navigate_next_region)
+        region_nav_layout.addWidget(self.next_region_btn)
+
+        region_nav_layout.addStretch()
+        self.region_nav_widget.setLayout(region_nav_layout)
+        self.region_nav_widget.setVisible(False)
+
+        manual_layout.addWidget(self.region_nav_widget)
+
         # Navigation buttons
         nav_row = QHBoxLayout()
         nav_row.setSpacing(SPACING_MEDIUM)
@@ -218,42 +291,9 @@ class ManualOffsetWidget(BaseExtractionWidget):
         layout.addWidget(manual_group)
         self.setLayout(layout)
 
-    def _on_offset_slider_changed(self, value: int):
-        """Handle offset slider change"""
-        # Update spinbox without triggering its handler
-        self.offset_spinbox.blockSignals(True)
-        self.offset_spinbox.setValue(value)
-        self.offset_spinbox.blockSignals(False)
+        # Initialize smart mode state
+        self.smart_mode_checkbox.setEnabled(False)  # Disabled until sprites detected
 
-        # Update hex label
-        self.manual_offset_hex_label.setText(f"0x{value:06X}")
-
-        # Update position percentage
-        self._update_position_label(value)
-
-        # Schedule preview update (debounced)
-        self._pending_offset = value
-        if hasattr(self, "_offset_timer"):
-            self._offset_timer.stop()
-            self._offset_timer.start()
-
-    def _on_offset_spinbox_changed(self, value: int):
-        """Handle offset spinbox change"""
-        # Update slider without triggering its handler
-        self.offset_slider.blockSignals(True)
-        self.offset_slider.setValue(value)
-        self.offset_slider.blockSignals(False)
-
-        # Update hex label
-        self.manual_offset_hex_label.setText(f"0x{value:06X}")
-
-        # Update position percentage
-        self._update_position_label(value)
-
-        # Schedule preview update
-        self._pending_offset = value
-        self._offset_timer.stop()
-        self._offset_timer.start()
 
     def _on_step_changed(self, index: int):
         """Handle step size change"""
@@ -380,3 +420,288 @@ class ManualOffsetWidget(BaseExtractionWidget):
             self.position_label.setText(f"({percentage:.1f}%)")
         else:
             self.position_label.setText("(0%)")
+
+    # Smart mode methods
+
+    def set_sprite_regions(self, sprites: list[tuple[int, float]]):
+        """Set sprite data and calculate regions"""
+        self._sprite_data = sprites
+        self._sprite_regions = []  # Clear existing regions
+
+        if sprites:
+            # Enable smart mode checkbox
+            self.smart_mode_checkbox.setEnabled(True)
+
+            # Calculate regions
+            self._sprite_regions = self._region_detector.detect_regions(sprites)
+
+            if self._sprite_regions:
+                # Update UI
+                self._update_region_ui()
+
+                # Auto-enable smart mode if significant number of sprites
+                if len(sprites) > 10 and len(self._sprite_regions) > 1:
+                    self.smart_mode_checkbox.setChecked(True)
+            else:
+                self.smart_mode_checkbox.setEnabled(False)
+        else:
+            self.smart_mode_checkbox.setEnabled(False)
+
+    def get_sprite_regions(self) -> list[SpriteRegion]:
+        """Get the current sprite regions"""
+        return self._sprite_regions
+
+    def _on_smart_mode_toggled(self, checked: int):
+        """Handle smart mode toggle"""
+        self._smart_mode_enabled = bool(checked)
+
+        if self._smart_mode_enabled:
+            if not self._sprite_regions:
+                # No regions available
+                self.smart_mode_checkbox.setChecked(False)
+                self.set_status_text("No sprite regions detected. Run a scan first.")
+                return
+
+            self._enable_smart_mode()
+        else:
+            self._disable_smart_mode()
+
+        self.smart_mode_changed.emit(self._smart_mode_enabled)
+
+    def _enable_smart_mode(self):
+        """Enable smart navigation mode"""
+        self.region_indicator_label.setText(f"Smart Mode: {len(self._sprite_regions)} regions")
+        self.region_indicator_label.setStyleSheet("""
+            color: #66ff66;
+            font-weight: bold;
+            padding: 2px 6px;
+            background: #1a2a1a;
+            border: 1px solid #448844;
+            border-radius: 3px;
+        """)
+
+        # Show region navigation controls
+        self.region_nav_widget.setVisible(True)
+
+        # Setup region mapping for slider
+        self._setup_region_mapping()
+
+        # Update UI with current region
+        self._update_region_ui()
+
+        # Jump to first region
+        if self._sprite_regions:
+            self._jump_to_region(0)
+
+    def _disable_smart_mode(self):
+        """Disable smart navigation mode"""
+        self.region_indicator_label.setText("Linear Mode")
+        self.region_indicator_label.setStyleSheet("""
+            color: #66aaff;
+            font-weight: bold;
+            padding: 2px 6px;
+            background: #1a1a1a;
+            border: 1px solid #444444;
+            border-radius: 3px;
+        """)
+
+        # Hide region navigation controls
+        self.region_nav_widget.setVisible(False)
+
+        # Clear region boundaries
+        self._region_boundaries = []
+        self._region_weights = []
+
+        # Force slider repaint
+        self.offset_slider.update()
+
+    def _setup_region_mapping(self):
+        """Calculate slider mapping for regions"""
+        if not self._sprite_regions:
+            return
+
+        # Calculate weights based on region size
+        total_size = sum(r.size_bytes for r in self._sprite_regions)
+        self._region_weights = [r.size_bytes / total_size for r in self._sprite_regions]
+
+        # Calculate slider boundaries for each region
+        self._region_boundaries = [0]
+        cumulative = 0
+        slider_max = self.offset_slider.maximum()
+
+        for weight in self._region_weights:
+            cumulative += weight * slider_max
+            self._region_boundaries.append(int(cumulative))
+
+        # Force slider repaint
+        self.offset_slider.update()
+
+    def _navigate_prev_region(self):
+        """Navigate to previous region"""
+        if self._current_region_index > 0:
+            self._jump_to_region(self._current_region_index - 1)
+
+    def _navigate_next_region(self):
+        """Navigate to next region"""
+        if self._current_region_index < len(self._sprite_regions) - 1:
+            self._jump_to_region(self._current_region_index + 1)
+
+    def _jump_to_region(self, region_index: int):
+        """Jump to a specific region"""
+        if 0 <= region_index < len(self._sprite_regions):
+            self._current_region_index = region_index
+            region = self._sprite_regions[region_index]
+
+            # Jump to center of region
+            self.set_offset(region.center_offset)
+
+            # Update UI
+            self._update_region_ui()
+
+            # Emit signal
+            self.region_changed.emit(region_index)
+
+    def _update_region_ui(self):
+        """Update region-related UI elements"""
+        if not self._sprite_regions or not self._smart_mode_enabled:
+            return
+
+        region = self._sprite_regions[self._current_region_index]
+
+        # Update region info label
+        self.region_info_label.setText(region.description)
+
+        # Update navigation button states
+        self.prev_region_btn.setEnabled(self._current_region_index > 0)
+        self.next_region_btn.setEnabled(self._current_region_index < len(self._sprite_regions) - 1)
+
+        # Update status
+        status = f"Region {self._current_region_index + 1} of {len(self._sprite_regions)}: "
+        status += f"{region.sprite_count} sprites, {region.quality_category} quality"
+        self.set_status_text(status)
+
+    def _on_offset_slider_changed(self, value: int):
+        """Handle offset slider change with smart mode support"""
+        # Map slider value to actual offset based on mode
+        if self._smart_mode_enabled:
+            actual_offset = self._map_slider_to_offset(value)
+        else:
+            actual_offset = value
+
+        # Update spinbox without triggering its handler
+        self.offset_spinbox.blockSignals(True)
+        self.offset_spinbox.setValue(actual_offset)
+        self.offset_spinbox.blockSignals(False)
+
+        # Update hex label
+        self.manual_offset_hex_label.setText(f"0x{actual_offset:06X}")
+
+        # Update position percentage
+        self._update_position_label(actual_offset)
+
+        # Schedule preview update (debounced)
+        self._pending_offset = actual_offset
+        if hasattr(self, "_offset_timer"):
+            self._offset_timer.stop()
+            self._offset_timer.start()
+
+        # Check if we entered a new region
+        if self._smart_mode_enabled:
+            self._check_region_change(actual_offset)
+
+    def _on_offset_spinbox_changed(self, value: int):
+        """Handle offset spinbox change with smart mode support"""
+        # Map offset to slider position based on mode
+        if self._smart_mode_enabled:
+            slider_pos = self._map_offset_to_slider(value)
+        else:
+            slider_pos = value
+
+        # Update slider without triggering its handler
+        self.offset_slider.blockSignals(True)
+        self.offset_slider.setValue(slider_pos)
+        self.offset_slider.blockSignals(False)
+
+        # Update hex label
+        self.manual_offset_hex_label.setText(f"0x{value:06X}")
+
+        # Update position percentage
+        self._update_position_label(value)
+
+        # Schedule preview update
+        self._pending_offset = value
+        self._offset_timer.stop()
+        self._offset_timer.start()
+
+        # Check if we entered a new region
+        if self._smart_mode_enabled:
+            self._check_region_change(value)
+
+    def _map_slider_to_offset(self, slider_value: int) -> int:
+        """Map slider position to ROM offset based on mode"""
+        if not self._smart_mode_enabled or not self._sprite_regions:
+            return slider_value  # Linear mapping
+
+        # Find which region this slider value falls into
+        for i in range(len(self._region_boundaries) - 1):
+            if self._region_boundaries[i] <= slider_value < self._region_boundaries[i + 1]:
+                # Interpolate within the region
+                region = self._sprite_regions[i]
+                region_start_slider = self._region_boundaries[i]
+                region_end_slider = self._region_boundaries[i + 1]
+
+                # Calculate position within region (0-1)
+                if region_end_slider > region_start_slider:
+                    position = (slider_value - region_start_slider) / (region_end_slider - region_start_slider)
+                else:
+                    position = 0
+
+                # Map to actual offset
+                return int(region.start_offset + position * (region.end_offset - region.start_offset))
+
+        # Fallback for edge cases
+        return self._sprite_regions[-1].end_offset if self._sprite_regions else slider_value
+
+    def _map_offset_to_slider(self, offset: int) -> int:
+        """Map ROM offset to slider position based on mode"""
+        if not self._smart_mode_enabled or not self._sprite_regions:
+            return offset  # Linear mapping
+
+        # Find which region contains this offset
+        region_index = self._region_detector.find_region_for_offset(offset)
+        if region_index is None:
+            # Offset is outside any region, find nearest
+            for i, region in enumerate(self._sprite_regions):
+                if offset < region.start_offset:
+                    region_index = max(0, i - 1)
+                    break
+            else:
+                region_index = len(self._sprite_regions) - 1
+
+        if 0 <= region_index < len(self._sprite_regions):
+            region = self._sprite_regions[region_index]
+            region_start_slider = self._region_boundaries[region_index]
+            region_end_slider = self._region_boundaries[region_index + 1]
+
+            # Calculate position within region
+            if region.end_offset > region.start_offset:
+                position = (offset - region.start_offset) / (region.end_offset - region.start_offset)
+                position = max(0, min(1, position))  # Clamp to 0-1
+            else:
+                position = 0
+
+            # Map to slider position
+            return int(region_start_slider + position * (region_end_slider - region_start_slider))
+
+        return 0
+
+    def _check_region_change(self, offset: int):
+        """Check if offset is in a different region and update UI"""
+        if not self._sprite_regions:
+            return
+
+        region_index = self._region_detector.find_region_for_offset(offset)
+        if region_index is not None and region_index != self._current_region_index:
+            self._current_region_index = region_index
+            self._update_region_ui()
+            self.region_changed.emit(region_index)

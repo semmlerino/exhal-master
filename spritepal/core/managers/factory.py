@@ -5,15 +5,18 @@ This factory provides a clean way to create manager instances while respecting
 Qt's object lifecycle and enabling both singleton and per-worker patterns.
 """
 
-from typing import Optional, Protocol
-import logging
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
+
 from spritepal.utils.logging_config import get_logger
 
 from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager
+
+if TYPE_CHECKING:
+    import logging
 
 logger = get_logger(__name__)
 

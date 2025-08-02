@@ -174,42 +174,6 @@ def create_mock_extraction_worker():
     return worker
 
 
-def create_mock_session_manager():
-    """
-    Create a mock session manager with all required methods.
-
-    Returns:
-        Mock: Configured mock session manager
-    """
-    session_manager = Mock()
-    session_manager.get_session_data.return_value = {}
-    session_manager.save_session_data = Mock()
-    session_manager.load_settings = Mock(return_value={})
-    session_manager.save_settings = Mock()
-    session_manager.get_recent_files = Mock(return_value=[])
-    session_manager.add_recent_file = Mock()
-    session_manager.get_window_geometry = Mock(return_value=None)
-    session_manager.save_window_geometry = Mock()
-    return session_manager
-
-
-def create_mock_settings_manager():
-    """
-    Create a mock settings manager with standard configuration.
-
-    Returns:
-        Mock: Configured mock settings manager
-    """
-    settings_manager = Mock()
-    settings_manager.get_setting = Mock(return_value=None)
-    settings_manager.set_setting = Mock()
-    settings_manager.get_all_settings = Mock(return_value={})
-    settings_manager.save_settings = Mock()
-    settings_manager.load_settings = Mock()
-    settings_manager.reset_settings = Mock()
-    return settings_manager
-
-
 def create_mock_extraction_manager():
     """
     Create a mock extraction manager for testing.
@@ -231,25 +195,6 @@ def create_mock_extraction_manager():
     return manager
 
 
-def create_mock_injection_manager():
-    """
-    Create a mock injection manager for testing.
-
-    Returns:
-        Mock: Configured mock injection manager
-    """
-    manager = Mock()
-    manager.inject_sprites = Mock()
-    manager.validate_injection_params = Mock(return_value=True)
-    manager.get_rom_injector = Mock()
-
-    # Add common injection signals
-    manager.injection_started = MockSignal()
-    manager.injection_progress = MockSignal()
-    manager.injection_complete = MockSignal()
-    manager.injection_failed = MockSignal()
-
-    return manager
 
 
 def create_mock_file_dialogs():

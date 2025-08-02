@@ -15,11 +15,8 @@ from .qt_mocks import (
     create_mock_extraction_manager,
     create_mock_extraction_worker,
     create_mock_file_dialogs,
-    create_mock_injection_manager,
     create_mock_main_window,
     create_mock_qimage,
-    create_mock_session_manager,
-    create_mock_settings_manager,
     create_mock_signals,
 )
 
@@ -33,10 +30,7 @@ __all__ = [
     "create_mock_extraction_manager",
     "create_mock_extraction_worker",
     "create_mock_file_dialogs",
-    "create_mock_injection_manager",
     "create_mock_main_window",
     "create_mock_qimage",
-    "create_mock_session_manager",
-    "create_mock_settings_manager",
     "create_mock_signals",
 ]

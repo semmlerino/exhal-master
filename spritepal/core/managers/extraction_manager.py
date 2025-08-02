@@ -7,11 +7,12 @@ import time
 from dataclasses import asdict
 from typing import Any
 
+from PIL import Image
+from PyQt6.QtCore import QObject, pyqtSignal
+
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.core.rom_extractor import ROMExtractor
-from PIL import Image
-from PyQt6.QtCore import pyqtSignal, QObject
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     SPRITE_PALETTE_END,

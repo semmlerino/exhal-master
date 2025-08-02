@@ -528,20 +528,20 @@ def get_minimal_preview_style() -> str:
 def get_borderless_preview_style() -> str:
     """
     Get completely borderless preview styling CSS for maximum space efficiency
-    
+
     Eliminates all borders, padding, margins, and background to maximize preview area.
     Perfect for space-efficient Live Preview displays that blend with parent.
 
     Returns:
         CSS string for borderless preview styling
     """
-    return f"""
-    QLabel {{
+    return """
+    QLabel {
         border: none;
         background-color: transparent;
         margin: 0px;
         padding: 0px;
-    }}
+    }
     """
 
 def get_splitter_style(handle_width: int = 8) -> str:
