@@ -46,12 +46,13 @@ class SpritePreviewWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
         layout.setSpacing(0)  # Zero spacing for maximum efficiency
 
-        # Preview label - maximum space efficiency
+        # Preview label - adaptive sizing for maximum space efficiency
         self.preview_label = QLabel()
-        self.preview_label.setMinimumSize(256, 256)
-        self.preview_label.setMaximumSize(512, 512)
+        # Remove rigid size constraints - let content determine size
+        self.preview_label.setMinimumSize(64, 64)  # Very small minimum for tiny sprites
+        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum, not excessive
         self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Size to content, not expanding
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(get_borderless_preview_style())
@@ -84,7 +85,32 @@ class SpritePreviewWidget(QWidget):
         controls_widget.setLayout(controls_layout)
         layout.addWidget(controls_widget)
 
+        # Set widget to size itself to content for maximum space efficiency
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.setLayout(layout)
+
+    def _get_efficient_scale_size(self, original_width: int, original_height: int) -> tuple[int, int]:
+        """Get efficient scale size that minimizes wasted space"""
+        # For very small sprites, use 2x scale minimum for visibility
+        if original_width <= 32 and original_height <= 32:
+            return original_width * 2, original_height * 2
+        
+        # For small sprites, use 1.5x scale
+        if original_width <= 64 and original_height <= 64:
+            return int(original_width * 1.5), int(original_height * 1.5)
+        
+        # For medium sprites, use original size or slight scale
+        if original_width <= 128 and original_height <= 128:
+            return original_width, original_height
+        
+        # For larger sprites, scale down to reasonable size
+        max_dimension = max(original_width, original_height)
+        if max_dimension > 200:
+            scale_factor = 200 / max_dimension
+            return int(original_width * scale_factor), int(original_height * scale_factor)
+        
+        # Default: use original size
+        return original_width, original_height
 
     def load_sprite_from_png(self, png_path: str, sprite_name: str | None = None):
         """Load sprite from PNG file"""
@@ -162,10 +188,11 @@ class SpritePreviewWidget(QWidget):
         )
         pixmap = QPixmap.fromImage(qimg)
 
-        # Scale for preview
+        # Scale for preview - adaptive sizing for space efficiency
+        scale_width, scale_height = self._get_efficient_scale_size(pixmap.width(), pixmap.height())
         scaled = pixmap.scaled(
-            256,
-            256,
+            scale_width,
+            scale_height,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation,
         )
@@ -214,10 +241,11 @@ class SpritePreviewWidget(QWidget):
         )
         pixmap = QPixmap.fromImage(qimg)
 
-        # Scale for preview
+        # Scale for preview - adaptive sizing for space efficiency
+        scale_width, scale_height = self._get_efficient_scale_size(pixmap.width(), pixmap.height())
         scaled = pixmap.scaled(
-            256,
-            256,
+            scale_width,
+            scale_height,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation,
         )
