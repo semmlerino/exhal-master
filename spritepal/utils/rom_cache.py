@@ -550,7 +550,7 @@ class ROMCache:
             except Exception:
                 logger.warning("Could not get settings manager for cache refresh")
                 return
-        
+
         if not self.settings_manager:
             return
 

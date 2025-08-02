@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
 from spritepal.core.controller import ExtractionController
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.managers.registry import (
     cleanup_managers as cleanup_managers_registry,
@@ -25,6 +24,7 @@ from spritepal.core.managers.registry import (
 from spritepal.core.managers.registry import (
     initialize_managers as initialize_managers_registry,
 )
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
@@ -158,7 +158,7 @@ class TestCompleteUserWorkflow:
             with (
                                 patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
                 patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-                patch("spritepal.core.controller.QThread") as mock_qthread,
+                patch("spritepal.core.workers.base.QThread") as mock_qthread,
             ):
 
                 # Configure mocks
@@ -288,14 +288,12 @@ class TestCompleteUserWorkflow:
         with (
                         patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
             patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.controller.QThread") as mock_qthread,
-            patch("spritepal.core.controller.pyqtSignal") as mock_pyqt_signal,
+            patch("spritepal.core.workers.base.QThread") as mock_qthread,
         ):
 
             # Configure mocks
             mock_qpixmap_utils.return_value = mock_pixmap_instance
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-            mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Mock QThread to run synchronously for testing
             mock_qthread_instance = Mock()
@@ -328,7 +326,7 @@ class TestCompleteUserWorkflow:
         # Patch dialog creation to avoid Qt widget issues in tests
         with (
             patch("spritepal.ui.row_arrangement_dialog.RowArrangementDialog") as mock_dialog_class,
-            patch("spritepal.core.controller.QMessageBox.critical")):
+            patch("spritepal.ui.common.error_handler.QMessageBox.critical")):
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = True
             mock_dialog_instance.get_arranged_path.return_value = sprite_file + "_arranged"
@@ -377,14 +375,12 @@ class TestCompleteUserWorkflow:
         with (
                         patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
             patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.controller.QThread"),
-            patch("spritepal.core.controller.pyqtSignal") as mock_pyqt_signal,
+            patch("spritepal.core.workers.base.QThread"),
         ):
 
             # Configure mocks
             mock_qpixmap_utils.return_value = mock_pixmap_instance
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-            mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Create and run worker
             worker = VRAMExtractionWorker(
@@ -475,14 +471,12 @@ class TestCompleteUserWorkflow:
             with (
                                 patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
                 patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-                patch("spritepal.core.controller.QThread"),
-                patch("spritepal.core.controller.pyqtSignal") as mock_pyqt_signal,
-            ):
+                patch("spritepal.core.workers.base.QThread"),
+                ):
 
                 # Configure mocks
                 mock_qpixmap_utils.return_value = mock_pixmap_instance
                 mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-                mock_pyqt_signal.side_effect = lambda *args: Mock()
 
                 # Create and run worker
                 worker = VRAMExtractionWorker(
@@ -546,14 +540,12 @@ class TestCompleteUserWorkflow:
         with (
                         patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
             patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.controller.QThread"),
-            patch("spritepal.core.controller.pyqtSignal") as mock_pyqt_signal,
+            patch("spritepal.core.workers.base.QThread"),
         ):
 
             # Configure mocks
             mock_qpixmap_utils.return_value = mock_pixmap_instance
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-            mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Create controller and worker
             controller = ExtractionController(mock_main_window)
@@ -597,14 +589,12 @@ class TestCompleteUserWorkflow:
         with (
                         patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
             patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.controller.QThread"),
-            patch("spritepal.core.controller.pyqtSignal") as mock_pyqt_signal,
+            patch("spritepal.core.workers.base.QThread"),
         ):
 
             # Configure mocks
             mock_qpixmap_utils.return_value = mock_pixmap_instance
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-            mock_pyqt_signal.side_effect = lambda *args: Mock()
 
             # Create recovery worker
             recovery_worker = VRAMExtractionWorker(valid_params)

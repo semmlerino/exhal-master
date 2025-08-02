@@ -12,7 +12,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from spritepal.core.managers import cleanup_managers, initialize_managers
-from .fixtures.qt_test_helpers import parent_widget, mockable_parent_widget
 
 
 class TestROMMapWidget:
@@ -35,9 +34,10 @@ class TestROMMapWidget:
         # Create widget with proper parent
         widget = ROMMapWidget(parent_widget)
 
-        # Verify basic initialization
-        assert hasattr(widget, "sprites")
-        assert hasattr(widget, "selected_offset")
+        # Verify basic initialization with actual attributes
+        assert hasattr(widget, "found_sprites")
+        assert hasattr(widget, "current_offset")
+        assert hasattr(widget, "rom_size")
         assert widget.parent() == parent_widget
 
     def test_add_sprite_data(self, parent_widget):
@@ -46,38 +46,34 @@ class TestROMMapWidget:
 
         widget = ROMMapWidget(parent_widget)
 
-        # Test adding sprite data
-        sprite_data = {
-            "offset": 0x1000,
-            "size": 32,
-            "name": "test_sprite",
-            "valid": True
-        }
+        # Test adding sprite with quality
+        offset = 0x1000
+        quality = 0.95
 
-        widget.add_sprite(sprite_data)
+        widget.add_found_sprite(offset, quality)
 
         # Verify sprite was added
-        assert len(widget.sprites) == 1
-        assert widget.sprites[0] == sprite_data
+        assert len(widget.found_sprites) == 1
+        assert widget.found_sprites[0] == (offset, quality)
 
     def test_sprite_count_limits(self, parent_widget):
         """Test sprite count limits prevent memory leaks"""
-        from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
+        from spritepal.ui.components.visualization.rom_map_widget import (
+            SPRITE_CLEANUP_TARGET,
+            SPRITE_CLEANUP_THRESHOLD,
+            ROMMapWidget,
+        )
 
         widget = ROMMapWidget(parent_widget)
 
         # Add many sprites to test limits
-        for i in range(1500):  # More than the limit
-            sprite_data = {
-                "offset": 0x1000 + i * 32,
-                "size": 32,
-                "name": f"sprite_{i}",
-                "valid": True
-            }
-            widget.add_sprite(sprite_data)
+        for i in range(SPRITE_CLEANUP_THRESHOLD + 100):  # More than the cleanup threshold
+            widget.add_found_sprite(0x1000 + i * 32, 1.0)
 
-        # Should not exceed the limit
-        assert len(widget.sprites) <= 1000  # Expected limit
+        # Should have cleaned up to around target count (allow small variation)
+        # The cleanup happens when exceeding threshold, so count should be close to target
+        assert len(widget.found_sprites) <= SPRITE_CLEANUP_TARGET + 100  # Allow small buffer
+        assert len(widget.found_sprites) < SPRITE_CLEANUP_THRESHOLD  # But definitely below threshold
 
     def test_cleanup_method(self, parent_widget):
         """Test cleanup method clears resources"""
@@ -85,15 +81,16 @@ class TestROMMapWidget:
 
         widget = ROMMapWidget(parent_widget)
 
-        # Add some data
-        widget.add_sprite({"offset": 0x1000, "size": 32, "name": "test", "valid": True})
-        assert len(widget.sprites) > 0
+        # Add some sprite data
+        widget.add_found_sprite(0x1000, 1.0)
+        widget.add_found_sprite(0x2000, 0.8)
+        assert len(widget.found_sprites) > 0
 
-        # Call cleanup
-        widget.cleanup()
+        # Clear sprites
+        widget.clear_sprites()
 
-        # Verify cleanup
-        assert len(widget.sprites) == 0
+        # Verify resources cleared
+        assert len(widget.found_sprites) == 0
 
 
 class TestScanControlsPanel:

@@ -116,7 +116,7 @@ class SpriteScanWorker(QThread):
                 # Calculate current step based on original range for consistent progress
                 current_step = (offset - original_start_offset) // step
                 self.progress.emit(current_step, total_steps)
-                
+
                 # Log every 50 steps for debugging
                 if current_step % 50 == 0:
                     logger.debug(f"Scan progress: step {current_step}/{total_steps} at offset 0x{offset:X}")
@@ -211,7 +211,7 @@ class SpriteScanWorker(QThread):
                         progress_pct = 100
                     else:
                         progress_pct = min(int(((offset - original_start_offset) / (end_offset - original_start_offset)) * 100), 99)
-                    
+
                     # Save every 10% or if we're at the end
                     should_save = (progress_pct >= self._last_save_progress + 10) or (offset >= actual_end)
 
@@ -234,7 +234,7 @@ class SpriteScanWorker(QThread):
 
             # Scan loop has ended
             logger.info(f"Exited scan loop. Final offset was 0x{last_scanned_offset:X}, current_step={current_step}, total_steps={total_steps}")
-            
+
             # Save final results after scan completes
             logger.debug(f"Scan loop completed. Found {len(found_sprites)} sprites total")
             if rom_cache:
@@ -263,7 +263,7 @@ class SpriteScanWorker(QThread):
                     qualities = [s["quality"] for s in sprites_with_quality]
                     avg_quality = sum(qualities) / len(qualities)
                     high_quality_count = sum(1 for q in qualities if q >= 0.7)
-                    
+
                     logger.info(f"Scan complete. Found {len(found_sprites)} sprites:")
                     logger.info(f"  - Average quality: {avg_quality:.2f}")
                     logger.info(f"  - High quality (≥0.7): {high_quality_count}")

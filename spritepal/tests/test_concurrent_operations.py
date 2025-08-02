@@ -18,11 +18,10 @@ from unittest.mock import patch
 import pytest
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.rom_extractor import ROMExtractor
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.ui.rom_extraction.workers.scan_worker import SpriteScanWorker
 from spritepal.utils.rom_cache import ROMCache, get_rom_cache
 
@@ -109,7 +108,7 @@ def real_cache(temp_dirs):
     settings = get_settings_manager()
     if settings:
         settings.set_cache_enabled(True)
-    
+
     cache = ROMCache(cache_dir=str(temp_dirs["cache"]))
     with patch("spritepal.utils.rom_cache.get_rom_cache", return_value=cache):
         yield cache
@@ -186,44 +185,44 @@ class TestConcurrentROMScanning:
         """Test multiple ROM scans accessing cache concurrently."""
         # First test basic cache functionality
         from spritepal.core.rom_injector import SpritePointer
-        
+
         rom_path = sample_files["rom_path"]
-        
+
         # Test 1: Basic save and load
         test_sprites = {
             "TestSprite": SpritePointer(offset=0x1000, bank=0x20, address=0x8000, compressed_size=256)
         }
-        
+
         # Save to cache
         save_result = real_cache.save_sprite_locations(rom_path, test_sprites)
         assert save_result is True, "Failed to save sprites to cache"
-        
+
         # Load from cache
         loaded_sprites = real_cache.get_sprite_locations(rom_path)
         assert loaded_sprites is not None, "Failed to load sprites from cache"
         assert "TestSprite" in loaded_sprites, "Sprite not found in loaded data"
-        
+
         # Test 2: Concurrent access test
         results = {"saves": 0, "loads": 0, "errors": []}
-        
+
         class SimpleCacheWorker(QThread):
             finished = pyqtSignal()
-            
+
             def __init__(self, worker_id, cache, rom_path):
                 super().__init__()
                 self.worker_id = worker_id
                 self.cache = cache
                 self.rom_path = rom_path
-                
+
             def run(self):
                 try:
                     from spritepal.core.rom_injector import SpritePointer
-                    
+
                     # Simple read and write
                     existing = self.cache.get_sprite_locations(self.rom_path)
                     if existing:
                         results["loads"] += 1
-                    
+
                     new_data = existing or {}
                     new_data[f"Worker{self.worker_id}"] = SpritePointer(
                         offset=0x2000 + self.worker_id * 0x100,
@@ -231,32 +230,32 @@ class TestConcurrentROMScanning:
                         address=0x8000,
                         compressed_size=256
                     )
-                    
+
                     if self.cache.save_sprite_locations(self.rom_path, new_data):
                         results["saves"] += 1
-                        
+
                     self.finished.emit()
                 except Exception as e:
                     results["errors"].append(str(e))
-        
+
         # Create simple workers
         workers = []
         for i in range(3):
             worker = SimpleCacheWorker(i, real_cache, rom_path)
             workers.append(worker)
-            
+
         # Start all workers
         for worker in workers:
             worker.start()
-            
+
         # Wait for all to finish
         for worker in workers:
             worker.wait(2000)
-            
+
         # Verify results
         assert results["saves"] >= 1, f"No successful saves: {results}"
         assert len(results["errors"]) == 0, f"Errors occurred: {results['errors']}"
-        
+
         # Verify final state
         final_data = real_cache.get_sprite_locations(rom_path)
         assert final_data is not None, "Final cache data is None"
@@ -419,7 +418,7 @@ class TestConcurrentExtraction:
         """Test multiple extraction workers on different files - properly serialized."""
         # The ExtractionManager prevents concurrent VRAM extractions
         # This test verifies that multiple extraction requests are handled sequentially
-        
+
         completed_extractions = []
         errors = []
 
@@ -448,23 +447,23 @@ class TestConcurrentExtraction:
 
             # Create and run worker
             worker = VRAMExtractionWorker(params)
-            
+
             def on_finished(files, idx=i):
                 completed_extractions.append(idx)
-                
+
             def on_error(msg, idx=i):
                 errors.append((idx, msg))
-                
+
             worker.extraction_finished.connect(on_finished)
             worker.error.connect(on_error)
-            
+
             # Run synchronously
             worker.run()
-            
+
         # Verify all extractions completed
         assert len(completed_extractions) == 3
         assert len(errors) == 0
-        
+
         # Verify all outputs were created
         for i in range(3):
             output_path = os.path.join(sample_files["output_dir"], f"extract_{i}.png")
@@ -566,14 +565,14 @@ class TestSettingsChangeDuringOperations:
 
         # Verify cache files exist in one of the locations
         # Check for any cache files (db or json)
-        cache1_files = list(cache_dir1.glob("*")) 
+        cache1_files = list(cache_dir1.glob("*"))
         cache2_files = list(cache_dir2.glob("*"))
-        
+
         # Print for debugging if no files found
         if len(cache1_files) == 0 and len(cache2_files) == 0:
             print(f"Cache dir 1 contents: {list(cache_dir1.iterdir())}")
             print(f"Cache dir 2 contents: {list(cache_dir2.iterdir())}")
-            
+
         # Either operation completed with files in a cache, or it was interrupted
         # The important thing is no error occurred during the cache location change
         assert results["write_done"] or len(cache1_files) > 0 or len(cache2_files) > 0
@@ -590,26 +589,26 @@ class TestUIResponsiveness:
         """Test that long operations complete successfully in background."""
         # Simple test that a worker thread can run while UI remains active
         operation_completed = False
-        
+
         class SimpleWorker(QThread):
             def run(self):
                 # Simulate some work
                 time.sleep(0.5)
                 nonlocal operation_completed
                 operation_completed = True
-        
+
         # Create and start worker
         worker = SimpleWorker()
         worker.start()
-        
+
         # Simulate UI activity while worker runs
         for i in range(5):
             mock_main_window.status_bar.showMessage(f"Working... {i}")
             QTest.qWait(100)  # Small delay
-            
+
         # Wait for worker to complete
         worker.wait(2000)
-        
+
         # Verify work completed
         assert operation_completed
         # Verify UI was updated (the helper tracks status messages)
@@ -646,7 +645,7 @@ class TestManagerThreadSafety:
                         # Generate preview with different offsets
                         offset = 0xC000 + (self.worker_id * 0x100) + (i * 0x10)
                         img, tiles = manager.generate_preview(
-                            sample_files["vram_path"], 
+                            sample_files["vram_path"],
                             offset
                         )
                         if img and tiles > 0:

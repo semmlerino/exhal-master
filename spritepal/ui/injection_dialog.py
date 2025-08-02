@@ -52,7 +52,7 @@ class InjectionDialog(TabbedDialog):
         self.metadata = None
         self.extraction_vram_offset = None
         self.rom_extraction_info = None
-        
+
         # Initialize UI components that will be created in setup methods
         self.extraction_group: QGroupBox | None = None
         self.extraction_info: QTextEdit | None = None
@@ -60,7 +60,7 @@ class InjectionDialog(TabbedDialog):
         self.preview_widget: SpritePreviewWidget | None = None
         self.rom_info_group: QGroupBox | None = None
         self.rom_info_text: QTextEdit | None = None
-        
+
         # File selectors
         self.sprite_file_selector: FileSelector | None = None
         self.input_vram_selector: FileSelector | None = None
@@ -73,10 +73,10 @@ class InjectionDialog(TabbedDialog):
         self.rom_offset_input: HexOffsetInput | None = None
         self.sprite_location_combo: QComboBox | None = None
         self.fast_compression_check: QCheckBox | None = None
-        
+
         # Get injection manager instance
         self.injection_manager = get_injection_manager()
-        
+
         # Step 2: Call parent init (this will call _setup_ui)
         super().__init__(
             parent=parent,

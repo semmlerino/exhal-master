@@ -10,13 +10,13 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtTest import QSignalSpy
 
+from spritepal.core.managers.base_manager import BaseManager
 from spritepal.core.workers.specialized import (
     ExtractionWorkerBase,
     InjectionWorkerBase,
     PreviewWorkerBase,
     ScanWorkerBase,
 )
-from spritepal.core.managers.base_manager import BaseManager
 
 
 class TestExtractionWorkerBase:
@@ -48,11 +48,11 @@ class TestExtractionWorkerBase:
         qtbot.addWidget(worker)
 
         # Test all extraction-specific signals exist
-        assert hasattr(worker, 'preview_ready')
-        assert hasattr(worker, 'preview_image_ready')
-        assert hasattr(worker, 'palettes_ready')
-        assert hasattr(worker, 'active_palettes_ready')
-        assert hasattr(worker, 'extraction_finished')
+        assert hasattr(worker, "preview_ready")
+        assert hasattr(worker, "preview_image_ready")
+        assert hasattr(worker, "palettes_ready")
+        assert hasattr(worker, "active_palettes_ready")
+        assert hasattr(worker, "extraction_finished")
 
         # Test signal emission
         preview_spy = QSignalSpy(worker.preview_ready)
@@ -105,9 +105,9 @@ class TestInjectionWorkerBase:
         qtbot.addWidget(worker)
 
         # Test all injection-specific signals exist
-        assert hasattr(worker, 'progress_percent')
-        assert hasattr(worker, 'compression_info')
-        assert hasattr(worker, 'injection_finished')
+        assert hasattr(worker, "progress_percent")
+        assert hasattr(worker, "compression_info")
+        assert hasattr(worker, "injection_finished")
 
         # Test signal emission
         progress_spy = QSignalSpy(worker.progress_percent)
@@ -155,12 +155,12 @@ class TestScanWorkerBase:
         qtbot.addWidget(worker)
 
         # Test all scan-specific signals exist
-        assert hasattr(worker, 'item_found')
-        assert hasattr(worker, 'scan_stats')
-        assert hasattr(worker, 'scan_progress')
-        assert hasattr(worker, 'scan_finished')
-        assert hasattr(worker, 'cache_status')
-        assert hasattr(worker, 'cache_progress')
+        assert hasattr(worker, "item_found")
+        assert hasattr(worker, "scan_stats")
+        assert hasattr(worker, "scan_progress")
+        assert hasattr(worker, "scan_finished")
+        assert hasattr(worker, "cache_status")
+        assert hasattr(worker, "cache_progress")
 
         # Test signal emission
         item_spy = QSignalSpy(worker.item_found)
@@ -275,8 +275,8 @@ class TestPreviewWorkerBase:
         qtbot.addWidget(worker)
 
         # Test all preview-specific signals exist
-        assert hasattr(worker, 'preview_ready')
-        assert hasattr(worker, 'preview_failed')
+        assert hasattr(worker, "preview_ready")
+        assert hasattr(worker, "preview_failed")
 
         # Test signal emission
         ready_spy = QSignalSpy(worker.preview_ready)
@@ -306,7 +306,7 @@ class TestPreviewWorkerBase:
         failed_spy = QSignalSpy(worker.preview_failed)
         error_spy = QSignalSpy(worker.error)
 
-        # Test emit_preview_ready - UPDATED FOR BUG #26: Workers emit PIL Image, not QPixmap  
+        # Test emit_preview_ready - UPDATED FOR BUG #26: Workers emit PIL Image, not QPixmap
         mock_preview = Mock()  # Mock PIL Image for Qt threading safety
         worker.emit_preview_ready(mock_preview)
         assert len(ready_spy) == 1
@@ -325,15 +325,14 @@ class TestPreviewWorkerBase:
 @pytest.fixture
 def qtbot():
     """Provide qtbot for Qt testing."""
-    from PyQt6.QtTest import QTest
     from PyQt6.QtWidgets import QApplication
-    
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
-    
+
     class QtBot:
         def addWidget(self, widget):
             pass
-    
+
     return QtBot()

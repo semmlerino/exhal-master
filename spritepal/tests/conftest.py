@@ -26,11 +26,6 @@ from .fixtures.qt_mocks import (
 )
 
 # Import Qt test helpers for proper parent widgets
-from .fixtures.qt_test_helpers import (
-    parent_widget,
-    mockable_parent_widget,
-    widget_factory,
-)
 
 
 @pytest.fixture(autouse=True)

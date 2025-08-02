@@ -457,12 +457,12 @@ class GridArrangementDialog(SplitterDialog):
         self.sprite_path = sprite_path
         self.tiles_per_row = tiles_per_row
         self.output_path = None
-        
+
         # Initialize components
         self.processor = GridImageProcessor()
         self.colorizer = PaletteColorizer()
         self.preview_generator = GridPreviewGenerator(self.colorizer)
-        
+
         # Initialize UI components that will be created in _setup_ui
         self.source_grid: GridWidget | None = None
         self.arranged_grid: GridWidget | None = None
@@ -490,7 +490,7 @@ class GridArrangementDialog(SplitterDialog):
         self.arrangement_manager = GridArrangementManager(
             self.processor.grid_rows, self.processor.grid_cols
         )
-        
+
         # Step 2: Call parent init (this will call _setup_ui)
         super().__init__(
             parent=parent,
@@ -522,7 +522,7 @@ class GridArrangementDialog(SplitterDialog):
         """Set up the dialog UI using SplitterDialog panels"""
         # Create horizontal splitter for left and right panels
         self.main_splitter = self.add_horizontal_splitter(handle_width=8)
-        
+
         # Left panel - Grid view and controls
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
@@ -662,7 +662,7 @@ class GridArrangementDialog(SplitterDialog):
         # Add panels to main horizontal splitter directly
         self.main_splitter.addWidget(left_widget)
         self.main_splitter.setStretchFactor(0, 2)    # 67% for left panel
-        
+
         self.main_splitter.addWidget(right_widget)
         self.main_splitter.setStretchFactor(1, 1)   # 33% for right panel
 

@@ -8,44 +8,43 @@ ensuring proper parent/child relationships and avoiding Qt lifecycle bugs.
 import atexit
 import os
 import sys
-from typing import Optional, Any
 from contextlib import contextmanager
+from typing import Any, Optional
 
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QApplication
 
 
 class TestApplicationFactory:
     """
     Factory for creating and managing Qt applications in tests.
-    
+
     Provides standardized Qt application setup that:
     - Ensures single QApplication instance per test session
-    - Manages proper application lifecycle 
+    - Manages proper application lifecycle
     - Handles offscreen rendering for headless testing
     - Provides cleanup mechanisms to prevent Qt lifecycle issues
     """
-    
+
     _application_instance: Optional[QApplication] = None
     _cleanup_registered: bool = False
-    
+
     @classmethod
     def get_application(cls, force_offscreen: bool = True) -> QApplication:
         """
         Get or create a QApplication instance for testing.
-        
+
         Args:
             force_offscreen: Force offscreen rendering for headless testing
-            
+
         Returns:
             QApplication instance suitable for testing
         """
         if cls._application_instance is None:
             cls._create_application(force_offscreen)
-            
+
         return cls._application_instance
-    
+
     @classmethod
     def _create_application(cls, force_offscreen: bool) -> None:
         """Create a new QApplication with proper test configuration."""
@@ -53,43 +52,45 @@ class TestApplicationFactory:
         existing_app = QApplication.instance()
         if existing_app is not None:
             cls._application_instance = existing_app
+            # Configure the existing application to have the correct test settings
+            cls._configure_test_application()
             return
-            
+
         # Set up offscreen rendering for headless testing
         if force_offscreen:
-            os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-            
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
         # Create application with test-friendly arguments
-        test_args = [sys.argv[0], '-platform', 'offscreen'] if force_offscreen else [sys.argv[0]]
+        test_args = [sys.argv[0], "-platform", "offscreen"] if force_offscreen else [sys.argv[0]]
         cls._application_instance = QApplication(test_args)
-        
+
         # Configure application for testing
         cls._configure_test_application()
-        
+
         # Register cleanup
         if not cls._cleanup_registered:
             atexit.register(cls._cleanup_application)
             cls._cleanup_registered = True
-    
+
     @classmethod
     def _configure_test_application(cls) -> None:
         """Configure the application for optimal testing."""
         if cls._application_instance is None:
             return
-            
+
         app = cls._application_instance
-        
+
         # Prevent application from quitting when last window closes
         app.setQuitOnLastWindowClosed(False)
-        
+
         # Set test-friendly application attributes
         app.setApplicationName("SpritePal-Test")
         app.setApplicationVersion("test")
         app.setOrganizationName("SpritePal-Test")
-        
+
         # Process any pending events to ensure clean state
         app.processEvents()
-    
+
     @classmethod
     def _cleanup_application(cls) -> None:
         """Clean up the application instance."""
@@ -100,24 +101,24 @@ class TestApplicationFactory:
             except Exception:
                 # Ignore cleanup errors during test shutdown
                 pass
-    
+
     @classmethod
     def reset_application(cls) -> None:
         """
         Reset the application for a new test context.
-        
+
         WARNING: Only use this in specific test scenarios that require
         a fresh application instance. Most tests should reuse the same
         application for performance.
         """
         cls._cleanup_application()
         cls._application_instance = None
-    
+
     @classmethod
     def process_events(cls, timeout_ms: int = 100) -> None:
         """
         Process Qt events to ensure UI updates complete.
-        
+
         Args:
             timeout_ms: Maximum time to spend processing events
         """
@@ -130,17 +131,17 @@ class TestApplicationFactory:
 class TestQtContext:
     """
     Context manager for Qt testing that ensures proper setup and cleanup.
-    
+
     Usage:
         with TestQtContext() as qt_context:
             app = qt_context.application
             # Test Qt components with guaranteed proper lifecycle
     """
-    
+
     def __init__(self, force_offscreen: bool = True, process_events_on_exit: bool = True):
         """
         Initialize Qt test context.
-        
+
         Args:
             force_offscreen: Force offscreen rendering for headless testing
             process_events_on_exit: Process events when exiting context
@@ -148,18 +149,18 @@ class TestQtContext:
         self.force_offscreen = force_offscreen
         self.process_events_on_exit = process_events_on_exit
         self.application: Optional[QApplication] = None
-    
-    def __enter__(self) -> 'TestQtContext':
+
+    def __enter__(self) -> "TestQtContext":
         """Enter the Qt test context."""
         self.application = TestApplicationFactory.get_application(self.force_offscreen)
         return self
-    
+
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit the Qt test context with proper cleanup."""
         if self.process_events_on_exit and self.application:
             # Process any remaining events to ensure clean state
             TestApplicationFactory.process_events()
-    
+
     def process_events(self, timeout_ms: int = 100) -> None:
         """Process Qt events within the context."""
         TestApplicationFactory.process_events(timeout_ms)
@@ -181,7 +182,7 @@ def qt_test_context(force_offscreen: bool = True):
 def ensure_qt_application() -> QApplication:
     """
     Ensure a Qt application exists, creating one if necessary.
-    
+
     This is a convenience function for tests that need to ensure
     Qt is available but don't need specific configuration.
     """
@@ -197,19 +198,19 @@ def process_qt_events(timeout_ms: int = 100) -> None:
 def validate_qt_application_state() -> dict[str, Any]:
     """
     Validate Qt application state for debugging test issues.
-    
+
     Returns:
         Dictionary with Qt application state information
     """
     app = QApplication.instance()
     if app is None:
         return {"status": "no_application", "error": "No QApplication instance found"}
-    
+
     return {
         "status": "ok",
         "application_name": app.applicationName(),
         "quit_on_last_window_closed": app.quitOnLastWindowClosed(),
-        "platform_name": app.platformName() if hasattr(app, 'platformName') else "unknown",
+        "platform_name": app.platformName() if hasattr(app, "platformName") else "unknown",
         "pixmap_creation_test": _test_pixmap_creation(),
     }
 

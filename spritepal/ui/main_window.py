@@ -890,7 +890,7 @@ class MainWindow(QMainWindow):
     def extraction_complete(self, extracted_files: list[str]) -> None:
         """Called when extraction is complete"""
         self._extracted_files = extracted_files
-        
+
         # CRITICAL FIX FOR BUG #7: Update _output_path based on actual extracted files
         # This ensures UI state consistency with what was actually extracted
         sprite_file = None
@@ -900,7 +900,7 @@ class MainWindow(QMainWindow):
                 # Derive the actual output base path by removing .png extension
                 self._output_path = file_path[:-4]  # Remove ".png"
                 break
-        
+
         # Enable buttons only if we successfully found a sprite file
         if sprite_file:
             self.extract_button.setEnabled(True)
@@ -908,7 +908,7 @@ class MainWindow(QMainWindow):
             self.arrange_rows_button.setEnabled(True)
             self.arrange_grid_button.setEnabled(True)
             self.inject_button.setEnabled(True)
-            
+
             # Update preview info with successful extraction
             self.preview_info.setText(f"Extracted {len(extracted_files)} files")
             self.status_bar.showMessage("Extraction complete!")
@@ -955,7 +955,7 @@ class MainWindow(QMainWindow):
             self.metadata_check.setChecked(session_data.get("create_metadata", True))
 
             self.status_bar.showMessage("Previous session restored")
-        
+
         # Always restore window size/position if enabled (regardless of session validity)
         from spritepal.utils.settings_manager import get_settings_manager
         settings_manager = get_settings_manager()

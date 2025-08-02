@@ -25,8 +25,8 @@
     "**/node_modules",
     "**/__pycache__",
     "**/.*",
-    "PYQT6_BEST_PRACTICES_EXAMPLES.py",
     "test_transparency_headless.py",
-    "view_sprites_zoomed.py"
+    "view_sprites_zoomed.py",
+    "archive/**"
   ]
 }

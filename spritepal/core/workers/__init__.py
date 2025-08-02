@@ -19,40 +19,42 @@ Architecture Patterns:
 """
 
 from .base import BaseWorker, ManagedWorker
-from .specialized import ExtractionWorkerBase, InjectionWorkerBase, ScanWorkerBase, PreviewWorkerBase
 from .extraction import (
-    VRAMExtractionWorker, 
     ROMExtractionWorker,
+    VRAMExtractionWorker,
+    WorkerOwnedROMExtractionWorker,
     WorkerOwnedVRAMExtractionWorker,
-    WorkerOwnedROMExtractionWorker
 )
 from .injection import (
-    VRAMInjectionWorker,
     ROMInjectionWorker,
+    VRAMInjectionWorker,
+    WorkerOwnedROMInjectionWorker,
     WorkerOwnedVRAMInjectionWorker,
-    WorkerOwnedROMInjectionWorker
+)
+from .specialized import (
+    ExtractionWorkerBase,
+    InjectionWorkerBase,
+    PreviewWorkerBase,
+    ScanWorkerBase,
 )
 
 __all__ = [
     # Base classes
     "BaseWorker",
-    "ManagedWorker", 
-    
     # Specialized base classes
     "ExtractionWorkerBase",
     "InjectionWorkerBase",
-    "ScanWorkerBase",
+    "ManagedWorker",
     "PreviewWorkerBase",
-    
+    "ROMExtractionWorker",
+    "ROMInjectionWorker",
+    "ScanWorkerBase",
     # Legacy implementations (singleton managers)
     "VRAMExtractionWorker",
-    "ROMExtractionWorker",
     "VRAMInjectionWorker",
-    "ROMInjectionWorker",
-    
+    "WorkerOwnedROMExtractionWorker",
+    "WorkerOwnedROMInjectionWorker",
     # Modern implementations (worker-owned managers)
     "WorkerOwnedVRAMExtractionWorker",
-    "WorkerOwnedROMExtractionWorker",
     "WorkerOwnedVRAMInjectionWorker",
-    "WorkerOwnedROMInjectionWorker",
 ]

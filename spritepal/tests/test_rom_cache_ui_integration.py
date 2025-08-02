@@ -13,7 +13,7 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
+# Managers are handled by conftest.py
 from spritepal.core.rom_extractor import ROMExtractor
 from spritepal.core.rom_injector import SpritePointer
 from spritepal.ui.dialogs.resume_scan_dialog import ResumeScanDialog
@@ -25,13 +25,7 @@ from spritepal.ui.rom_extraction.workers.scan_worker import SpriteScanWorker
 from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
 from spritepal.utils.rom_cache import ROMCache
 
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    """Initialize and cleanup managers for each test."""
-    initialize_managers("TestROMCacheUI")
-    yield
-    cleanup_managers()
+# Manager setup is handled by conftest.py setup_managers fixture
 
 
 @pytest.fixture
@@ -260,16 +254,16 @@ class TestSpriteScanWorkerCacheIntegration:
         """Test that scan worker can complete a basic scan without cache."""
         extractor = ROMExtractor()
         worker = SpriteScanWorker(test_rom_file, extractor, use_cache=False)
-        
+
         finished = False
         last_progress = 0
         error_msg = None
-        
+
         def on_finished():
             nonlocal finished
             finished = True
             print("Worker finished signal received!")
-            
+
         def on_progress(current, total):
             nonlocal last_progress
             if total > 0:
@@ -277,33 +271,33 @@ class TestSpriteScanWorkerCacheIntegration:
                 if pct != last_progress:
                     print(f"Progress: {current}/{total} = {pct}%")
                     last_progress = pct
-                    
+
         def on_cache_status(msg):
             if "Error:" in msg:
                 nonlocal error_msg
                 error_msg = msg
                 print(f"ERROR detected: {msg}")
-            
+
         worker.finished.connect(on_finished)
         worker.progress.connect(on_progress)
         worker.cache_status.connect(on_cache_status)
-        
+
         print(f"Starting worker with ROM: {test_rom_file}")
         worker.start()
-        
+
         # Wait up to 20 seconds for completion
         start_time = time.time()
         while not finished and (time.time() - start_time) < 20:
             qtbot.wait(100)
-            
+
         elapsed = time.time() - start_time
         print(f"Elapsed time: {elapsed:.1f}s, finished: {finished}, last_progress: {last_progress}%")
-        
+
         if error_msg:
-            assert False, f"Worker reported error: {error_msg}"
-            
+            raise AssertionError(f"Worker reported error: {error_msg}")
+
         assert finished, f"Basic scan worker did not finish after {elapsed:.1f}s, last progress: {last_progress}%"
-    
+
     def test_scan_worker_minimal_cache_resume(self, qtbot, test_rom_file, rom_cache):
         """Minimal test for cache resume functionality."""
         # Create very simple partial cache data
@@ -315,48 +309,48 @@ class TestSpriteScanWorkerCacheIntegration:
         # Start at 50% progress
         current_offset = 0xD8000  # Halfway between 0xC0000 and 0xF0000
         found_sprites = []  # No sprites found yet
-        
+
         # Save to cache
         assert rom_cache.save_partial_scan_results(
             test_rom_file, scan_params, found_sprites, current_offset, completed=False
         )
-        
+
         # Create worker with cache disabled to test manually
         extractor = ROMExtractor()
-        
+
         # Check what the cache returns
         partial_result = rom_cache.get_partial_scan_results(test_rom_file, scan_params)
         assert partial_result is not None
         print(f"Cache returned: {partial_result}")
-        
+
         # Now test with worker
         with patch("spritepal.utils.rom_cache.get_rom_cache", return_value=rom_cache):
             worker = SpriteScanWorker(test_rom_file, extractor, use_cache=True)
-            
+
             finished = False
             cache_msgs = []
-            
+
             def on_finished():
                 nonlocal finished
                 finished = True
-                
+
             def on_cache_status(msg):
                 print(f"Cache: {msg}")
                 cache_msgs.append(msg)
-                
+
             worker.finished.connect(on_finished)
             worker.cache_status.connect(on_cache_status)
-            
+
             worker.start()
-            
+
             # Wait up to 30 seconds
             start_time = time.time()
             while not finished and (time.time() - start_time) < 30:
                 qtbot.wait(500)
-                
+
             assert finished, f"Worker did not finish. Cache messages: {cache_msgs}"
             assert any("Resuming from" in msg for msg in cache_msgs)
-    
+
     @pytest.mark.slow
     def test_scan_worker_with_partial_cache(self, qtbot, test_rom_file, rom_cache):
         """Test scan worker resuming from partial cache - simplified."""
@@ -366,43 +360,43 @@ class TestSpriteScanWorkerCacheIntegration:
             "end_offset": 0xF0000,
             "alignment": 0x100
         }
-        
+
         # Try with 33% progress like original
         current_offset = 0xD0000
         found_sprites = [{"offset": 0xC1000, "size": 100}]
-        
+
         # Save to cache
         assert rom_cache.save_partial_scan_results(
             test_rom_file, scan_params, found_sprites, current_offset, completed=False
         )
-        
+
         # Create worker
         with patch("spritepal.utils.rom_cache.get_rom_cache", return_value=rom_cache):
             extractor = ROMExtractor()
             worker = SpriteScanWorker(test_rom_file, extractor, use_cache=True)
-            
+
             finished = False
             last_msg = None
-            
+
             def on_finished():
                 nonlocal finished
                 finished = True
-                
+
             def on_cache_status(msg):
                 nonlocal last_msg
                 last_msg = msg
                 print(f"Cache: {msg}")
-                
+
             worker.finished.connect(on_finished)
             worker.cache_status.connect(on_cache_status)
-            
+
             worker.start()
-            
+
             # Wait up to 30 seconds
             start_time = time.time()
             while not finished and (time.time() - start_time) < 30:
                 qtbot.wait(500)
-                
+
             assert finished, f"Worker did not finish. Last message: {last_msg}"
 
     @pytest.mark.slow
@@ -410,7 +404,7 @@ class TestSpriteScanWorkerCacheIntegration:
     def test_scan_worker_cache_save_progress(self, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test cache save progress during scanning."""
         mock_get_rom_cache.return_value = rom_cache
-        
+
         extractor = ROMExtractor()
         worker = SpriteScanWorker(test_rom_file, extractor, use_cache=True)
 
@@ -437,25 +431,25 @@ class TestSpriteScanWorkerCacheIntegration:
         def on_finished():
             nonlocal finished
             finished = True
-            
+
         worker.finished.connect(on_finished)
-        
+
         start_time = time.time()
         while not finished and (time.time() - start_time) < 10:
             qtbot.wait(100)
             # If we've seen enough progress saves, that's sufficient for this test
-            if len(save_messages) >= 4:  # At least 40% progress  
+            if len(save_messages) >= 4:  # At least 40% progress
                 break
-            
+
         if not finished and len(save_messages) < 4:
             print(f"Worker timed out. Save messages: {save_messages}")
             print(f"Cache progresses: {cache_progresses}")
-            
+
         # For this test, we just need to verify that periodic saves are happening
         # We don't need the full scan to complete
         assert len(save_messages) >= 4, f"Not enough save messages: {save_messages}"
         assert any("Saving progress" in msg for msg in save_messages)
-        
+
         # Clean up the worker
         if not finished:
             worker.terminate()
@@ -673,10 +667,10 @@ class TestCacheUIEndToEnd:
             rom_info_text = panel.rom_file_widget.rom_info_label.text()
             assert "💾 2 sprites cached" in rom_info_text
 
-            # Verify cache info is available
-            cache_info = rom_cache.get_cache_info(test_rom_file)
-            assert cache_info is not None
-            assert "sprite_locations" in cache_info or "sprite_count" in cache_info
+            # Verify cache info is available for the specific ROM
+            sprite_locations = rom_cache.get_sprite_locations(test_rom_file)
+            assert sprite_locations is not None
+            assert len(sprite_locations) > 0
 
     @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_cache_persistence_across_sessions(self, mock_get_rom_cache, qtbot, test_rom_file, temp_cache_dir):

@@ -10,9 +10,9 @@ import pytest
 
 # Imports handled by centralized conftest.py path setup
 from spritepal.core.controller import ExtractionController
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
+from spritepal.core.workers import VRAMExtractionWorker
 
 # Manager setup handled by centralized conftest.py
 
@@ -24,17 +24,14 @@ class TestVRAMExtractionWorkerMocked:
     # No need for local fixture definitions
 
     @patch("spritepal.core.controller.pil_to_qpixmap")
-    @patch("spritepal.core.controller.QThread")
-    @patch("spritepal.core.controller.pyqtSignal")
     def test_worker_with_mocked_qt(
-        self, mock_signal, mock_qthread, mock_pil_to_qpixmap,
+        self, mock_pil_to_qpixmap,
         standard_test_params, mock_extraction_signals
     ):
         """Test worker functionality with mocked Qt components"""
         # Manager setup handled by centralized fixture
         try:
             # Configure mocks
-            mock_signal.side_effect = lambda *args: Mock()
             mock_pixmap_instance = Mock()
             mock_pil_to_qpixmap.return_value = mock_pixmap_instance
 
@@ -51,7 +48,7 @@ class TestVRAMExtractionWorkerMocked:
             finished_files = []
 
             # Connect handlers
-            worker.progress.connect(lambda msg: progress_messages.append(msg))
+            worker.progress.connect(lambda percent, msg: progress_messages.append(msg))
             worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
             worker.extraction_finished.connect(lambda files: finished_files.extend(files))
 
@@ -135,7 +132,7 @@ class TestControllerMocked:
         assert mock_worker.progress.connect.called
         assert mock_worker.preview_ready.connect.called
         assert mock_worker.palettes_ready.connect.called
-        assert mock_worker.finished.connect.called
+        assert mock_worker.extraction_finished.connect.called
         assert mock_worker.error.connect.called
 
 

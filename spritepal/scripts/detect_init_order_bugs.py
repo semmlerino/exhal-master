@@ -10,7 +10,7 @@ already-created widgets or objects.
 import ast
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 
 class InitOrderDetector(ast.NodeVisitor):
@@ -18,11 +18,11 @@ class InitOrderDetector(ast.NodeVisitor):
 
     def __init__(self, filename: str):
         self.filename = filename
-        self.issues: List[Dict[str, Any]] = []
+        self.issues: list[dict[str, Any]] = []
         self.current_class: str | None = None
         self.in_init: bool = False
-        self.setup_methods_called: List[Tuple[str, int]] = []
-        self.attribute_assignments: List[Tuple[str, int, Any]] = []
+        self.setup_methods_called: list[tuple[str, int]] = []
+        self.attribute_assignments: list[tuple[str, int, Any]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Visit class definition."""
@@ -37,14 +37,14 @@ class InitOrderDetector(ast.NodeVisitor):
             self.in_init = True
             self.setup_methods_called = []
             self.attribute_assignments = []
-            
+
             # Visit the function body
             for stmt in node.body:
                 self.visit(stmt)
-            
+
             # Check for potential issues
             self._check_init_order_issues()
-            
+
             self.in_init = False
         else:
             self.generic_visit(node)
@@ -70,7 +70,7 @@ class InitOrderDetector(ast.NodeVisitor):
                     if isinstance(node.value, ast.Constant) and node.value.value is None:
                         value = "None"
                     else:
-                        value = ast.unparse(node.value) if hasattr(ast, 'unparse') else str(node.value)
+                        value = ast.unparse(node.value) if hasattr(ast, "unparse") else str(node.value)
                 self.attribute_assignments.append((node.target.attr, node.lineno, value))
         self.generic_visit(node)
 
@@ -85,7 +85,7 @@ class InitOrderDetector(ast.NodeVisitor):
                         if isinstance(node.value, ast.Constant) and node.value.value is None:
                             value = "None"
                         else:
-                            value = ast.unparse(node.value) if hasattr(ast, 'unparse') else str(node.value)
+                            value = ast.unparse(node.value) if hasattr(ast, "unparse") else str(node.value)
                         self.attribute_assignments.append((target.attr, node.lineno, value))
         self.generic_visit(node)
 
@@ -127,12 +127,12 @@ class InitOrderDetector(ast.NodeVisitor):
                 })
 
 
-def analyze_file(filepath: Path) -> List[Dict[str, Any]]:
+def analyze_file(filepath: Path) -> list[dict[str, Any]]:
     """Analyze a single Python file for initialization order issues."""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read()
-        
+
         tree = ast.parse(content, filename=str(filepath))
         detector = InitOrderDetector(str(filepath))
         detector.visit(tree)
@@ -150,7 +150,7 @@ def main():
 
     # Directories to scan
     directories = ["ui", "core", "utils"]
-    
+
     all_issues = []
     files_scanned = 0
 
@@ -201,7 +201,7 @@ def main():
     if all_issues:
         report_path = project_root / "init_order_issues.json"
         import json
-        with open(report_path, 'w') as f:
+        with open(report_path, "w") as f:
             json.dump(all_issues, f, indent=2)
         print(f"\nDetailed report saved to: {report_path}")
 

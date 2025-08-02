@@ -5,7 +5,7 @@ Test worker helpers for synchronous execution in tests
 from pathlib import Path
 from typing import Any
 
-from spritepal.core.workers import VRAMExtractionWorker, ROMExtractionWorker
+from spritepal.core.workers import ROMExtractionWorker, VRAMExtractionWorker
 
 
 class TestExtractionWorker(VRAMExtractionWorker):

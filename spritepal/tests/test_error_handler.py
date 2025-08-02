@@ -1,0 +1,104 @@
+"""
+Test error handler functionality
+"""
+
+import pytest
+from PyQt6.QtTest import QSignalSpy
+from PyQt6.QtWidgets import QWidget
+
+from spritepal.ui.common import get_error_handler, reset_error_handler
+
+
+class TestErrorHandler:
+    """Test error handler signal-based approach"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Reset error handler before each test"""
+        reset_error_handler()
+        yield
+        reset_error_handler()
+
+    def test_error_handler_emits_signals(self, qtbot):
+        """Test that error handler emits signals instead of showing dialogs"""
+        # Create a parent widget
+        parent = QWidget()
+        qtbot.addWidget(parent)
+
+        # Get error handler
+        handler = get_error_handler(parent)
+        handler.set_show_dialogs(False)  # Disable dialogs for testing
+
+        # Create signal spies
+        critical_spy = QSignalSpy(handler.critical_error)
+        warning_spy = QSignalSpy(handler.warning_error)
+        info_spy = QSignalSpy(handler.info_message)
+
+        # Test critical error
+        handler.handle_critical_error("Test Error", "This is a test error")
+        assert len(critical_spy) == 1
+        assert critical_spy[0] == ["Test Error", "This is a test error"]
+
+        # Test warning
+        handler.handle_warning("Test Warning", "This is a test warning")
+        assert len(warning_spy) == 1
+        assert warning_spy[0] == ["Test Warning", "This is a test warning"]
+
+        # Test info
+        handler.handle_info("Test Info", "This is test info")
+        assert len(info_spy) == 1
+        assert info_spy[0] == ["Test Info", "This is test info"]
+
+    def test_error_handler_handles_exceptions(self, qtbot):
+        """Test that error handler can handle exceptions"""
+        parent = QWidget()
+        qtbot.addWidget(parent)
+
+        handler = get_error_handler(parent)
+        handler.set_show_dialogs(False)
+
+        critical_spy = QSignalSpy(handler.critical_error)
+
+        # Test exception handling
+        test_exception = ValueError("Test exception")
+        handler.handle_exception(test_exception, "Test context")
+
+        assert len(critical_spy) == 1
+        assert critical_spy[0][0] == "Error"
+        assert "Test context: Test exception" in critical_spy[0][1]
+
+    def test_error_handler_singleton(self):
+        """Test that get_error_handler returns singleton"""
+        handler1 = get_error_handler()
+        handler2 = get_error_handler()
+        assert handler1 is handler2
+
+    def test_custom_signal_handlers(self, qtbot):
+        """Test that custom handlers can be connected to error signals"""
+        parent = QWidget()
+        qtbot.addWidget(parent)
+
+        handler = get_error_handler(parent)
+        handler.set_show_dialogs(False)
+
+        # Track custom handler calls
+        custom_calls = []
+
+        def custom_critical_handler(title: str, message: str):
+            custom_calls.append(("critical", title, message))
+
+        def custom_warning_handler(title: str, message: str):
+            custom_calls.append(("warning", title, message))
+
+        # Connect custom handlers
+        handler.critical_error.connect(custom_critical_handler)
+        handler.warning_error.connect(custom_warning_handler)
+
+        # Trigger errors
+        handler.handle_critical_error("Critical", "Critical message")
+        handler.handle_warning("Warning", "Warning message")
+
+        # Verify custom handlers were called
+        assert len(custom_calls) == 2
+        assert custom_calls[0] == ("critical", "Critical", "Critical message")
+        assert custom_calls[1] == ("warning", "Warning", "Warning message")

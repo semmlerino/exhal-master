@@ -194,7 +194,7 @@ class HexOffsetInput(QWidget):
         else:
             # Convert any other type to string
             converted_text = str(text)
-        
+
         self.hex_edit.setText(converted_text)
 
     def set_placeholder(self, placeholder: str):

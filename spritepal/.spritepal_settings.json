@@ -63,5 +63,11 @@
     "oam": [],
     "rom": [],
     "max_recent": 10
+  },
+  "manual_offset_dialog": {
+    "x": 473,
+    "y": -1179,
+    "width": 1000,
+    "height": 2054
   }
 }

@@ -210,8 +210,8 @@ class ROMMapWidget(QWidget):
             except (ArithmeticError, ValueError) as e:
                 logger.warning(f"Error drawing scale markers: {e}")
 
-        except (RuntimeError, ValueError, ArithmeticError) as e:
-            logger.exception(f"Paint error in ROM map widget: {e}")
+        except (RuntimeError, ValueError, ArithmeticError):
+            logger.exception("Paint error in ROM map widget")
             # Draw minimal error state
             try:
                 painter = QPainter(self)
@@ -220,8 +220,8 @@ class ROMMapWidget(QWidget):
                 painter.drawText(10, 20, "Visualization Error")
             except Exception:
                 pass  # Prevent cascading failures
-        except Exception as e:
-            logger.exception(f"Unexpected error in ROM map paint event: {e}")
+        except Exception:
+            logger.exception("Unexpected error in ROM map paint event")
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None):

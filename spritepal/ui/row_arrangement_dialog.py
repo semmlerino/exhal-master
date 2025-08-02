@@ -49,14 +49,14 @@ class RowArrangementDialog(SplitterDialog):
         self.arrangement_manager: ArrangementManager = ArrangementManager()
         self.colorizer: PaletteColorizer = PaletteColorizer()
         self.preview_generator: PreviewGenerator = PreviewGenerator(self.colorizer)
-        
+
         # Initialize UI components that will be created in _setup_ui
         self.available_list: DragDropListWidget | None = None
         self.arranged_list: DragDropListWidget | None = None
-        
+
         # Load sprite data before creating UI
         self._load_sprite_data()
-        
+
         # Step 2: Call parent init (this will call _setup_ui)
         super().__init__(
             parent=parent,
@@ -76,7 +76,7 @@ class RowArrangementDialog(SplitterDialog):
         self.colorizer.palette_index_changed.connect(self._on_palette_index_changed)
 
         self._update_panel_titles()
-        
+
         # Update status based on whether sprite loading was successful
         if self.original_image is not None and self.tile_rows:
             self.update_status(
@@ -103,7 +103,7 @@ class RowArrangementDialog(SplitterDialog):
             # CRITICAL FIX FOR BUG #21: Show error dialog and set up minimal state to prevent crashes
             from PyQt6.QtWidgets import QMessageBox
             _ = QMessageBox.critical(
-                self.parent(), "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
+                parent, "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
             )
             # Set up minimal state to prevent crashes
             self.original_image = None
@@ -478,7 +478,7 @@ class RowArrangementDialog(SplitterDialog):
         # ADDITIONAL SAFETY CHECK FOR BUG #21: Handle error state gracefully
         if self.original_image is None or not self.tile_rows:
             return None
-            
+
         arranged_indices = self.arrangement_manager.get_arranged_indices()
         if not arranged_indices:
             return None

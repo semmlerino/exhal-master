@@ -376,7 +376,7 @@ class TestInjectionWorker:
         )
 
         worker.progress = mock_signals["progress"]
-        worker.finished = mock_signals["finished"]
+        worker.injection_finished = mock_signals["finished"]
 
         worker.run()
 
@@ -400,7 +400,7 @@ class TestInjectionWorker:
         )
 
         worker.progress = mock_signals["progress"]
-        worker.finished = mock_signals["finished"]
+        worker.injection_finished = mock_signals["finished"]
 
         worker.run()
 
@@ -423,7 +423,7 @@ class TestInjectionWorker:
         )
 
         worker.progress = mock_signals["progress"]
-        worker.finished = mock_signals["finished"]
+        worker.injection_finished = mock_signals["finished"]
 
         worker.run()
 

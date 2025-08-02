@@ -10,9 +10,9 @@ from PIL import Image
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
@@ -91,25 +91,29 @@ class TestVRAMExtractionWorkerHeadless:
         initialize_managers("TestApp")
 
         try:
-            # Create worker first
-            worker = VRAMExtractionWorker(worker_params)
-
-            # Create test image
-            Image.new("P", (128, 64), 0)
-
-            # Mock the extraction manager's extract_from_vram method
-            with patch("spritepal.core.controller.get_extraction_manager") as mock_get_manager:
+            # Mock the extraction manager before creating worker
+            with patch("spritepal.core.workers.extraction.get_extraction_manager") as mock_get_manager:
                 # Create mock manager
                 mock_manager = Mock()
                 mock_get_manager.return_value = mock_manager
 
-                # Mock manager signals
+                # Create worker with mocked manager
+                worker = VRAMExtractionWorker(worker_params)
+
+                # Create test image
+                Image.new("P", (128, 64), 0)
+
+                # Mock manager signals to return Mock connections
+                mock_connection = Mock()
+
                 mock_manager.extraction_progress = Mock()
-                mock_manager.extraction_progress.connect = Mock()
+                mock_manager.extraction_progress.connect = Mock(return_value=mock_connection)
                 mock_manager.palettes_extracted = Mock()
-                mock_manager.palettes_extracted.connect = Mock()
+                mock_manager.palettes_extracted.connect = Mock(return_value=mock_connection)
                 mock_manager.active_palettes_found = Mock()
-                mock_manager.active_palettes_found.connect = Mock()
+                mock_manager.active_palettes_found.connect = Mock(return_value=mock_connection)
+                mock_manager.preview_generated = Mock()
+                mock_manager.preview_generated.connect = Mock(return_value=mock_connection)
 
                 # Mock the extraction result
                 output_path = worker_params["output_base"] + ".png"
@@ -137,12 +141,14 @@ class TestVRAMExtractionWorkerHeadless:
                 worker.preview_image_ready = preview_image_mock
                 worker.palettes_ready = palettes_mock
                 worker.active_palettes_ready = active_palettes_mock
-                worker.finished = finished_mock
+                worker.extraction_finished = finished_mock
                 worker.error = error_mock
 
                 # Mock pixmap creation to avoid Qt dependency
-                with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
+                with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap, \
+                     patch.object(worker, "disconnect_manager_signals") as mock_disconnect:
                     mock_pil_to_qpixmap.return_value = Mock()
+                    mock_disconnect.return_value = None
 
                     # Run the worker logic directly (not as thread)
                     worker.run()

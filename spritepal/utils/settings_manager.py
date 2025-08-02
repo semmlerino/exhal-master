@@ -5,7 +5,6 @@ This manager now delegates to SessionManager for actual storage to avoid
 conflicts when both managers save to the same file.
 """
 
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -36,7 +35,7 @@ class SettingsManager:
             self._session_manager.set("cache", "auto_cleanup", True)
         if self._session_manager.get("cache", "show_indicators") is None:
             self._session_manager.set("cache", "show_indicators", True)
-        
+
         # Set default paths if not present
         if self._session_manager.get("paths", "default_dumps_dir") is None:
             default_dir = str(Path.home() / "Documents" / "Mesen2" / "Debugger")

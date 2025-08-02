@@ -13,9 +13,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from spritepal.core.controller import ExtractionController
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
+from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
@@ -189,12 +189,12 @@ class TestVRAMExtractionWorker:
             preview_data = []
             finished_files = []
 
-            worker.progress.connect(lambda msg: progress_messages.append(msg))
+            worker.progress.connect(lambda percent, msg: progress_messages.append(msg))
             worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
-            worker.finished.connect(lambda files: finished_files.extend(files))
+            worker.extraction_finished.connect(lambda files: finished_files.extend(files))
 
             # Start worker as real thread and wait for completion
-            with qtbot.waitSignal(worker.finished, timeout=10000):
+            with qtbot.waitSignal(worker.extraction_finished, timeout=10000):
                 worker.start()
 
             # Wait for worker to fully complete
@@ -544,7 +544,7 @@ class TestFullWorkflowIntegration:
                 worker.preview_image_ready.connect(controller._on_preview_image_ready)
                 worker.palettes_ready.connect(controller._on_palettes_ready)
                 worker.active_palettes_ready.connect(controller._on_active_palettes_ready)
-                worker.finished.connect(controller._on_extraction_finished)
+                worker.extraction_finished.connect(controller._on_extraction_finished)
                 worker.error.connect(controller._on_extraction_error)
 
                 # Run worker directly
@@ -689,7 +689,7 @@ class TestFullWorkflowIntegration:
                         setattr(recovery_worker, signal_name, mock_signal)
 
                     # Connect completion tracking
-                    recovery_worker.finished.connect(controller._on_extraction_finished)
+                    recovery_worker.extraction_finished.connect(controller._on_extraction_finished)
                     recovery_worker.error.connect(controller._on_extraction_error)
 
                     # Run worker directly
@@ -770,7 +770,7 @@ class TestFullWorkflowIntegration:
                 worker.active_palettes_ready.connect(
                     lambda p: active_palette_calls.append(p)
                 )
-                worker.finished.connect(lambda f: completion_calls.append(f))
+                worker.extraction_finished.connect(lambda f: completion_calls.append(f))
 
                 # Run worker directly
                 worker.run()

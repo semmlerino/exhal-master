@@ -6,20 +6,22 @@ particularly catching initialization order bugs where attributes
 might be None when methods expect them to be initialized.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
-from PyQt6.QtWidgets import QApplication
 
 # Import all dialogs
 from spritepal.ui.dialogs import (
-    ManualOffsetDialog,
+    ResumeScanDialog,
     SettingsDialog,
     UserErrorDialog,
-    ResumeScanDialog,
 )
+from spritepal.ui.dialogs.manual_offset_dialog_simplified import (
+    ManualOffsetDialogSimplified as ManualOffsetDialog,
+)
+from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 
 
 class TestDialogInstantiation:
@@ -28,13 +30,12 @@ class TestDialogInstantiation:
     @pytest.fixture(autouse=True)
     def setup_qt_app(self, qapp):
         """Ensure Qt application is available."""
-        pass
 
     def test_manual_offset_dialog_creation(self, qtbot):
         """Test ManualOffsetDialog can be created and used."""
-        dialog = ManualOffsetDialog.get_instance()
+        dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
-        
+
         # Test that UI components are not None
         assert dialog.rom_map is not None
         assert dialog.offset_widget is not None
@@ -42,7 +43,7 @@ class TestDialogInstantiation:
         assert dialog.import_export is not None
         assert dialog.status_panel is not None
         assert dialog.preview_widget is not None
-        
+
         # Test that we can call basic methods that use these components
         # If any widget is None, this will raise AttributeError naturally
         # Don't call set_rom_data as it needs a real extraction_manager
@@ -53,33 +54,33 @@ class TestDialogInstantiation:
         """Test SettingsDialog can be created."""
         dialog = SettingsDialog()
         qtbot.addWidget(dialog)
-        
+
         # Test loading settings doesn't fail
         dialog._load_settings()
-        
+
         # Test UI components exist
-        assert hasattr(dialog, 'dumps_dir_edit')
-        assert hasattr(dialog, 'cache_enabled_check')
+        assert hasattr(dialog, "dumps_dir_edit")
+        assert hasattr(dialog, "cache_enabled_check")
 
     def test_injection_dialog_creation(self, qtbot):
         """Test InjectionDialog can be created."""
-        with patch('spritepal.ui.injection_dialog.get_injection_manager'), \
-             patch.object(InjectionDialog, '_load_metadata'), \
-             patch.object(InjectionDialog, '_set_initial_paths'), \
-             patch.object(InjectionDialog, '_load_rom_info'):
+        with patch("spritepal.ui.injection_dialog.get_injection_manager"), \
+             patch.object(InjectionDialog, "_load_metadata"), \
+             patch.object(InjectionDialog, "_set_initial_paths"), \
+             patch.object(InjectionDialog, "_load_rom_info"):
             dialog = InjectionDialog()
             qtbot.addWidget(dialog)
-            
+
             # Test UI components exist
-            assert hasattr(dialog, 'sprite_file_selector')
-            assert hasattr(dialog, 'preview_widget')
+            assert hasattr(dialog, "sprite_file_selector")
+            assert hasattr(dialog, "preview_widget")
 
     def test_user_error_dialog_creation(self, qtbot):
         """Test UserErrorDialog can be created."""
         # Constructor signature: (error_message, technical_details=None, parent=None)
         dialog = UserErrorDialog("Test Error", "Technical details about the error")
         qtbot.addWidget(dialog)
-        
+
         # Dialog should display without errors
         assert "Error" in dialog.windowTitle()
 
@@ -94,10 +95,10 @@ class TestDialogInstantiation:
         }
         dialog = ResumeScanDialog(scan_info)
         qtbot.addWidget(dialog)
-        
+
         # Should have proper result values
-        assert hasattr(dialog, 'RESUME')
-        assert hasattr(dialog, 'START_FRESH')
+        assert hasattr(dialog, "RESUME")
+        assert hasattr(dialog, "START_FRESH")
 
     def test_row_arrangement_dialog_creation(self, qtbot):
         """Test RowArrangementDialog can be created."""
@@ -106,15 +107,19 @@ class TestDialogInstantiation:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             test_file = f.name
             f.write(b"test data")
-        
+
         try:
-            with patch('spritepal.ui.row_arrangement_dialog.RowImageProcessor'):
+            with patch("spritepal.ui.row_arrangement_dialog.RowImageProcessor") as mock_processor:
+                # Configure mock to return expected tuple (image, tile_rows)
+                mock_instance = mock_processor.return_value
+                mock_instance.process_sprite_sheet.return_value = (None, [])  # (original_image, tile_rows)
+
                 dialog = RowArrangementDialog(test_file, 16)
                 qtbot.addWidget(dialog)
-                
+
                 # Test UI components exist
-                assert hasattr(dialog, 'available_rows_widget')
-                assert hasattr(dialog, 'arranged_rows_widget')
+                assert hasattr(dialog, "available_list")
+                assert hasattr(dialog, "arranged_list")
         finally:
             import os
             if os.path.exists(test_file):
@@ -127,15 +132,20 @@ class TestDialogInstantiation:
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             test_file = f.name
             f.write(b"test data")
-        
+
         try:
-            with patch('spritepal.ui.grid_arrangement_dialog.extract_tiles'):
+            with patch("spritepal.ui.grid_arrangement_dialog.GridImageProcessor") as mock_processor:
+                # Configure mock to return expected tuple (image, tiles)
+                mock_instance = mock_processor.return_value
+                mock_instance.process_sprite_sheet_as_grid.return_value = (None, {})  # (original_image, tiles)
+                mock_instance.grid_rows = 1
+                mock_instance.grid_cols = 1
+
                 dialog = GridArrangementDialog(test_file, 16)
                 qtbot.addWidget(dialog)
-                
+
                 # Test UI components exist
-                assert hasattr(dialog, 'source_list')
-                assert hasattr(dialog, 'arranged_list')
+                assert hasattr(dialog, "arrangement_list")
         finally:
             import os
             if os.path.exists(test_file):
@@ -147,21 +157,21 @@ class TestDialogMethodCalls:
 
     def test_manual_offset_dialog_methods(self, qtbot):
         """Test ManualOffsetDialog methods don't fail on None attributes."""
-        dialog = ManualOffsetDialog.get_instance()
+        dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
-        
+
         # These methods should not raise AttributeError
         methods_to_test = [
-            ('_update_status', ("Test status",)),
-            ('_create_left_panel', ()),
-            ('_create_right_panel', ()),
-            ('toggle_fullscreen', ()),
+            ("_update_status", ("Test status",)),
+            ("_create_left_panel", ()),
+            ("_create_right_panel", ()),
+            ("toggle_fullscreen", ()),
         ]
-        
+
         for method_name, args in methods_to_test:
             method = getattr(dialog, method_name, None)
             if method and callable(method):
-                # If widgets are not properly initialized (None), 
+                # If widgets are not properly initialized (None),
                 # calling these methods will raise AttributeError
                 # No need to catch and assert - let it fail naturally
                 method(*args)
@@ -172,15 +182,15 @@ class TestInitializationOrder:
 
     def test_no_overwritten_widgets(self, qtbot):
         """Test that widgets created in _setup methods aren't overwritten."""
-        dialog = ManualOffsetDialog.get_instance()
+        dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
-        
+
         # After initialization, all widget attributes should be widgets, not None
         widget_attrs = [
-            'rom_map', 'offset_widget', 'scan_controls',
-            'import_export', 'status_panel', 'preview_widget'
+            "rom_map", "offset_widget", "scan_controls",
+            "import_export", "status_panel", "preview_widget"
         ]
-        
+
         for attr in widget_attrs:
             widget = getattr(dialog, attr, None)
             assert widget is not None, f"Widget {attr} is None after initialization"

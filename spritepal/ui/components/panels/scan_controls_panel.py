@@ -22,11 +22,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from spritepal.ui.common import WorkerManager
 from spritepal.ui.components.dialogs import RangeScanDialog
 from spritepal.ui.components.visualization import ROMMapWidget
 from spritepal.ui.rom_extraction.workers import RangeScanWorker
 from spritepal.ui.styles import get_panel_style
 from spritepal.utils.logging_config import get_logger
+from spritepal.utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 
@@ -37,9 +39,10 @@ class ScanControlsPanel(QWidget):
     # Signals
     sprite_found = pyqtSignal(int, float)  # offset, quality
     scan_status_changed = pyqtSignal(str)  # status message
-    progress_update = pyqtSignal(int)  # progress value
+    progress_update = pyqtSignal(int, int)  # current_offset, progress_percentage
     scan_started = pyqtSignal()
     scan_finished = pyqtSignal()
+    partial_scan_detected = pyqtSignal(dict)  # cache info for resume dialog
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -62,6 +65,9 @@ class ScanControlsPanel(QWidget):
 
         # ROM map reference (set by parent)
         self.rom_map: ROMMapWidget | None = None
+
+        # Cache status UI
+        self.cache_status_label: QLabel | None = None
 
         self._setup_ui()
         self._connect_signals()
@@ -102,6 +108,19 @@ class ScanControlsPanel(QWidget):
         control_row.addStretch()  # Push buttons to left
         layout.addLayout(control_row)
 
+        # Cache status label
+        self.cache_status_label = QLabel("")
+        self.cache_status_label.setStyleSheet("""
+            QLabel {
+                color: #666;
+                font-size: 11px;
+                padding: 4px;
+                border-radius: 3px;
+            }
+        """)
+        self.cache_status_label.setVisible(False)  # Hidden by default
+        layout.addWidget(self.cache_status_label)
+
         self.setLayout(layout)
 
     def _connect_signals(self):
@@ -118,6 +137,9 @@ class ScanControlsPanel(QWidget):
             self.rom_size = rom_size
             self.extraction_manager = extraction_manager
             self.rom_extractor = extraction_manager.get_rom_extractor()
+
+        # Check for cached partial scan results
+        self._check_for_cached_scans()
 
     def _get_managers_safely(self) -> tuple["ExtractionManager | None", "ROMExtractor | None"]:
         """Get manager references safely with thread protection"""
@@ -152,6 +174,12 @@ class ScanControlsPanel(QWidget):
 
         # Additional validation in case dialog validation was bypassed
         if not self._validate_scan_parameters(start_offset, end_offset):
+            return
+
+        # Check for cached partial scan for this range
+        use_cache = self._check_scan_cache_before_start(start_offset, end_offset)
+        if use_cache is None:
+            # User cancelled via ResumeScanDialog
             return
 
         # Confirm the scan
@@ -200,6 +228,12 @@ class ScanControlsPanel(QWidget):
         # Validate full ROM scan parameters
         start_offset, end_offset = 0, self.rom_size - 1
         if not self._validate_scan_parameters(start_offset, end_offset):
+            return
+
+        # Check for cached partial scan for full ROM
+        use_cache = self._check_scan_cache_before_start(start_offset, end_offset)
+        if use_cache is None:
+            # User cancelled via ResumeScanDialog
             return
 
         # Start full ROM scan
@@ -260,12 +294,7 @@ class ScanControlsPanel(QWidget):
         # Clean up existing range scan worker with enhanced error handling
         if self.range_scan_worker:
             try:
-                self.range_scan_worker.quit()
-                if not self.range_scan_worker.wait(3000):  # 3 second timeout
-                    logger.warning("Range scan worker cleanup timeout, terminating")
-                    self.range_scan_worker.terminate()
-                    if not self.range_scan_worker.wait(1000):  # 1 second for termination
-                        logger.error("Range scan worker failed to terminate")
+                WorkerManager.cleanup_worker(self.range_scan_worker, timeout=3000)
             except RuntimeError as e:
                 logger.warning(f"Error during worker cleanup: {e}")
                 # Continue anyway, worker may already be cleaned up
@@ -290,6 +319,8 @@ class ScanControlsPanel(QWidget):
             self.range_scan_worker.scan_paused.connect(self._on_scan_paused)
             self.range_scan_worker.scan_resumed.connect(self._on_scan_resumed)
             self.range_scan_worker.scan_stopped.connect(self._on_scan_stopped)
+            self.range_scan_worker.cache_status.connect(self._on_cache_status)
+            self.range_scan_worker.cache_progress_saved.connect(self._on_cache_progress_saved)
 
             # Start the worker with error recovery
             self.range_scan_worker.start()
@@ -322,9 +353,9 @@ class ScanControlsPanel(QWidget):
         count = len(self.found_sprites)
         self.scan_status_changed.emit(f"Scanning... Found {count} sprite{'s' if count != 1 else ''}")
 
-    def _on_range_scan_progress(self, current_offset: int):
+    def _on_range_scan_progress(self, current_offset: int, progress_pct: int):
         """Handle progress updates during range scan"""
-        self.progress_update.emit(current_offset)
+        self.progress_update.emit(current_offset, progress_pct)
 
     def _on_range_scan_complete(self, found: bool):
         """Handle range scan completion"""
@@ -386,14 +417,8 @@ class ScanControlsPanel(QWidget):
 
     def cleanup_workers(self):
         """Clean up any running worker threads with timeouts to prevent hangs"""
-        if self.range_scan_worker:
-            self.range_scan_worker.quit()
-            if not self.range_scan_worker.wait(5000):  # 5 second timeout
-                logger.warning("Range scan worker did not stop gracefully, terminating")
-                self.range_scan_worker.terminate()
-                if not self.range_scan_worker.wait(2000):  # 2 second timeout for termination
-                    logger.error("Range scan worker failed to terminate")
-            self.range_scan_worker = None
+        WorkerManager.cleanup_worker(self.range_scan_worker, timeout=5000)
+        self.range_scan_worker = None
 
     def get_found_sprites(self) -> list[tuple[int, float]]:
         """Get the list of found sprites"""
@@ -402,9 +427,9 @@ class ScanControlsPanel(QWidget):
     def _validate_scan_parameters(self, start_offset: int, end_offset: int) -> bool:
         """Validate scan parameters before starting scan"""
         # Validation constants
-        MIN_SCAN_SIZE = 0x100  # 256 bytes minimum
-        MAX_SAFE_SCAN_SIZE = 0x400000  # 4MB for safe performance
-        MAX_SCAN_SIZE = 0x2000000  # 32MB absolute maximum
+        min_scan_size = 0x100  # 256 bytes minimum
+        max_safe_scan_size = 0x400000  # 4MB for safe performance
+        max_scan_size = 0x2000000  # 32MB absolute maximum
 
         # Basic range validation
         if start_offset < 0:
@@ -422,18 +447,18 @@ class ScanControlsPanel(QWidget):
         # Size validation
         scan_size = end_offset - start_offset + 1
 
-        if scan_size < MIN_SCAN_SIZE:
-            self.scan_status_changed.emit(f"Scan range too small: {scan_size} bytes (minimum {MIN_SCAN_SIZE})")
+        if scan_size < min_scan_size:
+            self.scan_status_changed.emit(f"Scan range too small: {scan_size} bytes (minimum {min_scan_size})")
             return False
 
-        if scan_size > MAX_SCAN_SIZE:
+        if scan_size > max_scan_size:
             self.scan_status_changed.emit(
-                f"Scan range too large: {scan_size / (1024*1024):.1f} MB (maximum {MAX_SCAN_SIZE / (1024*1024):.0f} MB)"
+                f"Scan range too large: {scan_size / (1024*1024):.1f} MB (maximum {max_scan_size / (1024*1024):.0f} MB)"
             )
             return False
 
         # Performance warning for large scans
-        if scan_size > MAX_SAFE_SCAN_SIZE:
+        if scan_size > max_safe_scan_size:
             scan_mb = scan_size / (1024 * 1024)
             result = _ = QMessageBox.question(
                 self,
@@ -453,3 +478,191 @@ class ScanControlsPanel(QWidget):
     def is_scan_active(self) -> bool:
         """Check if a scan is currently active"""
         return self.is_scanning
+
+    def _check_for_cached_scans(self) -> None:
+        """Check for cached partial scan results and emit signal if found"""
+        if not self.rom_path:
+            return
+
+        try:
+            rom_cache = get_rom_cache()
+            if not rom_cache.cache_enabled:
+                return
+
+            # Check common scan parameter combinations that might have cached results
+            common_scan_params = [
+                # Range scan parameters (around current offset)
+                {
+                    "start_offset": max(0, self.current_offset - 0x10000),  # 64KB before current
+                    "end_offset": min(self.rom_size, self.current_offset + 0x10000),  # 64KB after current
+                    "step": 0x100,
+                    "quality_threshold": 0.5,
+                    "min_sprite_size": 512,
+                    "max_sprite_size": 32768
+                },
+                # Full ROM scan parameters
+                {
+                    "start_offset": 0,
+                    "end_offset": self.rom_size,
+                    "step": 0x100,
+                    "quality_threshold": 0.5,
+                    "min_sprite_size": 512,
+                    "max_sprite_size": 32768
+                }
+            ]
+
+            # Check each parameter set for cached results
+            for scan_params in common_scan_params:
+                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+                if cached_progress and not cached_progress.get("completed", False):
+                    # Found incomplete cached scan - emit signal for parent to handle
+                    logger.info(f"Found cached partial scan for ROM: {os.path.basename(self.rom_path)}")
+                    self._update_cache_status(f"Found cached scan with {len(cached_progress.get('found_sprites', []))} sprites")
+                    self.partial_scan_detected.emit(cached_progress)
+                    return
+
+            # Check for completed scans to show status
+            for scan_params in common_scan_params:
+                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+                if cached_progress and cached_progress.get("completed", False):
+                    sprite_count = len(cached_progress.get("found_sprites", []))
+                    if sprite_count > 0:
+                        self._update_cache_status(f"Cache: {sprite_count} sprites found previously")
+                        return
+
+            # Clear status if no relevant cache found
+            self._clear_cache_status()
+
+        except Exception as e:
+            logger.warning(f"Error checking for cached scans: {e}")
+            self._clear_cache_status()
+
+    def _update_cache_status(self, message: str, status_type: str = "default") -> None:
+        """Update the cache status label with different styling based on type"""
+        if not self.cache_status_label:
+            return
+
+        self.cache_status_label.setText(message)
+        self.cache_status_label.setVisible(True)
+
+        # Different styles for different cache operations
+        if "resumed" in message.lower() or "resuming" in message.lower():
+            # Cache resume - blue theme
+            style = """
+                QLabel {
+                    background-color: #e3f2fd;
+                    color: #1976d2;
+                    border: 1px solid #2196f3;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: 11px;
+                    font-weight: bold;
+                }
+            """
+        elif "saved" in message.lower() or "progress" in message.lower():
+            # Cache save - orange theme
+            style = """
+                QLabel {
+                    background-color: #fff3e0;
+                    color: #f57c00;
+                    border: 1px solid #ff9800;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: 11px;
+                    font-weight: bold;
+                }
+            """
+        elif "complete" in message.lower():
+            # Completion - green theme
+            style = """
+                QLabel {
+                    background-color: #e8f5e8;
+                    color: #2e7d32;
+                    border: 1px solid #4caf50;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: 11px;
+                    font-weight: bold;
+                }
+            """
+        else:
+            # Default - gray theme
+            style = """
+                QLabel {
+                    background-color: #f5f5f5;
+                    color: #666;
+                    border: 1px solid #ddd;
+                    border-radius: 3px;
+                    padding: 4px;
+                    font-size: 11px;
+                    font-weight: bold;
+                }
+            """
+
+        self.cache_status_label.setStyleSheet(style)
+
+    def _clear_cache_status(self) -> None:
+        """Clear the cache status label"""
+        if self.cache_status_label:
+            self.cache_status_label.setVisible(False)
+
+    def _check_scan_cache_before_start(self, start_offset: int, end_offset: int) -> bool | None:
+        """
+        Check for cached partial scan for the specified range and show ResumeScanDialog if needed.
+
+        Returns:
+            True: Use cache (resume scan)
+            False: Don't use cache (fresh scan)
+            None: User cancelled
+        """
+        try:
+            rom_cache = get_rom_cache()
+            if not rom_cache.cache_enabled:
+                return False  # No cache, proceed with fresh scan
+
+            # Create scan parameters for this range
+            scan_params = {
+                "start_offset": start_offset,
+                "end_offset": end_offset,
+                "step": 0x100,
+                "quality_threshold": 0.5,
+                "min_sprite_size": 512,
+                "max_sprite_size": 32768
+            }
+
+            # Check for cached partial scan
+            cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+            if cached_progress and not cached_progress.get("completed", False):
+                # Found incomplete cached scan - show ResumeScanDialog
+                from spritepal.ui.dialogs import ResumeScanDialog
+                user_choice = ResumeScanDialog.show_resume_dialog(cached_progress, self)
+
+                if user_choice == ResumeScanDialog.RESUME:
+                    # User wants to resume
+                    self._update_cache_status("Resuming from cached progress...")
+                    return True
+                if user_choice == ResumeScanDialog.START_FRESH:
+                    # User wants fresh scan - clear the cache
+                    rom_cache.clear_scan_progress_cache(self.rom_path, scan_params)
+                    self._update_cache_status("Starting fresh scan (cache cleared)")
+                    return False
+                # User cancelled
+                return None
+
+            # No cached scan found, proceed with fresh scan
+            return False
+
+        except Exception as e:
+            logger.warning(f"Error checking scan cache: {e}")
+            return False  # Continue with fresh scan on error
+
+    def _on_cache_status(self, status_message: str) -> None:
+        """Handle cache status updates from worker"""
+        self._update_cache_status(status_message)
+        self.scan_status_changed.emit(status_message)
+
+    def _on_cache_progress_saved(self, current_offset: int, sprites_found: int, progress_pct: int) -> None:
+        """Handle cache progress save notifications from worker"""
+        cache_message = f"Progress saved: {progress_pct}% complete, {sprites_found} sprites found"
+        self._update_cache_status(cache_message)
+        logger.debug(f"Cache progress saved at offset 0x{current_offset:06X}: {sprites_found} sprites ({progress_pct}%)")

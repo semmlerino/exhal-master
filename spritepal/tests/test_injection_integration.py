@@ -158,7 +158,7 @@ class TestInjectionWorkflowIntegration:
         completion_results = []
 
         worker.progress.connect(lambda msg: progress_updates.append(msg))
-        worker.finished.connect(
+        worker.injection_finished.connect(
             lambda success, msg: completion_results.append((success, msg))
         )
 

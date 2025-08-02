@@ -6,19 +6,18 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-import contextlib
 
 import spritepal.core.controller
 from spritepal.core.controller import ExtractionController
-from spritepal.core.workers import VRAMExtractionWorker
 from spritepal.core.managers import cleanup_managers, initialize_managers
+from spritepal.core.workers import VRAMExtractionWorker
 
 
 class TestControllerImports:
@@ -136,15 +135,15 @@ class TestExtractionController:
     ):
         """Test starting extraction with valid parameters"""
         from .infrastructure.test_data_repository import get_test_data_repository
-        
+
         # Use TestDataRepository to create realistic files that pass defensive validation
         repo = get_test_data_repository()
         test_data = repo.get_vram_extraction_data("medium")  # Creates 64KB VRAM file
-        
+
         try:
             mock_main_window.get_extraction_params.return_value = {
                 "vram_path": test_data["vram_path"],
-                "cgram_path": test_data["cgram_path"], 
+                "cgram_path": test_data["cgram_path"],
                 "output_base": test_data["output_base"],
                 "grayscale_mode": True,  # Add missing parameter to bypass CGRAM validation
             }
@@ -422,7 +421,7 @@ class TestVRAMExtractionWorker:
         assert worker._connections == []  # No connections yet
 
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_full_workflow_success(self, mock_pil_to_qpixmap, worker):
         """Test successful full workflow execution"""
         # Use the mock manager from the worker fixture
@@ -460,7 +459,7 @@ class TestVRAMExtractionWorker:
         # Verify signals were emitted
         assert len(extraction_spy) == 1
         assert extraction_spy[0] == [["output.png", "output.pal.json", "output.metadata.json"]]
-        
+
         assert len(operation_spy) == 1
         assert operation_spy[0][0] is True  # Success
         assert "Successfully extracted 3 files" in operation_spy[0][1]
@@ -469,9 +468,9 @@ class TestVRAMExtractionWorker:
         """Test error handling in worker"""
         # Create a test exception
         test_exception = Exception("Test error")
-        
+
         # Directly patch the manager's extract_from_vram method to raise exception
-        with patch.object(worker.manager, 'extract_from_vram', side_effect=test_exception):
+        with patch.object(worker.manager, "extract_from_vram", side_effect=test_exception):
             # Mock signals
             worker.progress = Mock()
             worker.error = Mock()
@@ -485,13 +484,13 @@ class TestVRAMExtractionWorker:
             worker.error.emit.assert_called_once_with(expected_error, test_exception)
             worker.extraction_finished.emit.assert_not_called()
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_without_cgram(self, mock_pil_to_qpixmap, worker):
         """Test running without CGRAM file"""
         worker.params["cgram_path"] = None
 
         # Directly patch the manager's extract_from_vram method
-        with patch.object(worker.manager, 'extract_from_vram', return_value=["output.png"]) as mock_extract:
+        with patch.object(worker.manager, "extract_from_vram", return_value=["output.png"]) as mock_extract:
             # Mock signals
             worker.progress = Mock()
             worker.preview_ready = Mock()
@@ -510,13 +509,13 @@ class TestVRAMExtractionWorker:
             worker.extraction_finished.emit.assert_called_once()
             worker.error.emit.assert_not_called()
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_without_oam(self, mock_pil_to_qpixmap, worker):
         """Test running without OAM file"""
         worker.params["oam_path"] = None
 
         # Directly patch the manager's extract_from_vram method
-        with patch.object(worker.manager, 'extract_from_vram', return_value=[
+        with patch.object(worker.manager, "extract_from_vram", return_value=[
             "output.png", "output.pal.json", "output.metadata.json"
         ]) as mock_extract:
             # Mock signals
@@ -538,13 +537,13 @@ class TestVRAMExtractionWorker:
             worker.extraction_finished.emit.assert_called_once()
         worker.error.emit.assert_not_called()
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_without_metadata_creation(self, mock_pil_to_qpixmap, worker):
         """Test running without metadata creation"""
         worker.params["create_metadata"] = False
 
         # Directly patch the manager's extract_from_vram method
-        with patch.object(worker.manager, 'extract_from_vram', return_value=[
+        with patch.object(worker.manager, "extract_from_vram", return_value=[
             "output.png", "output.pal.json"
         ]) as mock_extract:
             # Mock signals
@@ -565,13 +564,13 @@ class TestVRAMExtractionWorker:
             worker.extraction_finished.emit.assert_called_once()
             worker.error.emit.assert_not_called()
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_without_grayscale_creation(self, mock_pil_to_qpixmap, worker):
         """Test running without grayscale palette creation"""
         worker.params["create_grayscale"] = False
 
         # Directly patch the manager's extract_from_vram method
-        with patch.object(worker.manager, 'extract_from_vram', return_value=["output.png"]) as mock_extract:
+        with patch.object(worker.manager, "extract_from_vram", return_value=["output.png"]) as mock_extract:
             # Mock signals
             worker.progress = Mock()
             worker.preview_ready = Mock()
@@ -590,11 +589,11 @@ class TestVRAMExtractionWorker:
             worker.extraction_finished.emit.assert_called_once()
             worker.error.emit.assert_not_called()
 
-    @patch("spritepal.core.workers.extraction.pil_to_qpixmap")
+    @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_signal_emission_order(self, mock_pil_to_qpixmap, worker):
         """Test that finished signal is emitted after successful extraction"""
         # Directly patch the manager's extract_from_vram method
-        with patch.object(worker.manager, 'extract_from_vram', return_value=[
+        with patch.object(worker.manager, "extract_from_vram", return_value=[
             "output.png", "output.pal.json", "output.metadata.json"
         ]):
             # Track if finished was called
@@ -841,15 +840,15 @@ class TestControllerWorkerIntegration:
         # CRITICAL FIX FOR BUG #27: Don't initialize real managers in mocked tests
         # Create controller with mocked window
         controller = ExtractionController(mock_main_window)
-        
+
         # Mock all manager dependencies to ensure complete isolation
         controller.extraction_manager = Mock()
         controller.injection_manager = Mock()
         controller.session_manager = Mock()
-        
+
         # Mock validation to always pass for mocked tests
         controller.extraction_manager.validate_extraction_params = Mock(return_value=None)
-        
+
         return controller
 
     @patch("spritepal.core.controller.VRAMExtractionWorker")
@@ -860,23 +859,23 @@ class TestControllerWorkerIntegration:
     ):
         """Test that worker signals are properly connected to controller handlers"""
         # CRITICAL FIX FOR BUG #27: Pure mocked test - NO real file dependencies
-        
+
         # Mock file system checks to pass validation
         mock_exists.return_value = True
         mock_getsize.return_value = 65536  # 64KB valid VRAM size
-        
+
         # Configure mock main window with fake parameters (already set in fixture)
         mock_main_window.reset_mock()
-        
-        # Create mock worker  
+
+        # Create mock worker
         mock_worker = Mock()
         mock_worker_class.return_value = mock_worker
-        
+
         # Mock file reading for validation
         with patch("builtins.open", mock_open(read_data=b"x" * 16)):
             # The extraction manager validation is already mocked in the fixture
             controller.start_extraction()
-            
+
         # Verify the worker class was called to create an instance
         mock_worker_class.assert_called_once()
 
@@ -900,7 +899,7 @@ class TestControllerWorkerIntegration:
         mock_worker.error.connect.assert_called_once_with(
             controller._on_extraction_error
         )
-        
+
         # Verify worker was started
         mock_worker.start.assert_called_once()
 
@@ -968,10 +967,10 @@ class TestControllerWorkerIntegration:
         # Mock file system checks to pass validation
         mock_exists.return_value = True
         mock_getsize.return_value = 65536  # 64KB valid VRAM size
-        
+
         # Reset mock to ensure clean state
         mock_main_window.reset_mock()
-        
+
         # Create different mock instances for each call
         first_mock_worker = Mock()
         second_mock_worker = Mock()
@@ -990,6 +989,6 @@ class TestControllerWorkerIntegration:
         # Should have different workers (test concurrency handling)
         assert first_worker != second_worker
         assert controller.worker == second_worker
-        
+
         # Verify mock class was called twice
         assert mock_worker_class.call_count == 2

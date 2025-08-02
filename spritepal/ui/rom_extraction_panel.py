@@ -24,8 +24,11 @@ from PyQt6.QtWidgets import (
 )
 
 from spritepal.core.managers import get_extraction_manager
+from spritepal.ui.common import WorkerManager
 from spritepal.ui.dialogs import UserErrorDialog
-from spritepal.ui.dialogs.manual_offset_dialog import ManualOffsetDialog
+from spritepal.ui.dialogs.manual_offset_dialog_simplified import (
+    ManualOffsetDialogSimplified,
+)
 from spritepal.ui.rom_extraction.state_manager import (
     ExtractionState,
     ExtractionStateManager,
@@ -323,7 +326,7 @@ class ROMExtractionPanel(QWidget):
             self.rom_file_widget.set_rom_path("")
 
     def _open_manual_offset_dialog(self):
-        """Open the manual offset control dialog"""
+        """Open the manual offset control dialog using singleton pattern"""
         if not self.rom_path:
             UserErrorDialog.show_error(
                 self,
@@ -332,14 +335,16 @@ class ROMExtractionPanel(QWidget):
             )
             return
 
-        # Create or get existing dialog instance
+        # Create dialog instance only once (singleton pattern)
         if self._manual_offset_dialog is None:
-            self._manual_offset_dialog = ManualOffsetDialog.get_instance(self)
-            # Connect signals
+            # Create new dialog instance with parent for proper lifecycle
+            self._manual_offset_dialog = ManualOffsetDialogSimplified(self)
+            # Connect signals once
             self._manual_offset_dialog.offset_changed.connect(self._on_dialog_offset_changed)
             self._manual_offset_dialog.sprite_found.connect(self._on_dialog_sprite_found)
+            logger.debug("Created ManualOffsetDialog singleton instance")
 
-        # Update dialog with current ROM data
+        # Update dialog with current ROM data every time it's opened
         self._manual_offset_dialog.set_rom_data(
             self.rom_path, self.rom_size, self.extraction_manager
         )
@@ -347,10 +352,13 @@ class ROMExtractionPanel(QWidget):
         # Set current offset
         self._manual_offset_dialog.set_offset(self._manual_offset)
 
-        # Show the dialog
-        self._manual_offset_dialog.show()
-        self._manual_offset_dialog.raise_()
-        self._manual_offset_dialog.activateWindow()
+        # Show the dialog (or bring to front if already visible)
+        if not self._manual_offset_dialog.isVisible():
+            self._manual_offset_dialog.show()
+        else:
+            # Bring to front if already visible
+            self._manual_offset_dialog.raise_()
+            self._manual_offset_dialog.activateWindow()
 
     def _on_dialog_offset_changed(self, offset: int):
         """Handle offset changes from the dialog"""
@@ -581,21 +589,17 @@ class ROMExtractionPanel(QWidget):
         if sprite_name in self.sprite_locations:
             sprite_config = self.sprite_locations[sprite_name]
 
-        # Clean up any existing preview worker
-        if self.preview_worker:
-            self.preview_worker.quit()
-            self.preview_worker.wait()
-
-        # Create and start preview worker
-        self.preview_worker = SpritePreviewWorker(
-            self.rom_path, offset, sprite_name, self.rom_extractor, sprite_config
+        # Create and start preview worker (cleanup existing if needed)
+        self.preview_worker = WorkerManager.create_and_start(
+            SpritePreviewWorker,
+            self.rom_path, offset, sprite_name, self.rom_extractor, sprite_config,
+            cleanup_existing=self.preview_worker
         )
         self.preview_worker.preview_ready.connect(self._on_preview_ready)
         self.preview_worker.preview_error.connect(self._on_preview_error)
         self.preview_worker.finished.connect(
             lambda: self.state_manager.finish_preview()
         )
-        self.preview_worker.start()
 
     def _on_preview_ready(
         self, tile_data: bytes, width: int, height: int, sprite_name: str
@@ -678,9 +682,7 @@ class ROMExtractionPanel(QWidget):
             dialog.setLayout(layout)
 
             # Clean up any existing scan worker
-            if self.scan_worker:
-                self.scan_worker.quit()
-                self.scan_worker.wait()
+            WorkerManager.cleanup_worker(self.scan_worker)
 
             # Check for cached scan results
             from spritepal.utils.rom_cache import get_rom_cache
@@ -885,10 +887,8 @@ class ROMExtractionPanel(QWidget):
 
             def on_dialog_finished(result):
                 # Clean up worker
-                if self.scan_worker:
-                    self.scan_worker.quit()
-                    self.scan_worker.wait()
-                    self.scan_worker = None
+                WorkerManager.cleanup_worker(self.scan_worker)
+                self.scan_worker = None
 
                 # Transition back to idle state
                 self.state_manager.finish_scanning()
@@ -988,9 +988,7 @@ class ROMExtractionPanel(QWidget):
         self.manual_offset_status.setText(f"Attempting to decompress at 0x{offset:06X}...")
 
         # Clean up any existing preview worker
-        if self.preview_worker:
-            self.preview_worker.quit()
-            self.preview_worker.wait()
+        WorkerManager.cleanup_worker(self.preview_worker)
 
         # Try to find sprite configuration for this offset
         sprite_config = None
@@ -1102,28 +1100,26 @@ class ROMExtractionPanel(QWidget):
 
     def _cleanup_workers(self):
         """Clean up any running worker threads"""
-        # Stop preview worker
-        if self.preview_worker:
-            self.preview_worker.quit()
-            self.preview_worker.wait()
-            self.preview_worker = None
+        # Use WorkerManager for consistent cleanup
+        WorkerManager.cleanup_worker(self.preview_worker)
+        self.preview_worker = None
 
-        # Stop search worker
-        if self.search_worker:
-            self.search_worker.quit()
-            self.search_worker.wait()
-            self.search_worker = None
+        WorkerManager.cleanup_worker(self.search_worker)
+        self.search_worker = None
 
-        # Stop scan worker
-        if self.scan_worker:
-            self.scan_worker.quit()
-            self.scan_worker.wait()
-            self.scan_worker = None
+        WorkerManager.cleanup_worker(self.scan_worker)
+        self.scan_worker = None
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None:
+
+    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
         """Handle panel close event"""
         # Clean up workers before closing
         self._cleanup_workers()
+
+        # Close manual offset dialog if it exists (singleton pattern - let Qt handle lifecycle)
+        if self._manual_offset_dialog and self._manual_offset_dialog.isVisible():
+            self._manual_offset_dialog.close()
+
         if a0:
             super().closeEvent(a0)
 

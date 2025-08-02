@@ -165,7 +165,7 @@ class FileSelector(QWidget):
         else:
             # Convert any type to string
             converted_path = str(path)
-        
+
         self.path_edit.setText(converted_path)
 
     def clear_path(self):

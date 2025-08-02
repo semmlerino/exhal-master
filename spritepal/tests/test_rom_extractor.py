@@ -166,10 +166,10 @@ class TestROMExtractor4bppConversion:
         # Empty data should be handled gracefully
         # Test that it either succeeds with 0 tiles or raises a specific error
         tile_count = extractor._convert_4bpp_to_png(tile_data, str(output_path))
-        
+
         # Should return 0 tiles for empty data
         assert tile_count == 0
-        
+
         # If image was created, verify it has reasonable dimensions
         if output_path.exists():
             img = Image.open(output_path)

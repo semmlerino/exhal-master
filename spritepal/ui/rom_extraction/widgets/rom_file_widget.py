@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLa
 
 from spritepal.utils.logging_config import get_logger
 from spritepal.utils.rom_cache import get_rom_cache
+
 from .base_widget import BaseExtractionWidget
 
 logger = get_logger(__name__)

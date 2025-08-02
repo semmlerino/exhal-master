@@ -5,15 +5,13 @@ Tests the BaseWorker and ManagedWorker classes to ensure proper signal
 emission, cancellation/pause mechanisms, and error handling.
 """
 
-import time
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import QObject, QTimer
 from PyQt6.QtTest import QSignalSpy
 
-from spritepal.core.workers.base import BaseWorker, ManagedWorker
 from spritepal.core.managers.base_manager import BaseManager
+from spritepal.core.workers.base import BaseWorker, ManagedWorker
 
 
 class TestBaseWorker:
@@ -161,11 +159,11 @@ class TestBaseWorker:
         # Test the method directly instead of using QTimer in test
         worker.pause()
         assert worker.is_paused
-        
+
         # Cancel and test that wait_if_paused exits
         worker.cancel()
         worker.wait_if_paused()  # Should exit immediately
-        
+
         # Test passed if we reach here without hanging
 
 
@@ -208,7 +206,7 @@ class TestManagedWorker:
         assert len(worker._connections) == 1
 
         # Test disconnection
-        with patch('PyQt6.QtCore.QObject.disconnect') as mock_disconnect:
+        with patch("PyQt6.QtCore.QObject.disconnect") as mock_disconnect:
             worker.disconnect_manager_signals()
             mock_disconnect.assert_called_once()
             assert worker._connections == []
@@ -339,15 +337,14 @@ class TestManagedWorker:
 @pytest.fixture
 def qtbot():
     """Provide qtbot for Qt testing."""
-    from PyQt6.QtTest import QTest
     from PyQt6.QtWidgets import QApplication
-    
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
-    
+
     class QtBot:
         def addWidget(self, widget):
             pass
-    
+
     return QtBot()
