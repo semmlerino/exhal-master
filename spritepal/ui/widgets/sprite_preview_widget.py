@@ -46,13 +46,13 @@ class SpritePreviewWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
         layout.setSpacing(0)  # Zero spacing for maximum efficiency
 
-        # Preview label - MAXIMUM space efficiency: size exactly to content
+        # Preview label - balanced space efficiency and visibility
         self.preview_label = QLabel()
-        # NO minimum size - let tiny sprites be tiny for maximum space efficiency
-        self.preview_label.setMinimumSize(1, 1)  # Absolute minimum for any content
-        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum only
+        # Small but visible minimum for when no sprite is loaded
+        self.preview_label.setMinimumSize(100, 100)  # Visible minimum for empty state
+        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum
         self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed  # Fixed size = exact content size
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Size to content but stay visible
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(get_borderless_preview_style())
@@ -201,7 +201,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
-        # SPACE EFFICIENCY: Resize label to exact pixmap size for no wasted space
+        # SPACE EFFICIENCY: When content is loaded, use borderless style and resize to content
+        self.preview_label.setStyleSheet(get_borderless_preview_style())
         self.preview_label.adjustSize()  # Shrink to exact content size
         self.sprite_pixmap = pixmap
 
@@ -250,7 +251,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
-        # SPACE EFFICIENCY: Resize label to exact pixmap size for no wasted space
+        # SPACE EFFICIENCY: When content is loaded, use borderless style and resize to content
+        self.preview_label.setStyleSheet(get_borderless_preview_style())
         self.preview_label.adjustSize()  # Shrink to exact content size
         self.sprite_pixmap = pixmap
 
@@ -337,9 +339,21 @@ class SpritePreviewWidget(QWidget):
             self.info_label.setText(f"Error loading sprite: {e}")
 
     def clear(self):
-        """Clear the preview"""
+        """Clear the preview and show visible placeholder"""
         self.preview_label.clear()
         self.preview_label.setText("No preview")
+        # Reset to minimum size for visibility when empty and make background visible
+        self.preview_label.setMinimumSize(100, 100)
+        # Temporarily set visible background for empty state
+        self.preview_label.setStyleSheet("""
+            QLabel {
+                border: 1px solid #666;
+                background-color: #f0f0f0;
+                color: #666;
+                margin: 0px;
+                padding: 4px;
+            }
+        """)
         self.palette_combo.clear()
         self.palette_combo.setEnabled(False)
         self.info_label.setText("No sprite loaded")
