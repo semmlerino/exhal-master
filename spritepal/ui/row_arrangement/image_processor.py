@@ -6,7 +6,7 @@ from typing import Any
 
 from PIL import Image
 
-from spritepal.utils.exceptions import FileFormatError
+from utils.exceptions import FileFormatError
 
 
 class RowImageProcessor:

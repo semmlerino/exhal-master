@@ -214,15 +214,15 @@ class TestSettingsIntegration:
 
         # Need to ensure SessionManager loads from our temp file
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         # Create a session manager with our temp settings file
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             # Now create SettingsManager which will use our mocked SessionManager
             settings = SettingsManager()
-            
+
             # Verify migration worked through the public API
             assert settings.get("session", "vram_path") == "/old/path.dmp"
             assert settings.get("ui", "window_width") == 800
@@ -249,19 +249,19 @@ class TestSettingsIntegration:
 
         # Need to ensure SessionManager loads from our temp file
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         # Create a session manager with our temp settings file
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             # Should load defaults without crashing
             settings = SettingsManager()
-            
+
             # Verify defaults loaded (since file was corrupted)
             assert settings.get("session", "vram_path") == ""
             assert settings.get("ui", "window_width") == 900
-            
+
             # Should be able to save valid settings
             settings.set("session", "vram_path", "/new/path.dmp")
             settings.save_settings()

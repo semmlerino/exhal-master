@@ -5,21 +5,57 @@ Extracts sprites directly from ROM files using HAL decompression
 
 import math
 import os
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import logging
+else:
+    import logging
 
 from PIL import Image
 
-from spritepal.core.default_palette_loader import DefaultPaletteLoader
-from spritepal.core.hal_compression import HALCompressionError, HALCompressor
-from spritepal.core.rom_injector import ROMInjector, SpritePointer
-from spritepal.core.rom_palette_extractor import ROMPaletteExtractor
-from spritepal.core.sprite_config_loader import SpriteConfigLoader
-from spritepal.utils.constants import BYTES_PER_TILE, TILE_HEIGHT, TILE_WIDTH
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_cache import get_rom_cache
-from spritepal.utils.rom_exceptions import ROMCompressionError
+from core.default_palette_loader import DefaultPaletteLoader
+from core.hal_compression import HALCompressionError, HALCompressor
+from core.rom_injector import ROMInjector, SpritePointer
+from core.rom_palette_extractor import ROMPaletteExtractor
+from core.sprite_config_loader import SpriteConfigLoader
+from utils.constants import (
+    BUFFER_SIZE_16KB,
+    BUFFER_SIZE_1KB,
+    BUFFER_SIZE_2KB,
+    BUFFER_SIZE_4KB,
+    BUFFER_SIZE_512B,
+    BUFFER_SIZE_64KB,
+    BUFFER_SIZE_8KB,
+    BYTE_FREQUENCY_SAMPLE_SIZE,
+    BYTES_PER_TILE,
+    DEFAULT_TILES_PER_ROW,
+    ENTROPY_ANALYSIS_SAMPLE,
+    LARGE_SPRITE_MAX,
+    MAX_ALIGNMENT_ERROR,
+    MAX_BYTE_VALUE,
+    MIN_SPRITE_TILES,
+    PIXEL_SCALE_FACTOR,
+    PREVIEW_TILES_PER_ROW,
+    PROGRESS_LOG_INTERVAL,
+    PROGRESS_SAVE_INTERVAL,
+    ROM_SCAN_STEP_DEFAULT,
+    ROM_SCAN_STEP_FINE,
+    ROM_SEARCH_RANGE_DEFAULT,
+    SPRITE_QUALITY_BONUS,
+    SPRITE_QUALITY_THRESHOLD,
+    TILE_ANALYSIS_SAMPLE,
+    TILE_HEIGHT,
+    TILE_PLANE_SIZE,
+    TILE_WIDTH,
+    TYPICAL_SPRITE_MAX,
+    TYPICAL_SPRITE_MIN,
+)
+from utils.logging_config import get_logger
+from utils.rom_cache import get_rom_cache
+from utils.rom_exceptions import ROMCompressionError
 
-logger = get_logger(__name__)
+logger: 'logging.Logger' = get_logger(__name__)
 
 
 class ROMExtractor:
@@ -37,7 +73,7 @@ class ROMExtractor:
 
     def extract_sprite_from_rom(
         self, rom_path: str, sprite_offset: int, output_base: str, sprite_name: str = ""
-    ) -> tuple[str, dict[str, Any]]:
+    ) -> bool:
         """
         Extract sprite from ROM at specified offset.
 
@@ -185,8 +221,14 @@ class ROMExtractor:
         except HALCompressionError as e:
             logger.exception("HAL decompression failed")
             raise ROMCompressionError(f"Failed to decompress sprite: {e}") from e
-        except Exception:
-            logger.exception("ROM extraction failed")
+        except (OSError, IOError, PermissionError) as e:
+            logger.exception(f"File I/O error during ROM extraction: {e}")
+            raise
+        except (ValueError, TypeError) as e:
+            logger.exception(f"Data format error during ROM extraction: {e}")
+            raise
+        except Exception as e:
+            logger.exception(f"Unexpected error during ROM extraction: {e}")
             raise
         else:
             logger.info("ROM extraction completed successfully")
@@ -209,7 +251,7 @@ class ROMExtractor:
         """
         # Calculate dimensions
         num_tiles = len(tile_data) // BYTES_PER_TILE
-        tiles_per_row = 16  # Standard width for sprite sheets
+        tiles_per_row = DEFAULT_TILES_PER_ROW  # Standard width for sprite sheets
 
         # Handle empty data gracefully
         if num_tiles == 0:
@@ -232,7 +274,7 @@ class ROMExtractor:
         img = Image.new("L", (img_width, img_height), 0)
 
         # Process each tile
-        log_interval = 100  # Log progress every 100 tiles
+        log_interval = PROGRESS_LOG_INTERVAL  # Log progress every 100 tiles
 
         for tile_idx in range(num_tiles):
             # Calculate tile position
@@ -252,7 +294,7 @@ class ROMExtractor:
                     # Get pixel value from 4bpp planar format
                     pixel = self._get_4bpp_pixel(tile_bytes, x, y)
                     # Convert 4-bit value to 8-bit grayscale (0-15 -> 0-255)
-                    gray_value = pixel * 17
+                    gray_value = pixel * PIXEL_SCALE_FACTOR
                     img.putpixel((tile_x + x, tile_y + y), gray_value)
 
         # Save as indexed PNG
@@ -267,8 +309,8 @@ class ROMExtractor:
         Get pixel value from 4bpp planar tile data.
 
         SNES 4bpp format stores 2 bitplanes together:
-        - Planes 0,1 are interleaved in first 16 bytes
-        - Planes 2,3 are interleaved in next 16 bytes
+        - Planes 0,1 are interleaved in first {TILE_PLANE_SIZE} bytes
+        - Planes 2,3 are interleaved in next {TILE_PLANE_SIZE} bytes
         """
         # Calculate byte positions
         row = y
@@ -277,8 +319,8 @@ class ROMExtractor:
         # Get bits from each plane
         plane0 = (tile_data[row * 2] >> bit) & 1
         plane1 = (tile_data[row * 2 + 1] >> bit) & 1
-        plane2 = (tile_data[16 + row * 2] >> bit) & 1
-        plane3 = (tile_data[16 + row * 2 + 1] >> bit) & 1
+        plane2 = (tile_data[TILE_PLANE_SIZE + row * 2] >> bit) & 1
+        plane3 = (tile_data[TILE_PLANE_SIZE + row * 2 + 1] >> bit) & 1
 
         # Combine bits to get 4-bit value
         return (plane3 << 3) | (plane2 << 2) | (plane1 << 1) | plane0
@@ -305,15 +347,21 @@ class ROMExtractor:
                 logger.info(f"Found {len(locations)} sprite locations")
                 return locations
 
-        except Exception:
-            logger.exception("Failed to get sprite locations")
+        except (OSError, IOError, PermissionError) as e:
+            logger.exception(f"File I/O error getting sprite locations: {e}")
+            return {}
+        except (ImportError, AttributeError) as e:
+            logger.warning(f"ROM header parsing not available: {e}")
+            return {}
+        except Exception as e:
+            logger.exception(f"Unexpected error getting sprite locations: {e}")
             return {}
         else:
             logger.warning(f"Unknown ROM: {header.title} - no sprite locations available")
             return {}
 
     def scan_for_sprites(
-        self, rom_path: str, start_offset: int, end_offset: int, step: int = 0x100
+        self, rom_path: str, start_offset: int, end_offset: int, step: int = ROM_SCAN_STEP_DEFAULT
     ) -> list[dict[str, Any]]:
         """
         Scan ROM for valid sprite data within a range of offsets with resumable caching.
@@ -322,7 +370,7 @@ class ROMExtractor:
             rom_path: Path to ROM file
             start_offset: Starting offset to scan from
             end_offset: Ending offset to scan to
-            step: Step size between scan attempts (default: 256 bytes)
+            step: Step size between scan attempts (default: {BUFFER_SIZE_256B} bytes)
 
         Returns:
             List of dictionaries containing valid sprite locations found
@@ -369,14 +417,14 @@ class ROMExtractor:
                 end_offset = rom_size
 
             scan_count = 0
-            save_progress_interval = 50  # Save progress every 50 scans
+            save_progress_interval = PROGRESS_SAVE_INTERVAL  # Save progress every 50 scans
 
             # Scan through the range, starting from resume offset
             for offset in range(resume_offset, end_offset, step):
                 scan_count += 1
 
                 # Show progress every 100 scans
-                if scan_count % 100 == 0:
+                if scan_count % PROGRESS_LOG_INTERVAL == 0:
                     logger.debug(f"Scanned {scan_count} offsets... (currently at 0x{offset:X})")
 
                 # Save progress periodically
@@ -399,7 +447,7 @@ class ROMExtractor:
                         num_tiles = len(sprite_data) // bytes_per_tile
 
                         # Only accept perfectly aligned data or minor misalignment
-                        if extra_bytes <= bytes_per_tile // 4 and num_tiles >= 16:  # At least 16 tiles
+                        if extra_bytes <= bytes_per_tile // 4 and num_tiles >= MIN_SPRITE_TILES:  # At least 16 tiles
                             alignment_status = "perfect" if extra_bytes == 0 else f"{extra_bytes} extra bytes"
 
                             sprite_info = {
@@ -419,8 +467,14 @@ class ROMExtractor:
                                 f"alignment: {alignment_status}"
                             )
 
-                except Exception:
+                except HALCompressionError:
                     # Decompression failed, not a valid sprite location
+                    continue
+                except (OSError, IOError, MemoryError) as e:
+                    logger.debug(f"I/O or memory error at offset 0x{offset:X}: {e}")
+                    continue
+                except Exception as e:
+                    logger.debug(f"Unexpected error at offset 0x{offset:X}: {e}")
                     continue
 
             logger.info(f"Scan complete: checked {scan_count} offsets, found {len(found_sprites)} valid sprites")
@@ -433,16 +487,30 @@ class ROMExtractor:
                 rom_path, scan_params, found_sprites, end_offset, completed=True
             )
 
-        except Exception:
-            logger.exception("Failed to scan for sprites")
+        except (OSError, IOError, PermissionError) as e:
+            logger.exception(f"File I/O error during sprite scan: {e}")
             # Save partial results even on failure
             if found_sprites:
                 try:
                     rom_cache.save_partial_scan_results(
                         rom_path, scan_params, found_sprites, resume_offset, completed=False
                     )
-                except Exception:
-                    logger.warning("Failed to save partial results on scan failure")
+                except (OSError, IOError, PermissionError) as cache_error:
+                    logger.warning(f"Failed to save partial results on scan failure: {cache_error}")
+            return []
+        except MemoryError as e:
+            logger.exception(f"Memory error during sprite scan: {e}")
+            return []
+        except Exception as e:
+            logger.exception(f"Unexpected error during sprite scan: {e}")
+            # Save partial results even on failure
+            if found_sprites:
+                try:
+                    rom_cache.save_partial_scan_results(
+                        rom_path, scan_params, found_sprites, resume_offset, completed=False
+                    )
+                except Exception as cache_error:
+                    logger.warning(f"Failed to save partial results on scan failure: {cache_error}")
             return []
         else:
             return found_sprites
@@ -466,38 +534,38 @@ class ROMExtractor:
             return 0.0
 
         # Reject data that's too large (likely not sprite data)
-        if data_size > 65536:  # 64KB absolute max
+        if data_size > BUFFER_SIZE_64KB:  # 64KB absolute max
             return 0.0
 
         # Check data size alignment
         extra_bytes = data_size % bytes_per_tile
         if extra_bytes == 0:
             score += 0.2  # Perfect alignment
-        elif extra_bytes > 16:  # Too much misalignment
+        elif extra_bytes > MAX_ALIGNMENT_ERROR:  # Too much misalignment
             return 0.0  # Reject badly misaligned data
         elif extra_bytes <= 8:
             score += 0.1  # Minor misalignment acceptable
 
         # 2. Tile count validation
         num_tiles = data_size // bytes_per_tile
-        if 32 <= num_tiles <= 256:  # Typical sprite size for Kirby
+        if TYPICAL_SPRITE_MIN <= num_tiles <= TYPICAL_SPRITE_MAX:  # Typical sprite size for Kirby
             score += 0.2
-        elif 16 <= num_tiles < 32 or 256 < num_tiles <= 512:
+        elif MIN_SPRITE_TILES <= num_tiles < TYPICAL_SPRITE_MIN or TYPICAL_SPRITE_MAX < num_tiles <= LARGE_SPRITE_MAX:
             score += 0.1
-        elif num_tiles < 16:  # Too small
+        elif num_tiles < MIN_SPRITE_TILES:  # Too small
             score *= 0.5  # Heavily penalize
-        elif num_tiles > 512:  # Too large
+        elif num_tiles > LARGE_SPRITE_MAX:  # Too large
             return 0.0
 
         # 3. Entropy analysis - sprites should have moderate entropy
-        entropy = self._calculate_entropy(sprite_data[:min(1024, data_size)])
+        entropy = self._calculate_entropy(sprite_data[:min(ENTROPY_ANALYSIS_SAMPLE, data_size)])
         if 2.0 <= entropy <= 6.0:  # Graphics data typically has moderate entropy
             score += 0.2
         elif entropy < 1.0 or entropy > 7.0:  # Too uniform or too random
             score *= 0.5  # Penalize
 
         # 4. Check for 4bpp tile structure
-        tiles_checked = min(10, num_tiles)
+        tiles_checked = min(TILE_ANALYSIS_SAMPLE, num_tiles)
         valid_tile_count = 0
 
         for i in range(tiles_checked):
@@ -510,7 +578,7 @@ class ROMExtractor:
         if tile_validity_ratio >= 0.8:
             score += 0.3
         elif tile_validity_ratio >= 0.5:
-            score += 0.15
+            score += SPRITE_QUALITY_BONUS
         elif tile_validity_ratio < 0.3:
             score *= 0.5  # Penalize low validity
 
@@ -519,11 +587,11 @@ class ROMExtractor:
             score += 0.1
 
         # 6. For PAL ROMs, check if sprite might be embedded within the data
-        if check_embedded and score < 0.5 and data_size > 16384:
+        if check_embedded and score < SPRITE_QUALITY_THRESHOLD and data_size > BUFFER_SIZE_16KB:
             # Check common embedded offsets
-            for test_offset in [512, 1024, 2048, 4096]:
-                if test_offset + 8192 <= data_size:
-                    embedded_data = sprite_data[test_offset:test_offset + 8192]
+            for test_offset in [BUFFER_SIZE_512B, BUFFER_SIZE_1KB, BUFFER_SIZE_2KB, BUFFER_SIZE_4KB]:
+                if test_offset + BUFFER_SIZE_8KB <= data_size:
+                    embedded_data = sprite_data[test_offset:test_offset + BUFFER_SIZE_8KB]
                     # Recursive call but without embedded check to avoid infinite recursion
                     embedded_score = self._assess_sprite_quality(embedded_data, check_embedded=False)
                     if embedded_score > score:
@@ -552,16 +620,16 @@ class ROMExtractor:
         # Check for reasonable bit patterns (not all 0 or all 1)
         bitplane_variety = 0
 
-        for i in range(0, 16, 2):  # First two bitplanes
+        for i in range(0, TILE_PLANE_SIZE, 2):  # First two bitplanes
             byte1 = tile_data[i]
             byte2 = tile_data[i + 1]
-            if 0 < byte1 < 255 or 0 < byte2 < 255:
+            if 0 < byte1 < MAX_BYTE_VALUE or 0 < byte2 < MAX_BYTE_VALUE:
                 bitplane_variety += 1
 
-        for i in range(16, 32, 2):  # Second two bitplanes
+        for i in range(TILE_PLANE_SIZE, BYTES_PER_TILE, 2):  # Second two bitplanes
             byte1 = tile_data[i]
             byte2 = tile_data[i + 1]
-            if 0 < byte1 < 255 or 0 < byte2 < 255:
+            if 0 < byte1 < MAX_BYTE_VALUE or 0 < byte2 < MAX_BYTE_VALUE:
                 bitplane_variety += 1
 
         # Expect some variety in the bitplanes
@@ -581,7 +649,7 @@ class ROMExtractor:
             return 0.0
 
         # Count byte frequencies
-        byte_counts = [0] * 256
+        byte_counts = [0] * (MAX_BYTE_VALUE + 1)
         for byte in data:
             byte_counts[byte] += 1
 
@@ -602,25 +670,25 @@ class ROMExtractor:
         Validate if a single tile has valid 4bpp sprite characteristics.
 
         Args:
-            tile_data: 32 bytes of tile data
+            tile_data: {BYTES_PER_TILE} bytes of tile data
 
         Returns:
             True if tile appears valid
         """
-        if len(tile_data) != 32:
+        if len(tile_data) != BYTES_PER_TILE:
             return False
 
         # Check for completely empty or full tile (common in non-sprite data)
-        if tile_data in (b"\x00" * 32, b"\xff" * 32):
+        if tile_data in (b"\x00" * BYTES_PER_TILE, b"\xff" * BYTES_PER_TILE):
             return False
 
         # Check bitplane structure
         plane_validity = 0
 
         # Check first two bitplanes (bytes 0-15)
-        plane01_zeros = sum(1 for b in tile_data[0:16] if b == 0)
-        plane01_ones = sum(1 for b in tile_data[0:16] if b == 0xFF)
-        if plane01_zeros < 15 and plane01_ones < 15:  # Not all blank/full
+        plane01_zeros = sum(1 for b in tile_data[0:TILE_PLANE_SIZE] if b == 0)
+        plane01_ones = sum(1 for b in tile_data[0:TILE_PLANE_SIZE] if b == 0xFF)
+        if plane01_zeros < (TILE_PLANE_SIZE - 1) and plane01_ones < (TILE_PLANE_SIZE - 1):  # Not all blank/full
             plane_validity += 1
 
         # Check second two bitplanes (bytes 16-31)
@@ -663,7 +731,7 @@ class ROMExtractor:
         pattern_matches = 0
         bytes_per_tile = BYTES_PER_TILE
 
-        for i in range(0, min(len(data) - bytes_per_tile*2, 256), bytes_per_tile):
+        for i in range(0, min(len(data) - bytes_per_tile*2, BYTE_FREQUENCY_SAMPLE_SIZE), bytes_per_tile):
             tile1 = data[i:i+bytes_per_tile]
             tile2 = data[i+bytes_per_tile:i+bytes_per_tile*2]
 
@@ -678,7 +746,7 @@ class ROMExtractor:
         return pattern_matches >= 2
 
     def find_best_sprite_offsets(
-        self, rom_path: str, base_offset: int, search_range: int = 0x1000
+        self, rom_path: str, base_offset: int, search_range: int = ROM_SEARCH_RANGE_DEFAULT
     ) -> list[int]:
         """
         Find the best sprite offsets around a base offset.
@@ -698,7 +766,7 @@ class ROMExtractor:
         end_offset = base_offset + search_range
 
         # Scan with smaller steps for more precise results
-        found_sprites = self.scan_for_sprites(rom_path, start_offset, end_offset, step=0x10)
+        found_sprites = self.scan_for_sprites(rom_path, start_offset, end_offset, step=ROM_SCAN_STEP_FINE)
 
         # Extract just the offsets from high-quality results
         best_offsets = []

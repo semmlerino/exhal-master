@@ -6,7 +6,7 @@ import os
 
 from PIL import Image
 
-from spritepal.utils.exceptions import TileError
+from utils.exceptions import TileError
 
 from .grid_arrangement_manager import TileGroup, TilePosition
 from .image_processor import RowImageProcessor

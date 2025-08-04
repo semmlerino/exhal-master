@@ -7,13 +7,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from spritepal.utils.constants import (
+from utils.constants import (
+    CGRAM_EXPECTED_SIZE,
+    COLOR_MASK_BLUE,
+    COLOR_MASK_GREEN,
+    COLOR_MASK_RED,
+    COLOR_SHIFT_BLUE,
+    COLOR_SHIFT_GREEN,
     COLORS_PER_PALETTE,
+    OAM_Y_VISIBLE_THRESHOLD,
+    PALETTE_ATTR_MASK,
     PALETTE_INFO,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
 )
-from spritepal.utils.validation import validate_cgram_file, validate_oam_file
+from utils.validation import validate_cgram_file, validate_oam_file
 
 
 class PaletteManager:
@@ -55,9 +63,9 @@ class PaletteManager:
 
                     # Convert BGR555 to RGB888 (proper 5-bit to 8-bit conversion)
                     # Use bit shifting for accurate conversion: (value << 3) | (value >> 2)
-                    b = (snes_color >> 10) & 0x1F
-                    g = (snes_color >> 5) & 0x1F
-                    r = snes_color & 0x1F
+                    b = (snes_color & COLOR_MASK_BLUE) >> COLOR_SHIFT_BLUE
+                    g = (snes_color & COLOR_MASK_GREEN) >> COLOR_SHIFT_GREEN
+                    r = snes_color & COLOR_MASK_RED
 
                     # Convert 5-bit to 8-bit values (0-31 to 0-255)
                     b = (b << 3) | (b >> 2)
@@ -211,15 +219,15 @@ class PaletteManager:
                 oam_data = f.read()
 
             # Parse OAM entries
-            for i in range(0, min(512, len(oam_data)), 4):
+            for i in range(0, min(CGRAM_EXPECTED_SIZE, len(oam_data)), 4):
                 if i + 3 < len(oam_data):
                     y_pos = oam_data[i + 1]
                     attrs = oam_data[i + 3]
 
                     # Check if sprite is on-screen
-                    if y_pos < 0xE0:  # Y < 224
+                    if y_pos < OAM_Y_VISIBLE_THRESHOLD:  # Y < 224
                         # Extract palette (lower 3 bits)
-                        oam_palette = attrs & 0x07
+                        oam_palette = attrs & PALETTE_ATTR_MASK
                         cgram_palette = oam_palette + 8
                         active_palettes.add(cgram_palette)
 

@@ -55,8 +55,8 @@ from spritepal.ui.dialogs import (
     SettingsDialog,
     UserErrorDialog,
 )
-from spritepal.ui.dialogs.manual_offset_dialog_simplified import (
-    ManualOffsetDialogSimplified as ManualOffsetDialog,
+from spritepal.ui.dialogs import (
+    UnifiedManualOffsetDialog as ManualOffsetDialog,
 )
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog

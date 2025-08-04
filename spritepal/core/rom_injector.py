@@ -12,13 +12,24 @@ from typing import Any
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from spritepal.core.hal_compression import HALCompressionError, HALCompressor
-from spritepal.core.injector import SpriteInjector
-from spritepal.core.rom_validator import ROMValidator
-from spritepal.core.sprite_config_loader import SpriteConfigLoader
-from spritepal.core.sprite_validator import SpriteValidator
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_backup import ROMBackupManager
+from core.hal_compression import HALCompressionError, HALCompressor
+from core.injector import SpriteInjector
+from core.rom_validator import ROMValidator
+from core.sprite_config_loader import SpriteConfigLoader
+from core.sprite_validator import SpriteValidator
+from utils.constants import (
+    IMAGE_DIMENSION_MULTIPLE,
+    MAX_SPRITE_DIMENSION,
+    PIXEL_MASK_4BIT,
+    ROM_CHECKSUM_COMPLEMENT_MASK,
+    ROM_HEADER_OFFSET_HIROM,
+    ROM_HEADER_OFFSET_LOROM,
+    ROM_MIN_REGION_SIZE,
+    ROM_SCAN_STEP_DEFAULT,
+    SMC_HEADER_SIZE,
+)
+from utils.logging_config import get_logger
+from utils.rom_backup import ROMBackupManager
 
 logger = get_logger(__name__)
 
@@ -64,20 +75,20 @@ class ROMInjector(SpriteInjector):
         with open(rom_path, "rb") as f:
             # Try to detect header offset (SMC header is 512 bytes)
             f.seek(0)
-            f.read(512)
+            f.read(SMC_HEADER_SIZE)
 
             # Check for SMC header
             header_offset = 0
             rom_size = os.path.getsize(rom_path)
-            if rom_size % 1024 == 512:
-                header_offset = 512
-                logger.debug(f"SMC header detected (512 bytes), ROM size: {rom_size} bytes")
+            if rom_size % 1024 == SMC_HEADER_SIZE:
+                header_offset = SMC_HEADER_SIZE
+                logger.debug(f"SMC header detected ({SMC_HEADER_SIZE} bytes), ROM size: {rom_size} bytes")
             else:
                 logger.debug(f"No SMC header detected, ROM size: {rom_size} bytes")
 
             # Read header at expected location
             # SNES header is typically at 0x7FC0 or 0xFFC0 depending on ROM type
-            for offset in [0x7FC0, 0xFFC0]:
+            for offset in [ROM_HEADER_OFFSET_LOROM, ROM_HEADER_OFFSET_HIROM]:
                 f.seek(header_offset + offset)
                 header_data = f.read(32)
 
@@ -90,7 +101,7 @@ class ROMInjector(SpriteInjector):
                 checksum = struct.unpack("<H", header_data[30:32])[0]
 
                 # Verify checksum to ensure valid header
-                if (checksum ^ checksum_complement) == 0xFFFF:
+                if (checksum ^ checksum_complement) == ROM_CHECKSUM_COMPLEMENT_MASK:
                     self.header = ROMHeader(
                         title=title,
                         rom_type=rom_type,
@@ -120,10 +131,10 @@ class ROMInjector(SpriteInjector):
         checksum = 0
         for i in range(0, len(data), 2):
             word = data[i + 1] << 8 | data[i] if i + 1 < len(data) else data[i]
-            checksum = (checksum + word) & 0xFFFF
+            checksum = (checksum + word) & ROM_CHECKSUM_COMPLEMENT_MASK
 
         # Calculate complement
-        complement = checksum ^ 0xFFFF
+        complement = checksum ^ ROM_CHECKSUM_COMPLEMENT_MASK
 
         logger.debug(f"Calculated checksum: 0x{checksum:04X}, complement: 0x{complement:04X}")
         return checksum, complement
@@ -139,7 +150,7 @@ class ROMInjector(SpriteInjector):
 
         # Find header location
         header_base = self.header.header_offset + (
-            0x7FC0 if len(rom_data) <= 0x8000 else 0xFFC0
+            ROM_HEADER_OFFSET_LOROM if len(rom_data) <= 0x8000 else ROM_HEADER_OFFSET_HIROM
         )
 
         # Update checksum in ROM

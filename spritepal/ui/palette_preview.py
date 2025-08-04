@@ -6,6 +6,7 @@ Palette preview widget for SpritePal
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
+from ui.common.spacing_constants import PALETTE_PREVIEW_SIZE, BORDER_THIN
 
 
 class PaletteColorWidget(QWidget):
@@ -17,7 +18,7 @@ class PaletteColorWidget(QWidget):
         super().__init__()
         self.index = index
         self.color = QColor(*color)
-        self.setFixedSize(QSize(32, 32))
+        self.setFixedSize(QSize(PALETTE_PREVIEW_SIZE, PALETTE_PREVIEW_SIZE))
         self.setToolTip(f"Color {index}: RGB({color[0]}, {color[1]}, {color[2]})")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -45,7 +46,7 @@ class PaletteColorWidget(QWidget):
         painter.fillRect(self.rect(), self.color)
 
         # Draw border
-        painter.setPen(QPen(QColor(100, 100, 100), 1))
+        painter.setPen(QPen(QColor(100, 100, 100), BORDER_THIN))
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
         # Draw index number
@@ -86,7 +87,7 @@ class PaletteWidget(QFrame):
             """
             PaletteWidget {
                 background-color: #2b2b2b;
-                border: 1px solid #555;
+                border: {BORDER_THIN}px solid #555;
                 border-radius: 4px;
                 padding: 4px;
             }
@@ -188,7 +189,7 @@ class PalettePreviewWidget(QWidget):
                     """
                     PaletteWidget {
                         background-color: #2b2b2b;
-                        border: 2px solid #0078d4;
+                        border: {BORDER_THICK}px solid #0078d4;
                         border-radius: 4px;
                         padding: 4px;
                     }
@@ -199,7 +200,7 @@ class PalettePreviewWidget(QWidget):
                     """
                     PaletteWidget {
                         background-color: #2b2b2b;
-                        border: 1px solid #555;
+                        border: {BORDER_THIN}px solid #555;
                         border-radius: 4px;
                         padding: 4px;
                     }

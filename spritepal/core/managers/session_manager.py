@@ -5,7 +5,9 @@ Manager for session state and application settings
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
+
+T = TypeVar('T')
 
 from PyQt6.QtCore import pyqtSignal
 
@@ -31,12 +33,17 @@ class SessionManager(BaseManager):
             settings_path: Optional custom path for settings file (for testing)
         """
         # Initialize attributes needed by _initialize() before calling super()
+        self._app_name: str
+        self._settings_file: Path
+        self._settings: dict[str, Any]
+        self._session_dirty: bool
+        
         self._app_name = app_name
         if settings_path:
             self._settings_file = settings_path
         else:
             self._settings_file = Path.cwd() / f".{app_name.lower()}_settings.json"
-        self._settings: dict[str, Any] = {}
+        self._settings = {}
         self._session_dirty = False
 
         # Now call super() which will call _initialize()
@@ -209,7 +216,7 @@ class SessionManager(BaseManager):
         finally:
             self._finish_operation(operation)
 
-    def get(self, category: str, key: str, default: Any = None) -> Any:
+    def get(self, category: str, key: str, default: T | None = None) -> Any:
         """
         Get a setting value
 
@@ -301,7 +308,7 @@ class SessionManager(BaseManager):
         if updates:
             self.update_session_data(updates)
 
-    def update_window_state(self, geometry: dict[str, int]) -> None:
+    def update_window_state(self, geometry: dict[str, int | float]) -> None:
         """
         Update window geometry in settings
 

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from spritepal.utils.logging_config import get_logger
+    from utils.logging_config import get_logger
 except ImportError:
     # Fallback logger
     import logging
@@ -25,7 +25,7 @@ except ImportError:
 def get_settings_manager():
     """Get settings manager with delayed import to avoid circular dependency"""
     try:
-        from spritepal.utils.settings_manager import get_settings_manager as _gsm
+        from utils.settings_manager import get_settings_manager as _gsm
         return _gsm()
     except ImportError:
         logger.warning("Could not import settings manager")
@@ -50,8 +50,8 @@ class ROMCache:
         # Get settings manager (might be None if managers not initialized yet)
         try:
             self.settings_manager = get_settings_manager()
-        except Exception:
-            logger.warning("Could not get settings manager during ROM cache initialization")
+        except (ImportError, AttributeError, RuntimeError) as e:
+            logger.warning(f"Could not get settings manager during ROM cache initialization: {e}")
             self.settings_manager = None
 
         # Check if caching is enabled in settings
@@ -100,8 +100,8 @@ class ROMCache:
                 fallback_dir.mkdir(parents=True, exist_ok=True)
                 self.cache_dir = fallback_dir
                 logger.info(f"Using fallback cache directory: {self.cache_dir}")
-            except Exception:
-                logger.exception("Failed to create fallback cache directory")
+            except (OSError, PermissionError) as e:
+                logger.exception(f"Failed to create fallback cache directory: {e}")
                 return False
             else:
                 return True
@@ -129,8 +129,9 @@ class ROMCache:
             # For non-existent files (like test scenarios), use path-based hash
             path_data = f"nonexistent_{os.path.abspath(rom_path)}"
             return hashlib.sha256(path_data.encode()).hexdigest()
-        except Exception:
+        except (OSError, IOError, PermissionError) as e:
             # Ultimate fallback: just use the path itself
+            logger.debug(f"Could not read ROM file for hashing, using path-based hash: {e}")
             return hashlib.sha256(str(rom_path).encode()).hexdigest()
 
     def _get_cache_file_path(self, rom_hash: str, cache_type: str) -> Path:
@@ -167,7 +168,8 @@ class ROMCache:
             rom_mtime = os.path.getmtime(rom_path)
             cache_mtime = cache_file.stat().st_mtime
 
-        except Exception:
+        except (OSError, IOError) as e:
+            logger.debug(f"Error checking cache validity for {cache_file}: {e}")
             return False
         else:
             return rom_mtime <= cache_mtime
@@ -194,7 +196,7 @@ class ROMCache:
             try:
                 if "temp_file" in locals() and temp_file.exists():
                     temp_file.unlink(missing_ok=True)
-            except Exception:
+            except (OSError, FileNotFoundError):
                 pass  # Ignore cleanup errors
             logger.warning(f"Failed to save cache file {cache_file}: {e}")
             return False
@@ -345,7 +347,7 @@ class ROMCache:
                     if cutoff_time is None or cache_file.stat().st_mtime < cutoff_time:
                         cache_file.unlink()
                         removed_count += 1
-                except Exception:
+                except (OSError, PermissionError):
                     pass  # Continue with other files
 
         except Exception as e:
@@ -390,7 +392,7 @@ class ROMCache:
                 if isinstance(location_data, dict) and "offset" in location_data:
                     # Import SpritePointer only when needed to avoid circular imports
                     try:
-                        from spritepal.core.rom_injector import SpritePointer
+                        from core.rom_injector import SpritePointer
                         # Restore SpritePointer object from cached data
                         restored_locations[name] = SpritePointer(
                             offset=location_data["offset"],
@@ -557,9 +559,9 @@ class ROMCache:
                     try:
                         cache_file.unlink()
                         removed_count += 1
-                    except Exception:
+                    except (OSError, PermissionError):
                         pass
-        except Exception:
+        except (OSError, PermissionError):
             pass
 
         return removed_count
@@ -570,8 +572,8 @@ class ROMCache:
         if not self.settings_manager:
             try:
                 self.settings_manager = get_settings_manager()
-            except Exception:
-                logger.warning("Could not get settings manager for cache refresh")
+            except (ImportError, AttributeError, RuntimeError) as e:
+                logger.warning(f"Could not get settings manager for cache refresh: {e}")
                 return
 
         if not self.settings_manager:

@@ -5,6 +5,7 @@ This allows for proper testing and separation of concerns.
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -70,34 +71,44 @@ class ErrorHandler(QObject):
 
     def _show_critical_dialog(self, title: str, message: str) -> None:
         """Default handler for critical errors - shows QMessageBox"""
-        if self._show_dialogs and self._parent_widget:
+        if self._show_dialogs and self._parent_widget is not None:
             QMessageBox.critical(self._parent_widget, title, message)
 
     def _show_warning_dialog(self, title: str, message: str) -> None:
         """Default handler for warnings - shows QMessageBox"""
-        if self._show_dialogs and self._parent_widget:
+        if self._show_dialogs and self._parent_widget is not None:
             QMessageBox.warning(self._parent_widget, title, message)
 
     def _show_info_dialog(self, title: str, message: str) -> None:
         """Default handler for info messages - shows QMessageBox"""
-        if self._show_dialogs and self._parent_widget:
+        if self._show_dialogs and self._parent_widget is not None:
             QMessageBox.information(self._parent_widget, title, message)
 
 
 # Global error handler instance
 _error_handler: ErrorHandler | None = None
+_error_handler_lock = threading.Lock()
 
 
 def get_error_handler(parent: QWidget | None = None) -> ErrorHandler:
-    """Get or create the global error handler instance"""
+    """Get or create the global error handler instance (thread-safe)"""
     global _error_handler
-    if _error_handler is None:
-        _error_handler = ErrorHandler(parent)
-    elif parent and not _error_handler._parent_widget:
-        # Update parent if provided and not already set
-        _error_handler._parent_widget = parent
-        _error_handler.setParent(parent)
-    return _error_handler
+
+    # Fast path - check without lock
+    if _error_handler is not None:
+        if parent is not None and _error_handler._parent_widget is None:
+            with _error_handler_lock:
+                if _error_handler._parent_widget is None:
+                    _error_handler._parent_widget = parent
+                    _error_handler.setParent(parent)
+        return _error_handler
+
+    # Slow path - create with lock
+    with _error_handler_lock:
+        # Double-check pattern
+        if _error_handler is None:
+            _error_handler = ErrorHandler(parent)
+        return _error_handler
 
 
 def reset_error_handler() -> None:

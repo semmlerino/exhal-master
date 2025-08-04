@@ -4,11 +4,14 @@ import os
 from pathlib import Path
 
 # Security constants
-MAX_VRAM_SIZE = 65536  # 64KB - standard SNES VRAM size
-MAX_CGRAM_SIZE = 512  # 512 bytes - standard SNES CGRAM size
-MAX_OAM_SIZE = 544  # 544 bytes - standard SNES OAM size
-MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for PNG files
-MAX_JSON_SIZE = 1 * 1024 * 1024  # 1MB for JSON files
+from utils.constants import (
+    CGRAM_EXPECTED_SIZE as MAX_CGRAM_SIZE,
+    MAX_IMAGE_SIZE,
+    MAX_JSON_SIZE,
+    MAX_TILE_COUNT_DEFAULT,
+    OAM_EXPECTED_SIZE as MAX_OAM_SIZE,
+    VRAM_MIN_SIZE as MAX_VRAM_SIZE,  # Standard VRAM size is 64KB
+)
 
 # Allowed file extensions
 VRAM_EXTENSIONS = {".dmp", ".bin", ".vram"}
@@ -121,7 +124,7 @@ def validate_offset(offset: int, max_offset: int) -> tuple[bool, str]:
     return True, ""
 
 
-def validate_tile_count(count: int, max_count: int = 8192) -> tuple[bool, str]:
+def validate_tile_count(count: int, max_count: int = MAX_TILE_COUNT_DEFAULT) -> tuple[bool, str]:
     """Validate tile count to prevent excessive memory usage."""
     if count < 0:
         return False, f"Tile count cannot be negative: {count}"

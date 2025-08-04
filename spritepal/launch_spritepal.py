@@ -14,9 +14,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.ui.main_window import MainWindow
-from spritepal.utils.logging_config import get_logger, setup_logging
+from core.managers import cleanup_managers, initialize_managers
+from ui.main_window import MainWindow
+from utils.logging_config import get_logger, setup_logging
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):

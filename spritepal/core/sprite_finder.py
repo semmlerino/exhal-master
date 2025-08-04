@@ -10,10 +10,24 @@ from typing import Any
 
 from PIL import Image
 
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.core.sprite_visual_validator import SpriteVisualValidator
-from spritepal.utils.constants import BYTES_PER_TILE
-from spritepal.utils.logging_config import get_logger
+from core.rom_extractor import ROMExtractor
+from core.sprite_visual_validator import SpriteVisualValidator
+from utils.constants import (
+    BYTES_PER_TILE,
+    ROM_SCAN_STEP_DEFAULT,
+    ROM_SCAN_STEP_QUICK,
+    ROM_SPRITE_AREA_1_END,
+    ROM_SPRITE_AREA_1_START,
+    ROM_SPRITE_AREA_2_END,
+    ROM_SPRITE_AREA_2_START,
+    ROM_SPRITE_AREA_3_END,
+    ROM_SPRITE_AREA_3_START,
+    ROM_SPRITE_AREA_4_END,
+    ROM_SPRITE_AREA_4_START,
+    ROM_SPRITE_AREA_5_END,
+    ROM_SPRITE_AREA_5_START,
+)
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -56,9 +70,9 @@ class SpriteFinder:
     def find_sprites_in_rom(
         self,
         rom_path: str,
-        start_offset: int = 0x80000,
+        start_offset: int = ROM_SPRITE_AREA_1_START,
         end_offset: int | None = None,
-        step: int = 0x100,
+        step: int = ROM_SCAN_STEP_DEFAULT,
         min_confidence: float = 0.6,
         save_previews: bool = True,
         max_candidates: int = 50
@@ -241,11 +255,11 @@ class SpriteFinder:
         Quick scan of areas where sprites are commonly found in SNES games.
         """
         common_sprite_ranges = [
-            (0x80000, 0x100000),   # Common sprite area 1
-            (0x100000, 0x180000),  # Common sprite area 2
-            (0x180000, 0x200000),  # Common sprite area 3
-            (0x200000, 0x280000),  # Extended sprite area
-            (0x280000, 0x300000),  # Additional sprites
+            (ROM_SPRITE_AREA_1_START, ROM_SPRITE_AREA_1_END),   # Common sprite area 1
+            (ROM_SPRITE_AREA_2_START, ROM_SPRITE_AREA_2_END),  # Common sprite area 2
+            (ROM_SPRITE_AREA_3_START, ROM_SPRITE_AREA_3_END),  # Common sprite area 3
+            (ROM_SPRITE_AREA_4_START, ROM_SPRITE_AREA_4_END),  # Extended sprite area
+            (ROM_SPRITE_AREA_5_START, ROM_SPRITE_AREA_5_END),  # Additional sprites
         ]
 
         all_candidates = []
@@ -258,7 +272,7 @@ class SpriteFinder:
                 rom_path,
                 start_offset=start,
                 end_offset=end,
-                step=0x1000,  # Larger step for quick scan
+                step=ROM_SCAN_STEP_QUICK,  # Larger step for quick scan
                 min_confidence=0.7,  # Higher threshold
                 save_previews=True,
                 max_candidates=10  # Limit per range

@@ -51,17 +51,33 @@ logs/
 *.tmp
 temp/
 
-# SpritePal specific
+# SpritePal specific outputs
 output/
 *.dmp
 *.smc
+
+# Test outputs and generated files (organized directories)
+test_output/
 *.pal.json
 *.metadata.json
 
-# Archive directory - deprecated/debug scripts
-archive/
+# Archive directories - historical/deprecated code (keep for reference)
+# archive/ and archive_2025_07_19/ are preserved for historical reference
+# but may contain large files that shouldn't be tracked
 
 # Settings files (user-specific)
 .spritepal_settings.json
+config/test_profiles/
 .testapp_settings.json
 .spritepal-integration-test_settings.json
+.*-test_settings.json
+.*-debug_settings.json
+
+# ROM files for development (large binary files)
+*.sfc
+*.smc
+
+# Generated analysis reports
+typecheck_report_*.json
+import_analysis_report.json
+init_order_issues.json

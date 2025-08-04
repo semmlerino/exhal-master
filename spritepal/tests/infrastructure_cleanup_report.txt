@@ -1,0 +1,140 @@
+# SpritePal Test Infrastructure Cleanup Report
+==================================================
+
+## Summary
+- Total test files analyzed: 123
+- Files with excessive mocking: 33
+- Files with outdated imports: 42
+- Conftest configuration issues: 2
+
+## Files with Excessive Mocking (>5 mock patterns)
+- test_collapsible_group_box.py: 14 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- test_complete_user_workflow_integration.py: 35 mock patterns
+  Patterns: signal_mocking, heavy_mocking
+- test_controller.py: 87 mock patterns
+  Patterns: decorator_patching, main_window_mocking, heavy_mocking
+- test_controller_dependency_injection.py: 18 mock patterns
+  Patterns: heavy_mocking
+- test_drag_drop_integration.py: 58 mock patterns
+  Patterns: heavy_mocking
+- test_found_sprites_registry.py: 11 mock patterns
+  Patterns: heavy_mocking
+- test_grid_arrangement_dialog_mock.py: 12 mock patterns
+  Patterns: heavy_mocking
+- test_grid_arrangement_integration.py: 8 mock patterns
+  Patterns: heavy_mocking
+- test_grid_arrangement_manager.py: 12 mock patterns
+  Patterns: heavy_mocking
+- test_grid_arrangement_zoom_mock.py: 9 mock patterns
+  Patterns: heavy_mocking
+- test_grid_preview_generator.py: 43 mock patterns
+  Patterns: heavy_mocking
+- test_image_utils_mocked.py: 13 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- test_infrastructure_cleanup.py: 10 mock patterns
+  Patterns: decorator_patching, main_window_mocking, worker_mocking, signal_mocking
+- test_injection_manager.py: 6 mock patterns
+  Patterns: decorator_patching
+- test_integration.py: 18 mock patterns
+  Patterns: signal_mocking, heavy_mocking
+- test_integration_headless.py: 41 mock patterns
+  Patterns: heavy_mocking
+- test_integration_mock.py: 8 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- test_manual_offset_dialog_refactoring.py: 56 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- test_pixel_editor_launch_integration.py: 41 mock patterns
+  Patterns: main_window_mocking, heavy_mocking
+- test_preview_coordinator.py: 15 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- test_rom_cache_ui_integration.py: 7 mock patterns
+  Patterns: decorator_patching
+- test_rom_cache_ui_integration_enhanced.py: 10 mock patterns
+  Patterns: heavy_mocking
+- test_rom_extractor.py: 17 mock patterns
+  Patterns: heavy_mocking
+- test_rom_injection_settings.py: 12 mock patterns
+  Patterns: heavy_mocking
+- test_row_arrangement_components.py: 12 mock patterns
+  Patterns: heavy_mocking
+- test_sprite_finder.py: 6 mock patterns
+  Patterns: heavy_mocking
+- test_ui_components.py: 8 mock patterns
+  Patterns: heavy_mocking
+- test_ui_components_mock.py: 55 mock patterns
+  Patterns: heavy_mocking
+- test_worker_base.py: 7 mock patterns
+  Patterns: heavy_mocking
+- test_worker_extraction.py: 24 mock patterns
+  Patterns: heavy_mocking
+- test_worker_specialized.py: 7 mock patterns
+  Patterns: heavy_mocking
+- test_zoomable_preview.py: 7 mock patterns
+  Patterns: decorator_patching, heavy_mocking
+- fixtures/test_worker_helper.py: 9 mock patterns
+  Patterns: heavy_mocking
+
+## Outdated Import References
+- test_collapsible_group_box.py:11: direct_qt_import
+- test_complete_user_workflow_integration.py:646: direct_qt_import
+- test_concurrent_operations.py:19: direct_qt_import
+- test_controller.py:440: direct_qt_import
+- test_controller_real_manager_integration.py:28: direct_qt_import
+- test_cross_dialog_integration_real.py:20: direct_qt_import
+- test_dialog_initialization.py:9: direct_qt_import
+- test_dialog_instantiation.py:198: direct_qt_import
+- test_dialog_lifecycle.py:7: direct_qt_import
+- test_dialog_real_integration.py:28: direct_qt_import
+- test_error_handler.py:6: direct_qt_import
+- test_error_handler_thread_safety.py:12: direct_qt_import
+- test_grid_arrangement_dialog_migration.py:149: direct_qt_import
+- test_grid_arrangement_zoom.py:10: direct_qt_import
+- test_image_utils.py:13: direct_qt_import
+- test_infrastructure_cleanup.py:127: direct_qt_import
+- test_infrastructure_cleanup.py:127: direct_qt_import
+- test_main_window_state_integration_real.py:26: direct_qt_import
+- test_manual_offset_dialog_fix.py:8: direct_qt_import
+- test_manual_offset_dialog_refactoring.py:24: direct_qt_import
+- test_preview_coordinator.py:6: direct_qt_import
+- test_realtime_preview_integration.py:307: direct_qt_import
+- test_resume_scan_dialog.py:6: direct_qt_import
+- test_rom_cache_ui_integration.py:13: direct_qt_import
+- test_row_arrangement_dialog_migration.py:136: direct_qt_import
+- test_settings_dialog_integration.py:14: direct_qt_import
+- test_settings_persistence_across_restarts.py:20: direct_qt_import
+- test_sprite_preview_widget.py:10: direct_qt_import
+- test_status_panel_cache_integration.py:14: direct_qt_import
+- test_worker_base.py:11: direct_qt_import
+- test_worker_extraction.py:12: direct_qt_import
+- test_worker_helper_validation.py:21: direct_qt_import
+- test_worker_manager.py:5: direct_qt_import
+- test_worker_owned_injection.py:16: direct_qt_import
+- test_worker_specialized.py:11: direct_qt_import
+- test_zoomable_preview.py:11: direct_qt_import
+- fixtures/test_dialog_helper.py:11: direct_qt_import
+- fixtures/test_file_dialog_helper.py:13: direct_qt_import
+- fixtures/test_main_window_helper.py:9: direct_qt_import
+- fixtures/test_main_window_helper_simple.py:10: direct_qt_import
+- fixtures/test_preview_helper.py:11: direct_qt_import
+- fixtures/test_worker_helper.py:168: direct_qt_import
+
+## Conftest Configuration Issues
+- multiple_conftest_files: Consolidate into single conftest.py
+- overlapping_fixtures: See details
+
+## Recommended Actions
+1. **Reduce Excessive Mocking** (mocking)
+   - Consider using integration tests instead of heavy mocking
+   - Affected: 33 files
+   - Action: Replace with MockFactory or integration tests
+
+2. **Update Outdated Imports** (imports)
+   - Fix references to old dialog names and direct Qt imports
+   - Affected: 41 files
+   - Action: Update import statements and use conftest fixtures
+
+3. **Consolidate Test Configuration** (configuration)
+   - Merge multiple conftest files and eliminate duplicate fixtures
+   - Affected: 2 files
+   - Action: Use unified conftest.py with modern fixtures

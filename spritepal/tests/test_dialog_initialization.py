@@ -10,9 +10,7 @@ from PyQt6.QtWidgets import QApplication
 
 from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
 from spritepal.ui.dialogs import SettingsDialog, UserErrorDialog
-from spritepal.ui.dialogs.manual_offset_dialog_simplified import (
-    ManualOffsetDialogSimplified as ManualOffsetDialog,
-)
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from spritepal.ui.dialogs.resume_scan_dialog import ResumeScanDialog
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
@@ -35,14 +33,16 @@ class TestDialogInitialization:
         # This was the original bug - instance variables assigned after super().__init__()
         dialog = ManualOffsetDialog()
 
-        # Verify UI components exist and are not None
-        assert dialog.rom_map is not None
-        assert dialog.offset_widget is not None
-        assert dialog.scan_controls is not None
-        assert dialog.import_export is not None
-        assert dialog.status_panel is not None
-        assert dialog.preview_widget is not None
-        assert dialog.apply_btn is not None
+        # Verify tab structure exists and are not None
+        assert dialog.tab_widget is not None
+        assert dialog.browse_tab is not None
+        assert dialog.smart_tab is not None
+        assert dialog.history_tab is not None
+        
+        # Verify service adapters are initialized
+        assert dialog.preview_service is not None
+        assert dialog.validation_service is not None
+        assert dialog.error_service is not None
 
         dialog.close()
 

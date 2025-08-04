@@ -9,7 +9,7 @@ used throughout SpritePal dialogs.
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from spritepal.ui.styles import get_muted_text_style
+from ui.styles import get_muted_text_style
 
 
 class FormRow(QWidget):
@@ -95,14 +95,14 @@ class FormRow(QWidget):
     def set_input_widget(self, widget: QWidget):
         """Set or replace the input widget"""
         # Remove existing input widget if any
-        if self.input_widget:
+        if self.input_widget is not None:
             self.input_layout.removeWidget(self.input_widget)
             self.input_widget.setParent(None)
 
         # Add new input widget
         self.input_widget = widget
         # Insert before help text if it exists
-        insert_index = 0 if not self.help_label else self.input_layout.count() - 1
+        insert_index = 0 if self.help_label is None else self.input_layout.count() - 1
         self.input_layout.insertWidget(insert_index, widget)
 
     def set_label_text(self, text: str):
@@ -115,7 +115,7 @@ class FormRow(QWidget):
 
     def set_help_text(self, text: str):
         """Set or update help text"""
-        if self.help_label:
+        if self.help_label is not None:
             self.help_label.setText(text)
         else:
             self.help_label = QLabel(text)
@@ -125,7 +125,7 @@ class FormRow(QWidget):
 
     def clear_help_text(self):
         """Remove help text"""
-        if self.help_label:
+        if self.help_label is not None:
             self.input_layout.removeWidget(self.help_label)
             self.help_label.setParent(None)
             self.help_label = None
@@ -133,16 +133,16 @@ class FormRow(QWidget):
     def set_validation_state(self, is_valid: bool, error_message: str = ""):
         """Set validation state with optional error message"""
         if not is_valid and error_message:
-            if not self.help_label:
+            if self.help_label is None:
                 self.set_help_text(error_message)
             else:
                 self.help_label.setText(error_message)
             # Change help label to error styling
             self.help_label.setStyleSheet(get_muted_text_style(color_level="dark"))
-        elif is_valid and self.help_label and not self._help_text:
+        elif is_valid and self.help_label is not None and not self._help_text:
             # Clear error message if no permanent help text
             self.clear_help_text()
-        elif is_valid and self.help_label and self._help_text:
+        elif is_valid and self.help_label is not None and self._help_text:
             # Restore original help text
             self.help_label.setText(self._help_text)
             self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))

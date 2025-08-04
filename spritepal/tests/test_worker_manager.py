@@ -4,6 +4,7 @@ Test the WorkerManager utility class.
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from ui.common import WorkerManager
+from ui.common.timing_constants import SLEEP_MEDIUM, WORKER_TIMEOUT_SHORT, TEST_TIMEOUT_MEDIUM, WORKER_TIMEOUT_LONG
 
 
 class DummyWorker(QThread):
@@ -19,7 +20,7 @@ class DummyWorker(QThread):
     def run(self):
         """Simple work simulation"""
         # Simulate some work
-        self.msleep(50)  # Sleep for 50ms
+        self.msleep(int(SLEEP_MEDIUM * 1000))  # Sleep for 50ms
         if self.should_run:
             self.work_done = True
             self.finished_work.emit()
@@ -50,10 +51,10 @@ class TestWorkerManager:
 
         # Start worker
         worker.start()
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
+        qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
 
         # Clean up should stop it gracefully
-        WorkerManager.cleanup_worker(worker, timeout=500)
+        WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT)
 
         # Worker should be stopped
         assert not worker.isRunning()
@@ -80,10 +81,10 @@ class TestWorkerManager:
 
         # Start worker
         worker.start()
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
+        qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
 
         # Cleanup without forced termination should respect the timeout
-        WorkerManager.cleanup_worker(worker, timeout=500, force_terminate=False)
+        WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT, force_terminate=False)
 
         # Worker should be stopped since our quit() implementation works
         assert not worker.isRunning()
@@ -94,11 +95,11 @@ class TestWorkerManager:
 
         # Start and immediately quit
         worker.start()
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
+        qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
         worker.quit()
 
         # Cleanup should handle gracefully
-        WorkerManager.cleanup_worker(worker, timeout=500)
+        WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT)
 
         # Worker should be stopped
         assert not worker.isRunning()
@@ -111,12 +112,12 @@ class TestWorkerManager:
         WorkerManager.start_worker(worker)
 
         # Worker should be running
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
+        qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
         assert worker.isRunning()
 
         # Cleanup
         worker.stop()
-        qtbot.waitUntil(lambda: not worker.isRunning(), timeout=1000)
+        qtbot.waitUntil(lambda: not worker.isRunning(), timeout=TEST_TIMEOUT_MEDIUM)
 
     def test_start_with_cleanup(self, qtbot):
         """Test starting a worker with cleanup of existing one"""
@@ -130,7 +131,7 @@ class TestWorkerManager:
         WorkerManager.start_worker(new_worker, cleanup_existing=old_worker)
 
         # Old worker should be stopped
-        qtbot.waitUntil(lambda: not old_worker.isRunning(), timeout=2000)
+        qtbot.waitUntil(lambda: not old_worker.isRunning(), timeout=WORKER_TIMEOUT_LONG)
         assert not old_worker.isRunning()
 
         # New worker should be running
@@ -146,13 +147,13 @@ class TestWorkerManager:
         worker = WorkerManager.create_and_start(DummyWorker)
 
         # Worker should be running
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
+        qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
         assert worker.isRunning()
         assert isinstance(worker, DummyWorker)
 
         # Cleanup
         worker.stop()
-        qtbot.waitUntil(lambda: not worker.isRunning(), timeout=1000)
+        qtbot.waitUntil(lambda: not worker.isRunning(), timeout=TEST_TIMEOUT_MEDIUM)
 
     def test_create_and_start_with_cleanup(self, qtbot):
         """Test create_and_start with existing worker cleanup"""
@@ -168,7 +169,7 @@ class TestWorkerManager:
         )
 
         # Old worker should be stopped
-        qtbot.waitUntil(lambda: not old_worker.isRunning(), timeout=2000)
+        qtbot.waitUntil(lambda: not old_worker.isRunning(), timeout=WORKER_TIMEOUT_LONG)
 
         # New worker should be running
         assert new_worker.isRunning()

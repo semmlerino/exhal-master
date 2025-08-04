@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.ui.styles import (
+from ui.styles import (
     get_error_text_style,
     get_hex_label_style,
     get_link_text_style,
@@ -38,9 +38,15 @@ from spritepal.ui.styles import (
     get_slider_style,
     get_success_text_style,
 )
-from spritepal.utils.constants import VRAM_SPRITE_OFFSET
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.settings_manager import get_settings_manager
+from utils.constants import VRAM_SPRITE_OFFSET
+from ui.common.spacing_constants import (
+    DROP_ZONE_MIN_HEIGHT, BROWSE_BUTTON_MAX_WIDTH, OFFSET_LABEL_MIN_WIDTH,
+    OFFSET_SPINBOX_MIN_WIDTH, COMBO_BOX_MIN_WIDTH, CIRCLE_INDICATOR_SIZE,
+    CIRCLE_INDICATOR_MARGIN, CHECKMARK_OFFSET, BORDER_THICK, LINE_THICK
+)
+from ui.common.timing_constants import REFRESH_RATE_60FPS
+from utils.logging_config import get_logger
+from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
 
@@ -55,11 +61,11 @@ class DropZone(QWidget):
         self.file_type = file_type
         self.file_path = ""
         self.setAcceptDrops(True)
-        self.setMinimumHeight(80)
+        self.setMinimumHeight(DROP_ZONE_MIN_HEIGHT)
         self.setStyleSheet(
             """
             DropZone {
-                border: 2px dashed #666;
+                border: {BORDER_THICK}px dashed #666;
                 border-radius: 8px;
                 background-color: #2b2b2b;
             }
@@ -85,7 +91,7 @@ class DropZone(QWidget):
 
         # Browse button
         self.browse_button = QPushButton("Browse")
-        self.browse_button.setMaximumWidth(100)
+        self.browse_button.setMaximumWidth(BROWSE_BUTTON_MAX_WIDTH)
         _ = self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -98,7 +104,7 @@ class DropZone(QWidget):
                 self.setStyleSheet(
                     """
                     DropZone {
-                        border: 2px solid #0078d4;
+                        border: {BORDER_THICK}px solid #0078d4;
                         border-radius: 8px;
                         background-color: #383838;
                     }
@@ -110,7 +116,7 @@ class DropZone(QWidget):
         self.setStyleSheet(
             """
             DropZone {
-                border: 2px dashed #666;
+                border: {BORDER_THICK}px dashed #666;
                 border-radius: 8px;
                 background-color: #2b2b2b;
             }
@@ -137,12 +143,12 @@ class DropZone(QWidget):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
             # Draw circle
-            painter.setPen(QPen(QColor(16, 124, 65), 2))
+            painter.setPen(QPen(QColor(16, 124, 65), BORDER_THICK))
             painter.setBrush(QColor(16, 124, 65, 30))
-            painter.drawEllipse(self.width() - 35, 10, 25, 25)
+            painter.drawEllipse(self.width() - CIRCLE_INDICATOR_MARGIN, CHECKMARK_OFFSET, CIRCLE_INDICATOR_SIZE, CIRCLE_INDICATOR_SIZE)
 
             # Draw checkmark
-            painter.setPen(QPen(QColor(16, 124, 65), 3))
+            painter.setPen(QPen(QColor(16, 124, 65), LINE_THICK))
             painter.drawLine(self.width() - 28, 22, self.width() - 23, 27)
             painter.drawLine(self.width() - 23, 27, self.width() - 15, 19)
 
@@ -208,8 +214,8 @@ class ExtractionPanel(QGroupBox):
     def __init__(self):
         super().__init__("Input Files")
         # Timer for debouncing offset changes
-        self._offset_timer = QTimer()
-        self._offset_timer.setInterval(16)  # 16ms delay for ~60fps updates
+        self._offset_timer = QTimer(self)  # Parent this timer to prevent crashes
+        self._offset_timer.setInterval(REFRESH_RATE_60FPS)  # 16ms delay for ~60fps updates
         self._offset_timer.setSingleShot(True)
         self._pending_offset: int | None = None
         self._slider_changing = False  # Track if change is from slider
@@ -250,7 +256,7 @@ class ExtractionPanel(QGroupBox):
         # Enhanced hex label with better styling
         self.offset_hex_label = QLabel("0xC000")
         self.offset_hex_label.setStyleSheet(get_hex_label_style(background=True, color="extract"))
-        self.offset_hex_label.setMinimumWidth(80)
+        self.offset_hex_label.setMinimumWidth(OFFSET_LABEL_MIN_WIDTH)
         self.offset_hex_label.setToolTip("Current offset in VRAM")
         offset_label_layout.addWidget(self.offset_hex_label)
 
@@ -269,6 +275,7 @@ class ExtractionPanel(QGroupBox):
 
         # Offset slider with fine control
         self.offset_slider = QSlider(Qt.Orientation.Horizontal)
+        self.offset_slider.setObjectName("vram_offset_slider")  # Unique identifier
         self.offset_slider.setMinimum(0)
         self.offset_slider.setMaximum(0x10000)  # 64KB max
         self.offset_slider.setValue(VRAM_SPRITE_OFFSET)
@@ -278,6 +285,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_slider.setPageStep(0x100)  # Page step
         _ = self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
         self.offset_slider.setStyleSheet(get_slider_style("extract"))
+        self.offset_slider.setToolTip("VRAM Offset: Adjust position within VRAM dump (0x0000-0x10000)")
         offset_layout.addWidget(self.offset_slider)
 
         # Offset controls row
@@ -291,7 +299,7 @@ class ExtractionPanel(QGroupBox):
         self.offset_spinbox.setSingleStep(0x20)  # Default to tile-aligned
         self.offset_spinbox.setDisplayIntegerBase(16)
         self.offset_spinbox.setPrefix("0x")
-        self.offset_spinbox.setMinimumWidth(100)
+        self.offset_spinbox.setMinimumWidth(OFFSET_SPINBOX_MIN_WIDTH)
         _ = self.offset_spinbox.valueChanged.connect(self._on_offset_spinbox_changed)
         self.offset_spinbox.setToolTip("Enter offset in hex (0x prefix) or decimal")
         offset_controls_layout.addWidget(self.offset_spinbox)
@@ -322,7 +330,7 @@ class ExtractionPanel(QGroupBox):
             "0x10000 - End"
         ])
         _ = self.jump_combo.currentIndexChanged.connect(self._on_jump_selected)
-        self.jump_combo.setMinimumWidth(150)
+        self.jump_combo.setMinimumWidth(COMBO_BOX_MIN_WIDTH)
         offset_controls_layout.addWidget(self.jump_combo)
 
         offset_controls_layout.addStretch()
@@ -658,6 +666,14 @@ class ExtractionPanel(QGroupBox):
 
     def _emit_offset_changed(self):
         """Emit the pending offset change after debounce"""
+        # Check if widget is still valid
+        try:
+            if not hasattr(self, '_pending_offset'):
+                return
+        except (RuntimeError, AttributeError):
+            # Widget may have been deleted
+            return
+            
         logger.debug(f"Timer triggered - emitting pending offset: {self._pending_offset}")
         try:
             if self._pending_offset is not None:
@@ -805,3 +821,12 @@ class ExtractionPanel(QGroupBox):
             return
 
         super().keyPressEvent(event)
+
+    def __del__(self) -> None:
+        """Destructor to ensure timer is stopped even if cleanup fails."""
+        try:
+            if hasattr(self, '_offset_timer') and self._offset_timer is not None:
+                self._offset_timer.stop()
+        except (RuntimeError, AttributeError):
+            # Widget may already be deleted
+            pass

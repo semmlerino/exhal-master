@@ -286,7 +286,7 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             widget: The widget to add as a tab
             label: The tab label
         """
-        if not self._tab_widget:
+        if self._tab_widget is None:
             from PyQt6.QtWidgets import QTabWidget
             self._tab_widget = QTabWidget()
             self.tab_widget = self._tab_widget  # Update public alias
@@ -378,7 +378,7 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         Args:
             index: Tab index to switch to
         """
-        if self._tab_widget:
+        if self._tab_widget is not None:
             self._tab_widget.setCurrentIndex(index)
 
     def get_current_tab_index(self) -> int:
@@ -388,7 +388,7 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         Returns:
             Current tab index, or -1 if no tabs exist
         """
-        if self._tab_widget:
+        if self._tab_widget is not None:
             return self._tab_widget.currentIndex()
         return -1
 

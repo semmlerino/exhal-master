@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PIL import Image
 
-from spritepal.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     import cv2  # type: ignore[import-not-found]

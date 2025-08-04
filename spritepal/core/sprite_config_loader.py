@@ -8,7 +8,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from spritepal.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

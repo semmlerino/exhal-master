@@ -8,7 +8,17 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from spritepal.utils.logging_config import get_logger
+try:
+    from utils.logging_config import get_logger
+except ImportError:
+    # Fallback for when the module path is not available
+    try:
+        from utils.logging_config import get_logger
+    except ImportError:
+        # Final fallback to standard logging
+        import logging
+        def get_logger(name: str) -> logging.Logger:
+            return logging.getLogger(name)
 
 from .exceptions import ValidationError
 
@@ -182,7 +192,7 @@ class BaseManager(QObject):
         if missing:
             raise ValidationError(f"Missing required parameters: {', '.join(missing)}")
 
-    def _validate_type(self, value: Any, name: str, expected_type: type) -> None:
+    def _validate_type(self, value: Any, name: str, expected_type: type[Any]) -> None:
         """
         Validate parameter type
 
@@ -233,3 +243,74 @@ class BaseManager(QObject):
             raise ValidationError(f"{name} must be >= {min_val}, got {value}")
         if max_val is not None and value > max_val:
             raise ValidationError(f"{name} must be <= {max_val}, got {value}")
+
+    def _handle_file_io_error(self, error: Exception, operation: str,
+                             context: str = "") -> None:
+        """
+        Handle file I/O related errors with standardized logging and re-raising
+
+        Args:
+            error: The original exception (OSError, IOError, PermissionError)
+            operation: Operation name for context
+            context: Additional context for the error message
+
+        Raises:
+            Exception: Re-raises the exception with enhanced error message
+        """
+        context_suffix = f" {context}" if context else ""
+        enhanced_msg = f"File I/O error during {operation}{context_suffix}: {error!s}"
+        
+        # Create exception of the same type with enhanced message
+        enhanced_error = type(error)(enhanced_msg)
+        enhanced_error.__cause__ = error
+        
+        self._handle_error(enhanced_error, operation)
+        raise enhanced_error
+
+    def _handle_data_format_error(self, error: Exception, operation: str,
+                                 context: str = "") -> None:
+        """
+        Handle data format related errors with standardized logging and re-raising
+
+        Args:
+            error: The original exception (ValueError, TypeError, json.JSONDecodeError)
+            operation: Operation name for context  
+            context: Additional context for the error message
+
+        Raises:
+            Exception: Re-raises the exception with enhanced error message
+        """
+        context_suffix = f" {context}" if context else ""
+        enhanced_msg = f"Data format error during {operation}{context_suffix}: {error!s}"
+        
+        # Create exception of the same type with enhanced message
+        enhanced_error = type(error)(enhanced_msg)
+        enhanced_error.__cause__ = error
+        
+        self._handle_error(enhanced_error, operation)
+        raise enhanced_error
+
+    def _handle_operation_error(self, error: Exception, operation: str,
+                               error_class: type[Exception], 
+                               context: str = "") -> None:
+        """
+        Handle operation-specific errors with standardized logging and re-raising
+
+        Args:
+            error: The original exception
+            operation: Operation name for context
+            error_class: Exception class to raise (e.g., ExtractionError, InjectionError)
+            context: Additional context for the error message
+
+        Raises:
+            error_class: Re-raises as the specified exception type
+        """
+        context_suffix = f" {context}" if context else ""
+        enhanced_msg = f"{operation.title()} failed{context_suffix}: {error!s}"
+        
+        # Create new exception of specified type
+        enhanced_error = error_class(enhanced_msg)
+        enhanced_error.__cause__ = error
+        
+        self._handle_error(enhanced_error, operation)
+        raise enhanced_error

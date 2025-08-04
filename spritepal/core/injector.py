@@ -9,12 +9,15 @@ from typing import Any
 from PIL import Image
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from spritepal.utils.constants import (
+from utils.constants import (
+    IMAGE_DIMENSION_MULTIPLE,
+    MAX_SPRITE_DIMENSION,
+    PIXEL_MASK_4BIT,
     TILE_HEIGHT,
     TILE_WIDTH,
     VRAM_SPRITE_OFFSET,
 )
-from spritepal.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -40,7 +43,7 @@ def encode_4bpp_tile(tile_pixels: list[int]) -> bytes:
 
         # Encode each pixel in the row
         for x in range(8):
-            pixel = tile_pixels[y * 8 + x] & 0x0F  # Ensure 4-bit value
+            pixel = tile_pixels[y * 8 + x] & PIXEL_MASK_4BIT  # Ensure 4-bit value
             bp0 |= ((pixel & 1) >> 0) << (7 - x)
             bp1 |= ((pixel & 2) >> 1) << (7 - x)
             bp2 |= ((pixel & 4) >> 2) << (7 - x)
@@ -93,11 +96,11 @@ class SpriteInjector:
 
             # Check dimensions are multiples of 8
             width, height = img.size
-            if width % 8 != 0 or height % 8 != 0:
+            if width % IMAGE_DIMENSION_MULTIPLE != 0 or height % IMAGE_DIMENSION_MULTIPLE != 0:
                 logger.error(f"Invalid dimensions: {width}x{height} (not multiples of 8)")
                 return (
                     False,
-                    f"Image dimensions must be multiples of 8 (found {width}x{height})",
+                    f"Image dimensions must be multiples of {IMAGE_DIMENSION_MULTIPLE} (found {width}x{height})",
                 )
 
             # Check color count based on mode
@@ -172,7 +175,7 @@ class SpriteInjector:
                         pixel_index = pixel_y * width + pixel_x
 
                         if pixel_index < len(pixels):
-                            tile_pixels.append(pixels[pixel_index] & 0x0F)
+                            tile_pixels.append(pixels[pixel_index] & PIXEL_MASK_4BIT)
                         else:
                             tile_pixels.append(0)
 
@@ -199,7 +202,7 @@ class SpriteInjector:
         try:
             # Use offset from metadata if not provided
             if offset is None and self.metadata and "extraction" in self.metadata:
-                offset_str = self.metadata["extraction"].get("vram_offset", "0xC000")
+                offset_str = self.metadata["extraction"].get("vram_offset", hex(VRAM_SPRITE_OFFSET))
                 offset = int(offset_str, 16)
                 logger.info(f"Using offset from metadata: 0x{offset:04X}")
             elif offset is None:

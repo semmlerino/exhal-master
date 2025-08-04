@@ -12,8 +12,8 @@ import shutil
 import subprocess
 import tempfile
 
-from spritepal.utils.constants import DATA_SIZE
-from spritepal.utils.logging_config import get_logger
+from utils.constants import DATA_SIZE
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

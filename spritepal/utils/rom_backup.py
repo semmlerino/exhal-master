@@ -7,8 +7,8 @@ import shutil
 from datetime import datetime, timezone
 from typing import Any
 
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_exceptions import ROMBackupError
+from utils.logging_config import get_logger
+from utils.rom_exceptions import ROMBackupError
 
 logger = get_logger(__name__)
 

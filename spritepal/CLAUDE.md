@@ -2,278 +2,180 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Widget Initialization Pattern
+## Critical Patterns
 
-**IMPORTANT**: Always follow this initialization order in `__init__` methods to avoid bugs:
+### Widget Initialization Order
+**ALWAYS** follow this order to avoid AttributeError bugs:
 
-1. **Declare ALL instance variables with type hints FIRST**
-2. **Call super().__init__() second**  
-3. **Call setup methods (_setup_ui, etc) AFTER variable declaration**
-4. **NEVER assign instance variables to None after setup methods**
-
-### ❌ Bad Pattern (causes AttributeError)
 ```python
 def __init__(self):
-    super().__init__()
-    self._setup_ui()  # Creates self.widget = QWidget()
-    
-    # BUG: This overwrites the widget with None!
-    self.widget: QWidget | None = None
-```
-
-### ✅ Good Pattern
-```python
-def __init__(self):
-    # Step 1: Declare instance variables
+    # 1. Declare ALL instance variables FIRST
     self.widget: QWidget | None = None
     self.data: list[str] = []
     
-    # Step 2: Initialize parent
+    # 2. Call super().__init__() second
     super().__init__()
     
-    # Step 3: Setup methods that create widgets
-    self._setup_ui()  # Now safely creates self.widget = QWidget()
+    # 3. Setup methods last
+    self._setup_ui()  # Now safe to assign self.widget = QWidget()
 ```
 
-This prevents the common bug where widgets are created in setup methods but then overwritten with None due to late instance variable declarations.
+### Qt Boolean Evaluation Pitfall
+Many Qt containers evaluate to `False` when empty. **Always use `is None` checks**:
+
+```python
+# ❌ BAD - fails for empty containers
+if self._layout:
+    self._layout.addWidget(widget)
+
+# ✅ GOOD - works correctly
+if self._layout is not None:
+    self._layout.addWidget(widget)
+```
+
+Affected classes: QTabWidget, QVBoxLayout, QHBoxLayout, QListWidget, QTreeWidget, QStackedWidget, QSplitter
+
+### Worker Thread Pattern
+All workers must use the `@handle_worker_errors` decorator:
+
+```python
+class MyWorker(BaseWorker):
+    # Standard signals
+    progress = pyqtSignal(int)
+    error = pyqtSignal(str, Exception)
+    finished = pyqtSignal(object)
+    
+    @handle_worker_errors
+    def run(self):
+        # Decorator handles all exceptions
+        result = self._do_work()
+        self.finished.emit(result)
+```
+
+### Cross-Thread Signal Safety
+**Never create GUI objects in worker threads**:
+
+```python
+# ❌ DANGER - creates GUI in worker thread
+worker.data_ready.connect(lambda: QMessageBox.information(...))
+
+# ✅ SAFE - GUI created in main thread
+worker.data_ready.connect(self._show_message_in_main_thread)
+```
+
+### Error Handling
+Use the exception hierarchy and centralized handler:
+
+```python
+from core.managers.exceptions import ValidationError
+from ui.common.error_handler import get_error_handler
+
+try:
+    self._validate_params(params)
+except ValidationError as e:
+    self._error_handler.handle_error(e, "Validation Failed")
+```
 
 ## Commands
 
-### Development Environment
-
-#### Virtual Environment Setup
+### Setup
 ```bash
-# Set up virtual environment (from exhal-master directory)
+# Virtual environment (from exhal-master/)
 python3 -m venv venv
 source venv/bin/activate  # Linux/macOS
-# OR
 venv\Scripts\activate     # Windows
 
 # Install dependencies
-pip install PyQt6 Pillow pytest pytest-qt ruff pyright
+pip install PySide6 Pillow pytest pytest-qt pytest-xvfb pytest-benchmark ruff basedpyright coverage
 
-# Verify virtual environment is active
-which python              # Should show venv/bin/python (Linux/macOS)
-# OR
-where python              # Should show venv\Scripts\python.exe (Windows)
-```
-
-#### Running Commands
-**IMPORTANT**: Always activate the virtual environment before running any commands:
-```bash
-# Activate venv first
-source venv/bin/activate  # Linux/macOS
-# OR  
-venv\Scripts\activate     # Windows
-
-# Then run SpritePal
+# Run SpritePal
 python launch_spritepal.py
-
-# Run tests (from spritepal directory)
-pytest tests/ -m "not gui"              # Run non-GUI tests only (headless)
-pytest tests/ -x                         # Run all tests, stop on first failure
-pytest tests/test_extractor.py -v       # Run specific test file
-pytest -k "test_palette"                 # Run tests matching keyword
-
-# Linting and Type Checking
-source venv/bin/activate                 # Activate virtual environment first (REQUIRED)
-ruff check .                             # Check for linting issues
-ruff check . --fix --unsafe-fixes        # Auto-fix linting issues
-.venv/bin/basedpyright                   # Type check with basedpyright (installed in venv)
-
-# Type Checking Analysis Tools
-python scripts/show_critical_errors.py   # Quick view of critical type errors
-python scripts/typecheck_analysis.py     # Comprehensive type error analysis
-python scripts/typecheck_analysis.py --critical   # Show only critical errors
-python scripts/typecheck_analysis.py --save       # Save analysis report to JSON
-
-# IMPORTANT: Always run linting tools from virtual environment
-# - ruff and basedpyright are installed in venv/, not globally
-# - Commands will fail with "command not found" without venv activation
-# - Install linting tools: pip install ruff basedpyright
-# - basedpyright must be run with full path: .venv/bin/basedpyright
-
-# Test Coverage
-pytest tests/ --cov=core --cov=ui --cov=utils    # Run tests with coverage
-coverage report                                   # View coverage report
-coverage html                                     # Generate HTML coverage report
 ```
 
-#### Deactivating Virtual Environment
+### Development
 ```bash
-deactivate                               # Return to system Python
+# Testing
+pytest tests/ -x                    # Stop on first failure
+pytest tests/ -m "unit"             # Unit tests only
+pytest tests/ --cov=core --cov=ui   # With coverage
+
+# Code quality (requires activated venv)
+ruff check . --fix                  # Lint and fix
+venv/bin/basedpyright              # Type check
+
+# Type error analysis
+python scripts/typecheck_analysis.py --critical
 ```
-
-
-### Testing with Virtual Display
-```bash
-# Install system dependencies (Linux)
-sudo ./install_test_deps.sh
-
-# Run with automatic Xvfb (recommended)
-python run_tests_xvfb.py
-
-# Run without virtual display (unit tests only)
-pytest tests/ --no-xvfb -m "not gui"
-
-# Run mock-based tests (works anywhere)
-pytest tests/test_integration_mock.py
-```
-
-### Development Tools
-
-#### Type Checking Analysis Scripts
-SpritePal includes development scripts for analyzing type checking results:
-
-**Quick Critical Errors View:**
-```bash
-python scripts/show_critical_errors.py
-```
-Shows only the most critical basedpyright errors that should be fixed first:
-- General type issues
-- Missing type arguments  
-- Import cycles
-- Argument/assignment type errors
-
-**Comprehensive Type Analysis:**
-```bash
-python scripts/typecheck_analysis.py [options]
-
-# Examples:
-python scripts/typecheck_analysis.py               # Full analysis
-python scripts/typecheck_analysis.py --critical    # Critical errors only
-python scripts/typecheck_analysis.py --save        # Save JSON report
-python scripts/typecheck_analysis.py --limit 10    # Limit errors shown
-python scripts/typecheck_analysis.py core/*.py     # Check specific files
-```
-
-Features:
-- Groups errors by type with counts
-- Shows files with most errors
-- Prioritizes critical issues
-- Can save JSON reports for tracking progress
-- Provides actionable summaries
-
-These tools help maintain code quality by making it easier to identify and fix the most important type issues.
 
 ## Architecture
 
-### SpritePal Overview
-SpritePal is a PyQt6 application for extracting SNES sprites from memory dumps with automatic palette association. It's part of the Kirby Super Star sprite editing toolkit.
+### Manager-Based Pattern
+```
+UI Layer (MainWindow, Dialogs, Panels)
+    ↓
+Controller (thin coordination)
+    ↓
+Manager Layer (business logic)
+- ExtractionManager: VRAM/ROM extraction
+- InjectionManager: VRAM/ROM injection  
+- SessionManager: Settings/state
+    ↓
+Core Layer (algorithms)
+- SpriteExtractor, ROMInjector, etc.
+```
 
-### Core Components
+### Key Managers
+- **ExtractionManager**: All extraction workflows, validation, preview generation
+- **InjectionManager**: All injection operations with compression support
+- **ManagerRegistry**: Singleton providing global manager access
+- **WorkerManager**: Thread lifecycle and signal management
 
-**Manager-Based Architecture:**
-- **Business Logic**: Centralized in `core/managers/` (ExtractionManager, InjectionManager, SessionManager)
-- **View**: PyQt6 UI components in `ui/` (main_window.py, preview widgets) - presentation only
-- **Controller**: Thin coordination layer in `core/controller.py` - delegates to managers
-- **Core**: Low-level extraction/injection classes in `core/` (used by managers)
+### Testing Infrastructure
+- **MockFactory**: Centralized mock creation (`tests/infrastructure/mock_factory.py`)
+- **Environment detection**: Auto-switches between real Qt and mocks
+- **Performance tests**: Use `@pytest.mark.benchmark` 
+- **GUI tests**: Use `@pytest.mark.gui` with qtbot
 
-**Manager Classes:**
-- `ExtractionManager`: Handles all extraction workflows (VRAM/ROM), validation, and preview generation
-- `InjectionManager`: Manages all injection operations (VRAM/ROM) with unified interface
-- `SessionManager`: Handles application state, settings persistence, and session management
-- `ManagerRegistry`: Singleton registry providing global access to manager instances
+### File Structure
+```
+spritepal/
+├── core/
+│   ├── managers/        # Business logic
+│   ├── workers/         # Thread workers
+│   └── *.py            # Core algorithms
+├── ui/
+│   ├── common/         # Shared UI utilities
+│   ├── dialogs/        # Dialog windows
+│   └── *.py           # Main UI components
+├── utils/              # Utilities (cache, settings)
+└── tests/
+    ├── infrastructure/ # Test framework
+    └── test_*.py      # Test files
+```
 
-**UI Components:**
-- `MainWindow`: Primary UI - delegates to controller, no business logic
-- `ROMExtractionPanel`: ROM selection UI - uses ExtractionManager via registry
-- `InjectionDialog`: Injection configuration - uses managers for validation
-- Workers: QThread wrappers that delegate to managers for actual operations
+## Quick Reference
 
-### Data Flow
-1. User interacts with UI (drag-drop files, configure extraction/injection)
-2. UI delegates to `Controller` for workflow coordination
-3. `Controller` uses `ExtractionManager` or `InjectionManager` for business logic:
-   - Manager validates parameters and handles errors
-   - Manager creates worker threads with proper configuration
-   - Manager coordinates low-level core classes (SpriteExtractor, ROMExtractor, etc.)
-4. Workers emit signals to managers, managers emit signals to controller/UI
-5. UI updates presentation based on manager signals (progress, preview, completion)
-6. `SessionManager` handles state persistence and settings throughout the process
+### Common Issues
+- **Qt object is None**: Use `is not None` checks, not truthiness
+- **Thread crash**: Ensure `@handle_worker_errors` on all workers
+- **Signal not working**: Check thread affinity with `obj.thread()`
+- **Type errors**: Run `python scripts/typecheck_analysis.py`
 
-### File Formats
-- **Input**: SNES memory dumps (.dmp files)
-  - VRAM: 64KB sprite graphics at offset 0xC000
-  - CGRAM: 512 bytes palette data (256 colors in BGR555)
-  - OAM: 544 bytes sprite attribute data
-- **Output**: 
-  - Indexed PNG (grayscale preserving pixel indices)
-  - .pal.json files (RGB888 palette data for pixel editor)
-  - .metadata.json (palette switching configuration)
+### Key Files
+- `utils/constants.py`: All magic numbers as named constants
+- `core/managers/exceptions.py`: Exception hierarchy
+- `ui/common/error_handler.py`: Centralized error handling
+- `ui/common/worker_manager.py`: Worker lifecycle management
+- `tests/conftest.py`: Test configuration and fixtures
 
-### Testing Strategy
-- **Unit tests**: Core logic (extractor, palette manager) - no GUI required
-- **Integration tests**: Workflow scenarios with real Qt components using pytest-xvfb
-- **Mock tests**: GUI component testing using mocks for any environment 
-- **GUI tests**: Full application testing with virtual display (Xvfb) or offscreen backend
-- **CI/CD**: Automatic virtual display setup with comprehensive platform coverage
+### Performance
+- ROM cache provides 225x-2400x speedup (see `utils/rom_cache.py`)
+- Use `pytest-benchmark` for performance testing
+- Profile before optimizing with cProfile/memory_profiler
 
-### Key Constants (utils/constants.py)
-- `VRAM_SPRITE_OFFSET`: 0xC000 (sprite data location in VRAM)
-- `SPRITE_PALETTE_START/END`: 8-15 (sprite palette indices)
-- `COLORS_PER_PALETTE`: 16
-- `BYTES_PER_TILE`: 32 (4bpp format)
-
-### HAL Compression Tools
-- **Location**: Pre-built HAL tools (exhal/inhal) are available in `../archive/obsolete_test_images/ultrathink/`
-- **Status**: Tools are automatically discovered and working for ROM injection functionality
-- **Usage**: Integrated into SpritePal's ROM injection workflow for compressed sprite data
-
-### Session Persistence
-Settings saved to `.spritepal_settings.json` include:
-- Last loaded file paths
-- Window geometry
-- Output preferences
-
-### Integration Points
-- Pixel editor launcher in `controller.py`
-- Auto-loading palette files by matching names
-- Metadata for advanced palette features
-
-### Architecture Patterns
-
-#### Manager Pattern (2025 Refactoring)
-- **Business Logic Separation**: All business logic moved from UI components to dedicated manager classes
-- **Centralized Validation**: Parameter validation and error handling consolidated in managers
-- **Unified Interfaces**: Managers provide consistent APIs for UI components
-- **Registry Access**: Global singleton registry provides access to manager instances
-
-#### Clean Architecture Benefits
-- **Testability**: Business logic can be unit tested independently of UI
-- **Maintainability**: Changes to business rules don't require UI modifications  
-- **Reusability**: Manager logic can be reused across different UI components
-- **Type Safety**: Strong typing and validation at the manager layer
-
-#### Legacy Pattern Support
-- **ROM Extraction UI**: Modular widget architecture in `ui/rom_extraction/`
-- **Error Handling**: Centralized exception hierarchy in `core/managers/exceptions.py`
-- **Thread Safety**: Manager operations are thread-safe with proper locking
-
-### ROM Cache System
-
-#### Overview
-SpritePal includes a high-performance ROM caching system that dramatically speeds up repeated sprite scans. The cache stores scan results in a SQLite database, eliminating the need to re-scan ROMs for the same parameters.
-
-#### Key Features
-- **Automatic Cache Detection**: When loading a ROM, SpritePal automatically checks for cached scan results
-- **Resume Partial Scans**: If a scan was interrupted, SpritePal offers to resume from where it left off
-- **Visual Indicators**: Cache status is shown throughout the UI:
-  - ROM file widget shows cache status badges
-  - Scan dialog displays cache hit/miss status
-  - Sprite selector indicates cached vs fresh results
-  - Manual offset dialog shows when using cached data
-
-#### Cache Operations
-- **Automatic Saving**: Scan results are automatically cached after completion
-- **Smart Invalidation**: Cache entries are invalidated when ROM modification time changes
-- **Clear Cache**: Available through the Settings dialog to free up disk space
-- **Performance**: Typical cache hits reduce load time from minutes to milliseconds
-
-#### Technical Details
-- **Storage**: SQLite database at `~/.cache/spritepal/rom_cache.db`
-- **Key Components**:
-  - `utils/rom_cache.py`: Core cache implementation with thread-safe singleton
-  - `ui/dialogs/resume_scan_dialog.py`: UI for resuming partial scans
-  - Cache integration in `ExtractionManager` and UI components
-- **Cache Keys**: Based on ROM path, scan parameters, and file modification time
+### Best Practices
+1. Always use virtual environment
+2. Follow signal naming conventions (past tense for events)
+3. Use MockFactory for consistent test mocks
+4. Handle errors at appropriate layers
+5. Type hint all new code (Python 3.10+ syntax)

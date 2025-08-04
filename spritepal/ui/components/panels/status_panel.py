@@ -6,7 +6,7 @@ Displays detection status, progress information, scanning progress, and cache st
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
-from spritepal.ui.styles import get_muted_text_style, get_panel_style
+from ui.styles import get_muted_text_style, get_panel_style
 
 
 class StatusPanel(QWidget):
@@ -18,24 +18,25 @@ class StatusPanel(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        """Initialize the status panel UI"""
+        """Initialize the compact status panel UI"""
         layout = QVBoxLayout()
-        layout.setContentsMargins(8, 6, 8, 6)  # Reduced padding
-        layout.setSpacing(3)  # Tighter spacing
+        layout.setContentsMargins(6, 4, 6, 4)  # More compact padding
+        layout.setSpacing(2)  # Very tight spacing
 
         # CRITICAL FIX: Set proper parent for all child widgets to prevent Qt lifecycle bugs
-        status_label = QLabel("Detection Status", parent=self)
-        status_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-bottom: 3px;")  # Smaller and tighter
+        status_label = QLabel("Status", parent=self)
+        status_label.setStyleSheet("font-weight: bold; font-size: 11px; margin-bottom: 2px;")  # Smaller title
         layout.addWidget(status_label)
 
-        self.detection_info = QLabel("Ready to search for sprites", parent=self)
+        self.detection_info = QLabel("Ready", parent=self)
         self.detection_info.setWordWrap(True)
-        self.detection_info.setStyleSheet("color: #cccccc;")
+        self.detection_info.setStyleSheet("color: #cccccc; font-size: 10px;")  # Smaller text
         layout.addWidget(self.detection_info)
 
         # Progress bar (initially hidden) - set proper parent
         self.scan_progress = QProgressBar(parent=self)
         self.scan_progress.setVisible(False)
+        self.scan_progress.setMaximumHeight(16)  # Thinner progress bar
         layout.addWidget(self.scan_progress)
 
         # Cache status section
@@ -68,7 +69,7 @@ class StatusPanel(QWidget):
 
     def _setup_cache_status(self, layout: QVBoxLayout) -> None:
         """Set up cache status indicators"""
-        from spritepal.utils.settings_manager import get_settings_manager
+        from utils.settings_manager import get_settings_manager
 
         settings_manager = get_settings_manager()
 
@@ -79,21 +80,22 @@ class StatusPanel(QWidget):
         # Cache status widget - CRITICAL FIX: Set proper parent for all widgets
         self.cache_status_widget = QWidget(parent=self)
         cache_layout = QHBoxLayout()
-        cache_layout.setContentsMargins(0, 3, 0, 0)  # Small top margin to separate from progress
-        cache_layout.setSpacing(4)
+        cache_layout.setContentsMargins(0, 2, 0, 0)  # Minimal top margin
+        cache_layout.setSpacing(3)  # Tighter spacing
 
         # Cache status label - set proper parent
-        cache_label = QLabel("ROM Cache:", parent=self.cache_status_widget)
-        cache_label.setStyleSheet("font-weight: bold; font-size: 11px;")
+        cache_label = QLabel("Cache:", parent=self.cache_status_widget)
+        cache_label.setStyleSheet("font-weight: bold; font-size: 10px;")  # Smaller font
         cache_layout.addWidget(cache_label)
 
         # Cache icon - set proper parent
         self.cache_icon_label = QLabel(parent=self.cache_status_widget)
+        self.cache_icon_label.setStyleSheet("font-size: 10px;")  # Smaller icon
         cache_layout.addWidget(self.cache_icon_label)
 
         # Cache info label - set proper parent
         self.cache_info_label = QLabel(parent=self.cache_status_widget)
-        self.cache_info_label.setStyleSheet(get_muted_text_style())
+        self.cache_info_label.setStyleSheet(get_muted_text_style() + " font-size: 9px;")  # Smaller text
         cache_layout.addWidget(self.cache_info_label)
 
         # Add stretch to push content to left
@@ -110,8 +112,8 @@ class StatusPanel(QWidget):
         if not hasattr(self, "cache_status_widget"):
             return
 
-        from spritepal.utils.rom_cache import get_rom_cache
-        from spritepal.utils.settings_manager import get_settings_manager
+        from utils.rom_cache import get_rom_cache
+        from utils.settings_manager import get_settings_manager
 
         settings_manager = get_settings_manager()
         cache_enabled = settings_manager.get_cache_enabled()

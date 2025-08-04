@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 from PyQt6.QtCore import QObject, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
 
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.settings_manager import get_settings_manager
+from utils.logging_config import get_logger
+from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
 
@@ -64,6 +64,7 @@ class ViewStateManager(QObject):
 
         # Save current geometry
         self._normal_geometry = self.dialog_widget.geometry()
+        logger.debug(f"GEOMETRY: Entering fullscreen, saved normal geometry: {self._normal_geometry}")
 
         # Use clean window flags for true fullscreen
         self.dialog_widget.setWindowFlags(Qt.WindowType.Window)
@@ -74,12 +75,14 @@ class ViewStateManager(QObject):
 
         self.fullscreen_toggled.emit(True)
         self.title_changed.emit(self._fullscreen_title)
-        logger.debug("Entered fullscreen mode")
+        logger.debug(f"GEOMETRY: Entered fullscreen mode, new geometry: {self.dialog_widget.geometry()}")
 
     def _exit_fullscreen(self) -> None:
         """Exit fullscreen mode"""
         if not self._is_fullscreen:
             return
+
+        logger.debug(f"GEOMETRY: Exiting fullscreen, current geometry: {self.dialog_widget.geometry()}")
 
         # Restore original window flags and geometry
         self.dialog_widget.setWindowFlags(self._original_window_flags)
@@ -87,13 +90,14 @@ class ViewStateManager(QObject):
 
         if self._normal_geometry:
             self.dialog_widget.setGeometry(self._normal_geometry)
+            logger.debug(f"GEOMETRY: Restored normal geometry: {self._normal_geometry}")
 
         self._is_fullscreen = False
         self.dialog_widget.setWindowTitle(self._base_title)
 
         self.fullscreen_toggled.emit(False)
         self.title_changed.emit(self._base_title)
-        logger.debug("Exited fullscreen mode")
+        logger.debug(f"GEOMETRY: Exited fullscreen mode, final geometry: {self.dialog_widget.geometry()}")
 
     def is_fullscreen(self) -> bool:
         """Check if currently in fullscreen mode"""
@@ -114,23 +118,59 @@ class ViewStateManager(QObject):
             self.dialog_widget.setWindowTitle(title)
             self.title_changed.emit(title)
 
+    def _is_position_valid(self, x: int, y: int, width: int, height: int) -> bool:
+        """Validate that window position and size are reasonable and safe to save"""
+        # Check for negative coordinates
+        if x < 0 or y < 0:
+            logger.debug(f"Invalid position: negative coordinates x={x}, y={y}")
+            return False
+
+        # Check for unreasonably large coordinates (likely corruption)
+        if x > 10000 or y > 10000:
+            logger.debug(f"Invalid position: excessive coordinates x={x}, y={y}")
+            return False
+
+        # Check for unreasonably large dimensions
+        if width > 5000 or height > 5000:
+            logger.debug(f"Invalid size: excessive dimensions {width}x{height}")
+            return False
+
+        # Check for minimum reasonable size
+        if width < 200 or height < 150:
+            logger.debug(f"Invalid size: too small {width}x{height}")
+            return False
+
+        # Ensure position is actually visible on screen
+        if not self._is_position_on_screen(x, y, width, height):
+            logger.debug(f"Invalid position: off-screen {x},{y} {width}x{height}")
+            return False
+
+        return True
+
     def save_window_position(self) -> None:
-        """Save the current window position to settings"""
+        """Save the current window position to settings with validation"""
         if self._is_fullscreen:
             # Don't save position in fullscreen mode
             return
 
         try:
-            settings_manager = get_settings_manager()
             pos = self.dialog_widget.pos()
             size = self.dialog_widget.size()
+            x, y = pos.x(), pos.y()
+            width, height = size.width(), size.height()
 
-            settings_manager.set("manual_offset_dialog", "x", pos.x())
-            settings_manager.set("manual_offset_dialog", "y", pos.y())
-            settings_manager.set("manual_offset_dialog", "width", size.width())
-            settings_manager.set("manual_offset_dialog", "height", size.height())
+            # Validate position before saving
+            if not self._is_position_valid(x, y, width, height):
+                logger.warning(f"Refusing to save invalid window position: {x},{y} {width}x{height}")
+                return
 
-            logger.debug(f"Saved window position: {pos.x()},{pos.y()} size: {size.width()}x{size.height()}")
+            settings_manager = get_settings_manager()
+            settings_manager.set("manual_offset_dialog", "x", x)
+            settings_manager.set("manual_offset_dialog", "y", y)
+            settings_manager.set("manual_offset_dialog", "width", width)
+            settings_manager.set("manual_offset_dialog", "height", height)
+
+            logger.debug(f"Saved valid window position: {x},{y} size: {width}x{height}")
         except Exception as e:
             logger.warning(f"Failed to save window position: {e}")
 
@@ -161,17 +201,50 @@ class ViewStateManager(QObject):
 
     def restore_window_position(self) -> bool:
         """
-        Restore window position from settings with screen bounds validation.
+        Restore window position from settings with comprehensive validation.
 
-        TEMPORARILY DISABLED: Always returns False to force safe positioning
-        until positioning issues are resolved.
+        Uses the robust _is_position_valid() method to ensure only safe positions
+        are restored, preventing corruption issues.
 
         Returns:
             True if position was restored, False otherwise
         """
-        # TEMPORARY FIX: Disable position restoration to prevent off-screen positioning
-        logger.debug("Position restoration temporarily disabled - using safe positioning")
-        return False
+        try:
+            settings_manager = get_settings_manager()
+
+            # Get saved position values
+            x = settings_manager.get("manual_offset_dialog", "x", None)
+            y = settings_manager.get("manual_offset_dialog", "y", None)
+            width = settings_manager.get("manual_offset_dialog", "width", None)
+            height = settings_manager.get("manual_offset_dialog", "height", None)
+
+            # Require all values to be present
+            if any(val is None for val in [x, y, width, height]):
+                logger.debug("Incomplete saved position data - using safe positioning")
+                return False
+
+            # Convert to integers and validate
+            try:
+                x, y, width, height = int(x), int(y), int(width), int(height)
+            except (ValueError, TypeError):
+                logger.debug("Invalid saved position data types - using safe positioning")
+                return False
+
+            # Use comprehensive validation
+            if not self._is_position_valid(x, y, width, height):
+                logger.debug(f"Saved position failed validation: {x},{y} {width}x{height} - using safe positioning")
+                return False
+
+            # Position is valid - restore it
+            self.dialog_widget.move(x, y)
+            self.dialog_widget.resize(width, height)
+
+            logger.debug(f"Successfully restored window position: {x},{y} size: {width}x{height}")
+            return True
+
+        except Exception as e:
+            logger.warning(f"Error restoring window position: {e} - using safe positioning")
+            return False
 
 
     def center_on_screen(self) -> None:
@@ -213,7 +286,8 @@ class ViewStateManager(QObject):
                 center_y = max(100, center_y)
 
                 self.dialog_widget.move(center_x, center_y)
-                logger.debug(f"Centered dialog on screen at {center_x},{center_y} (screen: {screen_geometry.width()}x{screen_geometry.height()})")
+                logger.debug(f"GEOMETRY: Centered dialog on screen at {center_x},{center_y} (screen: {screen_geometry.width()}x{screen_geometry.height()})")
+                logger.debug(f"GEOMETRY: Final centered geometry: {self.dialog_widget.geometry()}")
             else:
                 # Last resort - move to top-left with small offset
                 self.dialog_widget.move(100, 100)
@@ -250,9 +324,10 @@ class ViewStateManager(QObject):
             # Validate the calculated position is on screen
             if self._is_position_on_screen(center_x, center_y, self.dialog_widget.width(), self.dialog_widget.height()):
                 self.dialog_widget.move(center_x, center_y)
-                logger.debug(f"Centered dialog on parent at {center_x},{center_y}")
+                logger.debug(f"GEOMETRY: Centered dialog on parent at {center_x},{center_y}")
+                logger.debug(f"GEOMETRY: Final parent-centered geometry: {self.dialog_widget.geometry()}")
                 return True
-            logger.debug(f"Calculated parent center position {center_x},{center_y} is off-screen")
+            logger.debug(f"GEOMETRY: Calculated parent center position {center_x},{center_y} is off-screen")
             return False
 
         except Exception as e:
@@ -261,11 +336,9 @@ class ViewStateManager(QObject):
 
     def handle_show_event(self) -> None:
         """Handle dialog show event with robust positioning fallbacks"""
-        # TEMPORARY: Skip saved position restoration for now to avoid "too high" issues
-        # This ensures all dialogs use proper centering logic after the positioning fixes
-        # TODO: Remove this skip after a few releases when old bad positions are cleared
-
-        # Position restoration temporarily disabled to prevent off-screen issues
+        # Try to restore saved position first (with comprehensive validation)
+        if self.restore_window_position():
+            return
 
         # Try to center on parent window
         if self.center_on_parent():

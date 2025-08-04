@@ -7,9 +7,17 @@ conflicts when both managers save to the same file.
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from spritepal.core.managers import get_session_manager
+from utils.constants import (
+    CACHE_EXPIRATION_MAX_DAYS,
+    CACHE_EXPIRATION_MIN_DAYS,
+    CACHE_SIZE_MAX_MB,
+    CACHE_SIZE_MIN_MB,
+)
+
+if TYPE_CHECKING:
+    pass
 
 
 class SettingsManager:
@@ -18,6 +26,8 @@ class SettingsManager:
     def __init__(self, app_name: str = "SpritePal") -> None:
         self.app_name: str = app_name
         # Use SessionManager for all storage operations
+        # Late import to avoid circular dependency
+        from core.managers import get_session_manager
         self._session_manager = get_session_manager()
         # Initialize default settings if not present
         self._ensure_default_settings()
@@ -174,7 +184,7 @@ class SettingsManager:
 
     def set_cache_max_size_mb(self, size_mb: int) -> None:
         """Set maximum cache size in MB"""
-        self.set("cache", "max_size_mb", max(10, min(10000, size_mb)))  # Clamp between 10MB and 10GB
+        self.set("cache", "max_size_mb", max(CACHE_SIZE_MIN_MB, min(CACHE_SIZE_MAX_MB, size_mb)))
         self.save_settings()
 
     def get_cache_expiration_days(self) -> int:
@@ -183,7 +193,7 @@ class SettingsManager:
 
     def set_cache_expiration_days(self, days: int) -> None:
         """Set cache expiration in days"""
-        self.set("cache", "expiration_days", max(1, min(365, days)))  # Clamp between 1 and 365 days
+        self.set("cache", "expiration_days", max(CACHE_EXPIRATION_MIN_DAYS, min(CACHE_EXPIRATION_MAX_DAYS, days)))
         self.save_settings()
 
 

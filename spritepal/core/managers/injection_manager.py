@@ -12,11 +12,13 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 if TYPE_CHECKING:
     from .session_manager import SessionManager
+    from core.injector import InjectionWorker
+    from core.rom_injector import ROMInjectionWorker
 
-from spritepal.core.injector import InjectionWorker
-from spritepal.core.rom_injector import ROMInjectionWorker
-from spritepal.ui.common import WorkerManager
-from spritepal.utils.constants import (
+from core.injector import InjectionWorker
+from core.rom_injector import ROMInjectionWorker
+from ui.common import WorkerManager
+from utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
@@ -25,7 +27,8 @@ from spritepal.utils.constants import (
     SETTINGS_KEY_VRAM_PATH,
     SETTINGS_NS_ROM_INJECTION,
 )
-from spritepal.utils.rom_cache import get_rom_cache
+from utils.file_validator import FileValidator
+from utils.rom_cache import get_rom_cache
 
 from .base_manager import BaseManager
 from .exceptions import ValidationError
@@ -43,12 +46,15 @@ class InjectionManager(BaseManager):
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the injection manager"""
+        # Declare instance variables with type hints
+        self._current_worker: QThread | None
+        
         super().__init__("InjectionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize injection components"""
-        self._current_worker: QThread | None = None
-        self._is_initialized: bool = True
+        self._current_worker = None
+        self._is_initialized = True
         self._logger.info("InjectionManager initialized")
 
     def cleanup(self) -> None:
@@ -58,7 +64,7 @@ class InjectionManager(BaseManager):
             WorkerManager.cleanup_worker(self._current_worker, timeout=5000)
         self._current_worker = None
 
-    def _get_session_manager(self) -> "SessionManager":
+    def _get_session_manager(self) -> 'SessionManager':
         """Get session manager with late import to avoid circular dependencies"""
         from . import get_session_manager
         return get_session_manager()
@@ -130,6 +136,12 @@ class InjectionManager(BaseManager):
             self._logger.info(f"Started {mode_text} injection: {params['sprite_path']}")
             self.injection_progress.emit(f"Starting {mode_text} injection...")
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, operation, "injection startup")
+            return False
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, operation, "injection startup")
+            return False
         except Exception as e:
             self._handle_error(e, operation)
             return False
@@ -146,6 +158,10 @@ class InjectionManager(BaseManager):
         Raises:
             ValidationError: If parameters are invalid
         """
+        # Validate input type
+        if not isinstance(params, dict):
+            raise ValidationError("params must be a dictionary")
+        
         # Check required common parameters
         required = ["mode", "sprite_path", "offset"]
         self._validate_required(params, required)
@@ -154,19 +170,31 @@ class InjectionManager(BaseManager):
         self._validate_type(params["sprite_path"], "sprite_path", str)
         self._validate_type(params["offset"], "offset", int)
 
-        self._validate_file_exists(params["sprite_path"], "sprite_path")
+        # Use FileValidator for sprite file validation
+        sprite_result = FileValidator.validate_image_file(params["sprite_path"])
+        if not sprite_result.is_valid:
+            raise ValidationError(f"Sprite file validation failed: {sprite_result.error_message}")
+            
         self._validate_range(params["offset"], "offset", min_val=0)
 
         # Check mode-specific parameters
         if params["mode"] == "vram":
             vram_required = ["input_vram", "output_vram"]
             self._validate_required(params, vram_required)
-            self._validate_file_exists(params["input_vram"], "input_vram")
+            
+            # Use FileValidator for VRAM file validation
+            vram_result = FileValidator.validate_vram_file(params["input_vram"])
+            if not vram_result.is_valid:
+                raise ValidationError(f"Input VRAM file validation failed: {vram_result.error_message}")
 
         elif params["mode"] == "rom":
             rom_required = ["input_rom", "output_rom"]
             self._validate_required(params, rom_required)
-            self._validate_file_exists(params["input_rom"], "input_rom")
+            
+            # Use FileValidator for ROM file validation
+            rom_result = FileValidator.validate_rom_file(params["input_rom"])
+            if not rom_result.is_valid:
+                raise ValidationError(f"Input ROM file validation failed: {rom_result.error_message}")
 
             # Validate optional fast_compression parameter
             if "fast_compression" in params:
@@ -176,7 +204,10 @@ class InjectionManager(BaseManager):
 
         # Validate optional metadata_path
         if params.get("metadata_path"):
-            self._validate_file_exists(params["metadata_path"], "metadata_path")
+            # Use FileValidator for JSON metadata file validation
+            metadata_result = FileValidator.validate_json_file(params["metadata_path"])
+            if not metadata_result.is_valid:
+                raise ValidationError(f"Metadata file validation failed: {metadata_result.error_message}")
 
     def get_smart_vram_suggestion(self, sprite_path: str, metadata_path: str = "") -> str:
         """
@@ -203,8 +234,11 @@ class InjectionManager(BaseManager):
                 if vram_path:
                     self._logger.debug(f"Smart VRAM suggestion found: {vram_path}")
                     return vram_path
-            except Exception as e:
+            except (OSError, IOError, ValueError) as e:
                 self._logger.debug(f"VRAM suggestion strategy failed: {e}")
+                continue
+            except Exception as e:
+                self._logger.debug(f"Unexpected error in VRAM suggestion strategy: {e}")
                 continue
 
         self._logger.debug("No VRAM suggestion found")
@@ -256,6 +290,8 @@ class InjectionManager(BaseManager):
             vram_path = session_manager.get("session", "vram_path", "")
             if vram_path and os.path.exists(vram_path):
                 return vram_path
+        except (OSError, IOError, ValueError):
+            pass
         except Exception:
             pass
         return ""
@@ -271,6 +307,8 @@ class InjectionManager(BaseManager):
             vram_path = metadata.get("source_vram", "")
             if vram_path and os.path.exists(vram_path):
                 return vram_path
+        except (OSError, IOError, ValueError):
+            pass
         except Exception:
             pass
         return ""
@@ -303,6 +341,8 @@ class InjectionManager(BaseManager):
             recent_vram = session_manager.get_recent_files("vram")
             if recent_vram and os.path.exists(recent_vram[0]):
                 return recent_vram[0]
+        except (OSError, IOError, ValueError):
+            pass
         except Exception:
             pass
         return ""
@@ -316,6 +356,8 @@ class InjectionManager(BaseManager):
             )
             if last_injection_vram and os.path.exists(last_injection_vram):
                 return last_injection_vram
+        except (OSError, IOError, ValueError):
+            pass
         except Exception:
             pass
         return ""
@@ -364,6 +406,12 @@ class InjectionManager(BaseManager):
                     parsed_info["extraction_vram_offset"] = vram_offset
                     parsed_info["rom_extraction_info"] = None
 
+        except (OSError, IOError, PermissionError) as e:
+            self._logger.warning(f"File I/O error loading metadata from {metadata_path}: {e}")
+            return None
+        except (json.JSONDecodeError, ValueError) as e:
+            self._logger.warning(f"Invalid metadata format in {metadata_path}: {e}")
+            return None
         except Exception as e:
             self._logger.warning(f"Failed to load metadata from {metadata_path}: {e}")
             return None
@@ -624,7 +672,7 @@ class InjectionManager(BaseManager):
         timestamp = int(time.time())
         return f"{base}_modified_{timestamp}{ext}"
 
-    def convert_vram_to_rom_offset(self, vram_offset_str: str) -> int | None:
+    def convert_vram_to_rom_offset(self, vram_offset_str: str | int) -> int | None:
         """
         Convert VRAM offset to ROM offset based on known mappings
 

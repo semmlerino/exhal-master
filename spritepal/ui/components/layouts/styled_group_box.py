@@ -8,7 +8,7 @@ exactly replicating the group box patterns from existing dialogs.
 
 from PyQt6.QtWidgets import QGroupBox, QLayout, QWidget
 
-from spritepal.ui.styles import get_panel_style
+from ui.styles import get_panel_style
 
 
 class StyledGroupBox(QGroupBox):

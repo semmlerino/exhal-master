@@ -3,20 +3,28 @@ Core sprite extraction functionality
 """
 
 
+from typing import TYPE_CHECKING
+
 from PIL import Image
 
-from spritepal.utils.constants import (
+if TYPE_CHECKING:
+    import logging
+else:
+    import logging
+
+from utils.constants import (
     BYTES_PER_TILE,
     DEFAULT_TILES_PER_ROW,
+    PREVIEW_TILES_PER_ROW,
     TILE_HEIGHT,
     TILE_WIDTH,
     VRAM_SPRITE_OFFSET,
     VRAM_SPRITE_SIZE,
 )
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.validation import validate_offset, validate_vram_file
+from utils.logging_config import get_logger
+from utils.validation import validate_offset, validate_vram_file
 
-logger = get_logger(__name__)
+logger: 'logging.Logger' = get_logger(__name__)
 
 
 class SpriteExtractor:
@@ -235,7 +243,7 @@ class SpriteExtractor:
             tiles = tiles[:max_tiles]
 
         # Use smaller grid for preview
-        preview_tiles_per_row = min(8, self.tiles_per_row)
+        preview_tiles_per_row = min(PREVIEW_TILES_PER_ROW, self.tiles_per_row)
         logger.debug(f"Using {preview_tiles_per_row} tiles per row for preview")
 
         # Create preview image

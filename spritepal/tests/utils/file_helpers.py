@@ -8,7 +8,6 @@ test files and directories, reducing duplication across test files.
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Union
 
 from .data_generators import generate_cgram_data, generate_oam_data
 
@@ -163,7 +162,7 @@ def _generate_rom_data(**kwargs) -> bytearray:
     )
 
 
-def cleanup_test_files(file_paths: Union[list[str], dict[str, str], str]):
+def cleanup_test_files(file_paths: list[str] | dict[str, str] | str):
     """
     Clean up test files and directories.
 

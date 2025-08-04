@@ -16,10 +16,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.core.default_palette_loader import DefaultPaletteLoader
-from spritepal.core.managers import get_extraction_manager
-from spritepal.ui.styles import get_borderless_preview_style, get_muted_text_style
-from spritepal.utils.logging_config import get_logger
+from core.default_palette_loader import DefaultPaletteLoader
+from core.managers import get_extraction_manager
+from ui.styles import get_borderless_preview_style, get_muted_text_style
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -30,13 +30,18 @@ class SpritePreviewWidget(QWidget):
     palette_changed = pyqtSignal(int)  # Emitted when palette selection changes
 
     def __init__(self, title: str = "Sprite Preview", parent=None):
-        super().__init__(parent)
+        # Step 1: Declare instance variables with type hints
         self.title = title
         self.sprite_pixmap: QPixmap | None = None
         self.palettes: list[list[list[int]]] = []
         self.current_palette_index = 8  # Default sprite palette
         self.sprite_data: bytes | None = None
         self.default_palette_loader = DefaultPaletteLoader()
+        
+        # Step 2: Initialize parent
+        super().__init__(parent)
+        
+        # Step 3: Setup UI
         self._setup_ui()
 
     def _setup_ui(self):
@@ -45,16 +50,18 @@ class SpritePreviewWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
         layout.setSpacing(0)  # Zero spacing for maximum efficiency
 
-        # Preview label - balanced space efficiency and visibility
+        # Preview label - optimized for large dialog with dominant preview space
         self.preview_label = QLabel()
         # Small but visible minimum for when no sprite is loaded
-        self.preview_label.setMinimumSize(100, 100)  # Visible minimum for empty state
-        self.preview_label.setMaximumSize(400, 400)  # Reasonable maximum
+        self.preview_label.setMinimumSize(200, 200)  # Larger minimum for better visibility
+        self.preview_label.setMaximumSize(800, 800)  # Much larger maximum to use available space
         self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Size to content but stay visible
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Prefer available space without forcing expansion
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setStyleSheet(get_borderless_preview_style())
+
+        # Start with visible empty state style, will switch to borderless when content loads
+        self._apply_empty_state_style()
         layout.addWidget(self.preview_label)
 
         # Compact controls container - minimal space
@@ -89,35 +96,40 @@ class SpritePreviewWidget(QWidget):
         self.setLayout(layout)
 
     def _scale_pixmap_efficiently(self, pixmap: QPixmap) -> QPixmap:
-        """Scale pixmap efficiently to minimize wasted space"""
+        """Scale pixmap to make best use of available preview space"""
         original_width = pixmap.width()
         original_height = pixmap.height()
 
-        # Determine efficient scale size
-        if original_width <= 32 and original_height <= 32:
-            # Very small sprites: 2x scale for visibility
-            scale_width, scale_height = original_width * 2, original_height * 2
-        elif original_width <= 64 and original_height <= 64:
-            # Small sprites: 1.5x scale
-            scale_width, scale_height = int(original_width * 1.5), int(original_height * 1.5)
-        elif original_width <= 128 and original_height <= 128:
-            # Medium sprites: original size
-            scale_width, scale_height = original_width, original_height
-        else:
-            # Large sprites: scale down to reasonable size
-            max_dimension = max(original_width, original_height)
-            if max_dimension > 200:
-                scale_factor = 200 / max_dimension
-                scale_width, scale_height = int(original_width * scale_factor), int(original_height * scale_factor)
-            else:
-                scale_width, scale_height = original_width, original_height
+        # Get available space in the preview label
+        max_width = self.preview_label.maximumWidth()
+        max_height = self.preview_label.maximumHeight()
 
-        # Apply scaling
+        # Determine scale size based on available space and sprite size
+        if original_width <= 32 and original_height <= 32:
+            # Very small sprites: scale up significantly for visibility
+            scale_factor = min(6, max_width // original_width, max_height // original_height)
+            scale_width, scale_height = original_width * scale_factor, original_height * scale_factor
+        elif original_width <= 64 and original_height <= 64:
+            # Small sprites: scale up moderately
+            scale_factor = min(4, max_width // original_width, max_height // original_height)
+            scale_width, scale_height = original_width * scale_factor, original_height * scale_factor
+        elif original_width <= 128 and original_height <= 128:
+            # Medium sprites: scale up to use available space
+            scale_factor = min(3, max_width // original_width, max_height // original_height)
+            scale_width, scale_height = original_width * scale_factor, original_height * scale_factor
+        else:
+            # Large sprites: fit to available space
+            scale_factor_x = max_width / original_width
+            scale_factor_y = max_height / original_height
+            scale_factor = min(scale_factor_x, scale_factor_y, 2.0)  # Cap at 2x for very large sprites
+            scale_width, scale_height = int(original_width * scale_factor), int(original_height * scale_factor)
+
+        # Apply scaling with smooth transformation for better quality at larger sizes
         return pixmap.scaled(
             scale_width,
             scale_height,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.FastTransformation,
+            Qt.TransformationMode.SmoothTransformation,  # Better quality for larger previews
         )
 
     def load_sprite_from_png(self, png_path: str, sprite_name: str | None = None):
@@ -143,8 +155,14 @@ class SpritePreviewWidget(QWidget):
                 f"Size: {img.size[0]}x{img.size[1]} | Mode: {img.mode}"
             )
 
+        except (OSError, IOError, PermissionError) as e:
+            logger.exception(f"File I/O error loading sprite preview: {e}")
+            self.info_label.setText(f"Cannot access sprite file: {e}")
+        except (ValueError, TypeError) as e:
+            logger.exception(f"Image format error loading sprite preview: {e}")
+            self.info_label.setText(f"Invalid sprite format: {e}")
         except Exception as e:
-            logger.exception("Failed to load sprite preview")
+            logger.exception(f"Failed to load sprite preview: {e}")
             self.info_label.setText(f"Error loading sprite: {e}")
 
     def _load_grayscale_sprite(
@@ -200,9 +218,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
-        # SPACE EFFICIENCY: When content is loaded, use borderless style and resize to content
-        self.preview_label.setStyleSheet(get_borderless_preview_style())
-        self.preview_label.adjustSize()  # Shrink to exact content size
+        # SPACE EFFICIENCY: When content is loaded, use borderless style
+        self._apply_content_style()
         self.sprite_pixmap = pixmap
 
         # No palette selection for indexed sprites
@@ -250,9 +267,8 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         self.preview_label.setPixmap(scaled)
-        # SPACE EFFICIENCY: When content is loaded, use borderless style and resize to content
-        self.preview_label.setStyleSheet(get_borderless_preview_style())
-        self.preview_label.adjustSize()  # Shrink to exact content size
+        # SPACE EFFICIENCY: When content is loaded, use borderless style
+        self._apply_content_style()
         self.sprite_pixmap = pixmap
 
     def _on_palette_changed(self, index: int):
@@ -332,27 +348,27 @@ class SpritePreviewWidget(QWidget):
                 info_text += f" | Warning: {extra_bytes} extra bytes"
             self.info_label.setText(info_text)
 
+        except (OSError, IOError, PermissionError) as e:
+            logger.exception(f"File I/O error loading 4bpp sprite: {e}")
+            self.clear()
+        except (ValueError, TypeError) as e:
+            logger.exception(f"Data format error loading 4bpp sprite: {e}")
+            self.clear()
         except Exception as e:
-            logger.exception("Failed to load 4bpp sprite")
+            logger.exception(f"Failed to load 4bpp sprite: {e}")
             self.clear()
             self.info_label.setText(f"Error loading sprite: {e}")
 
     def clear(self):
         """Clear the preview and show visible placeholder"""
         self.preview_label.clear()
-        self.preview_label.setText("No preview")
-        # Reset to minimum size for visibility when empty and make background visible
-        self.preview_label.setMinimumSize(100, 100)
-        # Temporarily set visible background for empty state
-        self.preview_label.setStyleSheet("""
-            QLabel {
-                border: 1px solid #666;
-                background-color: #f0f0f0;
-                color: #666;
-                margin: 0px;
-                padding: 4px;
-            }
-        """)
+        self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
+        # Reset to minimum size for visibility when empty
+        self.preview_label.setMinimumSize(200, 200)  # Consistent with _setup_ui
+
+        # Apply visible empty state style
+        self._apply_empty_state_style()
+
         self.palette_combo.clear()
         self.palette_combo.setEnabled(False)
         self.info_label.setText("No sprite loaded")
@@ -360,6 +376,118 @@ class SpritePreviewWidget(QWidget):
         self.sprite_data = None
         self.palettes = []
 
+    def _apply_empty_state_style(self):
+        """Apply styling for empty state that's clearly visible"""
+        self.preview_label.setStyleSheet("""
+            QLabel {
+                border: 2px dashed #999;
+                background-color: #f8f9fa;
+                color: #6c757d;
+                margin: 0px;
+                padding: 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: normal;
+            }
+        """)
+
+    def _apply_content_style(self):
+        """Apply borderless style for actual content display"""
+        self.preview_label.setStyleSheet(get_borderless_preview_style())
+
+    def set_sprite(self, pixmap: QPixmap) -> None:
+        """Set the sprite preview from a QPixmap.
+        
+        This method is called by the manual offset dialog to update the preview.
+        
+        Args:
+            pixmap: The QPixmap to display, or None to clear
+        """
+        try:
+            # Handle None or invalid pixmap by clearing
+            if pixmap is None or pixmap.isNull():
+                self.clear()
+                return
+            
+            # Store the original pixmap
+            self.sprite_pixmap = pixmap
+            
+            # Scale the pixmap efficiently for display
+            scaled_pixmap = self._scale_pixmap_efficiently(pixmap)
+            
+            # Update the preview label
+            self.preview_label.setPixmap(scaled_pixmap)
+            
+            # Apply content styling (borderless)
+            self._apply_content_style()
+            
+            # Update sprite info with dimensions
+            width = pixmap.width()
+            height = pixmap.height()
+            self.info_label.setText(f"Size: {width}x{height} | Source: QPixmap")
+            
+            # Disable palette combo for direct pixmap display
+            # (since pixmaps are already rendered with colors)
+            self.palette_combo.clear()
+            self.palette_combo.setEnabled(False)
+            self.palette_combo.addItem("Direct Display")
+            
+            # Clear sprite data since this is a direct pixmap
+            self.sprite_data = None
+            self.palettes = []
+            
+        except Exception as e:
+            logger.exception(f"Failed to set sprite pixmap: {e}")
+            self.clear()
+            self.info_label.setText(f"Error displaying sprite: {e}")
+
     def get_current_pixmap(self) -> QPixmap | None:
         """Get the current preview pixmap"""
         return self.sprite_pixmap
+
+    def sizeHint(self):
+        """Provide optimal size hint for layout negotiations"""
+        from PyQt6.QtCore import QSize
+
+        # If we have a sprite loaded, base size on the preview content
+        if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
+            # Use the scaled pixmap size as the hint, with some padding for controls
+            preview_size = self.preview_label.pixmap().size()
+            controls_height = 60  # Approximate height for palette controls and info
+
+            width = max(preview_size.width(), 400)  # Minimum reasonable width
+            height = preview_size.height() + controls_height
+
+            # Clamp to reasonable bounds
+            width = min(max(width, 200), 800)
+            height = min(max(height, 150), 600)
+
+            return QSize(width, height)
+
+        # No sprite loaded - provide reasonable default for empty state
+        return QSize(400, 300)  # Good default for most layouts
+
+    def minimumSizeHint(self):
+        """Provide minimum size hint to prevent overly small widgets"""
+        from PyQt6.QtCore import QSize
+
+        # Minimum size should accommodate the empty state message and basic controls
+        return QSize(200, 150)  # Consistent with our validation limits
+
+    def hasHeightForWidth(self):
+        """Indicate that widget can adapt height based on width"""
+        return True
+
+    def heightForWidth(self, width):
+        """Calculate optimal height for given width"""
+        if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
+            # Calculate height based on aspect ratio of current sprite
+            preview_size = self.preview_label.pixmap().size()
+            if preview_size.width() > 0:
+                aspect_ratio = preview_size.height() / preview_size.width()
+                preview_height = int((width - 20) * aspect_ratio)  # 20px margin
+                controls_height = 60  # For palette controls and info
+                return preview_height + controls_height
+
+        # Default calculation for empty state
+        return int(width * 0.6)  # Reasonable aspect ratio

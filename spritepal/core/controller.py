@@ -13,14 +13,14 @@ from PIL import Image
 from PyQt6.QtCore import QObject
 
 if TYPE_CHECKING:
-    from spritepal.core.protocols import (
+    from core.protocols import (
         ExtractionManagerProtocol,
         InjectionManagerProtocol,
         SessionManagerProtocol,
     )
-    from spritepal.ui.main_window import MainWindow
+    from ui.main_window import MainWindow
 
-from spritepal.core.managers import (
+from core.managers import (
     ExtractionManager,
     InjectionManager,
     SessionManager,
@@ -28,20 +28,21 @@ from spritepal.core.managers import (
     get_injection_manager,
     get_session_manager,
 )
-from spritepal.core.workers import ROMExtractionWorker, VRAMExtractionWorker
-from spritepal.ui.common import WorkerManager
-from spritepal.ui.common.error_handler import get_error_handler
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
-from spritepal.utils.constants import (
+from core.workers import ROMExtractionWorker, VRAMExtractionWorker
+from ui.common import WorkerManager
+from ui.common.error_handler import get_error_handler
+from ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.injection_dialog import InjectionDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
+from utils.constants import (
     DEFAULT_TILES_PER_ROW,
     TILE_WIDTH,
 )
-from spritepal.utils.image_utils import pil_to_qpixmap
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.settings_manager import get_settings_manager
-from spritepal.utils.validation import validate_image_file
+from utils.image_utils import pil_to_qpixmap
+from utils.logging_config import get_logger
+from utils.preview_generator import get_preview_generator, create_vram_preview_request
+from utils.settings_manager import get_settings_manager
+from utils.file_validator import FileValidator
 
 
 # Type definitions
@@ -125,6 +126,13 @@ class ExtractionController(QObject):
         _ = self.extraction_manager.cache_miss.connect(self._on_cache_miss)
         _ = self.extraction_manager.cache_saved.connect(self._on_cache_saved)
 
+        # Initialize preview generator with managers
+        self.preview_generator = get_preview_generator()
+        self.preview_generator.set_managers(
+            extraction_manager=self.extraction_manager,
+            rom_extractor=self.extraction_manager.get_rom_extractor()
+        )
+
     def start_extraction(self) -> None:
         """Start the extraction process"""
         # Get parameters from UI
@@ -140,64 +148,44 @@ class ExtractionController(QObject):
 
         # DEFENSIVE VALIDATION: Prevent blocking I/O operations with invalid files
         # This ensures fail-fast behavior before expensive worker thread operations
-        import os
         vram_path = params.get("vram_path", "")
-        if not vram_path or not os.path.exists(vram_path):
-            self.main_window.extraction_failed(f"VRAM file does not exist: {vram_path}")
+        if not vram_path:
+            self.main_window.extraction_failed("VRAM file path is required")
             return
 
         # CRITICAL FIX FOR BUG #11: Add file format validation to prevent 2+ minute blocking
         # Validate VRAM file format and size to prevent expensive processing of invalid files
-        try:
-            # Check VRAM file size (should be at least 64KB for valid SNES VRAM dump)
-            vram_size = os.path.getsize(vram_path)
-            if vram_size < 0x10000:  # 64KB minimum
-                self.main_window.extraction_failed(f"VRAM file too small ({vram_size} bytes). Expected at least 64KB.")
-                return
-            if vram_size > 0x100000:  # 1MB maximum (reasonable upper bound)
-                self.main_window.extraction_failed(f"VRAM file too large ({vram_size} bytes). Expected at most 1MB.")
-                return
-
-            # Quick validation: try to read first few bytes to ensure file is readable
-            with open(vram_path, "rb") as f:
-                header = f.read(16)  # Read first 16 bytes
-                if len(header) < 16:
-                    self.main_window.extraction_failed("VRAM file appears corrupted or truncated.")
-                    return
-        except OSError as e:
-            self.main_window.extraction_failed(f"Cannot read VRAM file: {e}")
+        vram_result = FileValidator.validate_vram_file(vram_path)
+        if not vram_result.is_valid:
+            self.main_window.extraction_failed(vram_result.error_message or "VRAM file validation failed")
             return
+
+        # Show warnings if any
+        for warning in vram_result.warnings:
+            logger.warning(f"VRAM file warning: {warning}")
 
         cgram_path = params.get("cgram_path", "")
         grayscale_mode = params.get("grayscale_mode", False)
         if not grayscale_mode and cgram_path:
-            if not os.path.exists(cgram_path):
-                self.main_window.extraction_failed(f"CGRAM file does not exist: {cgram_path}")
+            cgram_result = FileValidator.validate_cgram_file(cgram_path)
+            if not cgram_result.is_valid:
+                self.main_window.extraction_failed(cgram_result.error_message or "CGRAM file validation failed")
                 return
-            # Validate CGRAM file size (should be 512 bytes for SNES CGRAM)
-            try:
-                cgram_size = os.path.getsize(cgram_path)
-                if cgram_size != 512:
-                    self.main_window.extraction_failed(f"CGRAM file size invalid ({cgram_size} bytes). Expected 512 bytes.")
-                    return
-            except OSError as e:
-                self.main_window.extraction_failed(f"Cannot read CGRAM file: {e}")
-                return
+
+            # Show warnings if any
+            for warning in cgram_result.warnings:
+                logger.warning(f"CGRAM file warning: {warning}")
 
         oam_path = params.get("oam_path", "")
         if oam_path:
-            if not os.path.exists(oam_path):
-                self.main_window.extraction_failed(f"OAM file does not exist: {oam_path}")
+            oam_result = FileValidator.validate_oam_file(oam_path)
+            if not oam_result.is_valid:
+                self.main_window.extraction_failed(oam_result.error_message or "OAM file validation failed")
                 return
-            # Validate OAM file size (should be 544 bytes for SNES OAM)
-            try:
-                oam_size = os.path.getsize(oam_path)
-                if oam_size != 544:
-                    self.main_window.extraction_failed(f"OAM file size invalid ({oam_size} bytes). Expected 544 bytes.")
-                    return
-            except OSError as e:
-                self.main_window.extraction_failed(f"Cannot read OAM file: {e}")
-                return
+
+            # Show warnings if any
+            for warning in oam_result.warnings:
+                logger.warning(f"OAM file warning: {warning}")
 
         # Create and start worker thread
         # Convert validated params dict to ExtractionParams TypedDict
@@ -205,7 +193,7 @@ class ExtractionController(QObject):
             "vram_path": params["vram_path"],
             "cgram_path": params.get("cgram_path", ""),
             "oam_path": params.get("oam_path", ""),
-            "vram_offset": params.get("vram_offset", 0xC000),
+            "vram_offset": params.get("vram_offset", VRAM_SPRITE_OFFSET),
             "output_base": params["output_base"],
             "create_grayscale": params.get("create_grayscale", True),
             "create_metadata": params.get("create_metadata", True),
@@ -287,15 +275,32 @@ class ExtractionController(QObject):
                 self.main_window.status_bar.showMessage("VRAM path not available")
                 return
 
-            # Use ExtractionManager for preview generation
-            logger.debug("Using ExtractionManager for preview generation")
-            img, num_tiles = self.extraction_manager.generate_preview(vram_path, offset)
-            logger.debug(f"Generated preview with {num_tiles} tiles, image size: {img.size[0]}x{img.size[1]}")
-
-            # Convert to pixmap
-            logger.debug("Converting PIL image to QPixmap")
-            pixmap = pil_to_qpixmap(img)
-            logger.debug("Pixmap conversion successful")
+            # Use PreviewGenerator service for unified preview generation
+            logger.debug("Using PreviewGenerator service for preview generation")
+            
+            # Create preview request
+            preview_request = create_vram_preview_request(
+                vram_path=vram_path,
+                offset=offset,
+                sprite_name=f"vram_0x{offset:06X}",
+                size=(self.main_window.sprite_preview.width(), self.main_window.sprite_preview.height())
+            )
+            
+            # Generate preview with progress tracking
+            def progress_callback(percent: int, message: str) -> None:
+                self.main_window.status_bar.showMessage(f"{message} ({percent}%)")
+            
+            result = self.preview_generator.generate_preview(preview_request, progress_callback)
+            
+            if result is None:
+                logger.error("Preview generation failed")
+                self.main_window.status_bar.showMessage("Preview generation failed")
+                return
+            
+            logger.debug(f"Generated preview with {result.tile_count} tiles, cached: {result.cached}")
+            pixmap = result.pixmap
+            num_tiles = result.tile_count
+            img = result.pil_image
 
             # Update preview without resetting view (for real-time slider updates)
             logger.debug("Updating sprite preview widget")
@@ -351,10 +356,10 @@ class ExtractionController(QObject):
 
         if launcher_path:
             # Validate sprite file before launching
-            is_valid, error_msg = validate_image_file(sprite_file)
-            if not is_valid:
+            image_result = FileValidator.validate_image_file(sprite_file)
+            if not image_result.is_valid:
                 self.main_window.status_bar.showMessage(
-                    f"Invalid sprite file: {error_msg}"
+                    f"Invalid sprite file: {image_result.error_message}"
                 )
                 return
 
@@ -383,8 +388,10 @@ class ExtractionController(QObject):
 
     def open_row_arrangement(self, sprite_file: str) -> None:
         """Open the row arrangement dialog"""
-        if not os.path.exists(sprite_file):
-            self.main_window.status_bar.showMessage("Sprite file not found")
+        # Validate sprite file exists and is valid
+        sprite_result = FileValidator.validate_file_existence(sprite_file, "Sprite file")
+        if not sprite_result.is_valid:
+            self.main_window.status_bar.showMessage(sprite_result.error_message or "Sprite file not found")
             return
 
         try:
@@ -428,8 +435,10 @@ class ExtractionController(QObject):
 
     def open_grid_arrangement(self, sprite_file: str) -> None:
         """Open the grid arrangement dialog"""
-        if not os.path.exists(sprite_file):
-            self.main_window.status_bar.showMessage("Sprite file not found")
+        # Validate sprite file exists and is valid
+        sprite_result = FileValidator.validate_file_existence(sprite_file, "Sprite file")
+        if not sprite_result.is_valid:
+            self.main_window.status_bar.showMessage(sprite_result.error_message or "Sprite file not found")
             return
 
         # Try to get tiles_per_row from sprite preview or use default
@@ -512,8 +521,9 @@ class ExtractionController(QObject):
         metadata_path = f"{output_base}.metadata.json"
 
         # Validate sprite file exists before creating dialog
-        if not os.path.exists(sprite_path):
-            self.main_window.status_bar.showMessage(f"Sprite file not found: {sprite_path}")
+        sprite_result = FileValidator.validate_file_existence(sprite_path, "Sprite file")
+        if not sprite_result.is_valid:
+            self.main_window.status_bar.showMessage(sprite_result.error_message or f"Sprite file not found: {sprite_path}")
             return
 
         # Get smart input VRAM suggestion using injection manager
@@ -574,7 +584,6 @@ class ExtractionController(QObject):
             self.main_window.status_bar.showMessage(f"Injection failed: {message}")
 
         # Clean up
-        # Injection worker removed - now handled by InjectionManager
         self.session_manager.set("workflow", "current_injection_dialog", None)
         self.session_manager.set("workflow", "current_injection_params", None)
 

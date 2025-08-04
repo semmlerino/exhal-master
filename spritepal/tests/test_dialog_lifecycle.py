@@ -6,9 +6,7 @@ These tests ensure dialogs can be safely opened, closed, and reopened.
 import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget
-from ui.dialogs.manual_offset_dialog_simplified import (
-    ManualOffsetDialogSimplified as ManualOffsetDialog,
-)
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 
 class TestDialogLifecycle:
@@ -32,8 +30,10 @@ class TestDialogLifecycle:
         dialog1.show()
         qtbot.waitUntil(dialog1.isVisible)
 
-        # Access a widget to ensure it exists
-        assert dialog1.offset_widget is not None
+        # Access tabs to ensure they exist
+        assert dialog1.browse_tab is not None
+        assert dialog1.smart_tab is not None
+        assert dialog1.history_tab is not None
 
         # Close dialog
         dialog1.close()
@@ -48,13 +48,15 @@ class TestDialogLifecycle:
         dialog2.show()
         qtbot.waitUntil(dialog2.isVisible)
 
-        # Verify widgets exist and are accessible
-        assert dialog2.offset_widget is not None
+        # Verify tabs exist and are accessible
+        assert dialog2.browse_tab is not None
+        assert dialog2.smart_tab is not None
+        assert dialog2.history_tab is not None
 
-        # Try to access the slider
-        if hasattr(dialog2.offset_widget, "offset_slider"):
+        # Try to access browse tab controls
+        if hasattr(dialog2.browse_tab, "offset_widget"):
             # This should work without errors
-            dialog2.offset_widget.offset_slider.setMaximum(1000)
+            dialog2.browse_tab.offset_widget.setMaximum(1000)
 
         # Cleanup
         dialog2.close()
@@ -83,7 +85,9 @@ class TestDialogLifecycle:
         qtbot.waitUntil(dialog.isVisible)
 
         # Verify dialog is functional before parent deletion
-        assert dialog.offset_widget is not None
+        assert dialog.browse_tab is not None
+        assert dialog.smart_tab is not None
+        assert dialog.history_tab is not None
 
         # Close dialog explicitly before parent deletion to avoid Qt lifecycle issues
         dialog.close()

@@ -23,10 +23,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.ui.components import BaseDialog
-from spritepal.ui.styles import get_button_style, get_muted_text_style
-from spritepal.utils.rom_cache import get_rom_cache
-from spritepal.utils.settings_manager import get_settings_manager
+from ui.components import BaseDialog
+from ui.styles import get_button_style, get_muted_text_style
+from utils.rom_cache import get_rom_cache
+from utils.settings_manager import get_settings_manager
 
 
 class SettingsDialog(BaseDialog):

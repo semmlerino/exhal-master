@@ -14,8 +14,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.ui.components import BaseDialog
-from spritepal.ui.styles import get_bold_text_style, get_muted_text_style
+from ui.components import BaseDialog
+from ui.styles import get_bold_text_style, get_muted_text_style
 
 
 class ResumeScanDialog(BaseDialog):

@@ -69,17 +69,17 @@ FONTS = {
 
 # Layout Dimensions
 DIMENSIONS = {
-    # Spacing
-    "spacing_xs": 4,
-    "spacing_sm": 6,
-    "spacing_md": 10,
-    "spacing_lg": 16,
-    "spacing_xl": 20,
+    # Spacing - reduced for more compact interface
+    "spacing_xs": 3,
+    "spacing_sm": 4,
+    "spacing_md": 8,
+    "spacing_lg": 12,
+    "spacing_xl": 16,
 
-    # Component heights
-    "button_height": 35,
-    "input_height": 32,
-    "combo_height": 32,
+    # Component heights - more compact
+    "button_height": 28,
+    "input_height": 28,
+    "combo_height": 28,
 
     # Component widths
     "button_min_width": 100,
@@ -146,3 +146,41 @@ def get_disabled_state_style() -> str:
         border-color: {COLORS['disabled']};
     }}
     """
+
+
+class Theme:
+    """Theme class providing easy access to color constants."""
+    
+    # Primary colors
+    PRIMARY = COLORS["primary"]
+    PRIMARY_LIGHT = COLORS["primary_hover"]
+    PRIMARY_DARK = COLORS["primary_pressed"]
+    
+    # Secondary colors
+    SECONDARY = COLORS["secondary"]
+    SECONDARY_LIGHT = COLORS["secondary_hover"]
+    SECONDARY_DARK = COLORS["secondary_pressed"]
+    
+    # Accent colors
+    ACCENT = COLORS["accent"]
+    ACCENT_LIGHT = COLORS["accent_hover"]
+    ACCENT_DARK = COLORS["accent_pressed"]
+    
+    # Backgrounds
+    BACKGROUND = COLORS["background"]
+    SURFACE = COLORS["panel_background"]
+    
+    # Text colors
+    TEXT = COLORS["black"]
+    TEXT_SECONDARY = COLORS["gray"]
+    TEXT_DISABLED = COLORS["disabled_text"]
+    
+    # Border colors
+    BORDER = COLORS["border"]
+    BORDER_FOCUS = COLORS["border_focus"]
+    
+    # Status colors
+    SUCCESS = COLORS["success"]
+    WARNING = COLORS["warning"]
+    DANGER = COLORS["danger"]
+    INFO = COLORS["info"]

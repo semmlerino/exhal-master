@@ -23,20 +23,20 @@ class TestSettingsManager:
     def settings_manager(self, temp_dir):
         """Create a SettingsManager in temp directory"""
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         # Create temp settings file path
         settings_file = Path(temp_dir) / ".testapp_settings.json"
-        
+
         # Create a session manager with our temp settings file
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             manager = SettingsManager("TestApp")
             # Store session manager reference for tests
             manager._test_session_manager = session_manager
             manager._test_settings_file = settings_file
-            
+
             yield manager
             # Cleanup
             if settings_file.exists():
@@ -50,21 +50,21 @@ class TestSettingsManager:
         assert settings_manager.get("session", "oam_path") == ""
         assert settings_manager.get("session", "create_grayscale") is True
         assert settings_manager.get("session", "create_metadata") is True
-        
-        # Check UI defaults  
+
+        # Check UI defaults
         assert settings_manager.get("ui", "window_width") == 900
         assert settings_manager.get("ui", "window_height") == 600
 
     def test_settings_file_path(self, temp_dir):
         """Test settings file path generation"""
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         settings_file = Path(temp_dir) / ".testapp_settings.json"
-        
+
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             manager = SettingsManager("TestApp")
             # Force saving to create the file
             manager.save_settings()
@@ -74,7 +74,7 @@ class TestSettingsManager:
     def test_load_existing_settings(self, temp_dir):
         """Test loading existing settings file"""
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         # Create settings file
         settings_data = {
             "session": {"vram_path": "/test/vram.dmp"},
@@ -88,7 +88,7 @@ class TestSettingsManager:
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             manager = SettingsManager("TestApp")
 
         assert manager.get("session", "vram_path") == "/test/vram.dmp"
@@ -97,7 +97,7 @@ class TestSettingsManager:
     def test_load_corrupted_settings(self, temp_dir):
         """Test loading corrupted settings file"""
         from spritepal.core.managers.session_manager import SessionManager
-        
+
         # Create corrupted settings file
         settings_file = Path(temp_dir) / ".testapp_settings.json"
         with open(settings_file, "w") as f:
@@ -107,7 +107,7 @@ class TestSettingsManager:
         with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
-            
+
             manager = SettingsManager("TestApp")
 
         assert manager.get("session", "vram_path") == ""
@@ -176,7 +176,7 @@ class TestSettingsManager:
         assert settings_manager.get("session", "vram_path") == "/new/vram.dmp"
         assert settings_manager.get("session", "cgram_path") == "/new/cgram.dmp"
         assert settings_manager.get("session", "output_name") == "output"
-        
+
         # Force save to file
         settings_manager.save_settings()
         # Should also save to file

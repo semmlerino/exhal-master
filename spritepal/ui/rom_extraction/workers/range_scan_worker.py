@@ -4,8 +4,8 @@ from typing import Any
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_cache import get_rom_cache
+from utils.logging_config import get_logger
+from utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 

@@ -74,7 +74,7 @@ def get_button_style(
         min-height: {min_height}px;
         border: {DIMENSIONS["border_width"]}px solid {colors["bg"]};
         border-radius: {DIMENSIONS["border_radius"]}px;
-        padding: {DIMENSIONS["spacing_sm"]}px {DIMENSIONS["spacing_md"]}px;
+        padding: {DIMENSIONS["spacing_xs"]}px {DIMENSIONS["spacing_sm"]}px;
     }}
     QPushButton:hover {{
         background-color: {colors["hover"]};
@@ -585,7 +585,7 @@ def get_dialog_button_box_style() -> str:
     QDialogButtonBox QPushButton {{
         min-width: 80px;
         min-height: {DIMENSIONS["button_height"]}px;
-        padding: {DIMENSIONS["spacing_sm"]}px {DIMENSIONS["spacing_lg"]}px;
+        padding: {DIMENSIONS["spacing_xs"]}px {DIMENSIONS["spacing_md"]}px;
         font-size: {FONTS["default_size"]};
         border-radius: {DIMENSIONS["border_radius"]}px;
     }}

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Optional, Protocol
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager

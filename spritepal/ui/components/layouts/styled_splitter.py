@@ -11,7 +11,7 @@ exactly replicating the splitter patterns from existing dialogs.
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QWidget
 
-from spritepal.ui.styles import get_splitter_style
+from ui.styles import get_splitter_style
 
 
 class StyledSplitter(QSplitter):

@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.utils.settings_manager import get_settings_manager
+from utils.settings_manager import get_settings_manager
 
 
 class FileSelector(QWidget):

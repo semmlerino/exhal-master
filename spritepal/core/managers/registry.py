@@ -86,8 +86,10 @@ class ManagerRegistry:
                 manager = self._managers[name]
                 manager.cleanup()
                 self._logger.debug(f"Cleaned up {name} manager")
-            except Exception:
-                self._logger.exception("Error cleaning up %s manager", name)
+            except (AttributeError, RuntimeError) as e:
+                self._logger.exception(f"Error cleaning up {name} manager: {e}")
+            except Exception as e:
+                self._logger.exception(f"Error cleaning up {name} manager: {e}")
 
         self._managers.clear()
         self._logger.info("All managers cleaned up")

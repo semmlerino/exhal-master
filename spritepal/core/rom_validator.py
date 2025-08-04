@@ -6,8 +6,25 @@ import os
 import struct
 from typing import Any, ClassVar
 
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_exceptions import (
+from utils.constants import (
+    ROM_CHECKSUM_COMPLEMENT_MASK,
+    ROM_CHECKSUM_PAL_EUROPE,
+    ROM_CHECKSUM_PAL_JAPAN,
+    ROM_CHECKSUM_PAL_USA,
+    ROM_HEADER_OFFSET_HIROM,
+    ROM_HEADER_OFFSET_LOROM,
+    ROM_SIZE_1_5MB,
+    ROM_SIZE_1MB,
+    ROM_SIZE_2_5MB,
+    ROM_SIZE_2MB,
+    ROM_SIZE_3MB,
+    ROM_SIZE_4MB,
+    ROM_SIZE_512KB,
+    ROM_SIZE_6MB,
+    SMC_HEADER_SIZE,
+)
+from utils.logging_config import get_logger
+from utils.rom_exceptions import (
     InvalidROMError,
     ROMChecksumError,
     ROMHeaderError,
@@ -22,22 +39,22 @@ class ROMValidator:
 
     # Valid ROM sizes (in bytes, without header)
     VALID_ROM_SIZES: ClassVar[list[int]] = [
-        0x80000,  # 512KB (4 Mbit)
-        0x100000,  # 1MB (8 Mbit)
-        0x180000,  # 1.5MB (12 Mbit)
-        0x200000,  # 2MB (16 Mbit)
-        0x280000,  # 2.5MB (20 Mbit)
-        0x300000,  # 3MB (24 Mbit)
-        0x400000,  # 4MB (32 Mbit)
-        0x600000,  # 6MB (48 Mbit)
+        ROM_SIZE_512KB,   # 512KB (4 Mbit)
+        ROM_SIZE_1MB,     # 1MB (8 Mbit)
+        ROM_SIZE_1_5MB,   # 1.5MB (12 Mbit)
+        ROM_SIZE_2MB,     # 2MB (16 Mbit)
+        ROM_SIZE_2_5MB,   # 2.5MB (20 Mbit)
+        ROM_SIZE_3MB,     # 3MB (24 Mbit)
+        ROM_SIZE_4MB,     # 4MB (32 Mbit)
+        ROM_SIZE_6MB,     # 6MB (48 Mbit)
     ]
 
     # Known game titles and their checksums
     KNOWN_GAMES: ClassVar[dict[str, dict[str, int]]] = {
         "KIRBY SUPER STAR": {
-            "USA": 0x8A5C,
-            "Japan": 0x7F4C,
-            "Europe": 0x8B5C,
+            "USA": ROM_CHECKSUM_PAL_USA,
+            "Japan": ROM_CHECKSUM_PAL_JAPAN,
+            "Europe": ROM_CHECKSUM_PAL_EUROPE,
         },
         "KIRBY'S DREAM LAND 3": {
             "USA": 0x1234,  # Example, replace with actual
@@ -88,7 +105,7 @@ class ROMValidator:
             header_offset = 512 if file_size % 1024 == 512 else 0
 
             # Try both possible header locations
-            for base_offset in [0x7FC0, 0xFFC0]:
+            for base_offset in [ROM_HEADER_OFFSET_LOROM, ROM_HEADER_OFFSET_HIROM]:
                 f.seek(header_offset + base_offset)
                 header_data = f.read(32)
 
@@ -107,7 +124,7 @@ class ROMValidator:
                 checksum = struct.unpack("<H", header_data[30:32])[0]
 
                 # Verify checksum format
-                if (checksum ^ checksum_complement) == 0xFFFF:
+                if (checksum ^ checksum_complement) == ROM_CHECKSUM_COMPLEMENT_MASK:
                     header_info = {
                         "title": title,
                         "rom_type": rom_type,
@@ -153,7 +170,7 @@ class ROMValidator:
                 word = (rom_data[i + 1] << 8) | rom_data[i]
             else:
                 word = rom_data[i]
-            checksum = (checksum + word) & 0xFFFF
+            checksum = (checksum + word) & ROM_CHECKSUM_COMPLEMENT_MASK
 
         # Compare with header checksum
         if checksum != header_info["checksum"]:

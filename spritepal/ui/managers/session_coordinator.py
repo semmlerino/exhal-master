@@ -1,0 +1,119 @@
+"""
+Session coordination for MainWindow save/restore functionality
+"""
+
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from PyQt6.QtCore import QObject
+
+from core.managers import get_session_manager
+
+if TYPE_CHECKING:
+    from core.managers.session_manager import SessionManager
+    from ui.extraction_panel import ExtractionPanel
+    from ui.managers.output_settings_manager import OutputSettingsManager
+    from ui.main_window import MainWindow
+
+
+class SessionCoordinator(QObject):
+    """Coordinates session save/restore operations"""
+    
+    def __init__(
+        self,
+        main_window: "MainWindow",
+        extraction_panel: "ExtractionPanel",
+        output_settings_manager: "OutputSettingsManager"
+    ) -> None:
+        """Initialize session coordinator
+        
+        Args:
+            main_window: Main window for geometry save/restore
+            extraction_panel: Extraction panel for file path save/restore
+            output_settings_manager: Output settings for save/restore
+        """
+        super().__init__()
+        self.main_window = main_window
+        self.extraction_panel = extraction_panel
+        self.output_settings_manager = output_settings_manager
+        self.session_manager: SessionManager = get_session_manager()
+        
+    def restore_session(self) -> None:
+        """Restore the previous session"""
+        # Validate file paths
+        session_data = self.session_manager.get_session_data()
+        validated_paths = {}
+
+        for key in ["vram_path", "cgram_path", "oam_path"]:
+            path = session_data.get(key, "")
+            if path and Path(path).exists():
+                validated_paths[key] = path
+            else:
+                validated_paths[key] = ""
+
+        # Check if there's a valid session to restore
+        has_valid_session = bool(validated_paths.get("vram_path") or validated_paths.get("cgram_path"))
+
+        if has_valid_session:
+            # Restore file paths
+            self.extraction_panel.restore_session_files(validated_paths)
+
+            # Restore output settings
+            if session_data.get("output_name"):
+                self.output_settings_manager.set_output_name(session_data["output_name"])
+
+            self.output_settings_manager.set_grayscale_enabled(session_data.get("create_grayscale", True))
+            self.output_settings_manager.set_metadata_enabled(session_data.get("create_metadata", True))
+
+        # Always restore window size/position if enabled (regardless of session validity)
+        self._restore_window_geometry()
+        
+        return has_valid_session
+        
+    def _restore_window_geometry(self) -> None:
+        """Restore window geometry if enabled in settings"""
+        from utils.settings_manager import get_settings_manager
+        
+        settings_manager = get_settings_manager()
+        if settings_manager.get("ui", "restore_position", False):
+            window_geometry = self.session_manager.get_window_geometry()
+            if window_geometry["width"] > 0:
+                self.main_window.resize(window_geometry["width"], window_geometry["height"])
+
+            if window_geometry["x"] >= 0:
+                self.main_window.move(window_geometry["x"], window_geometry["y"])
+                
+    def save_session(self) -> None:
+        """Save the current session"""
+        # Get session data from extraction panel
+        session_data = self.extraction_panel.get_session_data()
+
+        # Add output settings
+        session_data.update({
+            "output_name": self.output_settings_manager.get_output_name(),
+            "create_grayscale": self.output_settings_manager.get_grayscale_enabled(),
+            "create_metadata": self.output_settings_manager.get_metadata_enabled(),
+        })
+
+        # Save session data
+        self.session_manager.update_session_data(session_data)
+
+        # Save UI settings
+        window_geometry = {
+            "width": self.main_window.width(),
+            "height": self.main_window.height(),
+            "x": self.main_window.x(),
+            "y": self.main_window.y(),
+        }
+        self.session_manager.update_window_state(window_geometry)
+
+        # Save the session to disk
+        self.session_manager.save_session()
+        
+    def clear_session(self) -> None:
+        """Clear session data"""
+        self.session_manager.clear_session()
+        
+    def get_session_data(self) -> dict[str, Any]:
+        """Get current session data"""
+        return self.session_manager.get_session_data()

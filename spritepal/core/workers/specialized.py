@@ -5,12 +5,200 @@ These classes extend the base worker classes with domain-specific
 signals and behavior for extraction, injection, and scanning operations.
 """
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from PIL import Image
+    from core.managers import ExtractionManager, InjectionManager
+    from core.managers.factory import ManagerFactory
 
 from core.managers.base_manager import BaseManager
 from PyQt6.QtCore import QObject, pyqtSignal
+from utils.logging_config import get_logger
 
 from .base import BaseWorker, ManagedWorker
+
+logger = get_logger(__name__)
+
+
+class SignalConnectionHelper:
+    """
+    Helper class for standardizing signal connections in workers.
+    
+    Provides reusable methods for connecting different types of manager
+    signals to worker signals, reducing duplication and ensuring consistency.
+    """
+    
+    def __init__(self, worker: ManagedWorker) -> None:
+        """
+        Initialize with a reference to the worker.
+        
+        Args:
+            worker: The worker instance that owns the connections
+        """
+        self.worker = worker
+        self.manager = worker.manager
+        self._connections = worker._connections
+    
+    def validate_manager_type(self, expected_manager_getter, operation_type: str) -> bool:
+        """
+        Validate that the manager is of the expected type.
+        
+        Args:
+            expected_manager_getter: Function that returns expected manager type
+            operation_type: Description of operation type for error logging
+            
+        Returns:
+            True if manager type is valid, False otherwise
+        """
+        if not isinstance(self.manager, type(expected_manager_getter())):
+            logger.error(f"Invalid manager type for {operation_type}")
+            return False
+        return True
+    
+    def connect_progress_signals(self, progress_signal_name: str, progress_percent: int = 50) -> None:
+        """
+        Connect standard progress signals from manager to worker.
+        
+        Args:
+            progress_signal_name: Name of the progress signal on the manager
+            progress_percent: Fixed progress percentage to emit (default: 50)
+        """
+        progress_signal = getattr(self.manager, progress_signal_name, None)
+        if progress_signal is not None:
+            connection = progress_signal.connect(
+                lambda msg: self.worker.emit_progress(progress_percent, msg)
+            )
+            self._connections.append(connection)
+            logger.debug(f"Connected progress signal: {progress_signal_name}")
+        else:
+            logger.warning(f"Progress signal not found: {progress_signal_name}")
+    
+    def connect_extraction_signals(self, extraction_manager: "ExtractionManager") -> None:
+        """
+        Connect extraction-specific signals.
+        
+        Args:
+            extraction_manager: The extraction manager instance
+        """
+        if not hasattr(self.worker, 'palettes_ready'):
+            return
+            
+        # Connect palette signals
+        connection1 = extraction_manager.palettes_extracted.connect(self.worker.palettes_ready.emit)
+        connection2 = extraction_manager.active_palettes_found.connect(self.worker.active_palettes_ready.emit)
+        self._connections.extend([connection1, connection2])
+        logger.debug("Connected extraction-specific signals")
+    
+    def connect_preview_signals(self, extraction_manager: "ExtractionManager") -> None:
+        """
+        Connect preview generation signals with proper error handling.
+        
+        Args:
+            extraction_manager: The extraction manager instance
+        """
+        if not hasattr(self.worker, 'preview_ready'):
+            return
+            
+        def on_preview_generated(img: "Image.Image", tile_count: int) -> None:
+            """Handle preview generation with Qt threading safety."""
+            try:
+                # CRITICAL FIX FOR BUG #26: Don't create Qt GUI objects (QPixmap) in worker thread
+                # Let the main thread handle pil_to_qpixmap conversion to avoid Qt threading violations
+                self.worker.preview_ready.emit(img, tile_count)  # Changed: emit PIL Image, not QPixmap
+                if hasattr(self.worker, 'preview_image_ready'):
+                    self.worker.preview_image_ready.emit(img)
+            except (RuntimeError, TypeError) as e:
+                logger.exception(f"Qt signal error emitting preview image: {e}")
+                self.worker.emit_warning(f"Preview generation failed: {e}")
+            except Exception as e:
+                logger.exception(f"Unexpected error emitting preview image: {e}")
+                self.worker.emit_warning(f"Preview generation failed: {e}")
+        
+        connection = extraction_manager.preview_generated.connect(on_preview_generated)
+        self._connections.append(connection)
+        logger.debug("Connected preview generation signals")
+    
+    def connect_injection_signals(self, injection_manager: "InjectionManager") -> None:
+        """
+        Connect injection-specific signals.
+        
+        Args:
+            injection_manager: The injection manager instance
+        """
+        if not hasattr(self.worker, 'injection_finished'):
+            return
+            
+        # Connect injection-specific signals
+        connection1 = injection_manager.injection_finished.connect(self.worker.injection_finished.emit)
+        connection2 = injection_manager.progress_percent.connect(self.worker.progress_percent.emit)
+        connection3 = injection_manager.compression_info.connect(self.worker.compression_info.emit)
+        self._connections.extend([connection1, connection2, connection3])
+        logger.debug("Connected injection-specific signals")
+    
+    def connect_completion_signals(self, injection_manager: "InjectionManager") -> None:
+        """
+        Connect injection completion signals to worker operation completion.
+        
+        Args:
+            injection_manager: The injection manager instance
+        """
+        def on_injection_finished(success: bool, message: str) -> None:
+            """Handle injection completion and emit worker completion signal."""
+            self.worker.operation_finished.emit(
+                success, 
+                f"Injection {'completed' if success else 'failed'}: {message}"
+            )
+        
+        connection = injection_manager.injection_finished.connect(on_injection_finished)
+        self._connections.append(connection)
+        logger.debug("Connected injection completion signals")
+
+
+class WorkerOwnedManagerMixin:
+    """
+    Mixin for standardizing the worker-owned manager pattern.
+    
+    Provides common initialization logic for workers that own their
+    own manager instances for perfect thread isolation.
+    """
+    
+    @staticmethod
+    def create_worker_owned_manager(
+        manager_factory: Optional["ManagerFactory"],
+        manager_creator_func,
+        parent: QObject | None = None
+    ) -> BaseManager:
+        """
+        Create a manager using the worker-owned pattern.
+        
+        Args:
+            manager_factory: Manager factory or None to create default
+            manager_creator_func: Function to create manager from factory
+            parent: Initial parent (will be changed to worker later)
+            
+        Returns:
+            Created manager instance
+        """
+        # Create manager factory if none provided
+        if manager_factory is None:
+            from core.managers.factory import StandardManagerFactory
+            manager_factory = StandardManagerFactory(default_parent_strategy="none")
+        
+        # Create the manager (parent will be set after super init)
+        manager = manager_creator_func(manager_factory, parent=parent)
+        return manager
+    
+    def setup_worker_owned_manager(self, manager: BaseManager) -> None:
+        """
+        Complete worker-owned manager setup after worker initialization.
+        
+        Args:
+            manager: The manager to set up proper parent relationship
+        """
+        # Fix the manager's parent to be this worker for proper ownership
+        manager.setParent(self)
+        logger.info(f"{self._operation_name}: Created with worker-owned manager")
 
 
 class ExtractionWorkerBase(ManagedWorker):
@@ -28,7 +216,7 @@ class ExtractionWorkerBase(ManagedWorker):
     active_palettes_ready = pyqtSignal(list)  # active palette indices
     extraction_finished = pyqtSignal(list)  # list of extracted files
 
-    def __init__(self, manager: BaseManager, parent: Optional[QObject] = None) -> None:
+    def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
         self._operation_name = "ExtractionWorker"
 
@@ -46,7 +234,7 @@ class InjectionWorkerBase(ManagedWorker):
     compression_info = pyqtSignal(dict)  # Compression statistics
     injection_finished = pyqtSignal(bool, str)  # success, message
 
-    def __init__(self, manager: BaseManager, parent: Optional[QObject] = None) -> None:
+    def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
         self._operation_name = "InjectionWorker"
 
@@ -70,7 +258,7 @@ class ScanWorkerBase(BaseWorker):
     cache_status = pyqtSignal(str)  # Cache status message
     cache_progress = pyqtSignal(int)  # Cache save progress 0-100
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._operation_name = "ScanWorker"
 
@@ -111,7 +299,7 @@ class PreviewWorkerBase(BaseWorker):
     preview_ready = pyqtSignal(object)  # Generated preview (QPixmap, PIL Image, etc.)
     preview_failed = pyqtSignal(str)  # Preview generation failed
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._operation_name = "PreviewWorker"
 

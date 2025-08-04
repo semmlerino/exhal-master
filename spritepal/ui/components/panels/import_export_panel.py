@@ -20,8 +20,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.ui.components.visualization import ROMMapWidget
-from spritepal.ui.styles import get_panel_style
+from ui.components.visualization import ROMMapWidget
+from ui.styles import get_panel_style
 
 
 class ImportExportPanel(QWidget):

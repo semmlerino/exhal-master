@@ -6,17 +6,94 @@ ensuring consistent interfaces, proper error handling, and type safety.
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Optional
+from functools import wraps
+from typing import TYPE_CHECKING, Callable, Any, Optional
 
 from PyQt6.QtCore import QMetaObject, QObject, QThread, pyqtSignal
 
 if TYPE_CHECKING:
-    from spritepal.core.managers.factory import ManagerFactory
+    from core.managers.factory import ManagerFactory
 
 from core.managers.base_manager import BaseManager
 from utils.logging_config import get_logger
+from ui.common.timing_constants import SLEEP_WORKER
 
 logger = get_logger(__name__)
+
+
+def handle_worker_errors(
+    operation_context: str = "operation",
+    handle_interruption: bool = False,
+    include_runtime_error: bool = False
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """
+    Decorator for standardized worker exception handling.
+    
+    Handles the common exception patterns found across worker classes:
+    - Re-raises InterruptedError for proper cancellation handling (or handles it if handle_interruption=True)
+    - Catches file I/O errors: (OSError, IOError, PermissionError) - logs only
+    - Catches data format errors: (ValueError, TypeError) - logs only  
+    - Optionally catches RuntimeError (for base class compatibility) - logs only
+    - Catches general exceptions as fallback - logs AND emits signals
+    
+    This pattern prevents duplicate signal emissions while ensuring all errors are logged.
+    
+    Args:
+        operation_context: Context string for error messages (e.g., "VRAM extraction")
+        handle_interruption: If True, handles InterruptedError instead of re-raising
+        include_runtime_error: If True, adds RuntimeError to the handled exceptions
+        
+    Returns:
+        Decorated function that handles exceptions consistently
+        
+    Usage:
+        @handle_worker_errors("VRAM extraction")
+        def perform_operation(self) -> None:
+            # Your operation code here
+            pass
+    """
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(self: "BaseWorker", *args: Any, **kwargs: Any) -> Any:
+            try:
+                return func(self, *args, **kwargs)
+                
+            except InterruptedError:
+                if handle_interruption:
+                    logger.info(f"{self._operation_name}: Operation cancelled")
+                    self.operation_finished.emit(False, "Operation cancelled")
+                else:
+                    # Re-raise cancellation to be handled by caller or base class
+                    raise
+                
+            except (OSError, IOError, PermissionError) as e:
+                error_msg = f"File I/O error during {operation_context}: {e!s}"
+                logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
+                # Note: No signal emission for specific errors - only log
+                    
+            except (ValueError, TypeError) as e:
+                error_msg = f"Data format error during {operation_context}: {e!s}"
+                logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
+                # Note: No signal emission for specific errors - only log
+                    
+            except RuntimeError as e:
+                if include_runtime_error:
+                    error_msg = f"Runtime error during {operation_context}: {e!s}"
+                    logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
+                    # Note: No signal emission for specific errors - only log
+                else:
+                    # If not handling RuntimeError, let it propagate
+                    raise
+                    
+            except Exception as e:
+                error_msg = f"{operation_context} failed: {e!s}"
+                logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
+                # General exception catch: log AND emit signals
+                self.emit_error(error_msg, e)
+                self.operation_finished.emit(False, error_msg)
+                    
+        return wrapper
+    return decorator
 
 
 class WorkerMeta(type(QThread), ABCMeta):
@@ -42,7 +119,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
     # Standard finished signal - use this instead of QThread.finished
     operation_finished = pyqtSignal(bool, str)  # success, message
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._is_cancelled = False
         self._is_paused = False
@@ -88,7 +165,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         if message:
             logger.debug(f"{self._operation_name}: {percent}% - {message}")
 
-    def emit_error(self, message: str, exception: Optional[Exception] = None) -> None:
+    def emit_error(self, message: str, exception: Exception | None = None) -> None:
         """
         Emit error in a standard format.
 
@@ -114,22 +191,38 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         """
         Check if operation was cancelled and exit if so.
 
+        This method checks both the internal cancellation flag and Qt's
+        built-in interruption mechanism for maximum compatibility.
+
         Call this periodically in long-running operations.
 
         Raises:
-            InterruptedError: If operation was cancelled
+            InterruptedError: If operation was cancelled via any mechanism
         """
+        # Check internal cancellation flag (BaseWorker pattern)
         if self._is_cancelled:
             raise InterruptedError("Operation was cancelled")
+        
+        # Check Qt's built-in interruption mechanism
+        if self.isInterruptionRequested():
+            logger.debug(f"{self._operation_name}: Qt interruption detected")
+            self._is_cancelled = True  # Update internal state for consistency
+            raise InterruptedError("Operation was interrupted via Qt mechanism")
 
     def wait_if_paused(self) -> None:
         """
         Wait while operation is paused.
 
+        Also respects Qt's interruption mechanism and cancellation flags.
         Call this periodically in long-running operations.
         """
-        while self._is_paused and not self._is_cancelled:
-            self.msleep(100)  # Sleep 100ms
+        while self._is_paused and not self._is_cancelled and not self.isInterruptionRequested():
+            self.msleep(int(SLEEP_WORKER * 1000))  # Sleep 100ms
+            
+        # If we exited due to Qt interruption, update internal state
+        if self.isInterruptionRequested() and not self._is_cancelled:
+            logger.debug(f"{self._operation_name}: Qt interruption detected during pause")
+            self._is_cancelled = True
 
     @abstractmethod
     def run(self) -> None:
@@ -153,9 +246,9 @@ class ManagedWorker(BaseWorker):
 
     def __init__(
         self,
-        manager: Optional[BaseManager] = None,
+        manager: BaseManager | None = None,
         manager_factory: Optional["ManagerFactory"] = None,
-        parent: Optional[QObject] = None
+        parent: QObject | None = None
     ) -> None:
         super().__init__(parent)
 
@@ -192,6 +285,13 @@ class ManagedWorker(BaseWorker):
         self._connections.clear()
         logger.debug(f"{self._operation_name}: Disconnected {len(self._connections)} manager signals")
 
+    @handle_worker_errors("managed operation", handle_interruption=True, include_runtime_error=True)
+    def _execute_managed_operation(self) -> None:
+        """Execute the core managed operation logic with decorator error handling."""
+        logger.debug(f"{self._operation_name}: Starting managed operation")
+        self.connect_manager_signals()
+        self.perform_operation()
+
     def run(self) -> None:
         """
         Template method for managed operations.
@@ -203,20 +303,7 @@ class ManagedWorker(BaseWorker):
         4. Emit completion signal
         """
         try:
-            logger.debug(f"{self._operation_name}: Starting managed operation")
-            self.connect_manager_signals()
-            self.perform_operation()
-
-        except InterruptedError:
-            logger.info(f"{self._operation_name}: Operation cancelled")
-            self.operation_finished.emit(False, "Operation cancelled")
-
-        except Exception as e:
-            error_msg = f"Operation failed: {e!s}"
-            logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-            self.emit_error(error_msg, e)
-            self.operation_finished.emit(False, error_msg)
-
+            self._execute_managed_operation()
         finally:
             self.disconnect_manager_signals()
 

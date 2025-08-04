@@ -10,16 +10,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict, override
 
 if TYPE_CHECKING:
-    from PIL import Image
     from PyQt6.QtCore import QObject
 
-    from spritepal.core.managers import ExtractionManager
-    from spritepal.core.managers.factory import ManagerFactory
+    from core.managers import ExtractionManager
+    from core.managers.factory import ManagerFactory
 
-from spritepal.core.managers import get_extraction_manager
-from spritepal.utils.logging_config import get_logger
+from core.managers import get_extraction_manager
+from utils.logging_config import get_logger
+from .base import handle_worker_errors
 
-from .specialized import ExtractionWorkerBase
+from .specialized import ExtractionWorkerBase, SignalConnectionHelper, WorkerOwnedManagerMixin
 
 logger = get_logger(__name__)
 
@@ -63,82 +63,55 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
     @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
-        if not isinstance(self.manager, type(get_extraction_manager())):
-            logger.error("Invalid manager type for VRAM extraction")
+        helper = SignalConnectionHelper(self)
+        
+        # Validate manager type
+        if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
 
         # Type cast for better type checking
         extraction_manager: ExtractionManager = self.manager
 
-        # Connect standard progress signal
-        connection1 = extraction_manager.extraction_progress.connect(
-            lambda msg: self.emit_progress(50, msg)
-        )
-        self._connections.append(connection1)
-
-        # Connect extraction-specific signals
-        connection2 = extraction_manager.palettes_extracted.connect(self.palettes_ready.emit)
-        connection3 = extraction_manager.active_palettes_found.connect(self.active_palettes_ready.emit)
-        self._connections.extend([connection2, connection3])
-
-        # Handle preview generation - emit PIL Image directly, let main thread convert to QPixmap
-        def on_preview_generated(img: Image.Image, tile_count: int) -> None:
-            try:
-                # CRITICAL FIX FOR BUG #26: Don't create Qt GUI objects (QPixmap) in worker thread
-                # Let the main thread handle pil_to_qpixmap conversion to avoid Qt threading violations
-                self.preview_ready.emit(img, tile_count)  # Changed: emit PIL Image, not QPixmap
-                self.preview_image_ready.emit(img)
-            except Exception as e:
-                logger.exception("Failed to emit preview image")
-                self.emit_warning(f"Preview generation failed: {e}")
-
-        connection4 = extraction_manager.preview_generated.connect(on_preview_generated)
-        self._connections.append(connection4)
+        # Connect all standard signals using helper
+        helper.connect_progress_signals("extraction_progress", 50)
+        helper.connect_extraction_signals(extraction_manager)
+        helper.connect_preview_signals(extraction_manager)
 
         logger.debug(f"{self._operation_name}: Connected {len(self._connections)} manager signals")
 
     @override
+    @handle_worker_errors("VRAM extraction")
     def perform_operation(self) -> None:
         """Perform VRAM extraction via manager."""
-        try:
-            # Type cast for better type safety
-            extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type safety
+        extraction_manager: ExtractionManager = self.manager
 
-            # Check for cancellation before starting
-            self.check_cancellation()
+        # Check for cancellation before starting
+        self.check_cancellation()
 
-            logger.info(f"{self._operation_name}: Starting VRAM extraction")
-            self.emit_progress(10, "Starting VRAM extraction...")
+        logger.info(f"{self._operation_name}: Starting VRAM extraction")
+        self.emit_progress(10, "Starting VRAM extraction...")
 
-            # Perform extraction using manager
-            extracted_files = extraction_manager.extract_from_vram(
-                vram_path=self.params["vram_path"],
-                output_base=self.params["output_base"],
-                cgram_path=self.params.get("cgram_path"),
-                oam_path=self.params.get("oam_path"),
-                vram_offset=self.params.get("vram_offset"),
-                create_grayscale=self.params.get("create_grayscale", True),
-                create_metadata=self.params.get("create_metadata", True),
-                grayscale_mode=self.params.get("grayscale_mode", False),
-            )
+        # Perform extraction using manager
+        extracted_files = extraction_manager.extract_from_vram(
+            vram_path=self.params["vram_path"],
+            output_base=self.params["output_base"],
+            cgram_path=self.params.get("cgram_path"),
+            oam_path=self.params.get("oam_path"),
+            vram_offset=self.params.get("vram_offset"),
+            create_grayscale=self.params.get("create_grayscale", True),
+            create_metadata=self.params.get("create_metadata", True),
+            grayscale_mode=self.params.get("grayscale_mode", False),
+        )
 
-            # Check for cancellation after extraction
-            self.check_cancellation()
+        # Check for cancellation after extraction
+        self.check_cancellation()
 
-            # Emit completion signals
-            self.extraction_finished.emit(extracted_files)
-            self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
+        # Emit completion signals
+        self.extraction_finished.emit(extracted_files)
+        self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
 
-            logger.info(f"{self._operation_name}: Extraction completed successfully")
-
-        except InterruptedError:
-            # Re-raise cancellation to be handled by base class
-            raise
-        except Exception as e:
-            error_msg = f"VRAM extraction failed: {e!s}"
-            logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-            self.emit_error(error_msg, e)
-            self.operation_finished.emit(False, error_msg)
+        logger.info(f"{self._operation_name}: Extraction completed successfully")
 
 
 class ROMExtractionWorker(ExtractionWorkerBase):
@@ -158,64 +131,51 @@ class ROMExtractionWorker(ExtractionWorkerBase):
     @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
-        if not isinstance(self.manager, type(get_extraction_manager())):
-            logger.error("Invalid manager type for ROM extraction")
+        helper = SignalConnectionHelper(self)
+        
+        # Validate manager type
+        if not helper.validate_manager_type(get_extraction_manager, "ROM extraction"):
             return
 
-        # Type cast for better type checking
-        extraction_manager: ExtractionManager = self.manager
-
-        # Connect standard progress signal
-        connection = extraction_manager.extraction_progress.connect(
-            lambda msg: self.emit_progress(50, msg)
-        )
-        self._connections.append(connection)
+        # Connect standard progress signal using helper
+        helper.connect_progress_signals("extraction_progress", 50)
 
         logger.debug(f"{self._operation_name}: Connected {len(self._connections)} manager signals")
 
     @override
+    @handle_worker_errors("ROM extraction")
     def perform_operation(self) -> None:
         """Perform ROM extraction via manager."""
-        try:
-            # Type cast for better type safety
-            extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type safety
+        extraction_manager: ExtractionManager = self.manager
 
-            # Check for cancellation before starting
-            self.check_cancellation()
+        # Check for cancellation before starting
+        self.check_cancellation()
 
-            logger.info(f"{self._operation_name}: Starting ROM extraction")
-            self.emit_progress(10, "Starting ROM extraction...")
+        logger.info(f"{self._operation_name}: Starting ROM extraction")
+        self.emit_progress(10, "Starting ROM extraction...")
 
-            # Perform extraction using manager
-            extracted_files = extraction_manager.extract_from_rom(
-                rom_path=self.params["rom_path"],
-                offset=self.params["sprite_offset"],
-                output_base=self.params["output_base"],
-                sprite_name=self.params["sprite_name"],
-                cgram_path=self.params.get("cgram_path"),
-            )
+        # Perform extraction using manager
+        extracted_files = extraction_manager.extract_from_rom(
+            rom_path=self.params["rom_path"],
+            offset=self.params["sprite_offset"],
+            output_base=self.params["output_base"],
+            sprite_name=self.params["sprite_name"],
+            cgram_path=self.params.get("cgram_path"),
+        )
 
-            # Check for cancellation after extraction
-            self.check_cancellation()
+        # Check for cancellation after extraction
+        self.check_cancellation()
 
-            # Emit completion signals
-            self.extraction_finished.emit(extracted_files)
-            self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
+        # Emit completion signals
+        self.extraction_finished.emit(extracted_files)
+        self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
 
-            logger.info(f"{self._operation_name}: ROM extraction completed successfully")
-
-        except InterruptedError:
-            # Re-raise cancellation to be handled by base class
-            raise
-        except Exception as e:
-            error_msg = f"ROM extraction failed: {e!s}"
-            logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-            self.emit_error(error_msg, e)
-            self.operation_finished.emit(False, error_msg)
+        logger.info(f"{self._operation_name}: ROM extraction completed successfully")
 
 
 # Worker-owned manager pattern (Phase 2 architecture)
-class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase):
+class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMixin):
     """
     VRAM extraction worker that owns its own ExtractionManager instance.
 
@@ -230,109 +190,77 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase):
         manager_factory: ManagerFactory | None = None,
         parent: QObject | None = None
     ) -> None:
-        # Create manager factory if none provided
-        if manager_factory is None:
-            # We can't use self as parent yet since super().__init__ hasn't been called
-            # So we'll fix the parent after initialization
-            from spritepal.core.managers.factory import StandardManagerFactory
-            manager_factory = StandardManagerFactory(default_parent_strategy="none")
-
-        # Create the manager (parent will be set after super init)
-        manager = manager_factory.create_extraction_manager(parent=parent)
+        # Create manager using standardized worker-owned pattern
+        manager = self.create_worker_owned_manager(
+            manager_factory,
+            lambda factory, parent: factory.create_extraction_manager(parent=parent),
+            parent
+        )
 
         # Initialize parent class with the manager
         super().__init__(manager=manager, parent=parent)
 
-        # Now fix the manager's parent to be this worker for proper ownership
-        manager.setParent(self)
+        # Complete worker-owned manager setup
+        self.setup_worker_owned_manager(manager)
 
         self.params = params
         self._operation_name = "WorkerOwnedVRAMExtractionWorker"
 
-        logger.info(f"{self._operation_name}: Created with worker-owned manager")
-
     @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
-        if not isinstance(self.manager, type(get_extraction_manager())):
-            logger.error("Invalid manager type for VRAM extraction")
+        helper = SignalConnectionHelper(self)
+        
+        # Validate manager type
+        if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
 
         # Type cast for better type checking
         extraction_manager: ExtractionManager = self.manager
 
-        # Connect standard progress signal
-        connection1 = extraction_manager.extraction_progress.connect(
-            lambda msg: self.emit_progress(50, msg)
-        )
-        self._connections.append(connection1)
-
-        # Connect extraction-specific signals
-        connection2 = extraction_manager.palettes_extracted.connect(self.palettes_ready.emit)
-        connection3 = extraction_manager.active_palettes_found.connect(self.active_palettes_ready.emit)
-        self._connections.extend([connection2, connection3])
-
-        # Handle preview generation - emit PIL Image directly, let main thread convert to QPixmap
-        def on_preview_generated(img: Image.Image, tile_count: int) -> None:
-            try:
-                # CRITICAL FIX FOR BUG #26: Don't create Qt GUI objects (QPixmap) in worker thread
-                # Let the main thread handle pil_to_qpixmap conversion to avoid Qt threading violations
-                self.preview_ready.emit(img, tile_count)  # Changed: emit PIL Image, not QPixmap
-                self.preview_image_ready.emit(img)
-            except Exception as e:
-                logger.exception("Failed to emit preview image")
-                self.emit_warning(f"Preview generation failed: {e}")
-
-        connection4 = extraction_manager.preview_generated.connect(on_preview_generated)
-        self._connections.append(connection4)
+        # Connect all standard signals using helper
+        helper.connect_progress_signals("extraction_progress", 50)
+        helper.connect_extraction_signals(extraction_manager)
+        helper.connect_preview_signals(extraction_manager)
 
         logger.debug(f"{self._operation_name}: Connected {len(self._connections)} manager signals")
 
     @override
+    @handle_worker_errors("VRAM extraction")
     def perform_operation(self) -> None:
         """Perform VRAM extraction via worker-owned manager."""
-        try:
-            # Type cast for better type safety
-            extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type safety
+        extraction_manager: ExtractionManager = self.manager
 
-            # Check for cancellation before starting
-            self.check_cancellation()
+        # Check for cancellation before starting
+        self.check_cancellation()
 
-            logger.info(f"{self._operation_name}: Starting VRAM extraction")
-            self.emit_progress(10, "Starting VRAM extraction...")
+        logger.info(f"{self._operation_name}: Starting VRAM extraction")
+        self.emit_progress(10, "Starting VRAM extraction...")
 
-            # Perform extraction using manager
-            extracted_files = extraction_manager.extract_from_vram(
-                vram_path=self.params["vram_path"],
-                output_base=self.params["output_base"],
-                cgram_path=self.params.get("cgram_path"),
-                oam_path=self.params.get("oam_path"),
-                vram_offset=self.params.get("vram_offset"),
-                create_grayscale=self.params.get("create_grayscale", True),
-                create_metadata=self.params.get("create_metadata", True),
-                grayscale_mode=self.params.get("grayscale_mode", False),
-            )
+        # Perform extraction using manager
+        extracted_files = extraction_manager.extract_from_vram(
+            vram_path=self.params["vram_path"],
+            output_base=self.params["output_base"],
+            cgram_path=self.params.get("cgram_path"),
+            oam_path=self.params.get("oam_path"),
+            vram_offset=self.params.get("vram_offset"),
+            create_grayscale=self.params.get("create_grayscale", True),
+            create_metadata=self.params.get("create_metadata", True),
+            grayscale_mode=self.params.get("grayscale_mode", False),
+        )
 
-            # Check for cancellation after extraction
-            self.check_cancellation()
+        # Check for cancellation after extraction
+        self.check_cancellation()
 
-            # Emit completion signals
-            self.extraction_finished.emit(extracted_files)
-            self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
+        # Emit completion signals
+        self.extraction_finished.emit(extracted_files)
+        self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
 
-            logger.info(f"{self._operation_name}: Extraction completed successfully")
-
-        except InterruptedError:
-            # Re-raise cancellation to be handled by base class
-            raise
-        except Exception as e:
-            error_msg = f"VRAM extraction failed: {e!s}"
-            logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-            self.emit_error(error_msg, e)
-            self.operation_finished.emit(False, error_msg)
+        logger.info(f"{self._operation_name}: Extraction completed successfully")
 
 
-class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase):
+class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMixin):
     """
     ROM extraction worker that owns its own ExtractionManager instance.
 
@@ -347,81 +275,63 @@ class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase):
         manager_factory: ManagerFactory | None = None,
         parent: QObject | None = None
     ) -> None:
-        # Create manager factory if none provided
-        if manager_factory is None:
-            # We can't use self as parent yet since super().__init__ hasn't been called
-            # So we'll fix the parent after initialization
-            from spritepal.core.managers.factory import StandardManagerFactory
-            manager_factory = StandardManagerFactory(default_parent_strategy="none")
-
-        # Create the manager (parent will be set after super init)
-        manager = manager_factory.create_extraction_manager(parent=parent)
+        # Create manager using standardized worker-owned pattern
+        manager = self.create_worker_owned_manager(
+            manager_factory,
+            lambda factory, parent: factory.create_extraction_manager(parent=parent),
+            parent
+        )
 
         # Initialize parent class with the manager
         super().__init__(manager=manager, parent=parent)
 
-        # Now fix the manager's parent to be this worker for proper ownership
-        manager.setParent(self)
+        # Complete worker-owned manager setup
+        self.setup_worker_owned_manager(manager)
 
         self.params = params
         self._operation_name = "WorkerOwnedROMExtractionWorker"
 
-        logger.info(f"{self._operation_name}: Created with worker-owned manager")
-
     @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
-        if not isinstance(self.manager, type(get_extraction_manager())):
-            logger.error("Invalid manager type for ROM extraction")
+        helper = SignalConnectionHelper(self)
+        
+        # Validate manager type
+        if not helper.validate_manager_type(get_extraction_manager, "ROM extraction"):
             return
 
-        # Type cast for better type checking
-        extraction_manager: ExtractionManager = self.manager
-
-        # Connect standard progress signal
-        connection = extraction_manager.extraction_progress.connect(
-            lambda msg: self.emit_progress(50, msg)
-        )
-        self._connections.append(connection)
+        # Connect standard progress signal using helper
+        helper.connect_progress_signals("extraction_progress", 50)
 
         logger.debug(f"{self._operation_name}: Connected {len(self._connections)} manager signals")
 
     @override
+    @handle_worker_errors("ROM extraction")
     def perform_operation(self) -> None:
         """Perform ROM extraction via worker-owned manager."""
-        try:
-            # Type cast for better type safety
-            extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type safety
+        extraction_manager: ExtractionManager = self.manager
 
-            # Check for cancellation before starting
-            self.check_cancellation()
+        # Check for cancellation before starting
+        self.check_cancellation()
 
-            logger.info(f"{self._operation_name}: Starting ROM extraction")
-            self.emit_progress(10, "Starting ROM extraction...")
+        logger.info(f"{self._operation_name}: Starting ROM extraction")
+        self.emit_progress(10, "Starting ROM extraction...")
 
-            # Perform extraction using manager
-            extracted_files = extraction_manager.extract_from_rom(
-                rom_path=self.params["rom_path"],
-                offset=self.params["sprite_offset"],
-                output_base=self.params["output_base"],
-                sprite_name=self.params["sprite_name"],
-                cgram_path=self.params.get("cgram_path"),
-            )
+        # Perform extraction using manager
+        extracted_files = extraction_manager.extract_from_rom(
+            rom_path=self.params["rom_path"],
+            offset=self.params["sprite_offset"],
+            output_base=self.params["output_base"],
+            sprite_name=self.params["sprite_name"],
+            cgram_path=self.params.get("cgram_path"),
+        )
 
-            # Check for cancellation after extraction
-            self.check_cancellation()
+        # Check for cancellation after extraction
+        self.check_cancellation()
 
-            # Emit completion signals
-            self.extraction_finished.emit(extracted_files)
-            self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
+        # Emit completion signals
+        self.extraction_finished.emit(extracted_files)
+        self.operation_finished.emit(True, f"Successfully extracted {len(extracted_files)} files")
 
-            logger.info(f"{self._operation_name}: ROM extraction completed successfully")
-
-        except InterruptedError:
-            # Re-raise cancellation to be handled by base class
-            raise
-        except Exception as e:
-            error_msg = f"ROM extraction failed: {e!s}"
-            logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-            self.emit_error(error_msg, e)
-            self.operation_finished.emit(False, error_msg)
+        logger.info(f"{self._operation_name}: ROM extraction completed successfully")

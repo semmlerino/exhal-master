@@ -2,19 +2,19 @@
 Dialog components for SpritePal UI
 """
 
-from .manual_offset_dialog_simplified import ManualOffsetDialogSimplified
+# Import dialog components
+from .manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from .resume_scan_dialog import ResumeScanDialog
 from .settings_dialog import SettingsDialog
 from .user_error_dialog import UserErrorDialog
 
-# Legacy import for backward compatibility (until all tests are updated)
-try:
-    from .manual_offset_dialog import ManualOffsetDialog
-    _legacy_available = True
-except ImportError:
-    _legacy_available = False
-    ManualOffsetDialog = None
+# Primary interface
+ManualOffsetDialog = UnifiedManualOffsetDialog
 
-__all__ = ["ManualOffsetDialogSimplified", "ResumeScanDialog", "SettingsDialog", "UserErrorDialog"]
-if _legacy_available:
-    __all__.append("ManualOffsetDialog")
+__all__ = [
+    "ManualOffsetDialog",           # Primary interface (unified dialog)
+    "UnifiedManualOffsetDialog",    # Explicit new dialog name
+    "ResumeScanDialog", 
+    "SettingsDialog", 
+    "UserErrorDialog"
+]

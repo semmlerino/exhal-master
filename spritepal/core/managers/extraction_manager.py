@@ -5,20 +5,28 @@ Manager for handling all extraction operations
 import os
 import time
 from dataclasses import asdict
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.extractor import SpriteExtractor
+    from core.palette_manager import PaletteManager
+    from core.rom_extractor import ROMExtractor
 
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.utils.constants import (
+from core.extractor import SpriteExtractor
+from core.palette_manager import PaletteManager
+from core.rom_extractor import ROMExtractor
+from utils.constants import (
     BYTES_PER_TILE,
+    DEFAULT_PREVIEW_HEIGHT,
+    DEFAULT_PREVIEW_WIDTH,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
 )
-from spritepal.utils.rom_cache import get_rom_cache
+from utils.file_validator import FileValidator
+from utils.rom_cache import get_rom_cache
 
 from .base_manager import BaseManager
 from .exceptions import ExtractionError, ValidationError
@@ -40,14 +48,19 @@ class ExtractionManager(BaseManager):
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the extraction manager"""
+        # Declare instance variables with type hints
+        self._sprite_extractor: SpriteExtractor
+        self._rom_extractor: ROMExtractor
+        self._palette_manager: PaletteManager
+        
         super().__init__("ExtractionManager", parent)
 
     def _initialize(self) -> None:
         """Initialize extraction components"""
-        self._sprite_extractor: SpriteExtractor = SpriteExtractor()
-        self._rom_extractor: ROMExtractor = ROMExtractor()
-        self._palette_manager: PaletteManager = PaletteManager()
-        self._is_initialized: bool = True
+        self._sprite_extractor = SpriteExtractor()
+        self._rom_extractor = ROMExtractor()
+        self._palette_manager = PaletteManager()
+        self._is_initialized = True
         self._logger.info("ExtractionManager initialized")
 
     def cleanup(self) -> None:
@@ -90,11 +103,21 @@ class ExtractionManager(BaseManager):
         try:
             self._validate_required({"vram_path": vram_path, "output_base": output_base},
                                    ["vram_path", "output_base"])
-            self._validate_file_exists(vram_path, "VRAM file")
+            
+            # Use FileValidator for comprehensive file validation
+            vram_result = FileValidator.validate_vram_file(vram_path)
+            if not vram_result.is_valid:
+                raise ValidationError(f"VRAM file validation failed: {vram_result.error_message}")
+                
             if cgram_path:
-                self._validate_file_exists(cgram_path, "CGRAM file")
+                cgram_result = FileValidator.validate_cgram_file(cgram_path)
+                if not cgram_result.is_valid:
+                    raise ValidationError(f"CGRAM file validation failed: {cgram_result.error_message}")
+                    
             if oam_path:
-                self._validate_file_exists(oam_path, "OAM file")
+                oam_result = FileValidator.validate_oam_file(oam_path)
+                if not oam_result.is_valid:
+                    raise ValidationError(f"OAM file validation failed: {oam_result.error_message}")
         except ValidationError as e:
             self._handle_error(e, operation)
             raise
@@ -135,12 +158,12 @@ class ExtractionManager(BaseManager):
             self.extraction_progress.emit("Extraction complete!")
             self.files_created.emit(extracted_files)
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, operation, "VRAM extraction")
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, operation, "VRAM extraction")
         except Exception as e:
-            self._handle_error(
-                ExtractionError(f"VRAM extraction failed: {e!s}"),
-                operation
-            )
-            raise
+            self._handle_operation_error(e, operation, ExtractionError, "VRAM extraction")
         else:
             return extracted_files
         finally:
@@ -177,11 +200,19 @@ class ExtractionManager(BaseManager):
                 "sprite_name": sprite_name
             }
             self._validate_required(params, list(params.keys()))
-            self._validate_file_exists(rom_path, "ROM file")
+            
+            # Use FileValidator for comprehensive ROM file validation
+            rom_result = FileValidator.validate_rom_file(rom_path)
+            if not rom_result.is_valid:
+                raise ValidationError(f"ROM file validation failed: {rom_result.error_message}")
+                
             self._validate_type(offset, "offset", int)
             self._validate_range(offset, "offset", min_val=0)
+            
             if cgram_path:
-                self._validate_file_exists(cgram_path, "CGRAM file")
+                cgram_result = FileValidator.validate_cgram_file(cgram_path)
+                if not cgram_result.is_valid:
+                    raise ValidationError(f"CGRAM file validation failed: {cgram_result.error_message}")
         except ValidationError as e:
             self._handle_error(e, operation)
             raise
@@ -223,18 +254,27 @@ class ExtractionManager(BaseManager):
                 else:
                     self._raise_extraction_failed("Failed to extract sprite from ROM")
 
+            except (OSError, IOError, PermissionError) as e:
+                self._handle_file_io_error(e, operation, "ROM extraction")
+            except (ValueError, TypeError) as e:
+                self._handle_data_format_error(e, operation, "ROM extraction")
             except Exception as e:
-                raise ExtractionError(f"ROM extraction failed: {e!s}") from e
+                self._handle_operation_error(e, operation, ExtractionError, "ROM extraction")
 
             self._update_progress(operation, 100, 100)
             self.extraction_progress.emit("ROM extraction complete!")
             self.files_created.emit(extracted_files)
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, operation, "ROM extraction")
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, operation, "ROM extraction")
         except Exception as e:
             if not isinstance(e, ExtractionError):
-                e = ExtractionError(f"ROM extraction failed: {e!s}")
-            self._handle_error(e, operation)
-            raise
+                self._handle_operation_error(e, operation, ExtractionError, "ROM extraction")
+            else:
+                self._handle_error(e, operation)
+                raise
         else:
             return extracted_files
         finally:
@@ -259,7 +299,11 @@ class ExtractionManager(BaseManager):
         operation = "sprite_preview"
 
         try:
-            self._validate_file_exists(rom_path, "ROM file")
+            # Use FileValidator for ROM file validation
+            rom_result = FileValidator.validate_file_existence(rom_path, "ROM file")
+            if not rom_result.is_valid:
+                raise ValidationError(f"ROM file validation failed: {rom_result.error_message}")
+                
             self._validate_type(offset, "offset", int)
             self._validate_range(offset, "offset", min_val=0)
         except ValidationError as e:
@@ -277,8 +321,8 @@ class ExtractionManager(BaseManager):
             # Use ROM extractor to get raw tile data
             # This would need to be implemented in ROMExtractor
             # For now, we'll use a simplified approach
-            width = 128  # Default width in pixels
-            height = 128  # Default height
+            width = DEFAULT_PREVIEW_WIDTH
+            height = DEFAULT_PREVIEW_HEIGHT
             tile_count = (width * height) // (8 * 8)
 
             # Read raw data from ROM
@@ -287,10 +331,12 @@ class ExtractionManager(BaseManager):
                 # 4bpp = 32 bytes per tile
                 tile_data = f.read(tile_count * BYTES_PER_TILE)
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, operation, "preview generation")
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, operation, "preview generation")
         except Exception as e:
-            error = ExtractionError(f"Preview generation failed: {e!s}")
-            self._handle_error(error, operation)
-            raise error from e
+            self._handle_operation_error(e, operation, ExtractionError, "preview generation")
         else:
             return tile_data, width, height
         finally:
@@ -309,6 +355,10 @@ class ExtractionManager(BaseManager):
         Raises:
             ValidationError: If validation fails
         """
+        # Validate input type
+        if not isinstance(params, dict):
+            raise ValidationError("params must be a dictionary")
+        
         # Determine extraction type
         if "vram_path" in params:
             # VRAM extraction - check for missing VRAM file specifically
@@ -318,7 +368,12 @@ class ExtractionManager(BaseManager):
         elif "rom_path" in params:
             # ROM extraction
             self._validate_required(params, ["rom_path", "offset", "output_base"])
-            self._validate_file_exists(params["rom_path"], "ROM file")
+            
+            # Use FileValidator for ROM file validation
+            rom_result = FileValidator.validate_file_existence(params["rom_path"], "ROM file")
+            if not rom_result.is_valid:
+                raise ValidationError(f"ROM file validation failed: {rom_result.error_message}")
+                
             self._validate_type(params["offset"], "offset", int)
             self._validate_range(params["offset"], "offset", min_val=0)
         else:
@@ -434,12 +489,16 @@ class ExtractionManager(BaseManager):
             # Create grayscale image
             img = self._sprite_extractor.create_grayscale_image(tiles)
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, "preview_generation", "generating preview")
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, "preview_generation", "generating preview")
         except Exception as e:
-            raise ExtractionError(f"Failed to generate preview: {e}") from e
+            self._handle_operation_error(e, "preview_generation", ExtractionError, "generating preview")
         else:
             return img, num_tiles
 
-    def get_rom_extractor(self) -> "ROMExtractor":
+    def get_rom_extractor(self) -> 'ROMExtractor':
         """
         Get the ROM extractor instance for advanced operations
 
@@ -469,7 +528,10 @@ class ExtractionManager(BaseManager):
             ExtractionError: If operation fails
         """
         try:
-            self._validate_file_exists(rom_path, "rom_path")
+            # Use FileValidator for ROM file validation
+            rom_result = FileValidator.validate_file_existence(rom_path, "ROM file")
+            if not rom_result.is_valid:
+                raise ValidationError(f"ROM file validation failed: {rom_result.error_message}")
 
             # Try to load from cache first
             start_time = time.time()
@@ -502,9 +564,12 @@ class ExtractionManager(BaseManager):
                     self._logger.debug(f"Cached {len(locations)} sprite locations for future use (scan took {scan_time:.1f}s)")
                     self.cache_saved.emit("sprite_locations", len(locations))
 
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, "get_known_sprite_locations", "getting sprite locations")
+        except (ImportError, AttributeError) as e:
+            self._handle_operation_error(e, "get_known_sprite_locations", ExtractionError, "ROM analysis not available")
         except Exception as e:
-            self._handle_error(e, "get_known_sprite_locations")
-            raise ExtractionError(f"Failed to get sprite locations: {e}") from e
+            self._handle_operation_error(e, "get_known_sprite_locations", ExtractionError, "getting sprite locations")
         else:
             return locations
 
@@ -522,12 +587,19 @@ class ExtractionManager(BaseManager):
             ExtractionError: If operation fails
         """
         try:
-            self._validate_file_exists(rom_path, "rom_path")
+            # Use FileValidator for ROM file validation
+            rom_result = FileValidator.validate_file_existence(rom_path, "ROM file")
+            if not rom_result.is_valid:
+                raise ValidationError(f"ROM file validation failed: {rom_result.error_message}")
+                
             header = self._rom_extractor.rom_injector.read_rom_header(rom_path)
             return asdict(header)
+        except (OSError, IOError, PermissionError) as e:
+            self._handle_file_io_error(e, "read_rom_header", "reading ROM header")
+        except (ValueError, TypeError) as e:
+            self._handle_data_format_error(e, "read_rom_header", "reading ROM header")
         except Exception as e:
-            self._handle_error(e, "read_rom_header")
-            raise ExtractionError(f"Failed to read ROM header: {e}") from e
+            self._handle_operation_error(e, "read_rom_header", ExtractionError, "reading ROM header")
 
     def _raise_extraction_failed(self, message: str) -> None:
         """Helper method to raise ExtractionError (for TRY301 compliance)"""

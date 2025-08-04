@@ -20,17 +20,17 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.core.managers import get_injection_manager
-from spritepal.core.sprite_validator import SpriteValidator
-from spritepal.ui.components import (
+from core.managers import get_injection_manager
+from core.sprite_validator import SpriteValidator
+from ui.components import (
     FileSelector,
     FormRow,
     HexOffsetInput,
     StyledSplitter,
     TabbedDialog,
 )
-from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
-from spritepal.utils.logging_config import get_logger
+from ui.widgets.sprite_preview_widget import SpritePreviewWidget
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

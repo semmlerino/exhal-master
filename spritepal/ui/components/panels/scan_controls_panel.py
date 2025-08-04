@@ -9,8 +9,8 @@ import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from spritepal.core.managers.extraction_manager import ExtractionManager
-    from spritepal.core.rom_extractor import ROMExtractor
+    from core.managers.extraction_manager import ExtractionManager
+    from core.rom_extractor import ROMExtractor
 
 from PyQt6.QtCore import QMutex, QMutexLocker, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -22,13 +22,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.ui.common import WorkerManager
-from spritepal.ui.components.dialogs import RangeScanDialog
-from spritepal.ui.components.visualization import ROMMapWidget
-from spritepal.ui.rom_extraction.workers import RangeScanWorker
-from spritepal.ui.styles import get_panel_style
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.rom_cache import get_rom_cache
+from ui.common import WorkerManager
+from ui.components.dialogs import RangeScanDialog
+from ui.components.visualization import ROMMapWidget
+from ui.rom_extraction.workers import RangeScanWorker
+from ui.styles import get_panel_style
+from utils.logging_config import get_logger
+from utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 
@@ -46,9 +46,7 @@ class ScanControlsPanel(QWidget):
     sprites_detected = pyqtSignal(list)  # List of (offset, quality) tuples for region detection
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setStyleSheet(get_panel_style())
-
+        # Step 1: Declare all instance variables with type hints
         # State
         self.rom_path: str = ""
         self.rom_size: int = 0x400000
@@ -69,7 +67,12 @@ class ScanControlsPanel(QWidget):
 
         # Cache status UI
         self.cache_status_label: QLabel | None = None
-
+        
+        # Step 2: Initialize parent
+        super().__init__(parent)
+        self.setStyleSheet(get_panel_style())
+        
+        # Step 3: Setup UI and connections
         self._setup_ui()
         self._connect_signals()
 
@@ -143,9 +146,31 @@ class ScanControlsPanel(QWidget):
         self._check_for_cached_scans()
 
     def _get_managers_safely(self) -> tuple["ExtractionManager | None", "ROMExtractor | None"]:
-        """Get manager references safely with thread protection"""
+        """Get manager references safely with thread protection.
+        
+        WARNING: The returned references are only safe to use within the calling
+        context if that context also holds the mutex. For operations that need
+        managers, prefer using _with_managers_safely() instead.
+        """
         with QMutexLocker(self._manager_mutex):
             return self.extraction_manager, self.rom_extractor
+    
+    def _with_managers_safely(self, operation):
+        """Execute an operation with manager references under mutex protection.
+        
+        This prevents TOCTOU race conditions by holding the lock during the entire
+        operation. For long operations, extract only necessary data under lock.
+        
+        Args:
+            operation: Callable that takes (extraction_manager, rom_extractor) and returns a result
+            
+        Returns:
+            The result of the operation, or None if managers are not available
+        """
+        with QMutexLocker(self._manager_mutex):
+            if self.extraction_manager is None or self.rom_extractor is None:
+                return None
+            return operation(self.extraction_manager, self.rom_extractor)
 
     def set_rom_map(self, rom_map: ROMMapWidget):
         """Set the ROM map reference for visualization updates"""
@@ -157,8 +182,9 @@ class ScanControlsPanel(QWidget):
 
     def _scan_range(self):
         """Scan a range around current offset"""
-        extraction_manager, rom_extractor = self._get_managers_safely()
-        if not self.rom_path or not rom_extractor:
+        # Quick check if managers exist (safe under short lock)
+        has_managers = self._with_managers_safely(lambda em, re: True)
+        if not self.rom_path or not has_managers:
             self.scan_status_changed.emit("No ROM loaded")
             return
 
@@ -201,8 +227,9 @@ class ScanControlsPanel(QWidget):
 
     def _scan_all(self):
         """Scan entire ROM"""
-        extraction_manager, rom_extractor = self._get_managers_safely()
-        if not self.rom_path or not rom_extractor:
+        # Quick check if managers exist (safe under short lock)
+        has_managers = self._with_managers_safely(lambda em, re: True)
+        if not self.rom_path or not has_managers:
             self.scan_status_changed.emit("No ROM loaded")
             return
 
@@ -268,8 +295,8 @@ class ScanControlsPanel(QWidget):
 
     def _start_range_scan_worker(self, start_offset: int, end_offset: int):
         """Start the worker thread for range scanning with enhanced error recovery"""
-        # Get ROM extractor safely
-        extraction_manager, rom_extractor = self._get_managers_safely()
+        # Extract necessary data under mutex protection
+        rom_extractor = self._with_managers_safely(lambda em, re: re)
         if not rom_extractor:
             self.scan_status_changed.emit("ROM extractor not available")
             self._finish_scan()  # Reset UI state
@@ -547,7 +574,7 @@ class ScanControlsPanel(QWidget):
 
     def _update_cache_status(self, message: str, status_type: str = "default") -> None:
         """Update the cache status label with different styling based on type"""
-        if not self.cache_status_label:
+        if self.cache_status_label is None:
             return
 
         self.cache_status_label.setText(message)
@@ -611,7 +638,7 @@ class ScanControlsPanel(QWidget):
 
     def _clear_cache_status(self) -> None:
         """Clear the cache status label"""
-        if self.cache_status_label:
+        if self.cache_status_label is not None:
             self.cache_status_label.setVisible(False)
 
     def _check_scan_cache_before_start(self, start_offset: int, end_offset: int) -> bool | None:
@@ -642,7 +669,7 @@ class ScanControlsPanel(QWidget):
             cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
             if cached_progress and not cached_progress.get("completed", False):
                 # Found incomplete cached scan - show ResumeScanDialog
-                from spritepal.ui.dialogs import ResumeScanDialog
+                from ui.dialogs import ResumeScanDialog
                 user_choice = ResumeScanDialog.show_resume_dialog(cached_progress, self)
 
                 if user_choice == ResumeScanDialog.RESUME:

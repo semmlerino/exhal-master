@@ -10,8 +10,8 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
-from spritepal.utils.logging_config import get_logger
-from spritepal.utils.sprite_regions import SpriteRegion
+from utils.logging_config import get_logger
+from utils.sprite_regions import SpriteRegion
 
 logger = get_logger(__name__)
 

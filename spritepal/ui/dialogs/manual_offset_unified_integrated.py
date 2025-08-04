@@ -41,8 +41,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from ui.common import WorkerManager
+from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from ui.components import DialogBase
 from ui.components.panels import StatusPanel
+from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.dialogs.services import ViewStateManager
 from ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
@@ -52,35 +54,7 @@ from utils.sprite_regions import SpriteRegion
 logger = get_logger(__name__)
 
 
-class MinimalSignalCoordinator:
-    """Minimal signal coordinator for offset updates and preview management."""
-
-    def __init__(self, parent_dialog):
-        self._dialog_ref = weakref.ref(parent_dialog)
-
-        # Debouncing timer for offset changes
-        self._offset_timer = QTimer()
-        self._offset_timer.setSingleShot(True)
-        self._offset_timer.timeout.connect(self._emit_offset_changed)
-        self._pending_offset: int | None = None
-
-    def schedule_offset_update(self, offset: int, delay_ms: int = 50):
-        """Schedule offset update with debouncing."""
-        self._pending_offset = offset
-        self._offset_timer.stop()
-        self._offset_timer.start(delay_ms)
-
-    def _emit_offset_changed(self):
-        """Emit the offset changed signal."""
-        dialog = self._dialog_ref()
-        if dialog and self._pending_offset is not None:
-            dialog.offset_changed.emit(self._pending_offset)
-            self._pending_offset = None
-
-    def cleanup(self):
-        """Clean up resources."""
-        if self._offset_timer:
-            self._offset_timer.stop()
+# MinimalSignalCoordinator removed - SmartPreviewCoordinator handles all timing and debouncing
 
 
 class SimpleBrowseTab(QWidget):
@@ -101,46 +75,54 @@ class SimpleBrowseTab(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        """Set up the browse tab UI."""
+        """Set up the space-efficient browse tab UI."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
+        layout.setSpacing(6)  # Reduced from 10px
+        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Position section
-        pos_group = QFrame()
-        pos_group.setFrameStyle(QFrame.Shape.StyledPanel)
-        pos_layout = QVBoxLayout(pos_group)
+        # Unified control section - consolidates all controls into one compact area
+        controls_frame = QFrame()
+        controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        controls_layout = QVBoxLayout(controls_frame)
+        controls_layout.setSpacing(6)  # Compact spacing
+        controls_layout.setContentsMargins(8, 8, 8, 8)  # Reduced margins
 
-        # Title with clear identification
-        title = QLabel("ROM Offset Position")
+        # Main title - single title for entire control area
+        title = QLabel("ROM Offset Control")
         title_font = QFont()
         title_font.setBold(True)
-        title_font.setPointSize(12)
+        title_font.setPointSize(11)  # Slightly smaller
         title.setFont(title_font)
-        title.setStyleSheet("color: #4488dd; background-color: #1e1e1e; padding: 5px; border-radius: 3px;")
-        pos_layout.addWidget(title)
+        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
+        controls_layout.addWidget(title)
 
-        # Slider
+        # Slider with smart preview support
         self.position_slider = QSlider(Qt.Orientation.Horizontal)
         self.position_slider.setObjectName("manual_offset_rom_slider")  # Unique identifier
         self.position_slider.setMinimum(0)
         self.position_slider.setMaximum(self._rom_size)
         self.position_slider.setValue(self._current_offset)
-        self.position_slider.setMinimumHeight(40)
+        self.position_slider.setMinimumHeight(32)  # Reduced from 40px
+        
+        # Connect to valueChanged for compatibility (used by smart coordinator)
         self.position_slider.valueChanged.connect(self._on_slider_changed)
+        
+        # Smart preview coordinator will connect to pressed/moved/released signals
+        self._smart_preview_coordinator = None
         # Apply distinct styling for ROM offset slider
         self.position_slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 border: 2px solid #4488dd;
-                height: 10px;
+                height: 8px;
                 background: #2b2b2b;
-                border-radius: 5px;
+                border-radius: 4px;
             }
             QSlider::handle:horizontal {
                 background: #4488dd;
                 border: 2px solid #5599ee;
-                width: 20px;
-                margin: -6px 0;
-                border-radius: 10px;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
             }
             QSlider::handle:horizontal:hover {
                 background: #5599ee;
@@ -148,86 +130,68 @@ class SimpleBrowseTab(QWidget):
             }
             QSlider::sub-page:horizontal {
                 background: #3377cc;
-                border-radius: 5px;
+                border-radius: 4px;
             }
         """)
-        pos_layout.addWidget(self.position_slider)
+        controls_layout.addWidget(self.position_slider)
 
-        # Position info
+        # Position info row
         info_row = QHBoxLayout()
+        info_row.setSpacing(8)
+        
         self.position_label = QLabel(self._format_position(self._current_offset))
         position_font = QFont()
         position_font.setBold(True)
+        position_font.setPointSize(9)  # Slightly smaller
         self.position_label.setFont(position_font)
         info_row.addWidget(self.position_label)
 
         info_row.addStretch()
 
         self.offset_label = QLabel(f"0x{self._current_offset:06X}")
-        self.offset_label.setStyleSheet("font-family: monospace; color: #666;")
+        self.offset_label.setStyleSheet("font-family: monospace; color: #666; font-size: 11px;")
         info_row.addWidget(self.offset_label)
 
-        pos_layout.addLayout(info_row)
-        layout.addWidget(pos_group)
+        controls_layout.addLayout(info_row)
 
-        # Navigation section
-        nav_group = QFrame()
-        nav_group.setFrameStyle(QFrame.Shape.StyledPanel)
-        nav_layout = QVBoxLayout(nav_group)
-
-        nav_title = QLabel("Navigate")
-        nav_title_font = QFont()
-        nav_title_font.setBold(True)
-        nav_title_font.setPointSize(11)
-        nav_title.setFont(nav_title_font)
-        nav_layout.addWidget(nav_title)
-
+        # Compact navigation row - combine navigation and manual input
         nav_row = QHBoxLayout()
+        nav_row.setSpacing(6)
 
-        self.prev_button = QPushButton("◀ Previous")
-        self.prev_button.setMinimumHeight(36)
+        # Navigation buttons - smaller height
+        self.prev_button = QPushButton("◀ Prev")
+        self.prev_button.setMinimumHeight(28)  # Reduced from 36px
         self.prev_button.clicked.connect(self.find_prev_clicked.emit)
         nav_row.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Next ▶")
-        self.next_button.setMinimumHeight(36)
+        self.next_button.setMinimumHeight(28)  # Reduced from 36px
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
 
-        nav_row.addStretch()
-        nav_layout.addLayout(nav_row)
+        # Separator
+        nav_row.addSpacing(12)
 
-        # Step size control
-        step_row = QHBoxLayout()
-        step_row.addWidget(QLabel("Step Size:"))
-
+        # Step size control - inline
+        nav_row.addWidget(QLabel("Step:"))
         self.step_spinbox = QSpinBox()
         self.step_spinbox.setMinimum(0x100)
         self.step_spinbox.setMaximum(0x100000)
         self.step_spinbox.setValue(self._step_size)
         self.step_spinbox.setDisplayIntegerBase(16)
         self.step_spinbox.setPrefix("0x")
-        step_row.addWidget(self.step_spinbox)
-        step_row.addStretch()
+        self.step_spinbox.setMaximumWidth(80)
+        nav_row.addWidget(self.step_spinbox)
 
-        nav_layout.addLayout(step_row)
-        layout.addWidget(nav_group)
+        nav_row.addStretch()
+        controls_layout.addLayout(nav_row)
 
-        # Manual offset input
-        manual_group = QFrame()
-        manual_group.setFrameStyle(QFrame.Shape.StyledPanel)
-        manual_layout = QVBoxLayout(manual_group)
-
-        manual_title = QLabel("Manual Input")
-        manual_title_font = QFont()
-        manual_title_font.setBold(True)
-        manual_title_font.setPointSize(11)
-        manual_title.setFont(manual_title_font)
-        manual_layout.addWidget(manual_title)
-
+        # Manual input row - compact horizontal layout
         manual_row = QHBoxLayout()
-        manual_row.addWidget(QLabel("Offset:"))
-
+        manual_row.setSpacing(6)
+        
+        manual_row.addWidget(QLabel("Go to:"))
+        
         self.manual_spinbox = QSpinBox()
         self.manual_spinbox.setMinimum(0)
         self.manual_spinbox.setMaximum(self._rom_size)
@@ -238,13 +202,14 @@ class SimpleBrowseTab(QWidget):
         manual_row.addWidget(self.manual_spinbox)
 
         go_button = QPushButton("Go")
+        go_button.setMinimumHeight(28)  # Consistent with other buttons
         go_button.clicked.connect(lambda: self.set_offset(self.manual_spinbox.value()))
         manual_row.addWidget(go_button)
+        
         manual_row.addStretch()
+        controls_layout.addLayout(manual_row)
 
-        manual_layout.addLayout(manual_row)
-        layout.addWidget(manual_group)
-
+        layout.addWidget(controls_frame)
         layout.addStretch()
 
     def _format_position(self, offset: int) -> str:
@@ -256,7 +221,7 @@ class SimpleBrowseTab(QWidget):
         return "Unknown position"
 
     def _on_slider_changed(self, value: int):
-        """Handle slider changes."""
+        """Handle slider changes - smart preview coordinator handles preview updates automatically."""
         self._current_offset = value
         self._update_displays()
 
@@ -265,7 +230,11 @@ class SimpleBrowseTab(QWidget):
         self.manual_spinbox.setValue(value)
         self.manual_spinbox.blockSignals(False)
 
+        # Emit offset changed signal for external listeners
         self.offset_changed.emit(value)
+        
+        # Note: SmartPreviewCoordinator handles preview updates automatically via
+        # sliderMoved signal - no need to manually request here
 
     def _on_manual_changed(self, value: int):
         """Handle manual spinbox changes."""
@@ -278,6 +247,10 @@ class SimpleBrowseTab(QWidget):
         self.position_slider.blockSignals(False)
 
         self.offset_changed.emit(value)
+        
+        # Request immediate high-quality preview for manual changes
+        if self._smart_preview_coordinator:
+            self._smart_preview_coordinator.request_manual_preview(value)
 
     def _update_displays(self):
         """Update position displays."""
@@ -304,6 +277,10 @@ class SimpleBrowseTab(QWidget):
             self.manual_spinbox.blockSignals(False)
 
             self._update_displays()
+            
+            # Request immediate high-quality preview for programmatic changes
+            if self._smart_preview_coordinator:
+                self._smart_preview_coordinator.request_manual_preview(offset)
 
     def get_step_size(self) -> int:
         """Get step size."""
@@ -320,6 +297,34 @@ class SimpleBrowseTab(QWidget):
         """Enable/disable navigation."""
         self.prev_button.setEnabled(enabled)
         self.next_button.setEnabled(enabled)
+    
+    def connect_smart_preview_coordinator(self, coordinator):
+        """Connect smart preview coordinator for enhanced preview updates."""
+        self._smart_preview_coordinator = coordinator
+        if coordinator:
+            # Connect coordinator to slider for drag detection
+            coordinator.connect_slider(self.position_slider)
+            
+            # Setup UI update callback for immediate feedback
+            coordinator.set_ui_update_callback(self._on_smart_ui_update)
+            
+            logger.debug("Smart preview coordinator connected to browse tab")
+    
+    def _on_smart_ui_update(self, offset: int):
+        """Handle immediate UI updates from smart coordinator."""
+        if offset != self._current_offset:
+            # Update displays without triggering signals
+            self._current_offset = offset
+            
+            self.position_slider.blockSignals(True)
+            self.manual_spinbox.blockSignals(True)
+            
+            self.position_slider.setValue(offset)
+            self.manual_spinbox.setValue(offset)
+            self._update_displays()
+            
+            self.position_slider.blockSignals(False)
+            self.manual_spinbox.blockSignals(False)
 
 
 class SimpleSmartTab(QWidget):
@@ -339,52 +344,51 @@ class SimpleSmartTab(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        """Set up smart tab UI."""
+        """Set up space-efficient smart tab UI."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
+        layout.setSpacing(6)  # Reduced spacing
+        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Smart mode section
-        smart_group = QFrame()
-        smart_group.setFrameStyle(QFrame.Shape.StyledPanel)
-        smart_layout = QVBoxLayout(smart_group)
+        # Unified smart controls frame
+        smart_frame = QFrame()
+        smart_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        smart_layout = QVBoxLayout(smart_frame)
+        smart_layout.setSpacing(6)  # Compact spacing
+        smart_layout.setContentsMargins(8, 8, 8, 8)  # Reduced margins
 
+        # Single title for the entire smart tab
         title = QLabel("Smart Navigation")
         title_font = QFont()
         title_font.setBold(True)
-        title_font.setPointSize(12)
+        title_font.setPointSize(11)  # Slightly smaller
         title.setFont(title_font)
+        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
         smart_layout.addWidget(title)
 
+        # Smart mode checkbox
         self.smart_checkbox = QCheckBox("Enable Smart Mode")
         self.smart_checkbox.setToolTip("Navigate through detected sprite regions")
         self.smart_checkbox.toggled.connect(self.smart_mode_changed.emit)
         smart_layout.addWidget(self.smart_checkbox)
 
-        layout.addWidget(smart_group)
-
-        # Region selection
-        region_group = QFrame()
-        region_group.setFrameStyle(QFrame.Shape.StyledPanel)
-        region_layout = QVBoxLayout(region_group)
-
-        region_title = QLabel("Sprite Regions")
-        region_title_font = QFont()
-        region_title_font.setBold(True)
-        region_title_font.setPointSize(11)
-        region_title.setFont(region_title_font)
-        region_layout.addWidget(region_title)
-
+        # Compact region selection row
+        region_row = QHBoxLayout()
+        region_row.setSpacing(6)
+        
+        region_row.addWidget(QLabel("Region:"))
+        
         self.region_combo = QComboBox()
         self.region_combo.currentIndexChanged.connect(self._on_region_changed)
-        region_layout.addWidget(self.region_combo)
+        region_row.addWidget(self.region_combo)
 
-        # Go to region button
-        go_region_button = QPushButton("Go to Region")
+        # Compact go button
+        go_region_button = QPushButton("Go")
+        go_region_button.setMinimumHeight(28)  # Consistent with browse tab
         go_region_button.clicked.connect(self._go_to_current_region)
-        region_layout.addWidget(go_region_button)
+        region_row.addWidget(go_region_button)
 
-        layout.addWidget(region_group)
-
+        smart_layout.addLayout(region_row)
+        layout.addWidget(smart_frame)
         layout.addStretch()
 
     def _on_region_changed(self, index: int):
@@ -453,16 +457,18 @@ class SimpleHistoryTab(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        """Set up history tab UI."""
+        """Set up space-efficient history tab UI."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
+        layout.setSpacing(6)  # Reduced spacing
+        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Title
+        # Compact title
         title = QLabel("Found Sprites")
         title_font = QFont()
         title_font.setBold(True)
-        title_font.setPointSize(12)
+        title_font.setPointSize(11)  # Slightly smaller
         title.setFont(title_font)
+        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
         layout.addWidget(title)
 
         # Sprite list
@@ -470,14 +476,17 @@ class SimpleHistoryTab(QWidget):
         self.sprite_list.itemDoubleClicked.connect(self._on_sprite_double_clicked)
         layout.addWidget(self.sprite_list)
 
-        # Controls
+        # Compact controls row
         controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(6)
 
-        clear_button = QPushButton("Clear History")
+        clear_button = QPushButton("Clear")
+        clear_button.setMinimumHeight(28)  # Consistent height
         clear_button.clicked.connect(self.clear_history)
         controls_layout.addWidget(clear_button)
 
         go_button = QPushButton("Go to Selected")
+        go_button.setMinimumHeight(28)  # Consistent height
         go_button.clicked.connect(self._go_to_selected)
         controls_layout.addWidget(go_button)
 
@@ -562,6 +571,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.history_tab: SimpleHistoryTab | None = None
         self.preview_widget: SpritePreviewWidget | None = None
         self.status_panel: StatusPanel | None = None
+        self.status_collapsible: CollapsibleGroupBox | None = None
         self.apply_btn: QPushButton | None = None
 
         # Business logic state
@@ -577,10 +587,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.preview_worker: SpritePreviewWorker | None = None
         self.search_worker: SpriteSearchWorker | None = None
 
-        # Signal coordinator
-        self._signal_coordinator: MinimalSignalCoordinator | None = None
+        # Smart preview coordinator handles all timing and signal coordination
+        self._smart_preview_coordinator: SmartPreviewCoordinator | None = None
 
-        # Preview update timer
+        # Preview update timer (legacy - kept for compatibility)
         self._preview_timer: QTimer | None = None
 
         # Debug ID for tracking
@@ -595,14 +605,14 @@ class UnifiedManualOffsetDialog(DialogBase):
             min_size=(800, 500),
             with_status_bar=False,
             orientation=Qt.Orientation.Horizontal,
-            splitter_handle_width=6
+            splitter_handle_width=4  # Slightly thinner splitter
         )
 
         # Initialize view state manager
         self.view_state_manager = ViewStateManager(self, self)
 
         # Note: _setup_ui() is called by DialogBase.__init__() automatically
-        self._setup_signal_coordinator()
+        self._setup_smart_preview_coordinator()
         self._setup_preview_timer()
         self._connect_signals()
 
@@ -631,10 +641,11 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._setup_custom_buttons()
 
     def _create_left_panel(self) -> QWidget:
-        """Create the left panel with tabs and status."""
+        """Create the left panel with tabs and collapsible status."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setSpacing(10)
+        layout.setSpacing(8)  # Reduced spacing
+        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
         # Tab widget
         self.tab_widget = QTabWidget()
@@ -650,9 +661,12 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         layout.addWidget(self.tab_widget)
 
-        # Status panel
+        # Collapsible status panel - defaults to collapsed to save space
+        self.status_collapsible = CollapsibleGroupBox("Status", collapsed=True)
         self.status_panel = StatusPanel()
-        layout.addWidget(self.status_panel)
+        self.status_collapsible.add_widget(self.status_panel)
+        
+        layout.addWidget(self.status_collapsible)
 
         return panel
 
@@ -660,14 +674,16 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Create the right panel with preview."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setSpacing(10)
+        layout.setSpacing(8)  # Reduced spacing
+        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Title
+        # Compact title
         title = QLabel("Sprite Preview")
         title_font = QFont()
         title_font.setBold(True)
-        title_font.setPointSize(14)
+        title_font.setPointSize(12)  # Slightly smaller
         title.setFont(title_font)
+        title.setStyleSheet("color: #4488dd; padding: 4px 6px; border-radius: 3px;")
         layout.addWidget(title)
 
         # Preview widget
@@ -686,9 +702,21 @@ class UnifiedManualOffsetDialog(DialogBase):
         close_btn.clicked.connect(self.hide)
         self.button_box.addButton(close_btn, self.button_box.ButtonRole.RejectRole)
 
-    def _setup_signal_coordinator(self):
-        """Set up signal coordination."""
-        self._signal_coordinator = MinimalSignalCoordinator(self)
+    # _setup_signal_coordinator removed - SmartPreviewCoordinator handles all coordination
+    
+    def _setup_smart_preview_coordinator(self):
+        """Set up smart preview coordination for real-time updates."""
+        self._smart_preview_coordinator = SmartPreviewCoordinator(self)
+        
+        # Connect preview signals
+        self._smart_preview_coordinator.preview_ready.connect(self._on_smart_preview_ready)
+        self._smart_preview_coordinator.preview_cached.connect(self._on_smart_preview_cached)
+        self._smart_preview_coordinator.preview_error.connect(self._on_smart_preview_error)
+        
+        # Setup ROM data provider
+        self._smart_preview_coordinator.set_rom_data_provider(self._get_rom_data_for_preview)
+        
+        logger.debug("Smart preview coordinator setup complete")
 
     def _setup_preview_timer(self):
         """Set up preview update timer."""
@@ -705,6 +733,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.browse_tab.offset_changed.connect(self._on_offset_changed)
         self.browse_tab.find_next_clicked.connect(self._find_next_sprite)
         self.browse_tab.find_prev_clicked.connect(self._find_prev_sprite)
+        
+        # Connect smart preview coordinator to browse tab
+        if self._smart_preview_coordinator and self.browse_tab:
+            self.browse_tab.connect_smart_preview_coordinator(self._smart_preview_coordinator)
 
         # Smart tab signals
         self.smart_tab.smart_mode_changed.connect(self._on_smart_mode_changed)
@@ -719,8 +751,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Emit signal immediately for external listeners
         self.offset_changed.emit(offset)
 
-        # Request preview update
-        self._request_preview_update()
+        # SmartPreviewCoordinator handles all preview updates automatically
+        # No fallback needed - coordinator is always initialized
 
     def _on_offset_requested(self, offset: int):
         """Handle offset request from smart tab."""
@@ -834,8 +866,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         if self._preview_timer:
             self._preview_timer.stop()
 
-        if self._signal_coordinator:
-            self._signal_coordinator.cleanup()
+        # Signal coordinator cleanup handled by SmartPreviewCoordinator
+            
+        if self._smart_preview_coordinator:
+            self._smart_preview_coordinator.cleanup()
 
     # Public interface methods required by ROM extraction panel
 
@@ -855,6 +889,36 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.view_state_manager.update_title_with_rom(rom_path)
 
         logger.debug(f"ROM data updated: {os.path.basename(rom_path)} ({rom_size} bytes)")
+    
+    def _get_rom_data_for_preview(self):
+        """Provide ROM data for smart preview coordinator."""
+        with QMutexLocker(self._manager_mutex):
+            return (self.rom_path, self.rom_extractor)
+    
+    def _on_smart_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
+        """Handle preview ready from smart coordinator."""
+        if self.preview_widget:
+            self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+        
+        current_offset = self.get_current_offset()
+        self._update_status(f"High-quality preview at 0x{current_offset:06X}")
+    
+    def _on_smart_preview_cached(self, tile_data: bytes, width: int, height: int, sprite_name: str):
+        """Handle cached preview from smart coordinator."""
+        if self.preview_widget:
+            self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+        
+        current_offset = self.get_current_offset()
+        self._update_status(f"Cached preview at 0x{current_offset:06X}")
+    
+    def _on_smart_preview_error(self, error_msg: str):
+        """Handle preview error from smart coordinator."""
+        if self.preview_widget:
+            self.preview_widget.clear()
+            self.preview_widget.info_label.setText("No sprite found")
+        
+        current_offset = self.get_current_offset()
+        self._update_status(f"No sprite at 0x{current_offset:06X}: {error_msg}")
 
     def set_offset(self, offset: int) -> bool:
         """Set current offset."""

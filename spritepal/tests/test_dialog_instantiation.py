@@ -16,9 +16,7 @@ from spritepal.ui.dialogs import (
     SettingsDialog,
     UserErrorDialog,
 )
-from spritepal.ui.dialogs.manual_offset_dialog_simplified import (
-    ManualOffsetDialogSimplified as ManualOffsetDialog,
-)
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
@@ -36,13 +34,16 @@ class TestDialogInstantiation:
         dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
 
-        # Test that UI components are not None
-        assert dialog.rom_map is not None
-        assert dialog.offset_widget is not None
-        assert dialog.scan_controls is not None
-        assert dialog.import_export is not None
-        assert dialog.status_panel is not None
-        assert dialog.preview_widget is not None
+        # Test that tab structure components are not None
+        assert dialog.tab_widget is not None
+        assert dialog.browse_tab is not None
+        assert dialog.smart_tab is not None
+        assert dialog.history_tab is not None
+        
+        # Test that service adapters are initialized
+        assert dialog.preview_service is not None
+        assert dialog.validation_service is not None
+        assert dialog.error_service is not None
 
         # Test that we can call basic methods that use these components
         # If any widget is None, this will raise AttributeError naturally
@@ -162,10 +163,9 @@ class TestDialogMethodCalls:
 
         # These methods should not raise AttributeError
         methods_to_test = [
-            ("_update_status", ("Test status",)),
-            ("_create_left_panel", ()),
-            ("_create_right_panel", ()),
-            ("toggle_fullscreen", ()),
+            ("get_current_offset", ()),
+            ("_setup_services", ()),
+            ("_setup_keyboard_shortcuts", ()),
         ]
 
         for method_name, args in methods_to_test:
@@ -185,10 +185,9 @@ class TestInitializationOrder:
         dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
 
-        # After initialization, all widget attributes should be widgets, not None
+        # After initialization, all tab attributes should be widgets, not None
         widget_attrs = [
-            "rom_map", "offset_widget", "scan_controls",
-            "import_export", "status_panel", "preview_widget"
+            "tab_widget", "browse_tab", "smart_tab", "history_tab"
         ]
 
         for attr in widget_attrs:

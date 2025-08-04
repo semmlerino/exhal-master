@@ -8,8 +8,8 @@ import os
 
 from PIL import Image
 
-from spritepal.utils.constants import BYTES_PER_TILE
-from spritepal.utils.logging_config import get_logger
+from utils.constants import BYTES_PER_TILE
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

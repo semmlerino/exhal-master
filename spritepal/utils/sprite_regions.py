@@ -9,7 +9,17 @@ import statistics
 from dataclasses import dataclass
 from typing import Callable, TypedDict
 
-from spritepal.utils.logging_config import get_logger
+from utils.constants import (
+    MAX_SPRITE_COUNT_HEADER,
+    MAX_SPRITE_COUNT_MAIN,
+    ROM_ALIGNMENT_GAP_THRESHOLD,
+    ROM_MIN_REGION_SIZE,
+    ROM_SIZE_1MB,
+    ROM_SIZE_2MB,
+    ROM_SIZE_512KB,
+    SPRITE_DENSITY_THRESHOLD,
+)
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -63,9 +73,9 @@ class SpriteRegionDetector:
     """Detects and manages sprite regions from scan results"""
 
     def __init__(self,
-                 gap_threshold: int = 0x10000,  # 64KB default gap
+                 gap_threshold: int = ROM_ALIGNMENT_GAP_THRESHOLD,
                  min_sprites_per_region: int = 2,
-                 min_region_size: int = 0x1000,  # 4KB minimum
+                 min_region_size: int = ROM_MIN_REGION_SIZE,
                  merge_small_regions: bool = True):
         self.gap_threshold: int = gap_threshold
         self.min_sprites_per_region: int = min_sprites_per_region
@@ -128,7 +138,7 @@ class SpriteRegionDetector:
         offsets = [s[0] for s in sprites]
         qualities = [s[1] for s in sprites]
 
-        end_offset = max(offsets) + 0x1000  # Add some padding
+        end_offset = max(offsets) + ROM_MIN_REGION_SIZE  # Add some padding
         size_bytes = end_offset - start
         density = len(sprites) / (size_bytes / 1024) if size_bytes > 0 else 0
 
@@ -230,21 +240,21 @@ class SpriteRegionClassifier:
         self.classification_rules: dict[str, ClassificationRules] = {
             "characters": {
                 "min_sprite_count": 4,
-                "max_sprite_count": 50,
+                "max_sprite_count": MAX_SPRITE_COUNT_HEADER,
                 "typical_density": (0.5, 2.0),  # sprites per KB
-                "typical_sizes": (0x2000, 0x10000)  # 8KB to 64KB
+                "typical_sizes": (0x2000, ROM_ALIGNMENT_GAP_THRESHOLD)  # 8KB to 64KB
             },
             "backgrounds": {
                 "min_sprite_count": 10,
-                "max_sprite_count": 200,
+                "max_sprite_count": MAX_SPRITE_COUNT_MAIN,
                 "typical_density": (1.0, 5.0),
-                "typical_sizes": (0x4000, 0x20000)  # 16KB to 128KB
+                "typical_sizes": (ROM_MIN_REGION_SIZE * 4, ROM_SIZE_512KB // 4)  # 16KB to 128KB
             },
             "effects": {
                 "min_sprite_count": 1,
                 "max_sprite_count": 20,
                 "typical_density": (0.1, 1.0),
-                "typical_sizes": (0x1000, 0x8000)  # 4KB to 32KB
+                "typical_sizes": (ROM_MIN_REGION_SIZE, ROM_MIN_REGION_SIZE * 8)  # 4KB to 32KB
             }
         }
 
@@ -343,7 +353,7 @@ class RegionUpdateManager:
             if offset < nearest_region.start_offset:
                 nearest_region.start_offset = offset
             elif offset > nearest_region.end_offset:
-                nearest_region.end_offset = offset + 0x1000
+                nearest_region.end_offset = offset + ROM_MIN_REGION_SIZE
 
             nearest_region.sprite_offsets.append(offset)
             nearest_region.sprite_qualities.append(quality)
@@ -355,12 +365,12 @@ class RegionUpdateManager:
             new_region = SpriteRegion(
                 region_id=len(self.detector.regions),
                 start_offset=offset,
-                end_offset=offset + 0x1000,
+                end_offset=offset + ROM_MIN_REGION_SIZE,
                 sprite_offsets=[offset],
                 sprite_qualities=[quality],
                 average_quality=quality,
                 sprite_count=1,
-                size_bytes=0x1000,
+                size_bytes=ROM_MIN_REGION_SIZE,
                 density=1.0,
                 region_type="discovered"
             )

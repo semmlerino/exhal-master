@@ -16,7 +16,6 @@ from spritepal.utils.constants import (
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
     SETTINGS_KEY_LAST_INPUT_VRAM,
-    SETTINGS_KEY_LAST_OUTPUT_VRAM,
     SETTINGS_KEY_LAST_SPRITE_LOCATION,
     SETTINGS_NS_ROM_INJECTION,
 )
@@ -39,32 +38,32 @@ class TestROMInjectionSettingsPersistence:
     def settings_manager(self, temp_settings_file):
         """Create a settings manager with temporary file"""
         # Mock the SessionManager to use temporary storage
-        from spritepal.core.managers.session_manager import SessionManager
         import json
-        
+
+        from spritepal.core.managers.session_manager import SessionManager
+
         # Create a mock session manager with temporary file storage
         mock_session_manager = SessionManager(settings_path=Path(temp_settings_file))
-        
+
         # Override get_session_manager to return our mock
         with patch("spritepal.utils.settings_manager.get_session_manager", return_value=mock_session_manager):
             manager = SettingsManager()
-            
+
             # Add _settings property for test compatibility
             def get_settings():
                 # Load settings from the temp file for test verification
                 try:
-                    with open(temp_settings_file, 'r') as f:
+                    with open(temp_settings_file) as f:
                         return json.load(f)
                 except:
                     return {}
-            
+
             # Make it accessible as both a property and direct attribute
-            import types
             manager._settings = property(get_settings)
             # Also store direct access for tests
             manager._get_settings = get_settings
             manager._mock_session_manager = mock_session_manager  # Expose for tests
-            
+
             yield manager
 
     @pytest.fixture
@@ -187,11 +186,6 @@ class TestROMInjectionSettingsPersistence:
             SETTINGS_KEY_LAST_INPUT_VRAM,
             "/path/to/input.dmp",
         )
-        settings_manager.set_value(
-            SETTINGS_NS_ROM_INJECTION,
-            SETTINGS_KEY_LAST_OUTPUT_VRAM,
-            "/path/to/output.dmp",
-        )
         settings_manager.save()
 
         # Create a new settings manager to verify persistence
@@ -201,12 +195,6 @@ class TestROMInjectionSettingsPersistence:
                 SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM
             )
             == "/path/to/input.dmp"
-        )
-        assert (
-            settings_manager.get_value(
-                SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_OUTPUT_VRAM
-            )
-            == "/path/to/output.dmp"
         )
 
     def test_load_rom_injection_defaults(self, mock_dialog, settings_manager):

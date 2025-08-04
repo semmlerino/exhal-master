@@ -1,6 +1,8 @@
 """
 Mock-based integration tests that work in any environment.
 These tests mock Qt components to test business logic without requiring a display.
+
+MODERNIZED: Uses consolidated mock infrastructure from conftest.py
 """
 
 from pathlib import Path
@@ -8,39 +10,31 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-# Imports handled by centralized conftest.py path setup
+# Import business logic components - no more manual path setup needed
 from spritepal.core.controller import ExtractionController
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
 from spritepal.core.workers import VRAMExtractionWorker
 
-# Manager setup handled by centralized conftest.py
 
-
+@pytest.mark.mock
 class TestVRAMExtractionWorkerMocked:
-    """Test VRAMExtractionWorker with mocked Qt components"""
+    """Test VRAMExtractionWorker with mocked Qt components using modern fixtures."""
 
-    # Mock signals and worker params now provided by centralized fixtures
-    # No need for local fixture definitions
-
-    @patch("spritepal.core.controller.pil_to_qpixmap")
     def test_worker_with_mocked_qt(
-        self, mock_pil_to_qpixmap,
-        standard_test_params, mock_extraction_signals
+        self, standard_test_params, mock_extraction_worker
     ):
         """Test worker functionality with mocked Qt components"""
+        from unittest.mock import Mock, patch
+        from pathlib import Path
+        
         # Manager setup handled by centralized fixture
         try:
-            # Configure mocks
-            mock_pixmap_instance = Mock()
-            mock_pil_to_qpixmap.return_value = mock_pixmap_instance
-
-            # Create worker with centralized test parameters
-            worker = VRAMExtractionWorker(standard_test_params)
-
-            # Replace signals with our mocks
-            for signal_name, mock_signal_obj in mock_extraction_signals.items():
-                setattr(worker, signal_name, mock_signal_obj)
+            # Use the pre-configured mock worker from fixtures
+            worker = mock_extraction_worker
+            
+            # Update worker with test parameters
+            worker.params = standard_test_params
 
             # Track emitted data
             progress_messages = []

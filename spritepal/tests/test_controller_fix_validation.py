@@ -60,8 +60,11 @@ class TestControllerDefensiveValidationFix:
                 print(f"extraction_failed called with: {message}")
                 # Don't call original to avoid blocking modal dialog
                 # Just update button state for test validation
-                main_window.extract_button.setEnabled(True)
-                main_window.status_bar.showMessage("Extraction failed")
+                extract_button = getattr(main_window, 'extract_button', None)
+                if extract_button:
+                    extract_button.setEnabled(True)
+                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                    main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed
 
@@ -119,8 +122,11 @@ class TestControllerDefensiveValidationFix:
                 extraction_failed_called.append(message)
                 print(f"extraction_failed called with: {message}")
                 # Don't call original to avoid blocking modal dialog
-                main_window.extract_button.setEnabled(True)
-                main_window.status_bar.showMessage("Extraction failed")
+                extract_button = getattr(main_window, 'extract_button', None)
+                if extract_button:
+                    extract_button.setEnabled(True)
+                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                    main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed
 
@@ -182,8 +188,11 @@ class TestControllerDefensiveValidationFix:
             def track_extraction_failed(message):
                 extraction_failed_called.append(message)
                 # Don't call original to avoid blocking modal dialog
-                main_window.extract_button.setEnabled(True)
-                main_window.status_bar.showMessage("Extraction failed")
+                extract_button = getattr(main_window, 'extract_button', None)
+                if extract_button:
+                    extract_button.setEnabled(True)
+                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                    main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed
 

@@ -25,7 +25,18 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spritepal.utils.image_utils import pil_to_qpixmap
+from utils.constants import (
+    MAX_BYTE_VALUE,
+    PIXEL_GRAY_SCALE,
+    PREVIEW_SCALE_FACTOR,
+    TILE_HEIGHT,
+    TILE_WIDTH,
+)
+from utils.image_utils import pil_to_qpixmap
+from ui.common.spacing_constants import (
+    PREVIEW_MIN_SIZE, MAX_ZOOM, BORDER_THIN, PALETTE_SELECTOR_MIN_WIDTH,
+    TILE_GRID_THICKNESS
+)
 
 from .row_arrangement.palette_colorizer import PaletteColorizer
 
@@ -42,13 +53,13 @@ class ZoomablePreviewWidget(QWidget):
         # Zoom and pan state
         self._zoom = 1.0
         self._min_zoom = 0.1
-        self._max_zoom = 20.0
+        self._max_zoom = MAX_ZOOM
         self._pan_offset = QPointF(0, 0)
         self._last_mouse_pos = None
         self._is_panning = False
         self._grid_visible = True
 
-        self.setMinimumSize(QSize(256, 256))
+        self.setMinimumSize(QSize(PREVIEW_MIN_SIZE, PREVIEW_MIN_SIZE))
         self.setMouseTracking(True)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -60,7 +71,7 @@ class ZoomablePreviewWidget(QWidget):
             """
             ZoomablePreviewWidget {
                 background-color: #1e1e1e;
-                border: 1px solid #555;
+                border: {BORDER_THIN}px solid #555;
             }
         """
         )
@@ -98,7 +109,8 @@ class ZoomablePreviewWidget(QWidget):
             painter.resetTransform()
 
             # Draw zoom level indicator
-            painter.setPen(QPen(QColor(200, 200, 200), 1))
+            # Light gray grid color
+            painter.setPen(QPen(QColor(200, 200, 200), BORDER_THIN))
             painter.setFont(painter.font())
             zoom_text = f"Zoom: {self._zoom:.1f}x"
             painter.drawText(10, 20, zoom_text)
@@ -109,7 +121,8 @@ class ZoomablePreviewWidget(QWidget):
 
         else:
             # Draw placeholder
-            painter.setPen(QPen(QColor(100, 100, 100), 2))
+            # Dark gray selection border
+            painter.setPen(QPen(QColor(100, 100, 100), PREVIEW_SCALE_FACTOR))
             painter.drawText(
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
@@ -134,7 +147,7 @@ class ZoomablePreviewWidget(QWidget):
         bottom = min(self._pixmap.height(), int(visible_rect.bottom()) + 1)
 
         # Draw checkerboard pattern
-        tile_size = max(1, int(8 / self._zoom))  # Adjust tile size based on zoom
+        tile_size = max(1, int(TILE_WIDTH / self._zoom))  # Adjust tile size based on zoom
 
         for y in range(top, bottom, tile_size):
             for x in range(left, right, tile_size):
@@ -162,7 +175,7 @@ class ZoomablePreviewWidget(QWidget):
         bottom = min(self._pixmap.height(), int(visible_rect.bottom()) + 1)
 
         # Draw grid
-        painter.setPen(QPen(QColor(60, 60, 60), 0.5))
+        painter.setPen(QPen(QColor(60, 60, 60), TILE_GRID_THICKNESS))
 
         # Vertical lines
         for x in range(left, right + 1):
@@ -379,7 +392,7 @@ class PreviewPanel(QWidget):
         _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
 
         self.palette_selector = QComboBox()
-        self.palette_selector.setMinimumWidth(80)
+        self.palette_selector.setMinimumWidth(PALETTE_SELECTOR_MIN_WIDTH)
         self.palette_selector.setEnabled(False)
         _ = self.palette_selector.currentTextChanged.connect(self._on_palette_changed)
 
@@ -480,9 +493,9 @@ class PreviewPanel(QWidget):
                         gray_value = (
                             pixel_value
                             if self._grayscale_image.mode != "P"
-                            else (pixel_value * 255) // 15
+                            else (pixel_value * MAX_BYTE_VALUE) // 15
                         )
-                        pixels[x, y] = (gray_value, gray_value, gray_value, 255)
+                        pixels[x, y] = (gray_value, gray_value, gray_value, MAX_BYTE_VALUE)
 
             pixmap = self._pil_to_pixmap(rgba_image)
             self.preview.update_pixmap(pixmap)

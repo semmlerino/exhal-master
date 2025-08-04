@@ -29,3 +29,21 @@ class PreviewError(ManagerError):
 
 class FileOperationError(ManagerError):
     """Exception raised during file operations"""
+
+
+class CacheError(ManagerError):
+    """Exception raised during cache operations"""
+    
+    def __init__(self, message: str, cache_path: str = None):
+        super().__init__(message)
+        self.cache_path = cache_path
+
+
+class CacheCorruptionError(CacheError):
+    """Exception raised when cache database is corrupted"""
+    pass
+
+
+class CachePermissionError(CacheError):
+    """Exception raised when cache access is denied due to permissions"""
+    pass
