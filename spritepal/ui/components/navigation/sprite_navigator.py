@@ -252,7 +252,10 @@ class SpriteNavigator(QWidget):
 
         # ROM Map with density visualization
         map_section = CollapsibleGroupBox("ROM Map", collapsed=False)
-        map_layout = QVBoxLayout()
+        
+        # Create a container widget for the map layout
+        map_container = QWidget()
+        map_layout = QVBoxLayout(map_container)
 
         self.rom_map = ROMMapWidget()
         self.rom_map.setMinimumHeight(80)
@@ -279,12 +282,15 @@ class SpriteNavigator(QWidget):
         map_controls.addStretch()
         map_layout.addLayout(map_controls)
 
-        map_section.add_widget(map_layout)
+        map_section.add_widget(map_container)
         nav_layout.addWidget(map_section)
 
         # Navigation Controls
         nav_controls = CollapsibleGroupBox("Navigation", collapsed=False)
-        controls_layout = QVBoxLayout()
+        
+        # Create a container widget for the controls layout
+        controls_container = QWidget()
+        controls_layout = QVBoxLayout(controls_container)
 
         # Quick navigation buttons
         button_row = QHBoxLayout()
@@ -330,12 +336,15 @@ class SpriteNavigator(QWidget):
         mode_row.addStretch()
         controls_layout.addLayout(mode_row)
 
-        nav_controls.add_widget(controls_layout)
+        nav_controls.add_widget(controls_container)
         nav_layout.addWidget(nav_controls)
 
         # Nearby Sprites Preview
         preview_section = CollapsibleGroupBox("Nearby Sprites", collapsed=False)
-        preview_layout = QVBoxLayout()
+        
+        # Create a container widget for the preview layout
+        preview_container = QWidget()
+        preview_layout = QVBoxLayout(preview_container)
 
         # Thumbnail container
         self.thumbnail_container = QWidget()
@@ -356,7 +365,7 @@ class SpriteNavigator(QWidget):
         self.main_preview.setMaximumHeight(200)
         preview_layout.addWidget(self.main_preview)
 
-        preview_section.add_widget(preview_layout)
+        preview_section.add_widget(preview_container)
         nav_layout.addWidget(preview_section)
 
         layout.addWidget(nav_frame)
