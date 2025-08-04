@@ -10,7 +10,7 @@ from PIL import Image
 if TYPE_CHECKING:
     import logging
 else:
-    import logging
+    pass
 
 from utils.constants import (
     BYTES_PER_TILE,
@@ -24,7 +24,7 @@ from utils.constants import (
 from utils.logging_config import get_logger
 from utils.validation import validate_offset, validate_vram_file
 
-logger: 'logging.Logger' = get_logger(__name__)
+logger: "logging.Logger" = get_logger(__name__)
 
 
 class SpriteExtractor:

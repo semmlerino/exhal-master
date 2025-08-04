@@ -6,6 +6,8 @@ Allows users to configure sprite injection parameters
 import os
 from typing import Any
 
+from core.managers import get_injection_manager
+from core.sprite_validator import SpriteValidator
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -15,13 +17,11 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
-
-from core.managers import get_injection_manager
-from core.sprite_validator import SpriteValidator
 from ui.components import (
     FileSelector,
     FormRow,
@@ -114,7 +114,7 @@ class InjectionDialog(TabbedDialog):
         splitter = StyledSplitter(Qt.Orientation.Horizontal)
 
         # Create left panel for controls
-        left_widget = QWidget()
+        left_widget = QWidget(self)
         layout = QVBoxLayout(left_widget)
 
         # Add sprite file selector
@@ -137,7 +137,7 @@ class InjectionDialog(TabbedDialog):
         splitter = StyledSplitter(Qt.Orientation.Horizontal)
 
         # Create left panel for controls
-        left_widget = QWidget()
+        left_widget = QWidget(self)
         layout = QVBoxLayout(left_widget)
 
         # Add sprite file selector
@@ -156,7 +156,7 @@ class InjectionDialog(TabbedDialog):
 
     def _add_sprite_file_selector(self, layout: QVBoxLayout) -> None:
         """Add sprite file selector to a tab layout"""
-        sprite_group = QGroupBox("Sprite File")
+        sprite_group = QGroupBox("Sprite File", self)
         sprite_layout = QVBoxLayout()
 
         self.sprite_file_selector = FileSelector(
@@ -177,7 +177,7 @@ class InjectionDialog(TabbedDialog):
     def _add_vram_controls(self, layout: QVBoxLayout) -> None:
         """Add VRAM-specific controls to layout"""
         # Extraction info (if metadata available)
-        self.extraction_group = QGroupBox("Original Extraction Info")
+        self.extraction_group = QGroupBox("Original Extraction Info", self)
         extraction_layout = QVBoxLayout()
 
         self.extraction_info = QTextEdit()
@@ -189,7 +189,7 @@ class InjectionDialog(TabbedDialog):
         layout.addWidget(self.extraction_group)
 
         # VRAM settings
-        vram_group = QGroupBox("VRAM Settings")
+        vram_group = QGroupBox("VRAM Settings", self)
         vram_layout = QVBoxLayout()
 
         # Input VRAM
@@ -243,7 +243,7 @@ class InjectionDialog(TabbedDialog):
     def _add_rom_controls(self, layout: QVBoxLayout) -> None:
         """Add ROM-specific controls to layout"""
         # ROM settings
-        rom_group = QGroupBox("ROM Settings")
+        rom_group = QGroupBox("ROM Settings", self)
         rom_layout = QVBoxLayout()
 
         # Input ROM
@@ -272,9 +272,9 @@ class InjectionDialog(TabbedDialog):
 
         # Sprite location selector
         location_layout = QHBoxLayout()
-        location_layout.addWidget(QLabel("Sprite Location:"))
+        location_layout.addWidget(QLabel("Sprite Location:", self))
 
-        self.sprite_location_combo = QComboBox()
+        self.sprite_location_combo = QComboBox(self)
         self.sprite_location_combo.setMinimumWidth(200)
         # These will be populated dynamically when ROM is loaded
         self.sprite_location_combo.addItem("Select sprite location...", None)
@@ -283,7 +283,7 @@ class InjectionDialog(TabbedDialog):
         )
         location_layout.addWidget(self.sprite_location_combo)
 
-        location_layout.addWidget(QLabel("or Custom Offset:"))
+        location_layout.addWidget(QLabel("or Custom Offset:", self))
 
         self.rom_offset_input = HexOffsetInput(
             placeholder="0x0",
@@ -298,7 +298,7 @@ class InjectionDialog(TabbedDialog):
 
         # Compression options
         compression_layout = QHBoxLayout()
-        self.fast_compression_check = QCheckBox("Fast compression (larger file size)")
+        self.fast_compression_check = QCheckBox("Fast compression (larger file size)", self)
         compression_layout.addWidget(self.fast_compression_check)
         compression_layout.addStretch()
         rom_layout.addLayout(compression_layout)
@@ -307,7 +307,7 @@ class InjectionDialog(TabbedDialog):
         layout.addWidget(rom_group)
 
         # ROM info display
-        self.rom_info_group = QGroupBox("ROM Information")
+        self.rom_info_group = QGroupBox("ROM Information", self)
         rom_info_layout = QVBoxLayout()
 
         self.rom_info_text = QTextEdit()

@@ -505,24 +505,33 @@ class TestDataRepository:
         self._temp_dirs.clear()
 
 
-# Global repository instance
-_global_repository: Optional[TestDataRepository] = None
+class _TestDataRepositorySingleton:
+    """Singleton holder for TestDataRepository."""
+    _instance: Optional[TestDataRepository] = None
+
+    @classmethod
+    def get(cls) -> TestDataRepository:
+        """Get the global test data repository instance."""
+        if cls._instance is None:
+            cls._instance = TestDataRepository()
+        return cls._instance
+
+    @classmethod
+    def cleanup(cls) -> None:
+        """Clean up the global test data repository."""
+        if cls._instance is not None:
+            cls._instance.cleanup()
+            cls._instance = None
 
 
 def get_test_data_repository() -> TestDataRepository:
     """Get the global test data repository instance."""
-    global _global_repository
-    if _global_repository is None:
-        _global_repository = TestDataRepository()
-    return _global_repository
+    return _TestDataRepositorySingleton.get()
 
 
 def cleanup_test_data_repository() -> None:
     """Clean up the global test data repository."""
-    global _global_repository
-    if _global_repository is not None:
-        _global_repository.cleanup()
-        _global_repository = None
+    _TestDataRepositorySingleton.cleanup()
 
 
 # Convenience functions

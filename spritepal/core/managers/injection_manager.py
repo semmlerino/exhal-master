@@ -11,9 +11,10 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 if TYPE_CHECKING:
-    from .session_manager import SessionManager
     from core.injector import InjectionWorker
     from core.rom_injector import ROMInjectionWorker
+
+    from .session_manager import SessionManager
 
 from core.injector import InjectionWorker
 from core.rom_injector import ROMInjectionWorker
@@ -47,8 +48,8 @@ class InjectionManager(BaseManager):
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the injection manager"""
         # Declare instance variables with type hints
-        self._current_worker: QThread | None
-        
+        self._current_worker: QThread | None = None
+
         super().__init__("InjectionManager", parent)
 
     def _initialize(self) -> None:
@@ -64,9 +65,11 @@ class InjectionManager(BaseManager):
             WorkerManager.cleanup_worker(self._current_worker, timeout=5000)
         self._current_worker = None
 
-    def _get_session_manager(self) -> 'SessionManager':
+    def _get_session_manager(self) -> "SessionManager":
         """Get session manager with late import to avoid circular dependencies"""
-        from . import get_session_manager
+        # Delayed import to avoid circular dependency:
+        # injection_manager -> session_manager -> injection_manager
+        from . import get_session_manager  # noqa: PLC0415
         return get_session_manager()
 
     def start_injection(self, params: dict[str, Any]) -> bool:
@@ -136,7 +139,7 @@ class InjectionManager(BaseManager):
             self._logger.info(f"Started {mode_text} injection: {params['sprite_path']}")
             self.injection_progress.emit(f"Starting {mode_text} injection...")
 
-        except (OSError, IOError, PermissionError) as e:
+        except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "injection startup")
             return False
         except (ValueError, TypeError) as e:
@@ -161,7 +164,7 @@ class InjectionManager(BaseManager):
         # Validate input type
         if not isinstance(params, dict):
             raise ValidationError("params must be a dictionary")
-        
+
         # Check required common parameters
         required = ["mode", "sprite_path", "offset"]
         self._validate_required(params, required)
@@ -174,14 +177,14 @@ class InjectionManager(BaseManager):
         sprite_result = FileValidator.validate_image_file(params["sprite_path"])
         if not sprite_result.is_valid:
             raise ValidationError(f"Sprite file validation failed: {sprite_result.error_message}")
-            
+
         self._validate_range(params["offset"], "offset", min_val=0)
 
         # Check mode-specific parameters
         if params["mode"] == "vram":
             vram_required = ["input_vram", "output_vram"]
             self._validate_required(params, vram_required)
-            
+
             # Use FileValidator for VRAM file validation
             vram_result = FileValidator.validate_vram_file(params["input_vram"])
             if not vram_result.is_valid:
@@ -190,7 +193,7 @@ class InjectionManager(BaseManager):
         elif params["mode"] == "rom":
             rom_required = ["input_rom", "output_rom"]
             self._validate_required(params, rom_required)
-            
+
             # Use FileValidator for ROM file validation
             rom_result = FileValidator.validate_rom_file(params["input_rom"])
             if not rom_result.is_valid:
@@ -234,7 +237,7 @@ class InjectionManager(BaseManager):
                 if vram_path:
                     self._logger.debug(f"Smart VRAM suggestion found: {vram_path}")
                     return vram_path
-            except (OSError, IOError, ValueError) as e:
+            except (OSError, ValueError) as e:
                 self._logger.debug(f"VRAM suggestion strategy failed: {e}")
                 continue
             except Exception as e:
@@ -290,7 +293,7 @@ class InjectionManager(BaseManager):
             vram_path = session_manager.get("session", "vram_path", "")
             if vram_path and os.path.exists(vram_path):
                 return vram_path
-        except (OSError, IOError, ValueError):
+        except (OSError, ValueError):
             pass
         except Exception:
             pass
@@ -307,7 +310,7 @@ class InjectionManager(BaseManager):
             vram_path = metadata.get("source_vram", "")
             if vram_path and os.path.exists(vram_path):
                 return vram_path
-        except (OSError, IOError, ValueError):
+        except (OSError, ValueError):
             pass
         except Exception:
             pass
@@ -341,7 +344,7 @@ class InjectionManager(BaseManager):
             recent_vram = session_manager.get_recent_files("vram")
             if recent_vram and os.path.exists(recent_vram[0]):
                 return recent_vram[0]
-        except (OSError, IOError, ValueError):
+        except (OSError, ValueError):
             pass
         except Exception:
             pass
@@ -356,7 +359,7 @@ class InjectionManager(BaseManager):
             )
             if last_injection_vram and os.path.exists(last_injection_vram):
                 return last_injection_vram
-        except (OSError, IOError, ValueError):
+        except (OSError, ValueError):
             pass
         except Exception:
             pass
@@ -406,7 +409,7 @@ class InjectionManager(BaseManager):
                     parsed_info["extraction_vram_offset"] = vram_offset
                     parsed_info["rom_extraction_info"] = None
 
-        except (OSError, IOError, PermissionError) as e:
+        except (OSError, PermissionError) as e:
             self._logger.warning(f"File I/O error loading metadata from {metadata_path}: {e}")
             return None
         except (json.JSONDecodeError, ValueError) as e:
@@ -465,7 +468,9 @@ class InjectionManager(BaseManager):
             self._logger.debug(f"Cache miss, loading ROM info from file: {rom_path}")
 
             # Get extraction manager to read ROM header
-            from . import get_extraction_manager
+            # Delayed import to avoid circular dependency:
+            # injection_manager -> extraction_manager -> injection_manager
+            from . import get_extraction_manager  # noqa: PLC0415
             extraction_manager = get_extraction_manager()
             header = extraction_manager.read_rom_header(rom_path)
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Manual test runner for ROM cache functionality"""
 
+import inspect
 import os
 import sys
 import tempfile
+import traceback
+
+import utils.rom_cache
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -116,7 +120,6 @@ def test_singleton_behavior():
     print("\n=== Testing Singleton Behavior ===")
 
     # Reset singleton
-    import utils.rom_cache
     utils.rom_cache._rom_cache_instance = None
 
     # Get instances
@@ -140,7 +143,6 @@ def test_cache_with_ui_integration():
         print("✓ Successfully imported ROMFileWidget module")
 
         # Check if get_rom_cache is being used
-        import inspect
         source = inspect.getsource(ui_module.ROMFileWidget)
         if "get_rom_cache()" in source:
             print("✓ ROMFileWidget uses get_rom_cache() singleton")
@@ -178,7 +180,6 @@ def main():
                 all_passed = False
         except Exception as e:
             print(f"\n✗ Test {test.__name__} failed with error: {e}")
-            import traceback
             traceback.print_exc()
             all_passed = False
 

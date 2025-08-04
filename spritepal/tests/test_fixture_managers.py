@@ -1,6 +1,14 @@
 """
 Test the test fixture managers
 
+from ui.row_arrangement.grid_arrangement_manager import TilePosition
+
+from ui.row_arrangement.grid_arrangement_manager import TilePosition
+
+from ui.row_arrangement.grid_arrangement_manager import TilePosition
+
+from ui.row_arrangement.grid_arrangement_manager import TilePosition
+
 Verify that the test fixture managers work correctly and provide
 real implementations instead of mocks.
 """

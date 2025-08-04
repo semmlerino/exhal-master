@@ -12,7 +12,7 @@ ANIMATION_DEBOUNCE_DELAY = 16        # 16ms debounce delay for UI changes
 
 # Thread and worker timeouts
 WORKER_TIMEOUT_SHORT = 500           # 500ms for quick operations
-WORKER_TIMEOUT_MEDIUM = 1000         # 1000ms for medium operations  
+WORKER_TIMEOUT_MEDIUM = 1000         # 1000ms for medium operations
 WORKER_TIMEOUT_LONG = 2000           # 2000ms for long operations
 WORKER_TIMEOUT_EXTENDED = 5000       # 5000ms for extended operations
 WORKER_TIMEOUT_MAXIMUM = 10000       # 10000ms maximum timeout

@@ -6,6 +6,18 @@ These tests verify that the new manager-per-worker pattern provides:
 - Excellent testability without mocking
 - No shared state between tests
 - Proper Qt object lifecycle management
+
+import time
+from PyQt6.QtWidgets import QApplication
+
+import time
+from PyQt6.QtWidgets import QApplication
+
+import time
+from PyQt6.QtWidgets import QApplication
+
+import time
+from PyQt6.QtWidgets import QApplication
 """
 
 import os

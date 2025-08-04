@@ -9,4 +9,3 @@ pytestmark = pytest.mark.skip(reason="SignalCoordinator component removed during
 
 def test_placeholder():
     """Placeholder test to prevent empty test module issues."""
-    pass

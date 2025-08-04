@@ -15,7 +15,6 @@ This dialog provides:
 import contextlib
 import os
 import time
-import weakref
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, override
 
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PyQt6.QtCore import QMutex, QMutexLocker, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QFont, QHideEvent, QKeyEvent
+from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -33,6 +32,8 @@ from PyQt6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
+    QMessageBox,
     QPushButton,
     QSlider,
     QSpinBox,
@@ -41,14 +42,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from ui.common import WorkerManager
+from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from ui.components import DialogBase
 from ui.components.panels import StatusPanel
-from ui.common.collapsible_group_box import CollapsibleGroupBox
+from ui.components.visualization.rom_map_widget import ROMMapWidget
 from ui.dialogs.services import ViewStateManager
 from ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from utils.logging_config import get_logger
+from utils.rom_cache import get_rom_cache
 from utils.sprite_regions import SpriteRegion
 
 logger = get_logger(__name__)
@@ -103,10 +106,10 @@ class SimpleBrowseTab(QWidget):
         self.position_slider.setMaximum(self._rom_size)
         self.position_slider.setValue(self._current_offset)
         self.position_slider.setMinimumHeight(32)  # Reduced from 40px
-        
+
         # Connect to valueChanged for compatibility (used by smart coordinator)
         self.position_slider.valueChanged.connect(self._on_slider_changed)
-        
+
         # Smart preview coordinator will connect to pressed/moved/released signals
         self._smart_preview_coordinator = None
         # Apply distinct styling for ROM offset slider
@@ -138,7 +141,7 @@ class SimpleBrowseTab(QWidget):
         # Position info row
         info_row = QHBoxLayout()
         info_row.setSpacing(8)
-        
+
         self.position_label = QLabel(self._format_position(self._current_offset))
         position_font = QFont()
         position_font.setBold(True)
@@ -161,11 +164,13 @@ class SimpleBrowseTab(QWidget):
         # Navigation buttons - smaller height
         self.prev_button = QPushButton("◀ Prev")
         self.prev_button.setMinimumHeight(28)  # Reduced from 36px
+        self.prev_button.setToolTip("Find previous sprite (skip empty areas)")
         self.prev_button.clicked.connect(self.find_prev_clicked.emit)
         nav_row.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Next ▶")
         self.next_button.setMinimumHeight(28)  # Reduced from 36px
+        self.next_button.setToolTip("Find next sprite (skip empty areas)")
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
 
@@ -189,9 +194,9 @@ class SimpleBrowseTab(QWidget):
         # Manual input row - compact horizontal layout
         manual_row = QHBoxLayout()
         manual_row.setSpacing(6)
-        
+
         manual_row.addWidget(QLabel("Go to:"))
-        
+
         self.manual_spinbox = QSpinBox()
         self.manual_spinbox.setMinimum(0)
         self.manual_spinbox.setMaximum(self._rom_size)
@@ -205,7 +210,7 @@ class SimpleBrowseTab(QWidget):
         go_button.setMinimumHeight(28)  # Consistent with other buttons
         go_button.clicked.connect(lambda: self.set_offset(self.manual_spinbox.value()))
         manual_row.addWidget(go_button)
-        
+
         manual_row.addStretch()
         controls_layout.addLayout(manual_row)
 
@@ -232,7 +237,7 @@ class SimpleBrowseTab(QWidget):
 
         # Emit offset changed signal for external listeners
         self.offset_changed.emit(value)
-        
+
         # Note: SmartPreviewCoordinator handles preview updates automatically via
         # sliderMoved signal - no need to manually request here
 
@@ -247,7 +252,7 @@ class SimpleBrowseTab(QWidget):
         self.position_slider.blockSignals(False)
 
         self.offset_changed.emit(value)
-        
+
         # Request immediate high-quality preview for manual changes
         if self._smart_preview_coordinator:
             self._smart_preview_coordinator.request_manual_preview(value)
@@ -277,7 +282,7 @@ class SimpleBrowseTab(QWidget):
             self.manual_spinbox.blockSignals(False)
 
             self._update_displays()
-            
+
             # Request immediate high-quality preview for programmatic changes
             if self._smart_preview_coordinator:
                 self._smart_preview_coordinator.request_manual_preview(offset)
@@ -297,32 +302,32 @@ class SimpleBrowseTab(QWidget):
         """Enable/disable navigation."""
         self.prev_button.setEnabled(enabled)
         self.next_button.setEnabled(enabled)
-    
+
     def connect_smart_preview_coordinator(self, coordinator):
         """Connect smart preview coordinator for enhanced preview updates."""
         self._smart_preview_coordinator = coordinator
         if coordinator:
             # Connect coordinator to slider for drag detection
             coordinator.connect_slider(self.position_slider)
-            
+
             # Setup UI update callback for immediate feedback
             coordinator.set_ui_update_callback(self._on_smart_ui_update)
-            
+
             logger.debug("Smart preview coordinator connected to browse tab")
-    
+
     def _on_smart_ui_update(self, offset: int):
         """Handle immediate UI updates from smart coordinator."""
         if offset != self._current_offset:
             # Update displays without triggering signals
             self._current_offset = offset
-            
+
             self.position_slider.blockSignals(True)
             self.manual_spinbox.blockSignals(True)
-            
+
             self.position_slider.setValue(offset)
             self.manual_spinbox.setValue(offset)
             self._update_displays()
-            
+
             self.position_slider.blockSignals(False)
             self.manual_spinbox.blockSignals(False)
 
@@ -374,9 +379,9 @@ class SimpleSmartTab(QWidget):
         # Compact region selection row
         region_row = QHBoxLayout()
         region_row.setSpacing(6)
-        
+
         region_row.addWidget(QLabel("Region:"))
-        
+
         self.region_combo = QComboBox()
         self.region_combo.currentIndexChanged.connect(self._on_region_changed)
         region_row.addWidget(self.region_combo)
@@ -573,6 +578,9 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.status_panel: StatusPanel | None = None
         self.status_collapsible: CollapsibleGroupBox | None = None
         self.apply_btn: QPushButton | None = None
+        self.mini_rom_map: ROMMapWidget | None = None
+        self.bookmarks_menu: QMenu | None = None
+        self.bookmarks: list[tuple[int, str]] = []  # (offset, name) pairs
 
         # Business logic state
         self.rom_path: str = ""
@@ -582,6 +590,11 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.extraction_manager: ExtractionManager | None = None
         self.rom_extractor: ROMExtractor | None = None
         self._manager_mutex = QMutex()
+
+        # ROM cache integration
+        self.rom_cache = get_rom_cache()
+        self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+        self._adjacent_offsets_cache = set()  # Track preloaded offsets
 
         # Worker references
         self.preview_worker: SpritePreviewWorker | None = None
@@ -665,8 +678,17 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.status_collapsible = CollapsibleGroupBox("Status", collapsed=True)
         self.status_panel = StatusPanel()
         self.status_collapsible.add_widget(self.status_panel)
-        
+
+        # Add context menu for cache management
+        self._setup_cache_context_menu()
+
         layout.addWidget(self.status_collapsible)
+
+        # Mini ROM map for position context
+        self.mini_rom_map = ROMMapWidget()
+        self.mini_rom_map.setMaximumHeight(40)
+        self.mini_rom_map.setMinimumHeight(30)
+        layout.addWidget(self.mini_rom_map)
 
         return panel
 
@@ -698,25 +720,43 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.apply_btn.clicked.connect(self._apply_offset)
         self.button_box.addButton(self.apply_btn, self.button_box.ButtonRole.AcceptRole)
 
+        # Bookmark button
+        bookmark_btn = QPushButton("Bookmark")
+        bookmark_btn.setToolTip("Save current offset to bookmarks (Ctrl+D)")
+        bookmark_btn.clicked.connect(self._add_bookmark)
+        self.button_box.addButton(bookmark_btn, self.button_box.ButtonRole.ActionRole)
+
+        # Bookmarks menu button
+        bookmarks_menu_btn = QPushButton("Bookmarks ▼")
+        bookmarks_menu_btn.setToolTip("Show saved bookmarks (Ctrl+B)")
+        self.bookmarks_menu = QMenu(self)
+        self._update_bookmarks_menu()
+        bookmarks_menu_btn.setMenu(self.bookmarks_menu)
+        self.button_box.addButton(bookmarks_menu_btn, self.button_box.ButtonRole.ActionRole)
+
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.hide)
         self.button_box.addButton(close_btn, self.button_box.ButtonRole.RejectRole)
 
     # _setup_signal_coordinator removed - SmartPreviewCoordinator handles all coordination
-    
+
     def _setup_smart_preview_coordinator(self):
         """Set up smart preview coordination for real-time updates."""
-        self._smart_preview_coordinator = SmartPreviewCoordinator(self)
-        
+        self._smart_preview_coordinator = SmartPreviewCoordinator(self, rom_cache=self.rom_cache)
+
         # Connect preview signals
         self._smart_preview_coordinator.preview_ready.connect(self._on_smart_preview_ready)
         self._smart_preview_coordinator.preview_cached.connect(self._on_smart_preview_cached)
         self._smart_preview_coordinator.preview_error.connect(self._on_smart_preview_error)
-        
-        # Setup ROM data provider
+
+        # Setup ROM data provider with cache support
         self._smart_preview_coordinator.set_rom_data_provider(self._get_rom_data_for_preview)
-        
-        logger.debug("Smart preview coordinator setup complete")
+
+        # Connect cache-related signals
+        self._smart_preview_coordinator.preview_ready.connect(self._on_cache_miss)
+        self._smart_preview_coordinator.preview_cached.connect(self._on_cache_hit)
+
+        logger.debug("Smart preview coordinator setup complete with ROM cache integration")
 
     def _setup_preview_timer(self):
         """Set up preview update timer."""
@@ -733,7 +773,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.browse_tab.offset_changed.connect(self._on_offset_changed)
         self.browse_tab.find_next_clicked.connect(self._find_next_sprite)
         self.browse_tab.find_prev_clicked.connect(self._find_prev_sprite)
-        
+
         # Connect smart preview coordinator to browse tab
         if self._smart_preview_coordinator and self.browse_tab:
             self.browse_tab.connect_smart_preview_coordinator(self._smart_preview_coordinator)
@@ -748,11 +788,21 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_offset_changed(self, offset: int):
         """Handle offset changes from browse tab."""
+        # Update cache stats
+        self._cache_stats["total_requests"] += 1
+
+        # Update mini ROM map
+        if self.mini_rom_map:
+            self.mini_rom_map.set_current_offset(offset)
+
         # Emit signal immediately for external listeners
         self.offset_changed.emit(offset)
 
         # SmartPreviewCoordinator handles all preview updates automatically
         # No fallback needed - coordinator is always initialized
+
+        # Schedule predictive preloading for adjacent offsets
+        self._schedule_adjacent_preloading(offset)
 
     def _on_offset_requested(self, offset: int):
         """Handle offset request from smart tab."""
@@ -776,21 +826,60 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Could implement region-specific behavior here
 
     def _find_next_sprite(self):
-        """Find next sprite (placeholder)."""
-        if self.browse_tab:
-            current_offset = self.browse_tab.get_current_offset()
-            step_size = self.browse_tab.get_step_size()
-            new_offset = current_offset + step_size
-            if new_offset <= self.rom_size:
-                self.browse_tab.set_offset(new_offset)
+        """Find next sprite with region awareness."""
+        if not self.browse_tab or not self._has_rom_data():
+            return
+
+        current_offset = self.browse_tab.get_current_offset()
+
+        # Clean up existing search worker
+        if self.search_worker:
+            WorkerManager.cleanup_worker(self.search_worker)
+            self.search_worker = None
+
+        # Create search worker for forward search
+        with QMutexLocker(self._manager_mutex):
+            if self.rom_extractor:
+                self.search_worker = SpriteSearchWorker(
+                    self.rom_path,
+                    current_offset,
+                    self.rom_size,
+                    1,  # Forward direction
+                    self.rom_extractor
+                )
+                self.search_worker.sprite_found.connect(self._on_search_sprite_found)
+                self.search_worker.search_complete.connect(self._on_search_complete)
+                self.search_worker.start()
+
+                self._update_status("Searching for next sprite...")
 
     def _find_prev_sprite(self):
-        """Find previous sprite (placeholder)."""
-        if self.browse_tab:
-            current_offset = self.browse_tab.get_current_offset()
-            step_size = self.browse_tab.get_step_size()
-            new_offset = max(0, current_offset - step_size)
-            self.browse_tab.set_offset(new_offset)
+        """Find previous sprite with region awareness."""
+        if not self.browse_tab or not self._has_rom_data():
+            return
+
+        current_offset = self.browse_tab.get_current_offset()
+
+        # Clean up existing search worker
+        if self.search_worker:
+            WorkerManager.cleanup_worker(self.search_worker)
+            self.search_worker = None
+
+        # Create search worker for backward search
+        with QMutexLocker(self._manager_mutex):
+            if self.rom_extractor:
+                self.search_worker = SpriteSearchWorker(
+                    self.rom_path,
+                    current_offset,
+                    0,  # Search back to start
+                    -1,  # Backward direction
+                    self.rom_extractor
+                )
+                self.search_worker.sprite_found.connect(self._on_search_sprite_found)
+                self.search_worker.search_complete.connect(self._on_search_complete)
+                self.search_worker.start()
+
+                self._update_status("Searching for previous sprite...")
 
     def _request_preview_update(self, delay_ms: int = 100):
         """Request preview update with debouncing."""
@@ -851,6 +940,11 @@ class UnifiedManualOffsetDialog(DialogBase):
         if self.status_panel:
             self.status_panel.update_status(message)
 
+            # Add cache performance tooltip if available
+            if hasattr(self.status_panel, "status_label"):
+                tooltip = self._build_cache_tooltip()
+                self.status_panel.status_label.setToolTip(tooltip)
+
     def _has_rom_data(self) -> bool:
         """Check if ROM data is available."""
         return bool(self.rom_path and self.rom_size > 0)
@@ -867,9 +961,13 @@ class UnifiedManualOffsetDialog(DialogBase):
             self._preview_timer.stop()
 
         # Signal coordinator cleanup handled by SmartPreviewCoordinator
-            
+
         if self._smart_preview_coordinator:
             self._smart_preview_coordinator.cleanup()
+
+        # Reset cache stats
+        self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+        self._adjacent_offsets_cache.clear()
 
     # Public interface methods required by ROM extraction panel
 
@@ -885,38 +983,53 @@ class UnifiedManualOffsetDialog(DialogBase):
         if self.browse_tab:
             self.browse_tab.set_rom_size(rom_size)
 
+        # Update mini ROM map
+        if self.mini_rom_map:
+            self.mini_rom_map.set_rom_size(rom_size)
+
         # Update window title
         self.view_state_manager.update_title_with_rom(rom_path)
 
         logger.debug(f"ROM data updated: {os.path.basename(rom_path)} ({rom_size} bytes)")
-    
+
+        # Initialize cache for this ROM
+        self._initialize_rom_cache(rom_path)
+
+        # Update cache status display
+        self._update_cache_status_display()
+
+        # Load any cached sprites for visualization
+        self._load_cached_sprites_for_map()
+
     def _get_rom_data_for_preview(self):
-        """Provide ROM data for smart preview coordinator."""
+        """Provide ROM data with cache support for smart preview coordinator."""
         with QMutexLocker(self._manager_mutex):
-            return (self.rom_path, self.rom_extractor)
-    
+            return (self.rom_path, self.rom_extractor, self.rom_cache)
+
     def _on_smart_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle preview ready from smart coordinator."""
         if self.preview_widget:
             self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
-        
+
         current_offset = self.get_current_offset()
-        self._update_status(f"High-quality preview at 0x{current_offset:06X}")
-    
+        cache_status = self._get_cache_status_text()
+        self._update_status(f"High-quality preview at 0x{current_offset:06X} {cache_status}")
+
     def _on_smart_preview_cached(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle cached preview from smart coordinator."""
         if self.preview_widget:
             self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
-        
+
         current_offset = self.get_current_offset()
-        self._update_status(f"Cached preview at 0x{current_offset:06X}")
-    
+        cache_status = self._get_cache_status_text()
+        self._update_status(f"Cached preview at 0x{current_offset:06X} {cache_status}")
+
     def _on_smart_preview_error(self, error_msg: str):
         """Handle preview error from smart coordinator."""
         if self.preview_widget:
             self.preview_widget.clear()
             self.preview_widget.info_label.setText("No sprite found")
-        
+
         current_offset = self.get_current_offset()
         self._update_status(f"No sprite at 0x{current_offset:06X}: {error_msg}")
 
@@ -945,6 +1058,239 @@ class UnifiedManualOffsetDialog(DialogBase):
             if self.tab_widget:
                 self.tab_widget.setTabText(2, f"History ({count})")
 
+    # ROM Cache Integration Methods
+
+    def _initialize_rom_cache(self, rom_path: str) -> None:
+        """Initialize ROM cache for the current ROM."""
+        try:
+            # Reset cache stats for new ROM
+            self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+            self._adjacent_offsets_cache.clear()
+
+            # Log cache status
+            if self.rom_cache.cache_enabled:
+                logger.debug(f"ROM cache initialized for {os.path.basename(rom_path)}")
+            else:
+                logger.debug("ROM cache is disabled")
+
+        except Exception as e:
+            logger.warning(f"Error initializing ROM cache: {e}")
+
+    def _schedule_adjacent_preloading(self, current_offset: int) -> None:
+        """Schedule preloading of adjacent offsets for smooth navigation."""
+        if not self.rom_cache.cache_enabled:
+            return
+
+        try:
+            # Calculate adjacent offsets based on typical step sizes
+            step_sizes = [0x100, 0x1000, 0x2000]  # Common alignment boundaries
+            adjacent_offsets = []
+
+            for step in step_sizes:
+                # Previous and next offsets
+                prev_offset = max(0, current_offset - step)
+                next_offset = min(self.rom_size, current_offset + step)
+
+                # Only preload if not already cached
+                if prev_offset not in self._adjacent_offsets_cache:
+                    adjacent_offsets.append(prev_offset)
+                if next_offset not in self._adjacent_offsets_cache:
+                    adjacent_offsets.append(next_offset)
+
+            # Limit preloading to avoid overwhelming the system
+            adjacent_offsets = adjacent_offsets[:6]  # Max 6 adjacent offsets
+
+            # Schedule preloading with low priority
+            for offset in adjacent_offsets:
+                self._preload_offset(offset)
+                self._adjacent_offsets_cache.add(offset)
+
+        except Exception as e:
+            logger.debug(f"Error scheduling adjacent preloading: {e}")
+
+    def _preload_offset(self, offset: int) -> None:
+        """Preload a specific offset using the worker pool."""
+        if not self._smart_preview_coordinator or not self._rom_data_provider:
+            return
+
+        try:
+            # Use SmartPreviewCoordinator's worker pool for background preloading
+            # Request with very low priority so it doesn't interfere with user actions
+            self._smart_preview_coordinator.request_preview(offset, priority=-1)
+
+        except Exception as e:
+            logger.debug(f"Error preloading offset 0x{offset:06X}: {e}")
+
+    def _on_cache_hit(self, *args) -> None:
+        """Handle cache hit event."""
+        self._cache_stats["hits"] += 1
+
+    def _on_cache_miss(self, *args) -> None:
+        """Handle cache miss event."""
+        self._cache_stats["misses"] += 1
+
+    def _get_cache_status_text(self) -> str:
+        """Get cache status text for display."""
+        if not self.rom_cache.cache_enabled:
+            return "[Cache: Disabled]"
+
+        total = self._cache_stats["total_requests"]
+        hits = self._cache_stats["hits"]
+
+        if total > 0:
+            hit_rate = (hits / total) * 100
+            return f"[Cache: {hit_rate:.0f}% hit rate]"
+
+        return "[Cache: Ready]"
+
+    def _build_cache_tooltip(self) -> str:
+        """Build detailed cache tooltip."""
+        if not self.rom_cache.cache_enabled:
+            return "ROM caching is disabled"
+
+        try:
+            stats = self.rom_cache.get_cache_stats()
+            cache_info = [
+                f"Cache Directory: {stats.get('cache_dir', 'Unknown')}",
+                f"Total Cache Files: {stats.get('total_files', 0)}",
+                f"Cache Size: {stats.get('total_size_bytes', 0)} bytes",
+                "",
+                "Session Stats:",
+                f"  Total Requests: {self._cache_stats['total_requests']}",
+                f"  Cache Hits: {self._cache_stats['hits']}",
+                f"  Cache Misses: {self._cache_stats['misses']}",
+            ]
+
+            if self._cache_stats["total_requests"] > 0:
+                hit_rate = (self._cache_stats["hits"] / self._cache_stats["total_requests"]) * 100
+                cache_info.append(f"  Hit Rate: {hit_rate:.1f}%")
+
+            return "\n".join(cache_info)
+
+        except Exception as e:
+            return f"Cache tooltip error: {e}"
+
+    def _update_cache_status_display(self) -> None:
+        """Update cache status in the UI."""
+        try:
+            cache_status = self._get_cache_status_text()
+
+            # Update status panel if collapsed box exists
+            if self.status_collapsible and self.rom_cache.cache_enabled:
+                # Update collapsible title to show cache status
+                current_title = self.status_collapsible.title()
+                if "[Cache:" not in current_title:
+                    new_title = f"{current_title} {cache_status}"
+                    self.status_collapsible.setTitle(new_title)
+
+        except Exception as e:
+            logger.debug(f"Error updating cache status display: {e}")
+
+    def _setup_cache_context_menu(self) -> None:
+        """Set up context menu for cache management."""
+        if not self.status_collapsible:
+            return
+
+        try:
+            # Enable context menu on the status collapsible widget
+            self.status_collapsible.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.status_collapsible.customContextMenuRequested.connect(self._show_cache_context_menu)
+
+        except Exception as e:
+            logger.debug(f"Error setting up cache context menu: {e}")
+
+    def _show_cache_context_menu(self, position) -> None:
+        """Show cache management context menu."""
+        if not self.rom_cache.cache_enabled:
+            return
+
+        try:
+            menu = QMenu(self)
+
+            # Cache statistics action
+            stats_action = QAction("Show Cache Statistics", self)
+            stats_action.triggered.connect(self._show_cache_statistics)
+            menu.addAction(stats_action)
+
+            # Clear cache action
+            clear_action = QAction("Clear Cache", self)
+            clear_action.triggered.connect(self._clear_cache_with_confirmation)
+            menu.addAction(clear_action)
+
+            # Show at cursor position
+            global_pos = self.status_collapsible.mapToGlobal(position)
+            menu.exec(global_pos)
+
+        except Exception as e:
+            logger.debug(f"Error showing cache context menu: {e}")
+
+    def _show_cache_statistics(self) -> None:
+        """Show detailed cache statistics dialog."""
+        try:
+            stats = self.rom_cache.get_cache_stats()
+            session_stats = self._cache_stats
+
+            # Format cache size
+            size_bytes = stats.get("total_size_bytes", 0)
+            if size_bytes > 1024 * 1024:
+                size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+            elif size_bytes > 1024:
+                size_str = f"{size_bytes / 1024:.1f} KB"
+            else:
+                size_str = f"{size_bytes} bytes"
+
+            message = f"""Cache Statistics:
+
+Directory: {stats.get('cache_dir', 'Unknown')}
+Total Files: {stats.get('total_files', 0)}
+Total Size: {size_str}
+Sprite Location Caches: {stats.get('sprite_location_caches', 0)}
+ROM Info Caches: {stats.get('rom_info_caches', 0)}
+Scan Progress Caches: {stats.get('scan_progress_caches', 0)}
+
+Session Statistics:
+Total Requests: {session_stats['total_requests']}
+Cache Hits: {session_stats['hits']}
+Cache Misses: {session_stats['misses']}"""
+
+            if session_stats["total_requests"] > 0:
+                hit_rate = (session_stats["hits"] / session_stats["total_requests"]) * 100
+                message += f"\nHit Rate: {hit_rate:.1f}%"
+
+            QMessageBox.information(self, "ROM Cache Statistics", message)
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to retrieve cache statistics: {e}")
+
+    def _clear_cache_with_confirmation(self) -> None:
+        """Clear cache with user confirmation."""
+        try:
+            reply = QMessageBox.question(
+                self,
+                "Clear Cache",
+                "Are you sure you want to clear the ROM cache?\n\nThis will remove all cached data and may slow down future operations.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                removed_count = self.rom_cache.clear_cache()
+                QMessageBox.information(
+                    self,
+                    "Cache Cleared",
+                    f"Successfully cleared {removed_count} cache files."
+                )
+
+                # Reset session stats
+                self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
+                self._adjacent_offsets_cache.clear()
+
+                # Update status display
+                self._update_cache_status_display()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to clear cache: {e}")
+
     # Event handlers
 
     @override
@@ -962,6 +1308,19 @@ class UnifiedManualOffsetDialog(DialogBase):
                 event.accept()
             elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 self._apply_offset()
+                event.accept()
+            elif event.key() == Qt.Key.Key_G and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                # Ctrl+G - Go to offset
+                self._show_goto_dialog()
+                event.accept()
+            elif event.key() == Qt.Key.Key_D and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                # Ctrl+D - Add bookmark
+                self._add_bookmark()
+                event.accept()
+            elif event.key() == Qt.Key.Key_B and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                # Ctrl+B - Show bookmarks menu
+                if self.bookmarks_menu:
+                    self.bookmarks_menu.exec(self.mapToGlobal(self.rect().center()))
                 event.accept()
 
         super().keyPressEvent(event)
@@ -988,6 +1347,115 @@ class UnifiedManualOffsetDialog(DialogBase):
         logger.debug(f"Dialog {self._debug_id} showing")
         super().showEvent(event)
         self.view_state_manager.handle_show_event()
+
+    def _on_search_sprite_found(self, offset: int, quality: float):
+        """Handle sprite found during navigation search"""
+        if self.browse_tab:
+            self.browse_tab.set_offset(offset)
+
+        # Add to history
+        self.add_found_sprite(offset, quality)
+
+        self._update_status(f"Found sprite at 0x{offset:06X} (quality: {quality:.2f})")
+
+    def _on_search_complete(self, found: bool):
+        """Handle search completion"""
+        if not found:
+            self._update_status("No sprites found in search direction")
+
+    def _add_bookmark(self):
+        """Add current offset to bookmarks"""
+        offset = self.get_current_offset()
+
+        # Check if already bookmarked
+        for existing_offset, _ in self.bookmarks:
+            if existing_offset == offset:
+                self._update_status("Offset already bookmarked")
+                return
+
+        # Add bookmark with descriptive name
+        from PyQt6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(
+            self, "Add Bookmark",
+            f"Name for bookmark at 0x{offset:06X}:",
+            text=f"Sprite at 0x{offset:06X}"
+        )
+
+        if ok and name:
+            self.bookmarks.append((offset, name))
+            self._update_bookmarks_menu()
+            self._update_status(f"Bookmarked: {name}")
+
+    def _update_bookmarks_menu(self):
+        """Update bookmarks menu"""
+        if not self.bookmarks_menu:
+            return
+
+        self.bookmarks_menu.clear()
+
+        if not self.bookmarks:
+            action = self.bookmarks_menu.addAction("No bookmarks")
+            action.setEnabled(False)
+        else:
+            for offset, name in self.bookmarks:
+                action = self.bookmarks_menu.addAction(f"{name} (0x{offset:06X})")
+                action.triggered.connect(lambda checked, o=offset: self.set_offset(o))
+
+            self.bookmarks_menu.addSeparator()
+            clear_action = self.bookmarks_menu.addAction("Clear All Bookmarks")
+            clear_action.triggered.connect(self._clear_bookmarks)
+
+    def _clear_bookmarks(self):
+        """Clear all bookmarks"""
+        self.bookmarks.clear()
+        self._update_bookmarks_menu()
+        self._update_status("Bookmarks cleared")
+
+    def _show_goto_dialog(self):
+        """Show go to offset dialog"""
+        from PyQt6.QtWidgets import QInputDialog
+
+        current = self.get_current_offset()
+        text, ok = QInputDialog.getText(
+            self, "Go to Offset",
+            "Enter offset (hex or decimal):",
+            text=f"0x{current:06X}"
+        )
+
+        if ok and text:
+            try:
+                # Parse hex or decimal
+                offset = int(text, 16) if text.startswith(("0x", "0X")) else int(text)
+
+                # Validate bounds
+                if 0 <= offset <= self.rom_size:
+                    self.set_offset(offset)
+                else:
+                    self._update_status(f"Offset out of range: 0x{offset:06X}")
+            except ValueError:
+                self._update_status(f"Invalid offset: {text}")
+
+    def _load_cached_sprites_for_map(self):
+        """Load cached sprites for mini ROM map visualization"""
+        if not self.rom_path or not self.mini_rom_map:
+            return
+
+        try:
+            cached_locations = self.rom_cache.get_sprite_locations(self.rom_path)
+            if cached_locations:
+                sprites = []
+                for _name, info in cached_locations.items():
+                    if isinstance(info, dict) and "offset" in info:
+                        offset = info["offset"]
+                        quality = info.get("quality", 1.0)
+                        sprites.append((offset, quality))
+
+                if sprites:
+                    self.mini_rom_map.add_found_sprites_batch(sprites)
+                    logger.debug(f"Loaded {len(sprites)} sprites to mini map")
+
+        except Exception as e:
+            logger.warning(f"Failed to load sprites for mini map: {e}")
 
 
 def create_manual_offset_dialog(parent: QWidget | None = None) -> UnifiedManualOffsetDialog:

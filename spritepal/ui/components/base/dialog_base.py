@@ -9,7 +9,17 @@ late instance variable declarations.
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog, QWidget
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QStatusBar,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -155,14 +165,12 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             self.resize(width, height)
 
         if with_status_bar:
-            from PyQt6.QtWidgets import QStatusBar
             self.status_bar = QStatusBar(self)
             self.setStatusBar = lambda: self.status_bar  # Mock for dialogs
         else:
             self.status_bar = None
 
         # Create main layout for dialogs that need it
-        from PyQt6.QtWidgets import QDialogButtonBox, QTabWidget, QVBoxLayout, QWidget
         self.main_layout = QVBoxLayout(self)
         self.setLayout(self.main_layout)
 
@@ -190,7 +198,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
 
         # If orientation is specified, create a splitter automatically
         if orientation is not None:
-            from PyQt6.QtWidgets import QSplitter
             self.main_splitter = QSplitter(orientation)
             self.main_splitter.setHandleWidth(self._splitter_handle_width)
             self.main_layout.addWidget(self.main_splitter)
@@ -287,7 +294,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             label: The tab label
         """
         if self._tab_widget is None:
-            from PyQt6.QtWidgets import QTabWidget
             self._tab_widget = QTabWidget()
             self.tab_widget = self._tab_widget  # Update public alias
             self.main_layout.addWidget(self._tab_widget)
@@ -308,8 +314,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         Returns:
             The created splitter widget
         """
-        from PyQt6.QtCore import Qt
-        from PyQt6.QtWidgets import QSplitter
 
         if handle_width is None:
             handle_width = self._splitter_handle_width
@@ -354,7 +358,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         Returns:
             The created button
         """
-        from PyQt6.QtWidgets import QPushButton
 
         button = QPushButton(text)
         if callback:
@@ -400,7 +403,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             title: Error dialog title
             message: Error message to display
         """
-        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.critical(self, title, message)
 
     def show_info(self, title: str, message: str) -> None:
@@ -411,7 +413,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             title: Info dialog title
             message: Info message to display
         """
-        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.information(self, title, message)
 
     def show_warning(self, title: str, message: str) -> None:
@@ -422,7 +423,6 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             title: Warning dialog title
             message: Warning message to display
         """
-        from PyQt6.QtWidgets import QMessageBox
         QMessageBox.warning(self, title, message)
 
     def confirm_action(self, title: str, message: str) -> bool:
@@ -436,6 +436,5 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         Returns:
             True if user confirmed, False otherwise
         """
-        from PyQt6.QtWidgets import QMessageBox
         reply = QMessageBox.question(self, title, message)
         return reply == QMessageBox.StandardButton.Yes

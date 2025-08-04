@@ -1,0 +1,381 @@
+"""
+Region Jump Widget
+
+Provides quick navigation to sprite-dense regions of the ROM.
+Features:
+- Dropdown list of detected regions
+- Shows region statistics (sprite count, quality)
+- Direct offset jumping
+- Smart mode integration
+"""
+
+
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+from utils.logging_config import get_logger
+from utils.sprite_regions import SpriteRegion
+
+logger = get_logger(__name__)
+
+
+class RegionJumpWidget(QWidget):
+    """
+    Widget for quick navigation between sprite regions.
+
+    Features:
+    - Region selection dropdown
+    - Direct offset input
+    - Region statistics display
+    - Smart navigation mode
+    """
+
+    # Signals
+    region_selected = pyqtSignal(int)  # Emitted when region is selected
+    offset_requested = pyqtSignal(int)  # Emitted for direct offset jump
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+
+        # State
+        self.regions: list[SpriteRegion] = []
+        self.current_region_index = -1
+        self.smart_mode = False
+
+        # UI Components
+        self.region_combo: QComboBox | None = None
+        self.go_button: QPushButton | None = None
+        self.offset_spinbox: QSpinBox | None = None
+        self.stats_label: QLabel | None = None
+
+        self._setup_ui()
+        self._connect_signals()
+
+    def _setup_ui(self):
+        """Create the UI layout"""
+        layout = QVBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Main container frame
+        container = QFrame()
+        container.setStyleSheet("""
+            QFrame {
+                background: #363636;
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 6px;
+            }
+        """)
+        container_layout = QVBoxLayout(container)
+        container_layout.setSpacing(6)
+
+        # Title row
+        title_row = QHBoxLayout()
+        title_label = QLabel("Quick Jump")
+        title_font = QFont()
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_row.addWidget(title_label)
+
+        title_row.addStretch()
+
+        self.stats_label = QLabel("No regions")
+        self.stats_label.setStyleSheet("font-size: 10px; color: #888;")
+        title_row.addWidget(self.stats_label)
+
+        container_layout.addLayout(title_row)
+
+        # Region selector row
+        region_row = QHBoxLayout()
+        region_row.setSpacing(4)
+
+        region_label = QLabel("Region:")
+        region_label.setMinimumWidth(50)
+        region_row.addWidget(region_label)
+
+        self.region_combo = QComboBox()
+        self.region_combo.setMinimumWidth(200)
+        self.region_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.region_combo.setStyleSheet("""
+            QComboBox {
+                background: #2b2b2b;
+                border: 1px solid #555;
+                padding: 4px;
+                border-radius: 3px;
+            }
+            QComboBox:hover {
+                border-color: #4488dd;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #888;
+                margin-right: 4px;
+            }
+        """)
+        region_row.addWidget(self.region_combo)
+
+        self.go_button = QPushButton("Go")
+        self.go_button.setMinimumWidth(40)
+        self.go_button.setStyleSheet("""
+            QPushButton {
+                background: #4488dd;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #5599ee;
+            }
+            QPushButton:pressed {
+                background: #3377cc;
+            }
+            QPushButton:disabled {
+                background: #555;
+                color: #888;
+            }
+        """)
+        region_row.addWidget(self.go_button)
+
+        container_layout.addLayout(region_row)
+
+        # Direct offset row
+        offset_row = QHBoxLayout()
+        offset_row.setSpacing(4)
+
+        offset_label = QLabel("Offset:")
+        offset_label.setMinimumWidth(50)
+        offset_row.addWidget(offset_label)
+
+        self.offset_spinbox = QSpinBox()
+        self.offset_spinbox.setMinimum(0)
+        self.offset_spinbox.setMaximum(0x400000)  # Default 4MB
+        self.offset_spinbox.setSingleStep(0x1000)
+        self.offset_spinbox.setDisplayIntegerBase(16)
+        self.offset_spinbox.setPrefix("0x")
+        self.offset_spinbox.setStyleSheet("""
+            QSpinBox {
+                background: #2b2b2b;
+                border: 1px solid #555;
+                padding: 4px;
+                border-radius: 3px;
+                font-family: monospace;
+            }
+            QSpinBox:hover {
+                border-color: #4488dd;
+            }
+        """)
+        offset_row.addWidget(self.offset_spinbox)
+
+        go_offset_button = QPushButton("Jump")
+        go_offset_button.setMinimumWidth(50)
+        go_offset_button.clicked.connect(self._on_offset_jump)
+        offset_row.addWidget(go_offset_button)
+
+        container_layout.addLayout(offset_row)
+
+        layout.addWidget(container)
+
+    def _connect_signals(self):
+        """Connect internal signals"""
+        if self.region_combo:
+            self.region_combo.currentIndexChanged.connect(self._on_region_changed)
+        if self.go_button:
+            self.go_button.clicked.connect(self._on_go_clicked)
+
+    def _on_region_changed(self, index: int):
+        """Handle region selection change"""
+        if 0 <= index < len(self.regions):
+            self.current_region_index = index
+            self._update_stats_display()
+
+            # Update offset spinbox to show region start
+            region = self.regions[index]
+            if self.offset_spinbox:
+                self.offset_spinbox.setValue(region.center_offset)
+
+    def _on_go_clicked(self):
+        """Handle go button click"""
+        if 0 <= self.current_region_index < len(self.regions):
+            self.region_selected.emit(self.current_region_index)
+
+    def _on_offset_jump(self):
+        """Handle direct offset jump"""
+        if self.offset_spinbox:
+            offset = self.offset_spinbox.value()
+            self.offset_requested.emit(offset)
+
+    def _update_stats_display(self):
+        """Update region statistics display"""
+        if not self.stats_label:
+            return
+
+        if not self.regions:
+            self.stats_label.setText("No regions")
+            return
+
+        if 0 <= self.current_region_index < len(self.regions):
+            region = self.regions[self.current_region_index]
+            quality_text = self._get_quality_text(region.average_quality)
+            self.stats_label.setText(
+                f"{region.sprite_count} sprites, {quality_text} quality"
+            )
+        else:
+            total_sprites = sum(r.sprite_count for r in self.regions)
+            self.stats_label.setText(f"{len(self.regions)} regions, {total_sprites} sprites total")
+
+    def _get_quality_text(self, quality: float) -> str:
+        """Convert quality value to text description"""
+        if quality > 0.8:
+            return "high"
+        if quality > 0.5:
+            return "medium"
+        return "low"
+
+    def _format_region_name(self, region: SpriteRegion, index: int) -> str:
+        """Format region name for display"""
+        if region.custom_name:
+            return region.custom_name
+
+        # Build descriptive name
+        name_parts = []
+
+        # Region number
+        name_parts.append(f"Region {index + 1}")
+
+        # Add type if classified
+        if hasattr(region, "region_type") and region.region_type != "unknown":
+            name_parts.append(f"({region.region_type})")
+
+        # Add sprite count
+        name_parts.append(f"- {region.sprite_count} sprites")
+
+        # Add quality indicator
+        if region.average_quality > 0.8:
+            name_parts.append("★★★")
+        elif region.average_quality > 0.5:
+            name_parts.append("★★")
+        else:
+            name_parts.append("★")
+
+        return " ".join(name_parts)
+
+    # Public API
+
+    def set_regions(self, regions: list[SpriteRegion]):
+        """Set available regions"""
+        self.regions = regions
+        self.current_region_index = -1
+
+        # Update combo box
+        if self.region_combo:
+            self.region_combo.clear()
+
+            if not regions:
+                self.region_combo.addItem("No regions detected")
+                self.region_combo.setEnabled(False)
+                if self.go_button:
+                    self.go_button.setEnabled(False)
+            else:
+                for i, region in enumerate(regions):
+                    self.region_combo.addItem(self._format_region_name(region, i))
+
+                self.region_combo.setEnabled(True)
+                if self.go_button:
+                    self.go_button.setEnabled(True)
+
+                # Select first region by default
+                if regions:
+                    self.region_combo.setCurrentIndex(0)
+
+        self._update_stats_display()
+
+    def set_smart_mode(self, enabled: bool):
+        """Enable/disable smart mode features"""
+        self.smart_mode = enabled
+
+        # In smart mode, emphasize region navigation
+        if self.region_combo:
+            if enabled:
+                self.region_combo.setStyleSheet("""
+                    QComboBox {
+                        background: #2b4b2b;  /* Green tint for smart mode */
+                        border: 2px solid #4CAF50;
+                        padding: 4px;
+                        border-radius: 3px;
+                    }
+                    QComboBox:hover {
+                        border-color: #66BB6A;
+                    }
+                    QComboBox::drop-down {
+                        border: none;
+                    }
+                    QComboBox::down-arrow {
+                        image: none;
+                        border-left: 4px solid transparent;
+                        border-right: 4px solid transparent;
+                        border-top: 6px solid #4CAF50;
+                        margin-right: 4px;
+                    }
+                """)
+            else:
+                # Reset to normal style
+                self.region_combo.setStyleSheet("""
+                    QComboBox {
+                        background: #2b2b2b;
+                        border: 1px solid #555;
+                        padding: 4px;
+                        border-radius: 3px;
+                    }
+                    QComboBox:hover {
+                        border-color: #4488dd;
+                    }
+                    QComboBox::drop-down {
+                        border: none;
+                    }
+                    QComboBox::down-arrow {
+                        image: none;
+                        border-left: 4px solid transparent;
+                        border-right: 4px solid transparent;
+                        border-top: 6px solid #888;
+                        margin-right: 4px;
+                    }
+                """)
+
+    def get_current_region_index(self) -> int:
+        """Get currently selected region index"""
+        return self.current_region_index
+
+    def set_current_region(self, index: int):
+        """Set current region programmatically"""
+        if self.region_combo and 0 <= index < len(self.regions):
+            self.region_combo.setCurrentIndex(index)
+
+    def set_rom_size(self, size: int):
+        """Update ROM size for offset limits"""
+        if self.offset_spinbox:
+            self.offset_spinbox.setMaximum(size)
+
+    def highlight_region_for_offset(self, offset: int):
+        """Highlight the region containing the given offset"""
+        for i, region in enumerate(self.regions):
+            if region.start_offset <= offset <= region.end_offset:
+                if self.region_combo:
+                    self.region_combo.setCurrentIndex(i)
+                break

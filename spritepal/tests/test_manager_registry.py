@@ -2,6 +2,8 @@
 Tests for manager registry
 """
 
+
+
 import pytest
 
 from spritepal.core.managers import (

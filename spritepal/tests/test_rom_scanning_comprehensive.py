@@ -3,6 +3,10 @@ Comprehensive tests for ROM scanning functionality.
 Tests the scan_for_sprites method and related quality assessment features.
 """
 
+
+
+
+
 from unittest.mock import patch
 
 import pytest

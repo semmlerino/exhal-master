@@ -4,6 +4,10 @@ Tests real-time preview updates during user interactions.
 Mock Reduction Phase 4.3: Real preview implementation testing.
 """
 
+
+
+
+
 import sys
 import tempfile
 from pathlib import Path

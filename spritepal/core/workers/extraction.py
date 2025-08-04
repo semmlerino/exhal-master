@@ -10,16 +10,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict, override
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
-
     from core.managers import ExtractionManager
     from core.managers.factory import ManagerFactory
+    from PyQt6.QtCore import QObject
 
 from core.managers import get_extraction_manager
 from utils.logging_config import get_logger
-from .base import handle_worker_errors
 
-from .specialized import ExtractionWorkerBase, SignalConnectionHelper, WorkerOwnedManagerMixin
+from .base import handle_worker_errors
+from .specialized import (
+    ExtractionWorkerBase,
+    SignalConnectionHelper,
+    WorkerOwnedManagerMixin,
+)
 
 logger = get_logger(__name__)
 
@@ -64,7 +67,7 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
@@ -132,7 +135,7 @@ class ROMExtractionWorker(ExtractionWorkerBase):
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_extraction_manager, "ROM extraction"):
             return
@@ -210,7 +213,7 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
@@ -295,7 +298,7 @@ class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMix
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_extraction_manager, "ROM extraction"):
             return

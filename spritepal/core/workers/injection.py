@@ -10,16 +10,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict, override
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
-
     from core.managers import InjectionManager
     from core.managers.factory import ManagerFactory
+    from PyQt6.QtCore import QObject
 
 from core.managers import get_injection_manager
 from utils.logging_config import get_logger
-from .base import handle_worker_errors
 
-from .specialized import InjectionWorkerBase, SignalConnectionHelper, WorkerOwnedManagerMixin
+from .base import handle_worker_errors
+from .specialized import (
+    InjectionWorkerBase,
+    SignalConnectionHelper,
+    WorkerOwnedManagerMixin,
+)
 
 logger = get_logger(__name__)
 
@@ -64,7 +67,7 @@ class VRAMInjectionWorker(InjectionWorkerBase):
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_injection_manager, "VRAM injection"):
             return
@@ -123,7 +126,7 @@ class ROMInjectionWorker(InjectionWorkerBase):
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_injection_manager, "ROM injection"):
             return
@@ -200,7 +203,7 @@ class WorkerOwnedVRAMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixi
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_injection_manager, "VRAM injection"):
             return
@@ -276,7 +279,7 @@ class WorkerOwnedROMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixin
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
-        
+
         # Validate manager type
         if not helper.validate_manager_type(get_injection_manager, "ROM injection"):
             return

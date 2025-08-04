@@ -8,21 +8,9 @@ For backward compatibility, this module now imports from the new infrastructure.
 
 import warnings
 
+from spritepal.tests.infrastructure.mock_factory import MockFactory
+
 # Import from new infrastructure for backward compatibility
-from ..infrastructure.qt_mocks import (
-    MockSignal,
-    MockQWidget, 
-    MockQPixmap,
-    MockQLabel,
-    MockQThread,
-    create_mock_signals,
-)
-from ..infrastructure.mock_factory import (
-    MockFactory,
-    create_mock_main_window,
-    create_mock_extraction_worker,
-    create_mock_extraction_manager,
-)
 
 # Deprecation warning
 warnings.warn(
@@ -47,3 +35,26 @@ def create_mock_qimage():
 def create_mock_drag_drop_event():
     """Backward compatibility function."""
     return MockFactory.create_drag_drop_event()
+
+
+def create_mock_extraction_manager():
+    """Backward compatibility function."""
+    return MockFactory.create_extraction_manager()
+
+
+def create_mock_extraction_worker():
+    """Backward compatibility function."""
+    return MockFactory.create_extraction_worker()
+
+
+def create_mock_signals():
+    """Backward compatibility function."""
+    from spritepal.tests.infrastructure.qt_mocks import (
+        create_mock_signals as _create_mock_signals,
+    )
+    return _create_mock_signals()
+
+
+def create_mock_main_window():
+    """Backward compatibility function."""
+    return MockFactory.create_main_window()

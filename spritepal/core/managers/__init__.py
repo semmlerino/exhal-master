@@ -22,6 +22,7 @@ from .registry import (
     get_registry,
     get_session_manager,
     initialize_managers,
+    validate_manager_dependencies,
 )
 from .session_manager import SessionManager
 
@@ -48,4 +49,5 @@ __all__ = [
     "get_registry",
     "get_session_manager",
     "initialize_managers",
+    "validate_manager_dependencies",
 ]

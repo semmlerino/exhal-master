@@ -6,8 +6,7 @@ exactly replicating the group box patterns from existing dialogs.
 """
 
 
-from PyQt6.QtWidgets import QGroupBox, QLayout, QWidget
-
+from PyQt6.QtWidgets import QGroupBox, QHBoxLayout, QLayout, QVBoxLayout, QWidget
 from ui.styles import get_panel_style
 
 
@@ -70,7 +69,6 @@ class StyledGroupBox(QGroupBox):
             widget: Widget to add
             layout_type: Type of layout - "vertical", "horizontal"
         """
-        from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout
 
         if layout_type == "vertical":
             layout = QVBoxLayout()

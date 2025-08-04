@@ -8,6 +8,9 @@ and maintain full functionality after migration to the new component architectur
 import contextlib
 import tempfile
 
+
+
+
 import pytest
 from PIL import Image
 
@@ -35,7 +38,7 @@ class TestComprehensiveDialogMigrations:
         with contextlib.suppress(Exception):
             os.unlink(temp_file.name)
 
-    def test_all_dialogs_inherit_from_correct_base_classes(self, qtbot, test_sprite_image):
+    def test_all_dialogs_inherit_from_correct_base_classes(self, qtbot, test_sprite_image, manager_setup):
         """Test that all migrated dialogs inherit from the correct component base classes"""
         # Test UserErrorDialog inherits from BaseDialog
         error_dialog = UserErrorDialog("Test error")
@@ -60,7 +63,7 @@ class TestComprehensiveDialogMigrations:
         assert isinstance(grid_dialog, SplitterDialog)
         assert isinstance(grid_dialog, BaseDialog)  # SplitterDialog inherits from BaseDialog
 
-    def test_all_dialogs_have_consistent_component_features(self, qtbot, test_sprite_image):
+    def test_all_dialogs_have_consistent_component_features(self, qtbot, test_sprite_image, manager_setup):
         """Test that all migrated dialogs have consistent component features"""
         dialogs = [
             UserErrorDialog("Test error"),
@@ -83,7 +86,7 @@ class TestComprehensiveDialogMigrations:
             # All should have proper titles
             assert dialog.windowTitle() != ""
 
-    def test_dialog_button_integration_consistency(self, qtbot, test_sprite_image):
+    def test_dialog_button_integration_consistency(self, qtbot, test_sprite_image, manager_setup):
         """Test that all dialogs have consistent button integration"""
         # UserErrorDialog has custom OK button (creates button box manually)
         error_dialog = UserErrorDialog("Test error")
@@ -125,7 +128,7 @@ class TestComprehensiveDialogMigrations:
             dialog.update_status("Test message")
             assert dialog.status_bar.currentMessage() == "Test message"
 
-    def test_dialog_component_api_consistency(self, qtbot):
+    def test_dialog_component_api_consistency(self, qtbot, manager_setup):
         """Test that component APIs are consistent across dialogs"""
         # Test InjectionDialog component usage
         injection_dialog = InjectionDialog()
@@ -145,7 +148,7 @@ class TestComprehensiveDialogMigrations:
         assert hasattr(injection_dialog.sprite_file_selector, "get_path")
         assert hasattr(injection_dialog.sprite_file_selector, "set_path")
 
-    def test_dialog_layout_architecture_consistency(self, qtbot, test_sprite_image):
+    def test_dialog_layout_architecture_consistency(self, qtbot, test_sprite_image, manager_setup):
         """Test that layout architecture is consistent after migrations"""
         # Test TabbedDialog structure
         injection_dialog = InjectionDialog()
@@ -250,7 +253,7 @@ class TestComprehensiveDialogMigrations:
         # Should still close properly without explicit cleanup
         assert row_dialog.isVisible() or True  # Should not crash
 
-    def test_cross_dialog_workflow_integration(self, qtbot, test_sprite_image):
+    def test_cross_dialog_workflow_integration(self, qtbot, test_sprite_image, manager_setup):
         """Test that dialogs can work together in typical workflows"""
         # Simulate workflow: Extract -> Arrange -> Inject
 
@@ -276,7 +279,7 @@ class TestComprehensiveDialogMigrations:
         injection_dialog.set_current_tab(1)  # ROM tab
         assert injection_dialog.get_current_tab_index() == 1
 
-    def test_dialog_component_isolation(self, qtbot, test_sprite_image):
+    def test_dialog_component_isolation(self, qtbot, test_sprite_image, manager_setup):
         """Test that component changes don't affect other dialogs"""
         # Create multiple dialogs
         injection_dialog = InjectionDialog()

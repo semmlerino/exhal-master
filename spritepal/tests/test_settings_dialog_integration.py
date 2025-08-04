@@ -8,6 +8,8 @@ This module provides comprehensive testing of settings dialog integration with:
 - Error handling scenarios
 """
 
+
+
 from unittest.mock import MagicMock, patch
 
 import pytest

@@ -19,9 +19,8 @@ from utils.constants import (
     ROM_SIZE_2MB,
     ROM_SIZE_3MB,
     ROM_SIZE_4MB,
-    ROM_SIZE_512KB,
     ROM_SIZE_6MB,
-    SMC_HEADER_SIZE,
+    ROM_SIZE_512KB,
 )
 from utils.logging_config import get_logger
 from utils.rom_exceptions import (

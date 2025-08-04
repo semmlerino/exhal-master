@@ -5,6 +5,9 @@ Validates that the migrated RowArrangementDialog maintains all original function
 while using the new SplitterDialog architecture.
 """
 
+
+
+
 import contextlib
 import tempfile
 

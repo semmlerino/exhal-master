@@ -5,11 +5,11 @@ This factory provides a clean way to create manager instances while respecting
 Qt's object lifecycle and enabling both singleton and per-worker patterns.
 """
 
+import threading
 from typing import TYPE_CHECKING, Optional, Protocol
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
-
 from utils.logging_config import get_logger
 
 from .extraction_manager import ExtractionManager
@@ -144,7 +144,9 @@ class SingletonManagerFactory:
         Returns:
             Singleton ExtractionManager instance
         """
-        from . import get_extraction_manager
+        # Delayed import to avoid circular dependency:
+        # factory -> managers -> factory
+        from . import get_extraction_manager  # noqa: PLC0415
 
         if parent is not None:
             self._logger.warning(
@@ -166,7 +168,9 @@ class SingletonManagerFactory:
         Returns:
             Singleton InjectionManager instance
         """
-        from . import get_injection_manager
+        # Delayed import to avoid circular dependency:
+        # factory -> managers -> factory
+        from . import get_injection_manager  # noqa: PLC0415
 
         if parent is not None:
             self._logger.warning(
@@ -179,8 +183,34 @@ class SingletonManagerFactory:
         return manager
 
 
-# Default factory instances
-_default_factory: Optional[ManagerFactory] = None
+class _DefaultFactoryHolder:
+    """Holds the default factory instance without using global keyword."""
+    _instance: Optional[ManagerFactory] = None
+    _lock = threading.Lock()
+
+    @classmethod
+    def get(cls) -> ManagerFactory:
+        """Get the default factory instance."""
+        # Fast path - check without lock
+        if cls._instance is not None:
+            return cls._instance
+
+        # Slow path - create with lock
+        with cls._lock:
+            # Double-check pattern
+            if cls._instance is None:
+                # Default to singleton pattern for backward compatibility
+                cls._instance = SingletonManagerFactory()
+                logger.debug("Created default SingletonManagerFactory")
+
+            return cls._instance
+
+    @classmethod
+    def set(cls, factory: ManagerFactory) -> None:
+        """Set the default factory instance."""
+        with cls._lock:
+            cls._instance = factory
+            logger.info(f"Set default factory to: {type(factory).__name__}")
 
 
 def get_default_factory() -> ManagerFactory:
@@ -190,14 +220,7 @@ def get_default_factory() -> ManagerFactory:
     Returns:
         Default ManagerFactory instance
     """
-    global _default_factory
-
-    if _default_factory is None:
-        # Default to singleton pattern for backward compatibility
-        _default_factory = SingletonManagerFactory()
-        logger.debug("Created default SingletonManagerFactory")
-
-    return _default_factory
+    return _DefaultFactoryHolder.get()
 
 
 def set_default_factory(factory: ManagerFactory) -> None:
@@ -209,9 +232,7 @@ def set_default_factory(factory: ManagerFactory) -> None:
     Args:
         factory: ManagerFactory implementation to use as default
     """
-    global _default_factory
-    _default_factory = factory
-    logger.info(f"Set default factory to: {type(factory).__name__}")
+    _DefaultFactoryHolder.set(factory)
 
 
 def create_per_worker_factory(worker: QObject) -> ManagerFactory:

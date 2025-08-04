@@ -5,6 +5,7 @@ Registry for accessing manager instances
 import threading
 from typing import Any
 
+from PyQt6.QtWidgets import QApplication
 from utils.logging_config import get_logger
 
 from .exceptions import ManagerError
@@ -16,8 +17,8 @@ from .session_manager import SessionManager
 class ManagerRegistry:
     """Singleton registry for manager instances"""
 
-    _instance = None
-    _lock = threading.Lock()
+    _instance: "ManagerRegistry | None" = None
+    _lock: threading.Lock = threading.Lock()
 
     def __new__(cls) -> "ManagerRegistry":
         """Ensure only one instance exists"""
@@ -40,11 +41,14 @@ class ManagerRegistry:
 
     def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None) -> None:
         """
-        Initialize all managers
+        Initialize all managers with proper error handling and cleanup
 
         Args:
             app_name: Application name for settings
             settings_path: Optional custom settings path (for testing)
+            
+        Raises:
+            ManagerError: If manager initialization fails
         """
         with self._lock:  # Ensure thread-safe initialization
             # Skip if already initialized
@@ -55,7 +59,6 @@ class ManagerRegistry:
             self._logger.info("Initializing managers...")
 
             # Get Qt application instance for proper parent management
-            from PyQt6.QtWidgets import QApplication
             app = QApplication.instance()
             if not app:
                 self._logger.warning("No QApplication instance found - managers will have no Qt parent")
@@ -64,17 +67,50 @@ class ManagerRegistry:
                 qt_parent = app
                 self._logger.debug("Using QApplication as Qt parent for managers")
 
-            # Initialize session manager first as others may depend on it
-            # Note: SessionManager doesn't inherit from QObject, so no parent needed
-            self._managers["session"] = SessionManager(app_name, settings_path)
+            # Track which managers were created for cleanup on failure
+            created_managers = []
 
-            # Initialize Qt-based managers with proper parent to prevent lifecycle issues
-            self._managers["extraction"] = ExtractionManager(parent=qt_parent)
-            self._managers["injection"] = InjectionManager(parent=qt_parent)
+            try:
+                # Initialize session manager first as others may depend on it
+                # SessionManager inherits from BaseManager (QObject), so it can take a parent
+                self._logger.debug("Creating SessionManager...")
+                session_manager = SessionManager(app_name, settings_path)
+                session_manager.setParent(qt_parent)  # Set parent after creation
+                self._managers["session"] = session_manager
+                created_managers.append("session")
+                self._logger.debug("SessionManager created successfully")
 
-            # Future managers will be added here
+                # Initialize Qt-based managers with proper parent to prevent lifecycle issues
+                self._logger.debug("Creating ExtractionManager...")
+                self._managers["extraction"] = ExtractionManager(parent=qt_parent)
+                created_managers.append("extraction")
+                self._logger.debug("ExtractionManager created successfully")
 
-            self._logger.info("All managers initialized successfully")
+                self._logger.debug("Creating InjectionManager...")
+                self._managers["injection"] = InjectionManager(parent=qt_parent)
+                created_managers.append("injection")
+                self._logger.debug("InjectionManager created successfully")
+
+                # Future managers will be added here
+
+                self._logger.info("All managers initialized successfully")
+
+            except Exception as e:
+                self._logger.error(f"Manager initialization failed: {e}")
+
+                # Cleanup any managers that were created before the failure
+                for manager_name in created_managers:
+                    try:
+                        if manager_name in self._managers:
+                            manager = self._managers[manager_name]
+                            manager.cleanup()
+                            del self._managers[manager_name]
+                            self._logger.debug(f"Cleaned up {manager_name} manager after initialization failure")
+                    except Exception as cleanup_error:
+                        self._logger.error(f"Error cleaning up {manager_name} manager: {cleanup_error}")
+
+                # Re-raise as ManagerError
+                raise ManagerError(f"Failed to initialize managers: {e}") from e
 
     def cleanup_managers(self) -> None:
         """Cleanup all managers"""
@@ -86,10 +122,10 @@ class ManagerRegistry:
                 manager = self._managers[name]
                 manager.cleanup()
                 self._logger.debug(f"Cleaned up {name} manager")
-            except (AttributeError, RuntimeError) as e:
-                self._logger.exception(f"Error cleaning up {name} manager: {e}")
-            except Exception as e:
-                self._logger.exception(f"Error cleaning up {name} manager: {e}")
+            except (AttributeError, RuntimeError):
+                self._logger.exception(f"Error cleaning up {name} manager")
+            except Exception:
+                self._logger.exception(f"Error cleaning up {name} manager")
 
         self._managers.clear()
         self._logger.info("All managers cleaned up")
@@ -132,7 +168,7 @@ class ManagerRegistry:
 
     def _get_manager(self, name: str, expected_type: type) -> Any:
         """
-        Get a manager by name with type checking
+        Get a manager by name with type checking and dependency validation
 
         Args:
             name: Manager name
@@ -142,7 +178,7 @@ class ManagerRegistry:
             Manager instance
 
         Raises:
-            ManagerError: If manager not found or wrong type
+            ManagerError: If manager not found, wrong type, or not properly initialized
         """
         if name not in self._managers:
             raise ManagerError(
@@ -157,6 +193,13 @@ class ManagerRegistry:
                 f"got {type(manager).__name__}"
             )
 
+        # Validate that the manager is properly initialized
+        if not manager.is_initialized():
+            raise ManagerError(
+                f"{name.capitalize()} manager found but not properly initialized. "
+                "This may indicate a partial initialization failure."
+            )
+
         return manager
 
     def is_initialized(self) -> bool:
@@ -168,6 +211,43 @@ class ManagerRegistry:
     def get_all_managers(self) -> dict[str, Any]:
         """Get all registered managers (for testing/debugging)"""
         return self._managers.copy()
+
+    def validate_manager_dependencies(self) -> bool:
+        """
+        Validate that all managers and their dependencies are properly initialized
+        
+        Returns:
+            True if all dependencies are satisfied, False otherwise
+            
+        Raises:
+            ManagerError: If critical dependency issues are found
+        """
+        if not self.is_initialized():
+            self._logger.warning("Managers not initialized, cannot validate dependencies")
+            return False
+
+        self._logger.debug("Validating manager dependencies...")
+
+        try:
+            # Validate that all managers are individually initialized
+            for name, manager in self._managers.items():
+                if not manager.is_initialized():
+                    raise ManagerError(f"{name} manager not properly initialized")
+
+            # Validate specific dependency relationships
+            # InjectionManager depends on SessionManager
+            injection_manager = self._managers.get("injection")
+            session_manager = self._managers.get("session") 
+
+            if injection_manager and not session_manager:
+                raise ManagerError("InjectionManager requires SessionManager but it's not available")
+
+            self._logger.debug("All manager dependencies validated successfully")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Manager dependency validation failed: {e}")
+            return False
 
 
 # Global instance accessor functions
@@ -237,3 +317,13 @@ def cleanup_managers() -> None:
 def are_managers_initialized() -> bool:
     """Check if managers are initialized"""
     return _registry.is_initialized()
+
+
+def validate_manager_dependencies() -> bool:
+    """
+    Validate that all manager dependencies are satisfied
+    
+    Returns:
+        True if all dependencies are valid, False otherwise
+    """
+    return _registry.validate_manager_dependencies()

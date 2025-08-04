@@ -10,13 +10,15 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from core.managers import cleanup_managers, initialize_managers, validate_manager_dependencies
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
-
-from core.managers import cleanup_managers, initialize_managers
+from ui.common.error_handler import get_error_handler
 from ui.main_window import MainWindow
+from utils.error_display_adapter import ErrorHandlerAdapter
 from utils.logging_config import get_logger, setup_logging
+from utils.unified_error_handler import set_global_error_display
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -243,10 +245,29 @@ def main():
     sys.excepthook = handle_exception
     logger.info("Global exception handler installed")
 
-    # Initialize managers
+    # Initialize managers with enhanced error handling
     logger.info("Initializing managers...")
-    initialize_managers("SpritePal")
-    logger.info("Managers initialized successfully")
+    try:
+        initialize_managers("SpritePal")
+        logger.info("Managers initialized successfully")
+
+        # Validate manager dependencies
+        if validate_manager_dependencies():
+            logger.info("Manager dependencies validated successfully")
+        else:
+            logger.warning("Manager dependency validation failed - some features may not work correctly")
+
+    except Exception as e:
+        logger.critical(f"Failed to initialize managers: {e}")
+        logger.critical("Application cannot start without properly initialized managers")
+        sys.exit(1)
+
+    # Set up error handler integration (breaks circular dependency)
+    logger.info("Setting up error handler integration...")
+    ui_error_handler = get_error_handler()
+    adapter = ErrorHandlerAdapter(ui_error_handler)
+    set_global_error_display(adapter)
+    logger.info("Error handler integration complete")
 
     try:
         # Create application

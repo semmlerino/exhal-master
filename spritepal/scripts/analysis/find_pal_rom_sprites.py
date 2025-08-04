@@ -11,19 +11,19 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 def find_all_compressed(rom_data: bytes) -> list[tuple[int, bytes]]:
     """
     Find all HAL-compressed blocks in ROM data.
-    
+
     This function scans ROM data for HAL-compressed data blocks by looking for
     compression signatures and attempting decompression. HAL compression is used
     in Kirby Super Star and related games for sprite and tilemap data.
-    
+
     Args:
         rom_data: Raw ROM data bytes to scan for compressed blocks
-        
+
     Returns:
         List of tuples containing:
         - offset: Starting position of compressed block in ROM
         - decompressed_data: Decompressed bytes from that block
-        
+
     Note:
         This is a placeholder implementation. The actual implementation would:
         1. Scan for HAL compression headers/signatures

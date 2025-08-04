@@ -5,6 +5,13 @@ Tests the VRAMExtractionWorker and ROMExtractionWorker classes to ensure
 proper manager delegation, signal handling, and error management.
 """
 
+from PyQt6.QtTest import QSignalSpy
+
+from PyQt6.QtTest import QSignalSpy
+
+from PyQt6.QtTest import QSignalSpy
+
+from PyQt6.QtTest import QSignalSpy
 from unittest.mock import Mock, patch
 
 import pytest

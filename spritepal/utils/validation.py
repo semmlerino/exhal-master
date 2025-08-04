@@ -6,10 +6,16 @@ from pathlib import Path
 # Security constants
 from utils.constants import (
     CGRAM_EXPECTED_SIZE as MAX_CGRAM_SIZE,
+)
+from utils.constants import (
     MAX_IMAGE_SIZE,
     MAX_JSON_SIZE,
     MAX_TILE_COUNT_DEFAULT,
+)
+from utils.constants import (
     OAM_EXPECTED_SIZE as MAX_OAM_SIZE,
+)
+from utils.constants import (
     VRAM_MIN_SIZE as MAX_VRAM_SIZE,  # Standard VRAM size is 64KB
 )
 

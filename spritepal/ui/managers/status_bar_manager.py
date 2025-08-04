@@ -3,38 +3,33 @@ Status bar management for MainWindow
 """
 
 import logging
-from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
-
 from ui.styles import get_muted_text_style
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
 
 class StatusBarManager:
     """Manages status bar and cache indicators for MainWindow"""
-    
+
     def __init__(self, status_bar: QStatusBar) -> None:
         """Initialize status bar manager
-        
+
         Args:
             status_bar: The status bar widget to manage
         """
         self.status_bar = status_bar
-        
+
         # Cache status widgets (initialized by setup if enabled)
         self.cache_status_widget: QWidget | None = None
         self.cache_icon_label: QLabel | None = None
         self.cache_info_label: QLabel | None = None
         self.cache_operation_badge: QLabel | None = None
-        
+
     def setup_status_bar_indicators(self) -> None:
         """Set up permanent status bar indicators"""
-        from utils.settings_manager import get_settings_manager
+        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
 
         settings_manager = get_settings_manager()
 
@@ -78,12 +73,12 @@ class StatusBarManager:
     def update_cache_status(self) -> None:
         """Update cache status indicator"""
         from utils.rom_cache import get_rom_cache
-        from utils.settings_manager import get_settings_manager
+        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
 
         settings_manager = get_settings_manager()
 
         # Check if indicators are enabled and created
-        if (not self.cache_status_widget or 
+        if (not self.cache_status_widget or
             not settings_manager.get("cache", "show_indicators", True)):
             return
 
@@ -124,7 +119,7 @@ class StatusBarManager:
                 if self.cache_status_widget:
                     self.cache_status_widget.setToolTip(tooltip)
 
-            except (OSError, IOError, PermissionError) as e:
+            except (OSError, PermissionError) as e:
                 logger.warning(f"File I/O error getting cache stats: {e}")
                 if self.cache_icon_label:
                     self.cache_icon_label.setText("⚠ Cache:")
@@ -161,10 +156,10 @@ class StatusBarManager:
         """Hide cache operation badge"""
         if self.cache_operation_badge:
             self.cache_operation_badge.setVisible(False)
-            
+
     def show_message(self, message: str, timeout: int = 0) -> None:
         """Show message in status bar
-        
+
         Args:
             message: Message to display
             timeout: Timeout in milliseconds (0 for permanent)
@@ -173,11 +168,11 @@ class StatusBarManager:
             self.status_bar.showMessage(message, timeout)
         else:
             self.status_bar.showMessage(message)
-            
+
     def clear_message(self) -> None:
         """Clear status bar message"""
         self.status_bar.clearMessage()
-        
+
     def remove_cache_indicators(self) -> None:
         """Remove cache indicators from status bar"""
         if self.cache_status_widget:

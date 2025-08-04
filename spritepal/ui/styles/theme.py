@@ -150,35 +150,35 @@ def get_disabled_state_style() -> str:
 
 class Theme:
     """Theme class providing easy access to color constants."""
-    
+
     # Primary colors
     PRIMARY = COLORS["primary"]
     PRIMARY_LIGHT = COLORS["primary_hover"]
     PRIMARY_DARK = COLORS["primary_pressed"]
-    
+
     # Secondary colors
     SECONDARY = COLORS["secondary"]
     SECONDARY_LIGHT = COLORS["secondary_hover"]
     SECONDARY_DARK = COLORS["secondary_pressed"]
-    
+
     # Accent colors
     ACCENT = COLORS["accent"]
     ACCENT_LIGHT = COLORS["accent_hover"]
     ACCENT_DARK = COLORS["accent_pressed"]
-    
+
     # Backgrounds
     BACKGROUND = COLORS["background"]
     SURFACE = COLORS["panel_background"]
-    
+
     # Text colors
     TEXT = COLORS["black"]
     TEXT_SECONDARY = COLORS["gray"]
     TEXT_DISABLED = COLORS["disabled_text"]
-    
+
     # Border colors
     BORDER = COLORS["border"]
     BORDER_FOCUS = COLORS["border_focus"]
-    
+
     # Status colors
     SUCCESS = COLORS["success"]
     WARNING = COLORS["warning"]

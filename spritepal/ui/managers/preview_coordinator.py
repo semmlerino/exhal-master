@@ -4,9 +4,15 @@ Preview coordination for MainWindow sprite and palette previews
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QObject
-from PyQt6.QtWidgets import QGroupBox, QLabel, QSizePolicy, QSplitter, QVBoxLayout, QWidget
-
+from PyQt6.QtCore import QObject, Qt
+from PyQt6.QtWidgets import (
+    QGroupBox,
+    QLabel,
+    QSizePolicy,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 from ui.styles import get_muted_text_style
 
 if TYPE_CHECKING:
@@ -16,14 +22,14 @@ if TYPE_CHECKING:
 
 class PreviewCoordinator(QObject):
     """Coordinates sprite and palette preview widgets"""
-    
+
     def __init__(
         self,
         sprite_preview: "PreviewPanel",
         palette_preview: "PalettePreviewWidget"
     ) -> None:
         """Initialize preview coordinator
-        
+
         Args:
             sprite_preview: Sprite preview widget
             palette_preview: Palette preview widget
@@ -31,16 +37,16 @@ class PreviewCoordinator(QObject):
         super().__init__()
         self.sprite_preview = sprite_preview
         self.palette_preview = palette_preview
-        
+
         # Preview info label
         self.preview_info: QLabel
-        
+
     def create_preview_panel(self, parent: QWidget) -> QWidget:
         """Create and configure the preview panel
-        
+
         Args:
             parent: Parent widget
-            
+
         Returns:
             Configured preview panel widget
         """
@@ -84,16 +90,16 @@ class PreviewCoordinator(QObject):
         palette_group.setMinimumHeight(150)
 
         return right_splitter
-        
+
     def clear_previews(self) -> None:
         """Clear both sprite and palette previews"""
         self.sprite_preview.clear()
         self.palette_preview.clear()
         self.preview_info.setText("No sprites loaded")
-        
+
     def update_preview_info(self, message: str) -> None:
         """Update preview info message
-        
+
         Args:
             message: Message to display
         """

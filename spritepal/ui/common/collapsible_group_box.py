@@ -94,7 +94,7 @@ class CollapsibleGroupBox(QFrame):
         main_layout.setSpacing(0)
 
         # Header with title and collapse button
-        header_widget = QWidget()
+        header_widget = QWidget(self)
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(GROUP_PADDING, GROUP_PADDING, GROUP_PADDING, GROUP_PADDING)
         header_layout.setSpacing(SPACING_SMALL)
@@ -111,7 +111,7 @@ class CollapsibleGroupBox(QFrame):
         header_layout.addStretch()
 
         # Collapse/expand button
-        self._toggle_button = QPushButton()
+        self._toggle_button = QPushButton(self)
         self._toggle_button.setFixedSize(20, 20)
         self._toggle_button.setStyleSheet(f"""
             QPushButton {{
@@ -134,7 +134,7 @@ class CollapsibleGroupBox(QFrame):
         main_layout.addWidget(header_widget)
 
         # Content widget (will be animated)
-        self._content_widget = QWidget()
+        self._content_widget = QWidget(self)
         self._content_layout = QVBoxLayout(self._content_widget)
         self._content_layout.setContentsMargins(GROUP_PADDING, 0, GROUP_PADDING, GROUP_PADDING)
         self._content_layout.setSpacing(SPACING_SMALL)

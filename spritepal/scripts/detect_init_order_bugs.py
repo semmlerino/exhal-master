@@ -8,6 +8,7 @@ already-created widgets or objects.
 """
 
 import ast
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -200,7 +201,6 @@ def main():
     # Save detailed report
     if all_issues:
         report_path = project_root / "init_order_issues.json"
-        import json
         with open(report_path, "w") as f:
             json.dump(all_issues, f, indent=2)
         print(f"\nDetailed report saved to: {report_path}")

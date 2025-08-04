@@ -2,30 +2,27 @@
 Menu bar management for MainWindow
 """
 
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
-if TYPE_CHECKING:
-    pass
-
 
 class MenuBarActionsProtocol(Protocol):
     """Protocol defining the interface for menu bar actions"""
-    
+
     def new_extraction(self) -> None:
         """Start a new extraction"""
         ...
-    
+
     def show_settings(self) -> None:
         """Show settings dialog"""
         ...
-    
+
     def show_cache_manager(self) -> None:
         """Show cache manager dialog"""
         ...
-    
+
     def clear_all_caches(self) -> None:
         """Clear all caches with confirmation"""
         ...
@@ -33,17 +30,17 @@ class MenuBarActionsProtocol(Protocol):
 
 class MenuBarManager:
     """Manages menu bar creation and actions for MainWindow"""
-    
+
     def __init__(self, window: QMainWindow, actions_handler: MenuBarActionsProtocol) -> None:
         """Initialize menu bar manager
-        
+
         Args:
             window: The main window to create menus for
             actions_handler: Handler for menu actions
         """
         self.window = window
         self.actions_handler = actions_handler
-        
+
     def create_menus(self) -> None:
         """Create application menus"""
         menubar = self.window.menuBar()

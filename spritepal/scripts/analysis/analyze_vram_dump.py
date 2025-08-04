@@ -3,6 +3,7 @@
 Analyze VRAM dumps to identify sprite patterns and search for them in ROM
 """
 
+
 import os
 import sys
 

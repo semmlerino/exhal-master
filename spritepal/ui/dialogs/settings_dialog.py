@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.components import BaseDialog
 from ui.styles import get_button_style, get_muted_text_style
 from utils.rom_cache import get_rom_cache
@@ -95,35 +94,35 @@ class SettingsDialog(BaseDialog):
 
     def _create_general_tab(self) -> QWidget:
         """Create the general settings tab"""
-        widget = QWidget()
+        widget = QWidget(self)
         layout = QVBoxLayout()
 
         # Application settings group
-        app_group = QGroupBox("Application Settings")
+        app_group = QGroupBox("Application Settings", widget)
         app_layout = QFormLayout()
 
         # Window restore checkbox
-        self.restore_window_check = QCheckBox("Restore window position on startup")
+        self.restore_window_check = QCheckBox("Restore window position on startup", self)
         app_layout.addRow("Window:", self.restore_window_check)
 
         # Auto-save session checkbox
-        self.auto_save_session_check = QCheckBox("Automatically save session")
+        self.auto_save_session_check = QCheckBox("Automatically save session", self)
         app_layout.addRow("Session:", self.auto_save_session_check)
 
         app_group.setLayout(app_layout)
         layout.addWidget(app_group)
 
         # File settings group
-        file_group = QGroupBox("File Settings")
+        file_group = QGroupBox("File Settings", widget)
         file_layout = QFormLayout()
 
         # Default dumps directory
         dumps_layout = QHBoxLayout()
-        self.dumps_dir_edit = QLineEdit()
+        self.dumps_dir_edit = QLineEdit(self)
         self.dumps_dir_edit.setReadOnly(True)
         dumps_layout.addWidget(self.dumps_dir_edit, 1)
 
-        self.dumps_dir_button = QPushButton("Browse...")
+        self.dumps_dir_button = QPushButton("Browse...", self)
         self.dumps_dir_button.setStyleSheet(get_button_style())
         self.dumps_dir_button.clicked.connect(self._browse_dumps_directory)
         dumps_layout.addWidget(self.dumps_dir_button)
@@ -141,15 +140,15 @@ class SettingsDialog(BaseDialog):
 
     def _create_cache_tab(self) -> QWidget:
         """Create the cache settings tab"""
-        widget = QWidget()
+        widget = QWidget(self)
         layout = QVBoxLayout()
 
         # Cache settings group
-        cache_group = QGroupBox("Cache Settings")
+        cache_group = QGroupBox("Cache Settings", widget)
         cache_layout = QFormLayout()
 
         # Enable cache checkbox
-        self.cache_enabled_check = QCheckBox("Enable ROM scan caching")
+        self.cache_enabled_check = QCheckBox("Enable ROM scan caching", self)
         self.cache_enabled_check.setToolTip(
             "Cache ROM scan results to speed up subsequent operations"
         )
@@ -158,11 +157,11 @@ class SettingsDialog(BaseDialog):
 
         # Cache location
         location_layout = QHBoxLayout()
-        self.cache_location_edit = QLineEdit()
+        self.cache_location_edit = QLineEdit(self)
         self.cache_location_edit.setPlaceholderText("Default: ~/.spritepal_rom_cache")
         location_layout.addWidget(self.cache_location_edit, 1)
 
-        self.cache_location_button = QPushButton("Browse...")
+        self.cache_location_button = QPushButton("Browse...", self)
         self.cache_location_button.setStyleSheet(get_button_style())
         self.cache_location_button.clicked.connect(self._browse_cache_location)
         location_layout.addWidget(self.cache_location_button)
@@ -171,7 +170,7 @@ class SettingsDialog(BaseDialog):
 
         # Cache size limit
         size_layout = QHBoxLayout()
-        self.cache_size_spin = QSpinBox()
+        self.cache_size_spin = QSpinBox(self)
         self.cache_size_spin.setRange(10, 10000)
         self.cache_size_spin.setSuffix(" MB")
         self.cache_size_spin.setToolTip("Maximum cache size in megabytes")
@@ -182,7 +181,7 @@ class SettingsDialog(BaseDialog):
 
         # Cache expiration
         expiry_layout = QHBoxLayout()
-        self.cache_expiry_spin = QSpinBox()
+        self.cache_expiry_spin = QSpinBox(self)
         self.cache_expiry_spin.setRange(1, 365)
         self.cache_expiry_spin.setSuffix(" days")
         self.cache_expiry_spin.setToolTip("Cache entries older than this will be removed")
@@ -192,41 +191,41 @@ class SettingsDialog(BaseDialog):
         cache_layout.addRow("Expiration:", expiry_layout)
 
         # Additional options
-        self.auto_cleanup_check = QCheckBox("Automatically clean up old cache entries")
+        self.auto_cleanup_check = QCheckBox("Automatically clean up old cache entries", self)
         cache_layout.addRow("Maintenance:", self.auto_cleanup_check)
 
-        self.show_indicators_check = QCheckBox("Show cache indicators in UI")
+        self.show_indicators_check = QCheckBox("Show cache indicators in UI", self)
         cache_layout.addRow("Display:", self.show_indicators_check)
 
         cache_group.setLayout(cache_layout)
         layout.addWidget(cache_group)
 
         # Cache statistics group
-        stats_group = QGroupBox("Cache Statistics")
+        stats_group = QGroupBox("Cache Statistics", widget)
         stats_layout = QFormLayout()
 
         # Cache stats labels
-        self.cache_dir_label = QLabel("N/A")
+        self.cache_dir_label = QLabel("N/A", self)
         self.cache_dir_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Directory:", self.cache_dir_label)
 
-        self.cache_files_label = QLabel("0 files")
+        self.cache_files_label = QLabel("0 files", self)
         self.cache_files_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Cached items:", self.cache_files_label)
 
-        self.cache_size_label = QLabel("0 MB")
+        self.cache_size_label = QLabel("0 MB", self)
         self.cache_size_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Total size:", self.cache_size_label)
 
         # Cache actions
         actions_layout = QHBoxLayout()
 
-        self.refresh_stats_button = QPushButton("Refresh")
+        self.refresh_stats_button = QPushButton("Refresh", self)
         self.refresh_stats_button.setStyleSheet(get_button_style())
         self.refresh_stats_button.clicked.connect(self._update_cache_stats)
         actions_layout.addWidget(self.refresh_stats_button)
 
-        self.clear_cache_button = QPushButton("Clear Cache")
+        self.clear_cache_button = QPushButton("Clear Cache", self)
         self.clear_cache_button.setStyleSheet(get_button_style("danger"))
         self.clear_cache_button.clicked.connect(self._clear_cache)
         actions_layout.addWidget(self.clear_cache_button)

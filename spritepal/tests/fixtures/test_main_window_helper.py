@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QStatusBar
 

@@ -3,6 +3,7 @@ ROM extraction panel for SpritePal
 """
 
 import os
+import threading
 from typing import Any
 
 from core.managers import get_extraction_manager
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QLabel,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QSizePolicy,
@@ -23,7 +25,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from ui.common import WorkerManager
-from ui.dialogs import UnifiedManualOffsetDialog, UserErrorDialog
+from ui.components.navigation import SpriteNavigator
+from ui.dialogs import ResumeScanDialog, UnifiedManualOffsetDialog, UserErrorDialog
 from ui.rom_extraction.state_manager import (
     ExtractionState,
     ExtractionStateManager,
@@ -42,6 +45,7 @@ from utils.constants import (
 )
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
+from utils.thread_safe_singleton import QtThreadSafeSingleton
 
 logger = get_logger(__name__)
 
@@ -56,82 +60,112 @@ BUTTON_MAX_WIDTH = 150
 LABEL_MIN_WIDTH = 120
 
 
-class ManualOffsetDialogSingleton:
+class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDialog"]):
     """
-    Application-wide singleton for manual offset dialog.
+    Thread-safe application-wide singleton for manual offset dialog.
     Ensures only one dialog instance exists across the entire application.
+    
+    This singleton uses proper thread synchronization and Qt thread affinity checking
+    to prevent crashes when accessed from worker threads.
     """
     _instance: "UnifiedManualOffsetDialog | None" = None
     _creator_panel: "ROMExtractionPanel | None" = None
+    _lock = threading.Lock()
+
+    @classmethod 
+    def _create_instance(cls, creator_panel: "ROMExtractionPanel" = None) -> "UnifiedManualOffsetDialog":
+        """Create a new dialog instance (thread-safe, main thread only)."""
+        # Ensure we're on the main thread for Qt object creation
+        cls._ensure_main_thread()
+
+        logger.debug("Creating new ManualOffsetDialog singleton instance")
+        # Create new instance with None as parent to avoid widget hierarchy contamination
+        instance = UnifiedManualOffsetDialog(None)
+        cls._creator_panel = creator_panel
+
+        logger.debug(f"New dialog created with ID: {getattr(instance, '_debug_id', 'Unknown')}")
+
+        # Connect cleanup signals
+        instance.finished.connect(cls._on_dialog_closed)
+        instance.rejected.connect(cls._on_dialog_closed)
+        # Also connect destroyed signal for ultimate cleanup
+        instance.destroyed.connect(cls._on_dialog_destroyed)
+
+        return instance
 
     @classmethod
     def get_dialog(cls, creator_panel: "ROMExtractionPanel") -> "UnifiedManualOffsetDialog":
-        """Get or create the singleton dialog instance."""
+        """Get or create the singleton dialog instance (thread-safe)."""
         logger.debug("ManualOffsetDialogSingleton.get_dialog called")
-        logger.debug(f"Current instance: {cls._instance}")
+        logger.debug(f"Current instance exists: {cls._instance is not None}")
 
-        # Check if existing instance is still valid
-        if cls._instance is not None:
+        # Get instance using thread-safe pattern
+        instance = cls.get(creator_panel)
+
+        # Check if existing instance is still valid (only on main thread)
+        if cls.safe_qt_call(lambda: instance.isVisible()):
+            logger.debug(f"Reusing existing ManualOffsetDialog singleton instance (ID: {getattr(instance, '_debug_id', 'Unknown')})")
+            return instance
+        else:
+            # Dialog exists but is not visible - check if it's still valid
             try:
+                cls._ensure_main_thread()
                 # Test if the dialog is still valid by checking a property
-                _ = cls._instance.isVisible()
-                if cls._instance.isVisible():
-                    logger.debug(f"Reusing existing ManualOffsetDialog singleton instance (ID: {getattr(cls._instance, '_debug_id', 'Unknown')})")
-                    return cls._instance
-                # Dialog exists but is not visible - might be closed
-                logger.warning("[DEBUG] Existing dialog not visible, checking if needs cleanup")
+                _ = instance.isVisible()
+                logger.warning("[DEBUG] Existing dialog not visible, but still valid")
             except RuntimeError:
                 # Dialog has been destroyed by Qt but our reference is stale
                 logger.debug("Stale dialog reference detected, cleaning up")
-                cls._cleanup_instance()
+                cls.reset()
+                # Get new instance
+                instance = cls.get(creator_panel)
 
-        # Need to create new instance
-        if cls._instance is None:
-            # Create new instance with None as parent to avoid widget hierarchy contamination
-            logger.debug("Creating new ManualOffsetDialog singleton instance")
-            cls._instance = UnifiedManualOffsetDialog(None)
-            cls._creator_panel = creator_panel
-            logger.debug(f"New dialog created with ID: {getattr(cls._instance, '_debug_id', 'Unknown')}")
-
-            # Connect cleanup signals
-            cls._instance.finished.connect(cls._on_dialog_closed)
-            cls._instance.rejected.connect(cls._on_dialog_closed)
-            # Also connect destroyed signal for ultimate cleanup
-            cls._instance.destroyed.connect(cls._on_dialog_destroyed)
-
-        return cls._instance
+        return instance
 
     @classmethod
     def _on_dialog_closed(cls):
-        """Handle dialog close event for cleanup."""
+        """Handle dialog close event for cleanup (thread-safe)."""
         logger.debug("Manual offset dialog closed, scheduling cleanup")
-        # Use Qt's deleteLater for proper cleanup
-        if cls._instance is not None:
-            cls._instance.deleteLater()
-        cls._cleanup_instance()
+
+        # Use thread-safe cleanup
+        with cls._lock:
+            if cls._instance is not None:
+                # Schedule deletion on main thread
+                cls.safe_qt_call(lambda: cls._instance.deleteLater())
+            cls._cleanup_instance(cls._instance)
 
     @classmethod
     def _on_dialog_destroyed(cls):
-        """Handle dialog destroyed signal for ultimate cleanup."""
+        """Handle dialog destroyed signal for ultimate cleanup (thread-safe)."""
         logger.debug("Manual offset dialog destroyed signal received")
-        cls._cleanup_instance()
+        cls.reset()
 
     @classmethod
-    def _cleanup_instance(cls):
-        """Clean up the singleton instance."""
+    def _cleanup_instance(cls, instance: "UnifiedManualOffsetDialog") -> None:
+        """Clean up the singleton instance (thread-safe)."""
         logger.debug("Cleaning up ManualOffsetDialog singleton instance")
-        cls._instance = None
         cls._creator_panel = None
+        # Parent class handles instance cleanup
 
     @classmethod
     def is_dialog_open(cls) -> bool:
-        """Check if dialog is currently open."""
-        return cls._instance is not None and cls._instance.isVisible()
+        """Check if dialog is currently open (thread-safe)."""
+        if cls._instance is None:
+            return False
+
+        # Use safe Qt call to check visibility
+        is_visible = cls.safe_qt_call(lambda: cls._instance.isVisible())
+        return is_visible is True  # Handle None return from safe_qt_call
 
     @classmethod
     def get_current_dialog(cls) -> "UnifiedManualOffsetDialog | None":
-        """Get current dialog instance if it exists."""
-        return cls._instance if cls._instance is not None and cls._instance.isVisible() else None
+        """Get current dialog instance if it exists and is visible (thread-safe)."""
+        if cls._instance is None:
+            return None
+
+        # Check if dialog is visible using thread-safe method
+        is_visible = cls.safe_qt_call(lambda: cls._instance.isVisible())
+        return cls._instance if is_visible else None
 
 
 class ROMExtractionPanel(QWidget):
@@ -163,6 +197,9 @@ class ROMExtractionPanel(QWidget):
         self.search_worker = None
         self.scan_worker = None
 
+        # Navigation components
+        self.sprite_navigator = None
+
         self._setup_ui()
         self._load_last_rom()
 
@@ -172,7 +209,7 @@ class ROMExtractionPanel(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
 
         # Main panel for controls (no longer need splitter since preview is removed)
-        main_panel = QWidget()
+        main_panel = QWidget(self)
         layout = QVBoxLayout()
         layout.setSpacing(SPACING_LARGE)
         layout.setContentsMargins(SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM)
@@ -183,7 +220,13 @@ class ROMExtractionPanel(QWidget):
         self.rom_file_widget.partial_scan_detected.connect(self._on_partial_scan_detected)
         layout.addWidget(self.rom_file_widget)
 
-        # Mode selector widget
+        # Sprite Navigator - new integrated navigation system
+        self.sprite_navigator = SpriteNavigator()
+        self.sprite_navigator.offset_changed.connect(self._on_navigator_offset_changed)
+        self.sprite_navigator.sprite_selected.connect(self._on_navigator_sprite_selected)
+        layout.addWidget(self.sprite_navigator)
+
+        # Mode selector widget (kept for backward compatibility)
         self.mode_selector_widget = ModeSelectorWidget()
         self.mode_selector_widget.mode_changed.connect(self._on_mode_changed)
         layout.addWidget(self.mode_selector_widget)
@@ -273,7 +316,6 @@ class ROMExtractionPanel(QWidget):
     def _on_partial_scan_detected(self, scan_info: dict[str, Any]):
         """Handle detection of partial scan cache"""
         # Show resume dialog to ask user what to do
-        from ui.dialogs import ResumeScanDialog
         user_choice = ResumeScanDialog.show_resume_dialog(scan_info, self)
 
         if user_choice == ResumeScanDialog.RESUME:
@@ -282,7 +324,6 @@ class ROMExtractionPanel(QWidget):
         elif user_choice == ResumeScanDialog.START_FRESH:
             # User wants fresh scan - will be handled when they click Find Sprites
             # Just inform them
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.information(
                 self,
                 "Fresh Scan",
@@ -328,6 +369,9 @@ class ROMExtractionPanel(QWidget):
                     current_dialog = ManualOffsetDialogSingleton.get_current_dialog()
                     if current_dialog is not None:
                         current_dialog.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
+                    # Update navigator
+                    if self.sprite_navigator:
+                        self.sprite_navigator.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
                     logger.debug(f"ROM size: {self.rom_size} bytes (0x{self.rom_size:X})")
             except Exception as e:
                 logger.warning(f"Could not determine ROM size: {e}")
@@ -472,7 +516,9 @@ class ROMExtractionPanel(QWidget):
 
         try:
             # Check if sprites come from cache
-            from utils.rom_cache import get_rom_cache
+            from utils.rom_cache import (
+                get_rom_cache,  # Delayed import to avoid circular dependency
+            )
             rom_cache = get_rom_cache()
             cached_locations = rom_cache.get_sprite_locations(self.rom_path)
             is_from_cache = bool(cached_locations)
@@ -694,7 +740,9 @@ class ROMExtractionPanel(QWidget):
             WorkerManager.cleanup_worker(self.scan_worker)
 
             # Check for cached scan results
-            from utils.rom_cache import get_rom_cache
+            from utils.rom_cache import (
+                get_rom_cache,  # Delayed import to avoid circular dependency
+            )
             rom_cache = get_rom_cache()
 
             # Define scan parameters (must match SpriteScanWorker)
@@ -710,7 +758,6 @@ class ROMExtractionPanel(QWidget):
 
             if partial_cache and not partial_cache.get("completed", False):
                 # Show resume dialog to ask user
-                from ui.dialogs import ResumeScanDialog
                 user_choice = ResumeScanDialog.show_resume_dialog(partial_cache, self)
 
                 if user_choice == ResumeScanDialog.CANCEL:
@@ -782,6 +829,12 @@ class ROMExtractionPanel(QWidget):
                 text += "\n"
                 results_text.setPlainText(text)
 
+                # Update navigator with found sprite
+                if self.sprite_navigator:
+                    self.sprite_navigator.add_found_sprite(
+                        sprite_info["offset"], sprite_info.get("quality", 1.0)
+                    )
+
                 # Enable apply button after first find
                 if len(found_offsets) == 1 and apply_btn:
                     apply_btn.setEnabled(True)
@@ -839,6 +892,12 @@ class ROMExtractionPanel(QWidget):
                             }
                         """)
                         text += "\n✅ Results saved to cache for faster future scans.\n"
+
+                        # Update navigator with complete sprite list
+                        if self.sprite_navigator:
+                            sprites_with_quality = [(s["offset"], s.get("quality", 1.0))
+                                                  for s in found_offsets]
+                            self.sprite_navigator.set_found_sprites(sprites_with_quality)
                     else:
                         cache_status_label.setText("⚠️ Could not save to cache")
                         text += "\n⚠️ Could not save results to cache.\n"
@@ -974,6 +1033,38 @@ class ROMExtractionPanel(QWidget):
             # Preview now handled in manual offset dialog
             pass
 
+    def _on_navigator_offset_changed(self, offset: int):
+        """Handle offset change from navigator"""
+        self._manual_offset = offset
+        self.manual_offset_status.setText(f"Navigator: 0x{offset:06X}")
+
+        # Update manual offset dialog if open
+        current_dialog = ManualOffsetDialogSingleton.get_current_dialog()
+        if current_dialog is not None:
+            current_dialog.set_offset(offset)
+
+        # Update extraction readiness
+        self._check_extraction_ready()
+
+    def _on_navigator_sprite_selected(self, offset: int, sprite_name: str):
+        """Handle sprite selection from navigator"""
+        self._manual_offset = offset
+
+        # If in preset mode, try to find and select the sprite
+        if not self._manual_offset_mode:
+            # Look for sprite in combo box
+            for i in range(self.sprite_selector_widget.count()):
+                data = self.sprite_selector_widget.item_data(i)
+                if data and len(data) >= 2 and data[1] == offset:
+                    self.sprite_selector_widget.set_current_index(i)
+                    break
+        else:
+            # In manual mode, just update the offset
+            self.manual_offset_status.setText(f"Selected sprite at 0x{offset:06X}")
+
+        # Update extraction readiness
+        self._check_extraction_ready()
+
 
     # Manual preview functionality removed - now handled in manual offset dialog
 
@@ -1006,6 +1097,9 @@ class ROMExtractionPanel(QWidget):
         if current_dialog is not None:
             current_dialog.set_offset(offset)
             current_dialog.add_found_sprite(offset, quality)
+        # Update navigator
+        if self.sprite_navigator:
+            self.sprite_navigator.add_found_sprite(offset, quality)
 
     def _on_search_complete(self, found: bool):
         """Handle search completion"""

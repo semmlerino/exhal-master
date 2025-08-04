@@ -10,22 +10,16 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from PyQt6.QtCore import QThread, pyqtSignal
-
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.injector import SpriteInjector
 from core.rom_validator import ROMValidator
 from core.sprite_config_loader import SpriteConfigLoader
 from core.sprite_validator import SpriteValidator
+from PyQt6.QtCore import QThread, pyqtSignal
 from utils.constants import (
-    IMAGE_DIMENSION_MULTIPLE,
-    MAX_SPRITE_DIMENSION,
-    PIXEL_MASK_4BIT,
     ROM_CHECKSUM_COMPLEMENT_MASK,
     ROM_HEADER_OFFSET_HIROM,
     ROM_HEADER_OFFSET_LOROM,
-    ROM_MIN_REGION_SIZE,
-    ROM_SCAN_STEP_DEFAULT,
     SMC_HEADER_SIZE,
 )
 from utils.logging_config import get_logger

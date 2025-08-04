@@ -85,33 +85,42 @@ class ErrorHandler(QObject):
             QMessageBox.information(self._parent_widget, title, message)
 
 
-# Global error handler instance
-_error_handler: ErrorHandler | None = None
-_error_handler_lock = threading.Lock()
+class _ErrorHandlerSingleton:
+    """Thread-safe singleton holder for ErrorHandler."""
+    _instance: ErrorHandler | None = None
+    _lock = threading.Lock()
+
+    @classmethod
+    def get(cls, parent: QWidget | None = None) -> ErrorHandler:
+        """Get or create the global error handler instance (thread-safe)"""
+        # Fast path - check without lock
+        if cls._instance is not None:
+            if parent is not None and cls._instance._parent_widget is None:
+                with cls._lock:
+                    if cls._instance._parent_widget is None:
+                        cls._instance._parent_widget = parent
+                        cls._instance.setParent(parent)
+            return cls._instance
+
+        # Slow path - create with lock
+        with cls._lock:
+            # Double-check pattern
+            if cls._instance is None:
+                cls._instance = ErrorHandler(parent)
+            return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the global error handler (useful for testing)"""
+        with cls._lock:
+            cls._instance = None
 
 
 def get_error_handler(parent: QWidget | None = None) -> ErrorHandler:
     """Get or create the global error handler instance (thread-safe)"""
-    global _error_handler
-
-    # Fast path - check without lock
-    if _error_handler is not None:
-        if parent is not None and _error_handler._parent_widget is None:
-            with _error_handler_lock:
-                if _error_handler._parent_widget is None:
-                    _error_handler._parent_widget = parent
-                    _error_handler.setParent(parent)
-        return _error_handler
-
-    # Slow path - create with lock
-    with _error_handler_lock:
-        # Double-check pattern
-        if _error_handler is None:
-            _error_handler = ErrorHandler(parent)
-        return _error_handler
+    return _ErrorHandlerSingleton.get(parent)
 
 
 def reset_error_handler() -> None:
     """Reset the global error handler (useful for testing)"""
-    global _error_handler
-    _error_handler = None
+    _ErrorHandlerSingleton.reset()

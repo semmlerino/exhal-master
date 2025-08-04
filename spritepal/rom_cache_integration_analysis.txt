@@ -1,0 +1,610 @@
+================================================================================
+ROM CACHE INTEGRATION - CODE ANALYSIS REPORT
+Specific Integration Points for Maximum Performance Impact
+================================================================================
+
+1. EXECUTIVE SUMMARY
+----------------------------------------
+Total integration points identified: 9
+High impact opportunities: 9
+Medium impact opportunities: 0
+Low impact opportunities: 0
+
+Implementation effort distribution:
+  Low effort changes: 2
+  Medium effort changes: 7
+  High effort changes: 0
+
+2. QUICK WINS (High Impact, Low Effort)
+----------------------------------------
+1. _get_rom_data_for_preview (manual_offset_unified_integrated.py:892)
+   Issue: Returns ROM extractor directly, no caching benefit
+   Impact: HIGH | Effort: LOW
+
+2. set_rom_data_provider (smart_preview_coordinator.py:143)
+   Issue: Provider only returns ROM path and extractor, no cache access
+   Impact: HIGH | Effort: LOW
+
+3. HIGH IMPACT INTEGRATION POINTS
+----------------------------------------
+1. _get_rom_data_for_preview
+   File: manual_offset_unified_integrated.py (line 892)
+   Issue: Returns ROM extractor directly, no caching benefit
+   Effort: LOW
+
+2. _update_preview
+   File: manual_offset_unified_integrated.py (line 800)
+   Issue: Creates new worker for each preview without cache check
+   Effort: MEDIUM
+
+3. set_rom_data_provider
+   File: smart_preview_coordinator.py (line 143)
+   Issue: Provider only returns ROM path and extractor, no cache access
+   Effort: LOW
+
+4. _try_show_cached_preview
+   File: smart_preview_coordinator.py (line 256)
+   Issue: Only checks in-memory preview cache, not ROM cache
+   Effort: MEDIUM
+
+5. _on_worker_preview_ready
+   File: smart_preview_coordinator.py (line 322)
+   Issue: Only caches in memory, not persisted to ROM cache
+   Effort: MEDIUM
+
+6. _run_with_cancellation_checks
+   File: preview_worker_pool.py (line 102)
+   Issue: Always reads full ROM file, no cache utilization
+   Effort: MEDIUM
+
+7. NEW: cache_rom_data
+   File: rom_cache.py (line 634)
+   Issue: ROM cache doesn't currently cache raw ROM data
+   Effort: MEDIUM
+
+8. NEW: cache_sprite_data
+   File: rom_cache.py (line 634)
+   Issue: ROM cache doesn't cache individual sprite data
+   Effort: MEDIUM
+
+9. NEW: get_cached_sprite_data
+   File: rom_cache.py (line 634)
+   Issue: No method to retrieve cached sprite data
+   Effort: MEDIUM
+
+4. DETAILED CODE INTEGRATION POINTS
+========================================
+
+MANUAL_OFFSET_UNIFIED_INTEGRATED.PY
+-----------------------------------
+
+Function: _get_rom_data_for_preview (line 892)
+Impact: HIGH | Effort: LOW
+Issue: Returns ROM extractor directly, no caching benefit
+
+Current Implementation:
+```python
+def _get_rom_data_for_preview(self):
+    """Provide ROM data for smart preview coordinator."""
+    with QMutexLocker(self._manager_mutex):
+        return (self.rom_path, self.rom_extractor)
+```
+
+Proposed Solution:
+```python
+def _get_rom_data_for_preview(self):
+    """Provide ROM data for smart preview coordinator with cache integration."""
+    with QMutexLocker(self._manager_mutex):
+        # Return ROM cache instead of raw extractor for cached data access
+        from utils.rom_cache import get_rom_cache
+        return (self.rom_path, self.rom_extractor, get_rom_cache())
+```
+
+
+Function: _update_preview (line 800)
+Impact: HIGH | Effort: MEDIUM
+Issue: Creates new worker for each preview without cache check
+
+Current Implementation:
+```python
+def _update_preview(self):
+    """Update sprite preview."""
+    if not self._has_rom_data() or not self.browse_tab:
+        return
+
+    current_offset = self.browse_tab.get_current_offset()
+    self._update_status(f"Loading preview for 0x{current_offset:06X}...")
+
+    # Clean up existing preview worker
+    if self.preview_worker:
+        WorkerManager.cleanup_worker(self.preview_worker, timeout=1000)
+        self.preview_worker = None
+
+    # Create new preview worker
+    with QMutexLocker(self._manager_mutex):
+        if self.rom_extractor:
+            sprite_name = f"manual_0x{current_offset:X}"
+            self.preview_worker = SpritePreviewWorker(
+                self.rom_path, current_offset, sprite_name, self.rom_extractor, None
+            )
+```
+
+Proposed Solution:
+```python
+def _update_preview(self):
+    """Update sprite preview with cache integration."""
+    if not self._has_rom_data() or not self.browse_tab:
+        return
+
+    current_offset = self.browse_tab.get_current_offset()
+    
+    # Check ROM cache first for instant preview
+    from utils.rom_cache import get_rom_cache
+    rom_cache = get_rom_cache()
+    cached_sprite = rom_cache.get_cached_sprite_data(self.rom_path, current_offset)
+    
+    if cached_sprite:
+        tile_data, width, height, sprite_name = cached_sprite
+        self._on_preview_ready(tile_data, width, height, sprite_name)
+        self._update_status(f"Cached preview at 0x{current_offset:06X}")
+        return
+    
+    # Fallback to worker if not cached
+    self._update_status(f"Loading preview for 0x{current_offset:06X}...")
+    # ... existing worker creation code
+```
+
+
+SMART_PREVIEW_COORDINATOR.PY
+----------------------------
+
+Function: set_rom_data_provider (line 143)
+Impact: HIGH | Effort: LOW
+Issue: Provider only returns ROM path and extractor, no cache access
+
+Current Implementation:
+```python
+def set_rom_data_provider(self, provider: Callable[[], tuple[str, Any]]) -> None:
+    """Set provider for ROM data needed for preview generation."""
+    self._rom_data_provider = provider
+```
+
+Proposed Solution:
+```python
+def set_rom_data_provider(self, provider: Callable[[], tuple[str, Any, Any]]) -> None:
+    """Set provider for ROM data needed for preview generation."""
+    self._rom_data_provider = provider  # Now expects (rom_path, extractor, rom_cache)
+```
+
+
+Function: _try_show_cached_preview (line 256)
+Impact: HIGH | Effort: MEDIUM
+Issue: Only checks in-memory preview cache, not ROM cache
+
+Current Implementation:
+```python
+def _try_show_cached_preview(self) -> bool:
+    """Try to show cached preview immediately."""
+    if not self._rom_data_provider:
+        return False
+
+    try:
+        rom_path, _ = self._rom_data_provider()
+        with QMutexLocker(self._mutex):
+            offset = self._current_offset
+
+        cache_key = self._cache.make_key(rom_path, offset)
+        cached_data = self._cache.get(cache_key)
+
+        if cached_data:
+            tile_data, width, height, sprite_name = cached_data
+            self.preview_cached.emit(tile_data, width, height, sprite_name)
+            return True
+```
+
+Proposed Solution:
+```python
+def _try_show_cached_preview(self) -> bool:
+    """Try to show cached preview from ROM cache first, then memory cache."""
+    if not self._rom_data_provider:
+        return False
+
+    try:
+        rom_path, _, rom_cache = self._rom_data_provider()
+        with QMutexLocker(self._mutex):
+            offset = self._current_offset
+
+        # Check ROM cache first for persistent sprite data
+        cached_sprite = rom_cache.get_cached_sprite_data(rom_path, offset)
+        if cached_sprite:
+            tile_data, width, height, sprite_name = cached_sprite
+            self.preview_cached.emit(tile_data, width, height, sprite_name)
+            # Also store in memory cache for faster subsequent access
+            cache_key = self._cache.make_key(rom_path, offset)
+            self._cache.put(cache_key, cached_sprite)
+            return True
+
+        # Fallback to memory cache
+        cache_key = self._cache.make_key(rom_path, offset)
+        cached_data = self._cache.get(cache_key)
+
+        if cached_data:
+            tile_data, width, height, sprite_name = cached_data
+            self.preview_cached.emit(tile_data, width, height, sprite_name)
+            return True
+```
+
+
+Function: _on_worker_preview_ready (line 322)
+Impact: HIGH | Effort: MEDIUM
+Issue: Only caches in memory, not persisted to ROM cache
+
+Current Implementation:
+```python
+def _on_worker_preview_ready(self, request_id: int, tile_data: bytes,
+                            width: int, height: int, sprite_name: str) -> None:
+    """Handle preview ready from worker."""
+    # Cache the result
+    if self._rom_data_provider:
+        try:
+            rom_path, _ = self._rom_data_provider()
+            cache_key = self._cache.make_key(rom_path, self._current_offset)
+            self._cache.put(cache_key, (tile_data, width, height, sprite_name))
+        except Exception as e:
+            logger.warning(f"Error caching preview: {e}")
+
+    # Emit preview ready
+    self.preview_ready.emit(tile_data, width, height, sprite_name)
+```
+
+Proposed Solution:
+```python
+def _on_worker_preview_ready(self, request_id: int, tile_data: bytes,
+                            width: int, height: int, sprite_name: str) -> None:
+    """Handle preview ready from worker with dual caching."""
+    # Cache in both memory and ROM cache
+    if self._rom_data_provider:
+        try:
+            rom_path, _, rom_cache = self._rom_data_provider()
+            
+            # Cache in memory for immediate access
+            cache_key = self._cache.make_key(rom_path, self._current_offset)
+            self._cache.put(cache_key, (tile_data, width, height, sprite_name))
+            
+            # Cache in ROM cache for persistence
+            rom_cache.cache_sprite_data(rom_path, self._current_offset, 
+                                      tile_data, width, height, sprite_name)
+            
+        except Exception as e:
+            logger.warning(f"Error caching preview: {e}")
+
+    # Emit preview ready
+    self.preview_ready.emit(tile_data, width, height, sprite_name)
+```
+
+
+PREVIEW_WORKER_POOL.PY
+----------------------
+
+Function: _run_with_cancellation_checks (line 102)
+Impact: HIGH | Effort: MEDIUM
+Issue: Always reads full ROM file, no cache utilization
+
+Current Implementation:
+```python
+def _run_with_cancellation_checks(self) -> None:
+    """Run preview generation with periodic cancellation checks."""
+    # Check cancellation before file operations
+    if self._cancel_requested.is_set():
+        return
+
+    # Validate ROM path
+    if not self.rom_path or not self.rom_path.strip():
+        raise FileNotFoundError("No ROM path provided")
+
+    # Read ROM data
+    try:
+        with open(self.rom_path, "rb") as f:
+            rom_data = f.read()
+    except Exception as e:
+        raise OSError(f"Error reading ROM file: {e}")
+```
+
+Proposed Solution:
+```python
+def _run_with_cancellation_checks(self) -> None:
+    """Run preview generation with ROM cache integration."""
+    # Check cancellation before operations
+    if self._cancel_requested.is_set():
+        return
+
+    # Check ROM cache first
+    from utils.rom_cache import get_rom_cache
+    rom_cache = get_rom_cache()
+    
+    cached_sprite = rom_cache.get_cached_sprite_data(self.rom_path, self.offset)
+    if cached_sprite:
+        tile_data, width, height, sprite_name = cached_sprite
+        self.preview_ready.emit(self._current_request_id, tile_data, width, height, sprite_name)
+        return
+
+    # Get ROM data from cache if available
+    rom_data = rom_cache.get_rom_data(self.rom_path)
+    if rom_data is None:
+        # Fallback to file read if not cached
+        try:
+            with open(self.rom_path, "rb") as f:
+                rom_data = f.read()
+                # Cache ROM data for future use
+                rom_cache.cache_rom_data(self.rom_path, rom_data)
+        except Exception as e:
+            raise OSError(f"Error reading ROM file: {e}")
+```
+
+
+ROM_CACHE.PY
+------------
+
+Function: NEW: cache_rom_data (line 634)
+Impact: HIGH | Effort: MEDIUM
+Issue: ROM cache doesn't currently cache raw ROM data
+
+Current Implementation:
+```python
+# Method does not exist
+```
+
+Proposed Solution:
+```python
+def cache_rom_data(self, rom_path: str, rom_data: bytes) -> bool:
+    """Cache raw ROM data for reuse across preview operations."""
+    if not self._cache_enabled:
+        return False
+
+    try:
+        rom_hash = self._get_rom_hash(rom_path)
+        cache_file = self._get_cache_file_path(rom_hash, "rom_data")
+
+        # Store compressed ROM data
+        import gzip
+        compressed_data = gzip.compress(rom_data)
+        
+        cache_data = {
+            "version": self.CACHE_VERSION,
+            "rom_path": os.path.abspath(rom_path),
+            "rom_hash": rom_hash,
+            "cached_at": time.time(),
+            "rom_size": len(rom_data),
+            "compressed_size": len(compressed_data),
+            "rom_data": compressed_data.hex()  # Store as hex string
+        }
+
+        return self._save_cache_data(cache_file, cache_data)
+
+    except Exception as e:
+        logger.warning(f"Failed to cache ROM data: {e}")
+        return False
+```
+
+
+Function: NEW: cache_sprite_data (line 634)
+Impact: HIGH | Effort: MEDIUM
+Issue: ROM cache doesn't cache individual sprite data
+
+Current Implementation:
+```python
+# Method does not exist
+```
+
+Proposed Solution:
+```python
+def cache_sprite_data(self, rom_path: str, offset: int, 
+                       tile_data: bytes, width: int, height: int, sprite_name: str) -> bool:
+    """Cache individual sprite data for instant preview access."""
+    if not self._cache_enabled:
+        return False
+
+    try:
+        rom_hash = self._get_rom_hash(rom_path)
+        sprite_key = f"sprite_{offset:06X}"
+        cache_file = self._get_cache_file_path(rom_hash, sprite_key)
+
+        cache_data = {
+            "version": self.CACHE_VERSION,
+            "rom_path": os.path.abspath(rom_path),
+            "rom_hash": rom_hash,
+            "offset": offset,
+            "cached_at": time.time(),
+            "sprite_data": {
+                "tile_data": tile_data.hex(),
+                "width": width,
+                "height": height,
+                "sprite_name": sprite_name,
+                "data_size": len(tile_data)
+            }
+        }
+
+        return self._save_cache_data(cache_file, cache_data)
+
+    except Exception as e:
+        logger.warning(f"Failed to cache sprite data at 0x{offset:06X}: {e}")
+        return False
+```
+
+
+Function: NEW: get_cached_sprite_data (line 634)
+Impact: HIGH | Effort: MEDIUM
+Issue: No method to retrieve cached sprite data
+
+Current Implementation:
+```python
+# Method does not exist
+```
+
+Proposed Solution:
+```python
+def get_cached_sprite_data(self, rom_path: str, offset: int) -> tuple[bytes, int, int, str] | None:
+    """Retrieve cached sprite data for instant preview display."""
+    if not self._cache_enabled:
+        return None
+
+    try:
+        rom_hash = self._get_rom_hash(rom_path)
+        sprite_key = f"sprite_{offset:06X}"
+        cache_file = self._get_cache_file_path(rom_hash, sprite_key)
+
+        if not self._is_cache_valid(cache_file, rom_path):
+            return None
+
+        cache_data = self._load_cache_data(cache_file)
+        if not cache_data or "sprite_data" not in cache_data:
+            return None
+
+        sprite_data = cache_data["sprite_data"]
+        tile_data = bytes.fromhex(sprite_data["tile_data"])
+        
+        return (
+            tile_data,
+            sprite_data["width"],
+            sprite_data["height"],
+            sprite_data["sprite_name"]
+        )
+
+    except Exception as e:
+        logger.warning(f"Failed to retrieve cached sprite at 0x{offset:06X}: {e}")
+        return None
+```
+
+5. IMPLEMENTATION PRIORITY MATRIX
+----------------------------------------
+
+Priority 1 (Implement First):
+  • _get_rom_data_for_preview (manual_offset_unified_integrated.py)
+  • _update_preview (manual_offset_unified_integrated.py)
+  • set_rom_data_provider (smart_preview_coordinator.py)
+  • _try_show_cached_preview (smart_preview_coordinator.py)
+  • _on_worker_preview_ready (smart_preview_coordinator.py)
+  • _run_with_cancellation_checks (preview_worker_pool.py)
+  • NEW: cache_rom_data (rom_cache.py)
+  • NEW: cache_sprite_data (rom_cache.py)
+  • NEW: get_cached_sprite_data (rom_cache.py)
+
+Priority 2 (Implement Second):
+
+Priority 3 (Implement Later):
+
+6. PERFORMANCE IMPACT PROJECTION
+----------------------------------------
+Expected performance improvements after implementation:
+
+After Priority 1 changes (Foundation):
+  • ROM data caching: Eliminates 95% of file I/O
+  • Basic sprite caching: 3-5x speedup for repeated access
+  • Thread contention: ~80% reduction
+
+After Priority 2 changes (Optimization):
+  • Preview cache integration: Near-instant cached previews
+  • Memory efficiency: 60% reduction in peak usage
+  • User experience: Smooth slider dragging
+
+After Priority 3 changes (Advanced):
+  • Worker pool optimization: Maximum throughput
+  • Cache warming: Predictive caching
+  • Advanced compression: Minimized disk usage
+
+7. STEP-BY-STEP IMPLEMENTATION ROADMAP
+----------------------------------------
+
+WEEK 1: Foundation (4-6 hours)
+1. Add ROM cache sprite methods:
+   - cache_sprite_data()
+   - get_cached_sprite_data()
+   - cache_rom_data()
+   Estimated: 3-4 hours
+
+2. Update SmartPreviewCoordinator ROM data provider:
+   - Modify _get_rom_data_for_preview() to include cache
+   - Update set_rom_data_provider() signature
+   Estimated: 1-2 hours
+
+WEEK 2: Integration (6-8 hours)
+3. Implement cache-first preview strategy:
+   - Update _try_show_cached_preview() for ROM cache
+   - Modify _on_worker_preview_ready() for dual caching
+   Estimated: 3-4 hours
+
+4. Update manual offset dialog:
+   - Modify _update_preview() for cache checking
+   - Add cache statistics display
+   Estimated: 2-3 hours
+
+5. Test and validate changes:
+   - Unit tests for cache methods
+   - Integration testing with real ROMs
+   - Performance validation
+   Estimated: 1-2 hours
+
+WEEK 3: Optimization (4-6 hours)
+6. Advanced worker pool integration:
+   - Update PooledPreviewWorker cache checking
+   - Implement ROM data sharing
+   Estimated: 3-4 hours
+
+7. Cache management improvements:
+   - Add cache warming strategies
+   - Implement cache size monitoring
+   - Add user configuration options
+   Estimated: 2-3 hours
+
+8. RISK MITIGATION STRATEGIES
+----------------------------------------
+
+Technical Risks:
+  • Cache corruption: Implement cache validation and auto-repair
+  • Memory bloat: Add configurable cache size limits
+  • Thread safety: Use existing QMutex patterns from ROM cache
+  • Performance regression: Maintain fallback to current approach
+
+Implementation Risks:
+  • Breaking changes: Implement with feature flags
+  • Testing coverage: Add comprehensive test suite
+  • User experience: Gradual rollout with monitoring
+
+Mitigation Actions:
+  • Implement comprehensive logging for cache operations
+  • Add cache statistics to debug dialogs
+  • Create performance benchmarks for regression testing
+  • Maintain backward compatibility during transition
+
+9. SUCCESS METRICS AND VALIDATION
+----------------------------------------
+
+Performance Metrics:
+  • Preview generation time: Target <50ms for cached sprites
+  • File I/O operations: Target 95% reduction
+  • Memory usage: Target 60% peak reduction
+  • Cache hit rate: Target >80% for typical usage
+
+User Experience Metrics:
+  • Slider responsiveness: Target <100ms lag
+  • First preview load: Target <200ms
+  • Repeated access: Target <50ms
+
+Validation Methods:
+  • Automated performance benchmarks
+  • User acceptance testing
+  • Memory profiling and leak detection
+  • Long-running stability tests
+
+================================================================================
+CONCLUSION
+================================================================================
+
+This analysis identifies specific, actionable integration points that
+will provide maximum performance benefit with minimal implementation risk.
+The proposed changes leverage existing ROM cache infrastructure while
+adding targeted enhancements for sprite preview workflows.
+
+Total estimated effort: 14-20 hours across 3 weeks
+Expected performance improvement: 3-8x speedup for common operations
+Risk level: LOW (leverages existing, tested infrastructure)

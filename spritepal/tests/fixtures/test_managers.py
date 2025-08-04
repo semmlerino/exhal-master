@@ -3,6 +3,10 @@ Test fixture managers for real extraction/injection logic
 
 Provides real manager instances with test data instead of mocks,
 improving test reliability and reducing mocking overhead.
+
+import shutil
+
+import shutil
 """
 
 import os

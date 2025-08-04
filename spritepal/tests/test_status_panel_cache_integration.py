@@ -5,6 +5,14 @@ This module provides comprehensive testing of StatusPanel's cache functionality:
 - Cache status indicators (enabled/disabled/error states)
 - Real-time cache statistics updates
 - Settings integration (show_indicators setting)
+
+import spritepal.utils.rom_cache as rom_cache_module
+
+import spritepal.utils.rom_cache as rom_cache_module
+
+import spritepal.utils.rom_cache as rom_cache_module
+
+import spritepal.utils.rom_cache as rom_cache_module
 - Error handling and edge cases
 """
 

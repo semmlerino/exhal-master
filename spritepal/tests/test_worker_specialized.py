@@ -5,6 +5,8 @@ Tests the ExtractionWorkerBase, InjectionWorkerBase, ScanWorkerBase,
 and PreviewWorkerBase classes for proper specialized signal handling.
 """
 
+
+
 from unittest.mock import Mock
 
 import pytest

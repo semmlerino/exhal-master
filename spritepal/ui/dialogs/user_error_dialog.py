@@ -15,8 +15,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ui.components import BaseDialog
-from ui.styles import get_bold_text_style, get_muted_text_style
+from spritepal.ui.components import BaseDialog
+from spritepal.ui.styles import (
+    get_bold_text_style,
+    get_dialog_button_box_style,
+    get_muted_text_style,
+)
 
 
 class UserErrorDialog(BaseDialog):
@@ -178,7 +182,6 @@ class UserErrorDialog(BaseDialog):
 
         # Create custom OK-only button box
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        from ui.styles import get_dialog_button_box_style
         button_box.setStyleSheet(get_dialog_button_box_style())
         button_box.accepted.connect(self.accept)
         self.main_layout.addWidget(button_box)

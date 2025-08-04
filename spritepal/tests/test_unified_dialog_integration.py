@@ -3,7 +3,7 @@ Comprehensive integration tests for the unified manual offset dialog implementat
 
 This test suite validates all integration points of the unified manual offset dialog:
 - Main dialog initialization and coordination
-- Tab switching and cross-tab signal coordination  
+- Tab switching and cross-tab signal coordination
 - Service adapter thread safety and fallback patterns
 - SignalCoordinator queue management and signal loop prevention
 - Error handling and recovery scenarios
@@ -20,4 +20,3 @@ pytestmark = pytest.mark.skip(reason="Unified dialog integration components remo
 
 def test_placeholder():
     """Placeholder test to prevent empty test module issues."""
-    pass

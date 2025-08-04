@@ -2,6 +2,8 @@
 Enhanced tests for PaletteColorizer
 """
 
+
+
 from unittest.mock import Mock
 
 from PIL import Image

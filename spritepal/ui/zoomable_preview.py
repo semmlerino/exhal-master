@@ -24,19 +24,19 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from ui.common.spacing_constants import (
+    BORDER_THIN,
+    MAX_ZOOM,
+    PALETTE_SELECTOR_MIN_WIDTH,
+    PREVIEW_MIN_SIZE,
+    TILE_GRID_THICKNESS,
+)
 from utils.constants import (
     MAX_BYTE_VALUE,
-    PIXEL_GRAY_SCALE,
     PREVIEW_SCALE_FACTOR,
-    TILE_HEIGHT,
     TILE_WIDTH,
 )
 from utils.image_utils import pil_to_qpixmap
-from ui.common.spacing_constants import (
-    PREVIEW_MIN_SIZE, MAX_ZOOM, BORDER_THIN, PALETTE_SELECTOR_MIN_WIDTH,
-    TILE_GRID_THICKNESS
-)
 
 from .row_arrangement.palette_colorizer import PaletteColorizer
 
@@ -391,7 +391,7 @@ class PreviewPanel(QWidget):
         self.palette_toggle.setChecked(False)
         _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
 
-        self.palette_selector = QComboBox()
+        self.palette_selector = QComboBox(self)
         self.palette_selector.setMinimumWidth(PALETTE_SELECTOR_MIN_WIDTH)
         self.palette_selector.setEnabled(False)
         _ = self.palette_selector.currentTextChanged.connect(self._on_palette_changed)

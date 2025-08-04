@@ -5,20 +5,19 @@ Session coordination for MainWindow save/restore functionality
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QObject
-
 from core.managers import get_session_manager
+from PyQt6.QtCore import QObject
 
 if TYPE_CHECKING:
     from core.managers.session_manager import SessionManager
     from ui.extraction_panel import ExtractionPanel
-    from ui.managers.output_settings_manager import OutputSettingsManager
     from ui.main_window import MainWindow
+    from ui.managers.output_settings_manager import OutputSettingsManager
 
 
 class SessionCoordinator(QObject):
     """Coordinates session save/restore operations"""
-    
+
     def __init__(
         self,
         main_window: "MainWindow",
@@ -26,7 +25,7 @@ class SessionCoordinator(QObject):
         output_settings_manager: "OutputSettingsManager"
     ) -> None:
         """Initialize session coordinator
-        
+
         Args:
             main_window: Main window for geometry save/restore
             extraction_panel: Extraction panel for file path save/restore
@@ -37,7 +36,7 @@ class SessionCoordinator(QObject):
         self.extraction_panel = extraction_panel
         self.output_settings_manager = output_settings_manager
         self.session_manager: SessionManager = get_session_manager()
-        
+
     def restore_session(self) -> None:
         """Restore the previous session"""
         # Validate file paths
@@ -67,13 +66,13 @@ class SessionCoordinator(QObject):
 
         # Always restore window size/position if enabled (regardless of session validity)
         self._restore_window_geometry()
-        
+
         return has_valid_session
-        
+
     def _restore_window_geometry(self) -> None:
         """Restore window geometry if enabled in settings"""
         from utils.settings_manager import get_settings_manager
-        
+
         settings_manager = get_settings_manager()
         if settings_manager.get("ui", "restore_position", False):
             window_geometry = self.session_manager.get_window_geometry()
@@ -82,7 +81,7 @@ class SessionCoordinator(QObject):
 
             if window_geometry["x"] >= 0:
                 self.main_window.move(window_geometry["x"], window_geometry["y"])
-                
+
     def save_session(self) -> None:
         """Save the current session"""
         # Get session data from extraction panel
@@ -109,11 +108,11 @@ class SessionCoordinator(QObject):
 
         # Save the session to disk
         self.session_manager.save_session()
-        
+
     def clear_session(self) -> None:
         """Clear session data"""
         self.session_manager.clear_session()
-        
+
     def get_session_data(self) -> dict[str, Any]:
         """Get current session data"""
         return self.session_manager.get_session_data()

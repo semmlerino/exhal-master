@@ -17,11 +17,10 @@ Working Tests:
 
 import pytest
 
-# Skip all tests in this module since the slider-preview integration components 
+# Skip all tests in this module since the slider-preview integration components
 # depend on removed manual offset dialog implementation
 pytestmark = pytest.mark.skip(reason="Slider-preview integration components depend on removed dialog")
 
 
 def test_placeholder():
     """Placeholder test to prevent empty test module issues."""
-    pass

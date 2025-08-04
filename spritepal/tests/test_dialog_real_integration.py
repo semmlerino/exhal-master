@@ -19,6 +19,7 @@ This replaces mock usage in dialog tests:
 - Mock signal connections (can't test real cross-dialog communication)
 """
 
+
 import os
 import sys
 import tempfile

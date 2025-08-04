@@ -6,9 +6,12 @@ particularly catching initialization order bugs where attributes
 might be None when methods expect them to be initialized.
 """
 
+
+
 from unittest.mock import patch
 
 import pytest
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 # Import all dialogs
 from spritepal.ui.dialogs import (
@@ -16,7 +19,6 @@ from spritepal.ui.dialogs import (
     SettingsDialog,
     UserErrorDialog,
 )
-from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
@@ -39,7 +41,7 @@ class TestDialogInstantiation:
         assert dialog.browse_tab is not None
         assert dialog.smart_tab is not None
         assert dialog.history_tab is not None
-        
+
         # Test that service adapters are initialized
         assert dialog.preview_service is not None
         assert dialog.validation_service is not None

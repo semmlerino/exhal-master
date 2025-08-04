@@ -1,5 +1,13 @@
 """
 Tests for the centralized UI styling system
+
+from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
+
+from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
+
+from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
+
+from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
 """
 
 from ui.styles import (

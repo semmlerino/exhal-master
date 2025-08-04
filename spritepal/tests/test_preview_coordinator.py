@@ -9,4 +9,3 @@ pytestmark = pytest.mark.skip(reason="PreviewCoordinator component removed durin
 
 def test_placeholder():
     """Placeholder test to prevent empty test module issues."""
-    pass

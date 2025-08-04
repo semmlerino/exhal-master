@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -101,9 +102,8 @@ class RowArrangementDialog(SplitterDialog):
 
         except (OSError, ValueError, RuntimeError) as e:
             # CRITICAL FIX FOR BUG #21: Show error dialog and set up minimal state to prevent crashes
-            from PyQt6.QtWidgets import QMessageBox
             _ = QMessageBox.critical(
-                parent, "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
+                self, "Error Loading Sprite", f"Failed to load sprite file:\n{e!s}"
             )
             # Set up minimal state to prevent crashes
             self.original_image = None
@@ -196,8 +196,8 @@ class RowArrangementDialog(SplitterDialog):
         preview_layout = QVBoxLayout(preview_group)
 
         # Preview scroll area (now resizable)
-        scroll_area = QScrollArea()
-        self.preview_label: QLabel = QLabel()
+        scroll_area = QScrollArea(self)
+        self.preview_label: QLabel = QLabel(self)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet(
             "background-color: #2d2d2d; border: 1px solid #555;"

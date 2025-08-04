@@ -6,7 +6,7 @@ Palette preview widget for SpritePal
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
-from ui.common.spacing_constants import PALETTE_PREVIEW_SIZE, BORDER_THIN
+from ui.common.spacing_constants import BORDER_THIN, PALETTE_PREVIEW_SIZE
 
 
 class PaletteColorWidget(QWidget):
@@ -77,8 +77,8 @@ class PaletteColorWidget(QWidget):
 class PaletteWidget(QFrame):
     """Widget for displaying a single palette"""
 
-    def __init__(self, palette_index, name=""):
-        super().__init__()
+    def __init__(self, palette_index, name="", parent=None):
+        super().__init__(parent)
         self.palette_index = palette_index
         self.name = name
         self.colors = []
@@ -95,12 +95,12 @@ class PaletteWidget(QFrame):
         )
 
         # Layout
-        layout = QGridLayout()
+        layout = QGridLayout(self)
         layout.setSpacing(2)
         layout.setContentsMargins(4, 4, 4, 4)
 
         # Palette label
-        self.label = QLabel(f"{palette_index}")
+        self.label = QLabel(f"{palette_index}", self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setStyleSheet("font-weight: bold; color: #ddd;")
         layout.addWidget(self.label, 0, 0, 1, 4)
@@ -146,14 +146,14 @@ class PalettePreviewWidget(QWidget):
 
     def _setup_ui(self):
         """Set up the UI"""
-        layout = QGridLayout()
+        layout = QGridLayout(self)
         layout.setSpacing(8)
 
         # Create palette widgets for palettes 8-15
         self.palette_widgets = {}
         for i in range(8):
             palette_index = i + 8
-            palette_widget = PaletteWidget(palette_index)
+            palette_widget = PaletteWidget(palette_index, "", self)
 
             row = i // 4
             col = i % 4

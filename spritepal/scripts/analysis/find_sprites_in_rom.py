@@ -3,6 +3,7 @@
 Search for VRAM sprite patterns in ROM
 """
 
+
 import os
 import sys
 import tempfile

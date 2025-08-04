@@ -4,8 +4,10 @@ Shows visual preview of sprites with optional palette support
 """
 
 
+from core.default_palette_loader import DefaultPaletteLoader
+from core.managers import get_extraction_manager
 from PIL import Image
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -15,9 +17,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.default_palette_loader import DefaultPaletteLoader
-from core.managers import get_extraction_manager
+from ui.common.collapsible_group_box import CollapsibleGroupBox
+from ui.common.spacing_constants import (
+    COLOR_MUTED,
+    COMPACT_BUTTON_HEIGHT,
+    SPACING_TINY,
+)
 from ui.styles import get_borderless_preview_style, get_muted_text_style
 from utils.logging_config import get_logger
 
@@ -29,7 +34,7 @@ class SpritePreviewWidget(QWidget):
 
     palette_changed = pyqtSignal(int)  # Emitted when palette selection changes
 
-    def __init__(self, title: str = "Sprite Preview", parent=None):
+    def __init__(self, title: str = "Sprite Preview", parent: QWidget | None = None) -> None:
         # Step 1: Declare instance variables with type hints
         self.title = title
         self.sprite_pixmap: QPixmap | None = None
@@ -37,62 +42,90 @@ class SpritePreviewWidget(QWidget):
         self.current_palette_index = 8  # Default sprite palette
         self.sprite_data: bytes | None = None
         self.default_palette_loader = DefaultPaletteLoader()
-        
+
+        # UI components (initialized in _setup_ui)
+        self.preview_label: QLabel | None = None
+        self.controls_group: CollapsibleGroupBox | None = None
+        self.palette_combo: QComboBox | None = None
+        self.info_label: QLabel | None = None
+        self.essential_info_label: QLabel | None = None
+
         # Step 2: Initialize parent
         super().__init__(parent)
-        
+
         # Step 3: Setup UI
         self._setup_ui()
 
-    def _setup_ui(self):
-        """Initialize the user interface - optimized for maximum space efficiency"""
+    def _setup_ui(self) -> None:
+        """Initialize the user interface - space-efficient with progressive disclosure"""
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)  # Zero margins for maximum efficiency
-        layout.setSpacing(0)  # Zero spacing for maximum efficiency
+        layout.setContentsMargins(SPACING_TINY, SPACING_TINY, SPACING_TINY, SPACING_TINY)  # 4px minimum for focus
+        layout.setSpacing(SPACING_TINY)  # 4px spacing
 
-        # Preview label - optimized for large dialog with dominant preview space
-        self.preview_label = QLabel()
-        # Small but visible minimum for when no sprite is loaded
-        self.preview_label.setMinimumSize(200, 200)  # Larger minimum for better visibility
-        self.preview_label.setMaximumSize(800, 800)  # Much larger maximum to use available space
+        # Preview label - maximum space usage with 100x100 minimum
+        self.preview_label = QLabel(self)
+        self.preview_label.setMinimumSize(100, 100)  # UX-validated minimum
+        self.preview_label.setMaximumSize(16777215, 16777215)  # Use all available space
         self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred  # Prefer available space without forcing expansion
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding  # Use ALL available space
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Start with visible empty state style, will switch to borderless when content loads
+        # Start with visible empty state style
         self._apply_empty_state_style()
         layout.addWidget(self.preview_label)
 
-        # Compact controls container - minimal space
-        controls_widget = QWidget()
-        controls_layout = QVBoxLayout()
-        controls_layout.setContentsMargins(2, 2, 2, 2)  # Minimal margins only for controls
-        controls_layout.setSpacing(2)  # Minimal spacing only for controls
+        # Essential info (always visible) - single line for collapsed state
+        self.essential_info_label = QLabel("No sprite loaded")
+        self.essential_info_label.setStyleSheet(f"""
+            QLabel {{
+                color: {COLOR_MUTED};
+                font-size: 11px;
+                padding: 2px;
+                margin: 0px;
+            }}
+        """)
+        self.essential_info_label.setFixedHeight(COMPACT_BUTTON_HEIGHT // 2)  # 16px height
+        layout.addWidget(self.essential_info_label)
 
-        # Palette selector - compact
-        palette_layout = QHBoxLayout()
+        # Collapsible controls group - starts collapsed for space efficiency
+        self.controls_group = CollapsibleGroupBox(
+            title="Controls",
+            collapsed=True,  # Default to collapsed for maximum preview space
+            parent=self
+        )
+
+        # Palette selector in horizontal layout for space efficiency
+        palette_widget = QWidget(self)
+        palette_layout = QHBoxLayout(palette_widget)
         palette_layout.setContentsMargins(0, 0, 0, 0)
-        palette_layout.setSpacing(4)
-        palette_layout.addWidget(QLabel("Palette:"))
-        self.palette_combo = QComboBox()
-        self.palette_combo.setMinimumWidth(150)
+        palette_layout.setSpacing(SPACING_TINY)
+
+        palette_label = QLabel("Palette:")
+        palette_label.setFixedHeight(COMPACT_BUTTON_HEIGHT)
+        palette_layout.addWidget(palette_label)
+
+        self.palette_combo = QComboBox(self)
+        self.palette_combo.setMinimumWidth(120)  # Compact width
+        self.palette_combo.setFixedHeight(COMPACT_BUTTON_HEIGHT)  # 32px for accessibility
         self.palette_combo.currentIndexChanged.connect(self._on_palette_changed)
         palette_layout.addWidget(self.palette_combo)
-        palette_layout.addStretch()
 
-        controls_layout.addLayout(palette_layout)
+        palette_layout.addStretch()  # Push everything left
 
-        # Info label - compact
+        # Detailed info label (only visible when expanded)
         self.info_label = QLabel("No sprite loaded")
         self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
-        controls_layout.addWidget(self.info_label)
+        self.info_label.setWordWrap(True)
 
-        controls_widget.setLayout(controls_layout)
-        layout.addWidget(controls_widget)
+        # Add to collapsible group
+        self.controls_group.add_widget(palette_widget)
+        self.controls_group.add_widget(self.info_label)
 
-        # Set widget to size itself to content for maximum space efficiency
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        layout.addWidget(self.controls_group)
+
+        # Set widget to use maximum available space
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setLayout(layout)
 
     def _scale_pixmap_efficiently(self, pixmap: QPixmap) -> QPixmap:
@@ -132,7 +165,7 @@ class SpritePreviewWidget(QWidget):
             Qt.TransformationMode.SmoothTransformation,  # Better quality for larger previews
         )
 
-    def load_sprite_from_png(self, png_path: str, sprite_name: str | None = None):
+    def load_sprite_from_png(self, png_path: str, sprite_name: str | None = None) -> None:
         """Load sprite from PNG file"""
         try:
             # Load image
@@ -155,19 +188,19 @@ class SpritePreviewWidget(QWidget):
                 f"Size: {img.size[0]}x{img.size[1]} | Mode: {img.mode}"
             )
 
-        except (OSError, IOError, PermissionError) as e:
-            logger.exception(f"File I/O error loading sprite preview: {e}")
+        except (OSError, PermissionError) as e:
+            logger.exception("File I/O error loading sprite preview")
             self.info_label.setText(f"Cannot access sprite file: {e}")
         except (ValueError, TypeError) as e:
-            logger.exception(f"Image format error loading sprite preview: {e}")
+            logger.exception("Image format error loading sprite preview")
             self.info_label.setText(f"Invalid sprite format: {e}")
         except Exception as e:
-            logger.exception(f"Failed to load sprite preview: {e}")
+            logger.exception("Failed to load sprite preview")
             self.info_label.setText(f"Error loading sprite: {e}")
 
     def _load_grayscale_sprite(
         self, img: Image.Image, sprite_name: str | None = None
-    ):
+    ) -> None:
         """Load grayscale sprite and apply palettes"""
         # Convert to QImage
         width, height = img.size
@@ -199,7 +232,7 @@ class SpritePreviewWidget(QWidget):
         # Apply current palette
         self._update_preview_with_palette(img)
 
-    def _load_indexed_sprite(self, img: Image.Image):
+    def _load_indexed_sprite(self, img: Image.Image) -> None:
         """Load indexed sprite with its palette"""
         # Convert to RGBA for display
         img_rgba = img.convert("RGBA")
@@ -227,7 +260,7 @@ class SpritePreviewWidget(QWidget):
         self.palette_combo.clear()
         self.palette_combo.addItem("Built-in Palette")
 
-    def _update_preview_with_palette(self, grayscale_img: Image.Image):
+    def _update_preview_with_palette(self, grayscale_img: Image.Image) -> None:
         """Update preview by applying selected palette to grayscale image"""
         if not self.palettes or self.current_palette_index >= len(self.palettes):
             # No palette - show grayscale
@@ -271,7 +304,7 @@ class SpritePreviewWidget(QWidget):
         self._apply_content_style()
         self.sprite_pixmap = pixmap
 
-    def _on_palette_changed(self, index: int):
+    def _on_palette_changed(self, index: int) -> None:
         """Handle palette selection change"""
         if index >= 0 and self.sprite_data:
             self.current_palette_index = self.palette_combo.currentData() or 8
@@ -288,12 +321,13 @@ class SpritePreviewWidget(QWidget):
         width: int = 128,
         height: int = 128,
         sprite_name: str | None = None,
-    ):
+    ) -> None:
         """Load sprite from 4bpp tile data"""
         try:
             # Validate tile data
             if not tile_data:
                 self.clear()
+                self.essential_info_label.setText("No data")
                 self.info_label.setText("No sprite data available")
                 return
 
@@ -301,6 +335,7 @@ class SpritePreviewWidget(QWidget):
             extra_bytes = len(tile_data) % bytes_per_tile
             if extra_bytes > bytes_per_tile // 2:  # More than half a tile of extra data
                 self.clear()
+                self.essential_info_label.setText("Corrupted data")
                 self.info_label.setText(
                     "Unable to display sprite - data appears corrupted"
                 )
@@ -319,6 +354,7 @@ class SpritePreviewWidget(QWidget):
 
             if num_tiles == 0:
                 self.clear()
+                self.essential_info_label.setText("No tiles")
                 self.info_label.setText("No valid sprite tiles found")
                 return
 
@@ -348,35 +384,40 @@ class SpritePreviewWidget(QWidget):
                 info_text += f" | Warning: {extra_bytes} extra bytes"
             self.info_label.setText(info_text)
 
-        except (OSError, IOError, PermissionError) as e:
-            logger.exception(f"File I/O error loading 4bpp sprite: {e}")
+        except (OSError, PermissionError):
+            logger.exception("File I/O error loading 4bpp sprite")
             self.clear()
-        except (ValueError, TypeError) as e:
-            logger.exception(f"Data format error loading 4bpp sprite: {e}")
+            self.essential_info_label.setText("I/O error")
+        except (ValueError, TypeError):
+            logger.exception("Data format error loading 4bpp sprite")
             self.clear()
+            self.essential_info_label.setText("Data error")
         except Exception as e:
-            logger.exception(f"Failed to load 4bpp sprite: {e}")
+            logger.exception("Failed to load 4bpp sprite")
             self.clear()
+            self.essential_info_label.setText("Load error")
             self.info_label.setText(f"Error loading sprite: {e}")
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the preview and show visible placeholder"""
         self.preview_label.clear()
         self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
         # Reset to minimum size for visibility when empty
-        self.preview_label.setMinimumSize(200, 200)  # Consistent with _setup_ui
+        self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
 
         # Apply visible empty state style
         self._apply_empty_state_style()
 
         self.palette_combo.clear()
         self.palette_combo.setEnabled(False)
+        # Reset both info labels to cleared state
+        self.essential_info_label.setText("No sprite loaded")
         self.info_label.setText("No sprite loaded")
         self.sprite_pixmap = None
         self.sprite_data = None
         self.palettes = []
 
-    def _apply_empty_state_style(self):
+    def _apply_empty_state_style(self) -> None:
         """Apply styling for empty state that's clearly visible"""
         self.preview_label.setStyleSheet("""
             QLabel {
@@ -391,15 +432,15 @@ class SpritePreviewWidget(QWidget):
             }
         """)
 
-    def _apply_content_style(self):
+    def _apply_content_style(self) -> None:
         """Apply borderless style for actual content display"""
         self.preview_label.setStyleSheet(get_borderless_preview_style())
 
     def set_sprite(self, pixmap: QPixmap) -> None:
         """Set the sprite preview from a QPixmap.
-        
+
         This method is called by the manual offset dialog to update the preview.
-        
+
         Args:
             pixmap: The QPixmap to display, or None to clear
         """
@@ -408,77 +449,96 @@ class SpritePreviewWidget(QWidget):
             if pixmap is None or pixmap.isNull():
                 self.clear()
                 return
-            
+
             # Store the original pixmap
             self.sprite_pixmap = pixmap
-            
+
             # Scale the pixmap efficiently for display
             scaled_pixmap = self._scale_pixmap_efficiently(pixmap)
-            
+
             # Update the preview label
             self.preview_label.setPixmap(scaled_pixmap)
-            
+
             # Apply content styling (borderless)
             self._apply_content_style()
-            
+
             # Update sprite info with dimensions
             width = pixmap.width()
             height = pixmap.height()
+            self.essential_info_label.setText(f"{width}x{height} - Direct")
             self.info_label.setText(f"Size: {width}x{height} | Source: QPixmap")
-            
+
             # Disable palette combo for direct pixmap display
             # (since pixmaps are already rendered with colors)
             self.palette_combo.clear()
             self.palette_combo.setEnabled(False)
             self.palette_combo.addItem("Direct Display")
-            
+
             # Clear sprite data since this is a direct pixmap
             self.sprite_data = None
             self.palettes = []
-            
+
         except Exception as e:
-            logger.exception(f"Failed to set sprite pixmap: {e}")
+            logger.exception("Failed to set sprite pixmap")
             self.clear()
+            self.essential_info_label.setText("Display error")
             self.info_label.setText(f"Error displaying sprite: {e}")
 
     def get_current_pixmap(self) -> QPixmap | None:
         """Get the current preview pixmap"""
         return self.sprite_pixmap
 
-    def sizeHint(self):
-        """Provide optimal size hint for layout negotiations"""
-        from PyQt6.QtCore import QSize
+    def expand_controls(self) -> None:
+        """Expand the controls group for better access"""
+        if self.controls_group is not None:
+            self.controls_group.set_collapsed(False)
+
+    def collapse_controls(self) -> None:
+        """Collapse the controls group for maximum preview space"""
+        if self.controls_group is not None:
+            self.controls_group.set_collapsed(True)
+
+    def is_controls_collapsed(self) -> bool:
+        """Check if controls are currently collapsed"""
+        return self.controls_group.is_collapsed() if self.controls_group is not None else True
+
+    def sizeHint(self) -> QSize:
+        """Provide optimal size hint for layout negotiations - space-efficient"""
 
         # If we have a sprite loaded, base size on the preview content
         if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
-            # Use the scaled pixmap size as the hint, with some padding for controls
-            preview_size = self.preview_label.pixmap().size()
-            controls_height = 60  # Approximate height for palette controls and info
+            # Use the scaled pixmap size as the hint, with minimal space for controls
+            if self.preview_label is not None and self.preview_label.pixmap() is not None:
+                preview_size = self.preview_label.pixmap().size()
+            else:
+                preview_size = QSize(100, 100)  # Fallback
 
-            width = max(preview_size.width(), 400)  # Minimum reasonable width
+            # Collapsed controls take minimal space: essential info (16px) + collapsible header (32px)
+            controls_height = 48
+
+            width = max(preview_size.width(), 150)  # Smaller minimum
             height = preview_size.height() + controls_height
 
-            # Clamp to reasonable bounds
-            width = min(max(width, 200), 800)
-            height = min(max(height, 150), 600)
+            # More aggressive space usage - allow larger sizes
+            width = min(max(width, 120), 1200)
+            height = min(max(height, 148), 900)  # Match minimumSizeHint
 
             return QSize(width, height)
 
-        # No sprite loaded - provide reasonable default for empty state
-        return QSize(400, 300)  # Good default for most layouts
+        # No sprite loaded - compact default for empty state
+        return QSize(150, 148)  # Match minimumSizeHint for consistency
 
-    def minimumSizeHint(self):
+    def minimumSizeHint(self) -> QSize:
         """Provide minimum size hint to prevent overly small widgets"""
-        from PyQt6.QtCore import QSize
 
         # Minimum size should accommodate the empty state message and basic controls
         return QSize(200, 150)  # Consistent with our validation limits
 
-    def hasHeightForWidth(self):
+    def hasHeightForWidth(self) -> bool:
         """Indicate that widget can adapt height based on width"""
         return True
 
-    def heightForWidth(self, width):
+    def heightForWidth(self, width: int) -> int:
         """Calculate optimal height for given width"""
         if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
             # Calculate height based on aspect ratio of current sprite

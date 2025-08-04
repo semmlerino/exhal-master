@@ -9,8 +9,8 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import Optional
 from unittest.mock import patch
-from typing import Dict, Any
 
 import pytest
 
@@ -38,7 +38,7 @@ def pytest_configure(config):
     """Configure pytest with unified markers for SpritePal tests."""
     markers = [
         "integration: mark test as integration test",
-        "unit: mark test as unit test", 
+        "unit: mark test as unit test",
         "mock: mark test as using mocks",
         "slow: mark test as slow running",
         "manager: mark test as testing manager classes",
@@ -52,7 +52,7 @@ def pytest_configure(config):
         "timer: mark test as testing QTimer functionality",
         "no_manager_setup: skip automatic manager setup for this test",
     ]
-    
+
     for marker in markers:
         config.addinivalue_line("markers", marker)
 
@@ -71,7 +71,7 @@ def pytest_collection_modifyitems(config, items):
 def qt_environment_setup():
     """
     Setup Qt environment automatically based on capabilities.
-    
+
     In headless environments, this provides comprehensive Qt mocking.
     In GUI environments, this ensures proper Qt initialization.
     """
@@ -89,7 +89,7 @@ def qt_environment_setup():
 def setup_managers(request):
     """
     Setup managers for all tests.
-    
+
     This fixture ensures proper manager initialization and cleanup
     for every test, replacing duplicated setup across test files.
     Skips setup if test is marked with 'no_manager_setup'.
@@ -98,7 +98,7 @@ def setup_managers(request):
     if request.node.get_closest_marker("no_manager_setup"):
         yield
         return
-        
+
     initialize_managers("TestApp")
     yield
     cleanup_managers()
@@ -108,65 +108,64 @@ def setup_managers(request):
 def test_data_factory():
     """
     Factory for creating consistent test data structures.
-    
+
     Provides a unified way to create VRAM, CGRAM, and OAM test data
     with realistic patterns used across the test suite.
     """
-    def _create_test_data(data_type: str, size: int = None, **kwargs) -> bytearray:
+    def _create_test_data(data_type: str, size: Optional[int] = None, **kwargs) -> bytearray:
         """
         Create test data of specified type.
-        
+
         Args:
             data_type: Type of data - 'vram', 'cgram', 'oam'
             size: Size override (uses defaults if None)
             **kwargs: Additional parameters for data generation
-            
+
         Returns:
             Bytearray with realistic test data
         """
         if data_type == "vram":
             default_size = 0x10000  # 64KB
             data = bytearray(size or default_size)
-            
+
             # Add realistic sprite data at VRAM offset
             start_offset = kwargs.get("sprite_offset", VRAM_SPRITE_OFFSET)
             tile_count = kwargs.get("tile_count", 10)
-            
+
             for i in range(tile_count):
                 offset = start_offset + i * BYTES_PER_TILE
                 if offset + BYTES_PER_TILE <= len(data):
                     for j in range(BYTES_PER_TILE):
                         data[offset + j] = (i + j) % 256
-            
+
             return data
-        
-        elif data_type == "cgram":
+
+        if data_type == "cgram":
             default_size = 512  # 256 colors * 2 bytes
             data = bytearray(size or default_size)
-            
+
             # Add realistic palette data (BGR555 format)
             for i in range(0, len(data), 2):
                 data[i] = i % 256
                 data[i + 1] = (i // 2) % 32
-            
+
             return data
-        
-        elif data_type == "oam":
+
+        if data_type == "oam":
             default_size = 544  # Standard OAM size
             data = bytearray(size or default_size)
-            
+
             # Add realistic OAM data (sprite attributes)
             for i in range(0, min(len(data), 512), 4):  # 4 bytes per entry
                 data[i] = i % 256      # X position
-                data[i + 1] = i % 224  # Y position  
+                data[i + 1] = i % 224  # Y position
                 data[i + 2] = i % 256  # Tile index
                 data[i + 3] = 0x20     # Attributes
-            
+
             return data
-        
-        else:
-            raise ValueError(f"Unknown data type: {data_type}")
-    
+
+        raise ValueError(f"Unknown data type: {data_type}")
+
     return _create_test_data
 
 
@@ -174,12 +173,12 @@ def test_data_factory():
 def temp_files():
     """
     Factory for creating temporary test files with automatic cleanup.
-    
+
     Creates temporary files with test data and ensures they are
     properly cleaned up after test completion.
     """
     created_files = []
-    
+
     def _create_temp_file(data: bytes, suffix: str = ".dmp") -> str:
         """Create a temporary file with the given data."""
         temp_file = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
@@ -187,9 +186,9 @@ def temp_files():
         temp_file.close()
         created_files.append(temp_file.name)
         return temp_file.name
-    
+
     yield _create_temp_file
-    
+
     # Cleanup
     import os
     for file_path in created_files:
@@ -203,7 +202,7 @@ def temp_files():
 def standard_test_params(test_data_factory, temp_files):
     """
     Create standard test parameters used across integration tests.
-    
+
     Provides the common set of test parameters that many integration
     tests use, reducing duplication in test setup.
     """
@@ -211,12 +210,12 @@ def standard_test_params(test_data_factory, temp_files):
     vram_data = test_data_factory("vram")
     cgram_data = test_data_factory("cgram")
     oam_data = test_data_factory("oam")
-    
+
     # Create temporary files
     vram_file = temp_files(vram_data, ".dmp")
     cgram_file = temp_files(cgram_data, ".dmp")
     oam_file = temp_files(oam_data, ".dmp")
-    
+
     return {
         "vram_path": vram_file,
         "cgram_path": cgram_file,
@@ -234,7 +233,7 @@ def standard_test_params(test_data_factory, temp_files):
 def minimal_sprite_data(test_data_factory):
     """
     Create minimal but valid sprite data for quick tests.
-    
+
     Provides a lightweight alternative to full test data for tests
     that just need basic sprite data structure.
     """
@@ -278,7 +277,7 @@ def mock_session_manager():
     return MockFactory.create_session_manager()
 
 
-@pytest.fixture 
+@pytest.fixture
 def mock_file_dialogs():
     """Provide mock file dialog functions."""
     return MockFactory.create_file_dialogs()

@@ -6,6 +6,9 @@ Tests both unit functionality and integration across multiple modules.
 from pathlib import Path
 from unittest.mock import Mock
 
+
+
+
 import pytest
 from PIL import Image
 

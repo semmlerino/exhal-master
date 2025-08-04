@@ -7,6 +7,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+
+
+
 from spritepal.core.controller import ExtractionController
 from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.utils.settings_manager import SettingsManager, get_settings_manager

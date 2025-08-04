@@ -2,9 +2,10 @@
 Base manager class providing common functionality for all managers
 """
 
+import logging
 import os
 import threading
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -21,9 +22,6 @@ except ImportError:
             return logging.getLogger(name)
 
 from .exceptions import ValidationError
-
-if TYPE_CHECKING:
-    import logging
 
 
 class BaseManager(QObject):
@@ -57,9 +55,13 @@ class BaseManager(QObject):
         # State tracking
         self._is_initialized: bool = False
         self._active_operations: set[str] = set()
+        self._initializing: bool = True  # Flag to prevent cross-manager access during init
 
         # Initialize the manager
-        self._initialize()
+        try:
+            self._initialize()
+        finally:
+            self._initializing = False  # Clear flag regardless of success/failure
 
     def _initialize(self) -> None:
         """Initialize the manager - must be implemented by subclasses"""
@@ -76,6 +78,10 @@ class BaseManager(QObject):
     def is_initialized(self) -> bool:
         """Check if manager is initialized"""
         return self._is_initialized
+
+    def is_initializing(self) -> bool:
+        """Check if manager is currently initializing"""
+        return self._initializing
 
     def is_operation_active(self, operation: str) -> bool:
         """Check if a specific operation is currently active"""
@@ -259,11 +265,11 @@ class BaseManager(QObject):
         """
         context_suffix = f" {context}" if context else ""
         enhanced_msg = f"File I/O error during {operation}{context_suffix}: {error!s}"
-        
+
         # Create exception of the same type with enhanced message
         enhanced_error = type(error)(enhanced_msg)
         enhanced_error.__cause__ = error
-        
+
         self._handle_error(enhanced_error, operation)
         raise enhanced_error
 
@@ -274,7 +280,7 @@ class BaseManager(QObject):
 
         Args:
             error: The original exception (ValueError, TypeError, json.JSONDecodeError)
-            operation: Operation name for context  
+            operation: Operation name for context
             context: Additional context for the error message
 
         Raises:
@@ -282,16 +288,16 @@ class BaseManager(QObject):
         """
         context_suffix = f" {context}" if context else ""
         enhanced_msg = f"Data format error during {operation}{context_suffix}: {error!s}"
-        
+
         # Create exception of the same type with enhanced message
         enhanced_error = type(error)(enhanced_msg)
         enhanced_error.__cause__ = error
-        
+
         self._handle_error(enhanced_error, operation)
         raise enhanced_error
 
     def _handle_operation_error(self, error: Exception, operation: str,
-                               error_class: type[Exception], 
+                               error_class: type[Exception],
                                context: str = "") -> None:
         """
         Handle operation-specific errors with standardized logging and re-raising
@@ -307,10 +313,10 @@ class BaseManager(QObject):
         """
         context_suffix = f" {context}" if context else ""
         enhanced_msg = f"{operation.title()} failed{context_suffix}: {error!s}"
-        
+
         # Create new exception of specified type
         enhanced_error = error_class(enhanced_msg)
         enhanced_error.__cause__ = error
-        
+
         self._handle_error(enhanced_error, operation)
         raise enhanced_error

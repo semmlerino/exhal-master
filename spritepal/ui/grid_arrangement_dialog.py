@@ -464,8 +464,8 @@ class GridArrangementDialog(SplitterDialog):
         self.preview_generator = GridPreviewGenerator(self.colorizer)
 
         # Initialize UI components that will be created in _setup_ui
-        self.source_grid: GridWidget | None = None
-        self.arranged_grid: GridWidget | None = None
+        self.source_grid: QWidget | None = None
+        self.arranged_grid: QWidget | None = None
         self.original_image: Image.Image | None = None
         self.tiles: dict[tuple[int, int], Image.Image] = {}
 
@@ -524,11 +524,11 @@ class GridArrangementDialog(SplitterDialog):
         self.main_splitter = self.add_horizontal_splitter(handle_width=8)
 
         # Left panel - Grid view and controls
-        left_widget = QWidget()
+        left_widget = QWidget(self)
         left_layout = QVBoxLayout(left_widget)
 
         # Selection mode controls
-        mode_group = QGroupBox("Selection Mode")
+        mode_group = QGroupBox("Selection Mode", left_widget)
         mode_layout = QHBoxLayout()
 
         self.mode_buttons = QButtonGroup()
@@ -545,12 +545,12 @@ class GridArrangementDialog(SplitterDialog):
         left_layout.addWidget(mode_group)
 
         # Grid view
-        grid_group = QGroupBox("Sprite Grid")
+        grid_group = QGroupBox("Sprite Grid", left_widget)
         grid_layout = QVBoxLayout()
 
         # Create graphics scene and view
-        self.scene = QGraphicsScene()
-        self.grid_view = GridGraphicsView()
+        self.scene = QGraphicsScene(self)
+        self.grid_view = GridGraphicsView(self)
         self.grid_view.setScene(self.scene)
 
         # Set up grid view (only if we have valid data)
@@ -580,50 +580,50 @@ class GridArrangementDialog(SplitterDialog):
         left_layout.addWidget(grid_group, 1)
 
         # Action buttons
-        actions_group = QGroupBox("Actions")
+        actions_group = QGroupBox("Actions", left_widget)
         actions_layout = QHBoxLayout()
 
-        self.add_btn = QPushButton("Add Selection")
+        self.add_btn = QPushButton("Add Selection", self)
         _ = self.add_btn.clicked.connect(self._add_selection)
         actions_layout.addWidget(self.add_btn)
 
-        self.remove_btn = QPushButton("Remove Selection")
+        self.remove_btn = QPushButton("Remove Selection", self)
         _ = self.remove_btn.clicked.connect(self._remove_selection)
         actions_layout.addWidget(self.remove_btn)
 
-        self.create_group_btn = QPushButton("Create Group")
+        self.create_group_btn = QPushButton("Create Group", self)
         _ = self.create_group_btn.clicked.connect(self._create_group)
         actions_layout.addWidget(self.create_group_btn)
 
-        self.clear_btn = QPushButton("Clear All")
+        self.clear_btn = QPushButton("Clear All", self)
         _ = self.clear_btn.clicked.connect(self._clear_arrangement)
         actions_layout.addWidget(self.clear_btn)
 
         # Separator
-        actions_layout.addWidget(QLabel("|"))
+        actions_layout.addWidget(QLabel("|", self))
 
         # Zoom controls
-        self.zoom_out_btn = QPushButton("-")
+        self.zoom_out_btn = QPushButton("-", self)
         _ = self.zoom_out_btn.clicked.connect(self.grid_view.zoom_out)
         self.zoom_out_btn.setMaximumWidth(30)
         actions_layout.addWidget(self.zoom_out_btn)
 
-        self.zoom_level_label = QLabel("100%")
+        self.zoom_level_label = QLabel("100%", self)
         self.zoom_level_label.setMinimumWidth(50)
         self.zoom_level_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         actions_layout.addWidget(self.zoom_level_label)
 
-        self.zoom_in_btn = QPushButton("+")
+        self.zoom_in_btn = QPushButton("+", self)
         _ = self.zoom_in_btn.clicked.connect(self.grid_view.zoom_in)
         self.zoom_in_btn.setMaximumWidth(30)
         actions_layout.addWidget(self.zoom_in_btn)
 
-        self.zoom_fit_btn = QPushButton("Fit")
+        self.zoom_fit_btn = QPushButton("Fit", self)
         _ = self.zoom_fit_btn.clicked.connect(self.grid_view.zoom_to_fit)
         self.zoom_fit_btn.setMaximumWidth(40)
         actions_layout.addWidget(self.zoom_fit_btn)
 
-        self.zoom_reset_btn = QPushButton("1:1")
+        self.zoom_reset_btn = QPushButton("1:1", self)
         _ = self.zoom_reset_btn.clicked.connect(self.grid_view.reset_zoom)
         self.zoom_reset_btn.setMaximumWidth(40)
         actions_layout.addWidget(self.zoom_reset_btn)
@@ -632,25 +632,25 @@ class GridArrangementDialog(SplitterDialog):
         left_layout.addWidget(actions_group)
 
         # Right panel - Arrangement list and preview
-        right_widget = QWidget()
+        right_widget = QWidget(self)
         right_layout = QVBoxLayout(right_widget)
 
         # Arrangement list
-        list_group = QGroupBox("Current Arrangement")
+        list_group = QGroupBox("Current Arrangement", right_widget)
         list_layout = QVBoxLayout()
 
-        self.arrangement_list = QListWidget()
+        self.arrangement_list = QListWidget(self)
         list_layout.addWidget(self.arrangement_list)
 
         list_group.setLayout(list_layout)
         right_layout.addWidget(list_group)
 
         # Preview
-        preview_group = QGroupBox("Arrangement Preview")
+        preview_group = QGroupBox("Arrangement Preview", right_widget)
         preview_layout = QVBoxLayout()
 
-        scroll_area = QScrollArea()
-        self.preview_label = QLabel()
+        scroll_area = QScrollArea(self)
+        self.preview_label = QLabel(self)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         scroll_area.setWidget(self.preview_label)
         scroll_area.setWidgetResizable(True)

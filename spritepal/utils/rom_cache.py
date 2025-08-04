@@ -10,6 +10,7 @@ import tempfile
 import threading
 import time
 import uuid
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +24,18 @@ except ImportError:
 
 # Delayed import to avoid circular dependency
 def get_settings_manager():
-    """Get settings manager with delayed import to avoid circular dependency"""
+    """Get settings manager with delayed import to avoid circular dependency.
+
+    This function uses a delayed import to break the circular dependency:
+    rom_cache -> settings_manager -> session_manager -> managers -> rom_cache
+
+    The import is done at runtime rather than module level to prevent
+    the circular import from causing initialization failures.
+    """
     try:
-        from utils.settings_manager import get_settings_manager as _gsm
+        # REQUIRED DELAYED IMPORT: Prevents circular dependency:
+        # rom_cache -> settings_manager -> session_manager -> managers -> rom_cache
+        from utils.settings_manager import get_settings_manager as _gsm  # noqa: PLC0415
         return _gsm()
     except ImportError:
         logger.warning("Could not import settings manager")
@@ -100,13 +110,13 @@ class ROMCache:
                 fallback_dir.mkdir(parents=True, exist_ok=True)
                 self.cache_dir = fallback_dir
                 logger.info(f"Using fallback cache directory: {self.cache_dir}")
-            except (OSError, PermissionError) as e:
-                logger.exception(f"Failed to create fallback cache directory: {e}")
+            except (OSError, PermissionError):
+                logger.exception("Failed to create fallback cache directory")
                 return False
-            else:
-                return True
-        else:
+
             return True
+
+        return True
 
     def _get_rom_hash(self, rom_path: str) -> str:
         """Generate SHA-256 hash of ROM file for cache key with proper error handling.
@@ -129,7 +139,7 @@ class ROMCache:
             # For non-existent files (like test scenarios), use path-based hash
             path_data = f"nonexistent_{os.path.abspath(rom_path)}"
             return hashlib.sha256(path_data.encode()).hexdigest()
-        except (OSError, IOError, PermissionError) as e:
+        except (OSError, PermissionError) as e:
             # Ultimate fallback: just use the path itself
             logger.debug(f"Could not read ROM file for hashing, using path-based hash: {e}")
             return hashlib.sha256(str(rom_path).encode()).hexdigest()
@@ -168,11 +178,11 @@ class ROMCache:
             rom_mtime = os.path.getmtime(rom_path)
             cache_mtime = cache_file.stat().st_mtime
 
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.debug(f"Error checking cache validity for {cache_file}: {e}")
             return False
-        else:
-            return rom_mtime <= cache_mtime
+
+        return rom_mtime <= cache_mtime
 
     def _save_cache_data(self, cache_file: Path, cache_data: dict[str, Any]) -> bool:
         """Safely save cache data with error handling and unique temp files."""
@@ -193,15 +203,21 @@ class ROMCache:
             temp_file.replace(cache_file)
         except Exception as e:
             # Clean up temp file if it exists
-            try:
-                if "temp_file" in locals() and temp_file.exists():
-                    temp_file.unlink(missing_ok=True)
-            except (OSError, FileNotFoundError):
-                pass  # Ignore cleanup errors
+            self._cleanup_temp_file(locals().get("temp_file"))
             logger.warning(f"Failed to save cache file {cache_file}: {e}")
             return False
-        else:
-            return True
+
+        return True
+
+    def _cleanup_temp_file(self, temp_file: Path | None) -> None:
+        """Clean up temporary file safely (TRY301: abstract exception handling)."""
+        if temp_file is None:
+            return
+        try:
+            if temp_file.exists():
+                temp_file.unlink(missing_ok=True)
+        except (OSError, FileNotFoundError):
+            pass  # Ignore cleanup errors
 
     def _load_cache_data(self, cache_file: Path, max_retries: int = 3) -> dict[str, Any] | None:
         """Safely load cache data with error handling and retry logic."""
@@ -316,6 +332,8 @@ class ROMCache:
             sprite_location_files = [f for f in cache_files if "_sprite_locations.json" in f.name]
             rom_info_files = [f for f in cache_files if "_rom_info.json" in f.name]
             scan_progress_files = [f for f in cache_files if "_scan_progress_" in f.name]
+            preview_files = [f for f in cache_files if "_preview_" in f.name]
+            preview_batch_files = [f for f in cache_files if "_preview_batch.json" in f.name]
 
             return {
                 "cache_dir": str(self.cache_dir),
@@ -325,6 +343,8 @@ class ROMCache:
                 "sprite_location_caches": len(sprite_location_files),
                 "rom_info_caches": len(rom_info_files),
                 "scan_progress_caches": len(scan_progress_files),
+                "preview_caches": len(preview_files),
+                "preview_batch_caches": len(preview_batch_files),
                 "cache_dir_exists": self.cache_dir.exists(),
             }
 
@@ -390,9 +410,11 @@ class ROMCache:
 
             for name, location_data in sprite_locations.items():
                 if isinstance(location_data, dict) and "offset" in location_data:
-                    # Import SpritePointer only when needed to avoid circular imports
+                    # Import SpritePointer only when needed to avoid circular imports.
+                    # REQUIRED DELAYED IMPORT: Prevents circular dependency:
+                    # rom_cache -> rom_injector -> managers -> rom_cache
                     try:
-                        from core.rom_injector import SpritePointer
+                        from core.rom_injector import SpritePointer  # noqa: PLC0415
                         # Restore SpritePointer object from cached data
                         restored_locations[name] = SpritePointer(
                             offset=location_data["offset"],
@@ -411,8 +433,8 @@ class ROMCache:
         except Exception as e:
             logger.warning(f"Failed to load sprite locations from cache: {e}")
             return None
-        else:
-            return restored_locations
+
+        return restored_locations
 
     def save_sprite_locations(self, rom_path: str, sprite_locations: dict[str, Any],
                             rom_header: dict[str, Any] | None = None) -> bool:
@@ -566,6 +588,386 @@ class ROMCache:
 
         return removed_count
 
+    def clear_preview_cache(self, rom_path: str | None = None) -> int:
+        """Clear preview data caches.
+
+        Args:
+            rom_path: Optional ROM path to clear caches for specific ROM only
+
+        Returns:
+            Number of cache files removed
+        """
+        if not self._cache_enabled:
+            return 0
+
+        removed_count = 0
+        try:
+            if rom_path:
+                # Clear preview caches for specific ROM
+                rom_hash = self._get_rom_hash(rom_path)
+
+                # Clear individual preview caches
+                for cache_file in self.cache_dir.glob(f"{rom_hash}_preview_*.json"):
+                    try:
+                        cache_file.unlink()
+                        removed_count += 1
+                    except (OSError, PermissionError):
+                        pass
+
+                # Clear batch preview cache
+                batch_cache = self._get_cache_file_path(rom_hash, "preview_batch")
+                if batch_cache.exists():
+                    try:
+                        batch_cache.unlink()
+                        removed_count += 1
+                    except (OSError, PermissionError):
+                        pass
+            else:
+                # Clear all preview caches
+                for cache_file in self.cache_dir.glob("*_preview_*.json"):
+                    try:
+                        cache_file.unlink()
+                        removed_count += 1
+                    except (OSError, PermissionError):
+                        pass
+
+                for cache_file in self.cache_dir.glob("*_preview_batch.json"):
+                    try:
+                        cache_file.unlink()
+                        removed_count += 1
+                    except (OSError, PermissionError):
+                        pass
+
+        except (OSError, PermissionError):
+            pass
+
+        return removed_count
+
+    def _get_cache_key(self, rom_hash: str, offset: int, params: dict[str, Any] | None = None) -> str:
+        """Generate consistent cache key for preview data.
+
+        Args:
+            rom_hash: Hash of ROM file
+            offset: Offset within ROM
+            params: Optional parameters affecting preview generation
+
+        Returns:
+            Cache key string
+        """
+        key_components = [rom_hash, str(offset)]
+
+        if params:
+            # Sort parameters for consistent key generation
+            sorted_params = json.dumps(params, sort_keys=True)
+            param_hash = hashlib.md5(sorted_params.encode()).hexdigest()[:8]
+            key_components.append(param_hash)
+
+        return "_".join(key_components)
+
+    def save_preview_data(self, rom_path: str, offset: int, tile_data: bytes,
+                         width: int, height: int, params: dict[str, Any] | None = None) -> bool:
+        """Save preview tile data to cache with compression.
+
+        Args:
+            rom_path: Path to ROM file
+            offset: Offset within ROM where sprite data was found
+            tile_data: Raw tile data bytes
+            width: Width of sprite in pixels
+            height: Height of sprite in pixels
+            params: Optional parameters used for preview generation
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        if not self._cache_enabled:
+            return False
+
+        try:
+            rom_hash = self._get_rom_hash(rom_path)
+            cache_key = self._get_cache_key(rom_hash, offset, params)
+            cache_file = self._get_cache_file_path(rom_hash, f"preview_{cache_key}")
+
+            # Compress tile data using zlib (level 6 for balance of speed/compression)
+            compressed_data = zlib.compress(tile_data, level=6)
+
+            cache_data = {
+                "version": self.CACHE_VERSION,
+                "rom_path": os.path.abspath(rom_path),
+                "rom_hash": rom_hash,
+                "cached_at": time.time(),
+                "preview_data": {
+                    "offset": offset,
+                    "tile_data": compressed_data.hex(),  # Store as hex string for JSON
+                    "width": width,
+                    "height": height,
+                    "params": params,
+                    "timestamp": time.time(),
+                    "compression_ratio": len(compressed_data) / len(tile_data) if tile_data else 0.0,
+                }
+            }
+
+            success = self._save_cache_data(cache_file, cache_data)
+            if success:
+                logger.debug(f"Saved preview data for offset {offset:08X} "
+                           f"(compressed {len(tile_data)} -> {len(compressed_data)} bytes)")
+            return success
+
+        except Exception as e:
+            logger.warning(f"Failed to save preview data: {e}")
+            return False
+
+    def get_preview_data(self, rom_path: str, offset: int,
+                        params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        """Get cached preview data for ROM and offset.
+
+        Args:
+            rom_path: Path to ROM file
+            offset: Offset within ROM
+            params: Optional parameters used for preview generation
+
+        Returns:
+            Dictionary containing decompressed tile data and metadata, or None if not cached
+        """
+        if not self._cache_enabled:
+            return None
+
+        try:
+            rom_hash = self._get_rom_hash(rom_path)
+            cache_key = self._get_cache_key(rom_hash, offset, params)
+            cache_file = self._get_cache_file_path(rom_hash, f"preview_{cache_key}")
+
+            if not self._is_cache_valid(cache_file, rom_path):
+                return None
+
+            cache_data = self._load_cache_data(cache_file)
+            if not cache_data:
+                return None
+
+            # Validate cache format
+            if (cache_data.get("version") != self.CACHE_VERSION or
+                "preview_data" not in cache_data):
+                return None
+
+            preview_data = cache_data["preview_data"]
+
+            # Decompress tile data
+            try:
+                compressed_hex = preview_data["tile_data"]
+                compressed_data = bytes.fromhex(compressed_hex)
+                tile_data = zlib.decompress(compressed_data)
+
+                # Return decompressed data with metadata
+                return {
+                    "offset": preview_data["offset"],
+                    "tile_data": tile_data,
+                    "width": preview_data["width"],
+                    "height": preview_data["height"],
+                    "params": preview_data.get("params"),
+                    "timestamp": preview_data["timestamp"],
+                    "compression_ratio": preview_data.get("compression_ratio", 0.0),
+                }
+
+            except (ValueError, zlib.error) as e:
+                logger.warning(f"Failed to decompress preview data: {e}")
+                return None
+
+        except Exception as e:
+            logger.warning(f"Failed to load preview data: {e}")
+            return None
+
+    def save_preview_batch(self, rom_path: str, preview_data_dict: dict[int, dict[str, Any]]) -> bool:
+        """Save multiple preview data entries in batch for efficiency.
+
+        Args:
+            rom_path: Path to ROM file
+            preview_data_dict: Dictionary mapping offsets to preview data
+                              Each entry should contain: tile_data, width, height, params
+
+        Returns:
+            True if all entries saved successfully, False otherwise
+        """
+        if not self._cache_enabled:
+            return False
+
+        if not preview_data_dict:
+            return True
+
+        try:
+            rom_hash = self._get_rom_hash(rom_path)
+            cache_file = self._get_cache_file_path(rom_hash, "preview_batch")
+
+            # Process each entry and compress tile data
+            batch_data = {}
+            total_original_size = 0
+            total_compressed_size = 0
+
+            for offset, data in preview_data_dict.items():
+                tile_data = data["tile_data"]
+                if not isinstance(tile_data, bytes):
+                    logger.warning(f"Invalid tile data type for offset {offset:08X}")
+                    continue
+
+                # Compress tile data
+                compressed_data = zlib.compress(tile_data, level=6)
+                total_original_size += len(tile_data)
+                total_compressed_size += len(compressed_data)
+
+                batch_data[str(offset)] = {
+                    "tile_data": compressed_data.hex(),
+                    "width": data["width"],
+                    "height": data["height"],
+                    "params": data.get("params"),
+                    "timestamp": time.time(),
+                    "compression_ratio": len(compressed_data) / len(tile_data),
+                }
+
+            cache_data = {
+                "version": self.CACHE_VERSION,
+                "rom_path": os.path.abspath(rom_path),
+                "rom_hash": rom_hash,
+                "cached_at": time.time(),
+                "batch_preview_data": batch_data,
+                "batch_stats": {
+                    "entry_count": len(batch_data),
+                    "total_original_size": total_original_size,
+                    "total_compressed_size": total_compressed_size,
+                    "overall_compression_ratio": total_compressed_size / total_original_size if total_original_size > 0 else 0.0,
+                }
+            }
+
+            success = self._save_cache_data(cache_file, cache_data)
+            if success:
+                logger.debug(f"Saved batch preview data: {len(batch_data)} entries, "
+                           f"compressed {total_original_size} -> {total_compressed_size} bytes")
+            return success
+
+        except Exception as e:
+            logger.warning(f"Failed to save preview batch: {e}")
+            return False
+
+    def get_offset_suggestions(self, rom_path: str, current_offset: int | None = None,
+                              limit: int = 10) -> list[dict[str, Any]]:
+        """Get offset suggestions based on cached scan results and preview data.
+
+        Analyzes cached data to suggest offsets that are likely to contain sprites,
+        with confidence scores based on various factors.
+
+        Args:
+            rom_path: Path to ROM file
+            current_offset: Current offset to exclude from suggestions
+            limit: Maximum number of suggestions to return
+
+        Returns:
+            List of suggestion dictionaries with offset, confidence, and metadata
+        """
+        if not self._cache_enabled:
+            return []
+
+        try:
+            rom_hash = self._get_rom_hash(rom_path)
+            suggestions = []
+
+            # Collect offsets from different cache sources
+            offset_sources = {}
+
+            # 1. Check scan progress caches for found sprites
+            for cache_file in self.cache_dir.glob(f"{rom_hash}_scan_progress_*.json"):
+                try:
+                    cache_data = self._load_cache_data(cache_file)
+                    if not cache_data or not self._is_cache_valid(cache_file, rom_path):
+                        continue
+
+                    scan_progress = cache_data.get("scan_progress", {})
+                    found_sprites = scan_progress.get("found_sprites", [])
+
+                    for sprite in found_sprites:
+                        offset = sprite.get("offset")
+                        if offset is not None and offset != current_offset:
+                            if offset not in offset_sources:
+                                offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
+
+                            # High confidence for found sprites
+                            offset_sources[offset]["confidence"] += 0.8
+                            offset_sources[offset]["sources"].append("scan_result")
+                            offset_sources[offset]["metadata"]["sprite_info"] = sprite
+
+                except Exception as e:
+                    logger.debug(f"Error processing scan cache {cache_file}: {e}")
+                    continue
+
+            # 2. Check preview data caches
+            for cache_file in self.cache_dir.glob(f"{rom_hash}_preview_*.json"):
+                try:
+                    cache_data = self._load_cache_data(cache_file)
+                    if not cache_data or not self._is_cache_valid(cache_file, rom_path):
+                        continue
+
+                    preview_data = cache_data.get("preview_data")
+                    if preview_data:
+                        offset = preview_data.get("offset")
+                        if offset is not None and offset != current_offset:
+                            if offset not in offset_sources:
+                                offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
+
+                            # Medium confidence for cached previews
+                            offset_sources[offset]["confidence"] += 0.6
+                            offset_sources[offset]["sources"].append("preview_cache")
+                            offset_sources[offset]["metadata"]["preview_size"] = (
+                                preview_data.get("width"), preview_data.get("height")
+                            )
+
+                except Exception as e:
+                    logger.debug(f"Error processing preview cache {cache_file}: {e}")
+                    continue
+
+            # 3. Check batch preview caches
+            batch_cache = self._get_cache_file_path(rom_hash, "preview_batch")
+            if batch_cache.exists() and self._is_cache_valid(batch_cache, rom_path):
+                try:
+                    cache_data = self._load_cache_data(batch_cache)
+                    if cache_data and cache_data.get("batch_preview_data"):
+                        for offset_str, data in cache_data["batch_preview_data"].items():
+                            offset = int(offset_str)
+                            if offset != current_offset:
+                                if offset not in offset_sources:
+                                    offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
+
+                                # Medium confidence for batch previews
+                                offset_sources[offset]["confidence"] += 0.5
+                                offset_sources[offset]["sources"].append("batch_preview")
+                                offset_sources[offset]["metadata"]["batch_size"] = (
+                                    data.get("width"), data.get("height")
+                                )
+
+                except Exception as e:
+                    logger.debug(f"Error processing batch preview cache: {e}")
+
+            # 4. Build suggestion list with confidence scoring
+            for offset, data in offset_sources.items():
+                # Normalize confidence score (cap at 1.0)
+                confidence = min(data["confidence"], 1.0)
+
+                # Boost confidence for multiple sources
+                source_count = len(set(data["sources"]))
+                if source_count > 1:
+                    confidence = min(confidence * 1.2, 1.0)
+
+                suggestions.append({
+                    "offset": offset,
+                    "confidence": confidence,
+                    "sources": data["sources"],
+                    "metadata": data["metadata"],
+                    "hex_offset": f"0x{offset:08X}",
+                })
+
+            # Sort by confidence (descending) and limit results
+            suggestions.sort(key=lambda x: x["confidence"], reverse=True)
+            return suggestions[:limit]
+
+        except Exception as e:
+            logger.warning(f"Failed to generate offset suggestions: {e}")
+            return []
+
     def refresh_settings(self) -> None:
         """Refresh cache settings from settings manager."""
         # Try to get settings manager if we don't have one
@@ -599,16 +1001,26 @@ class ROMCache:
                     self._cache_enabled = self._setup_cache_directory()
 
 
-# Global cache instance
-_rom_cache_instance: ROMCache | None = None
-_rom_cache_lock = threading.Lock()
+class _ROMCacheSingleton:
+    """Thread-safe singleton holder for ROMCache."""
+    _instance: ROMCache | None = None
+    _lock = threading.Lock()
+
+    @classmethod
+    def get(cls) -> ROMCache:
+        """Get the global ROM cache instance (thread-safe)."""
+        # Fast path - check without lock
+        if cls._instance is not None:
+            return cls._instance
+
+        # Slow path - create with lock
+        with cls._lock:
+            # Double-check locking pattern
+            if cls._instance is None:
+                cls._instance = ROMCache()
+        return cls._instance
+
 
 def get_rom_cache() -> ROMCache:
     """Get the global ROM cache instance (thread-safe)."""
-    global _rom_cache_instance
-    if _rom_cache_instance is None:
-        with _rom_cache_lock:
-            # Double-check locking pattern
-            if _rom_cache_instance is None:
-                _rom_cache_instance = ROMCache()
-    return _rom_cache_instance
+    return _ROMCacheSingleton.get()

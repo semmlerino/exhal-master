@@ -5,6 +5,7 @@ This validates that the fix eliminates the 2+ minute blocking behavior
 with invalid file paths, ensuring fail-fast behavior.
 """
 
+
 import sys
 import time
 from pathlib import Path
@@ -60,10 +61,10 @@ class TestControllerDefensiveValidationFix:
                 print(f"extraction_failed called with: {message}")
                 # Don't call original to avoid blocking modal dialog
                 # Just update button state for test validation
-                extract_button = getattr(main_window, 'extract_button', None)
+                extract_button = getattr(main_window, "extract_button", None)
                 if extract_button:
                     extract_button.setEnabled(True)
-                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                if hasattr(main_window, "status_bar") and main_window.status_bar:
                     main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed
@@ -122,10 +123,10 @@ class TestControllerDefensiveValidationFix:
                 extraction_failed_called.append(message)
                 print(f"extraction_failed called with: {message}")
                 # Don't call original to avoid blocking modal dialog
-                extract_button = getattr(main_window, 'extract_button', None)
+                extract_button = getattr(main_window, "extract_button", None)
                 if extract_button:
                     extract_button.setEnabled(True)
-                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                if hasattr(main_window, "status_bar") and main_window.status_bar:
                     main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed
@@ -188,10 +189,10 @@ class TestControllerDefensiveValidationFix:
             def track_extraction_failed(message):
                 extraction_failed_called.append(message)
                 # Don't call original to avoid blocking modal dialog
-                extract_button = getattr(main_window, 'extract_button', None)
+                extract_button = getattr(main_window, "extract_button", None)
                 if extract_button:
                     extract_button.setEnabled(True)
-                if hasattr(main_window, 'status_bar') and main_window.status_bar:
+                if hasattr(main_window, "status_bar") and main_window.status_bar:
                     main_window.status_bar.showMessage("Extraction failed")
 
             main_window.extraction_failed = track_extraction_failed

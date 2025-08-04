@@ -9,6 +9,14 @@ from unittest.mock import patch
 
 import pytest
 
+import tempfile
+
+import tempfile
+
+import tempfile
+
+import tempfile
+
 from spritepal.core.rom_injector import SpritePointer
 from spritepal.utils.rom_cache import ROMCache, get_rom_cache
 

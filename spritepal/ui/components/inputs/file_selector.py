@@ -17,7 +17,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QWidget,
 )
-
 from utils.settings_manager import get_settings_manager
 
 

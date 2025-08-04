@@ -14,11 +14,30 @@ import builtins
 import contextlib
 import json
 from pathlib import Path
+
+import spritepal.core.managers.registry
+import spritepal.utils.rom_cache
+
+import spritepal.core.managers.registry
+import spritepal.utils.rom_cache
+
+import spritepal.core.managers.registry
+import spritepal.utils.rom_cache
+
+import spritepal.core.managers.registry
+import spritepal.utils.rom_cache
+import spritepal.utils.settings_manager
+import spritepal.utils.settings_manager
+import spritepal.utils.settings_manager
+import spritepal.utils.settings_manager
 from unittest.mock import patch
 
 import pytest
 from PyQt6.QtCore import QSettings
 
+import spritepal.core.managers.registry
+import spritepal.utils.rom_cache
+import spritepal.utils.settings_manager
 from spritepal.core.managers import (
     cleanup_managers,
     get_session_manager,
@@ -65,9 +84,6 @@ class TestSettingsPersistenceAcrossRestarts:
         monkeypatch.setattr(Path, "cwd", lambda: test_dir)
 
         # Reset global instances BEFORE yielding
-        import spritepal.core.managers.registry
-        import spritepal.utils.rom_cache
-        import spritepal.utils.settings_manager
 
         spritepal.utils.settings_manager._settings_manager_instance = None
         spritepal.utils.rom_cache._rom_cache_instance = None

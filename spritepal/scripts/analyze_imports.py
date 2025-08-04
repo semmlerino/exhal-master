@@ -9,6 +9,7 @@ Identifies:
 """
 
 import ast
+import json
 from collections import defaultdict
 from pathlib import Path
 
@@ -251,7 +252,6 @@ def main():
 
     # Save detailed report
     report_path = project_root / "import_analysis_report.json"
-    import json
     with open(report_path, "w") as f:
         json.dump({
             "dependencies": {k: list(v) for k, v in dependencies.items()},

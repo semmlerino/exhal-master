@@ -10,6 +10,8 @@ This module provides comprehensive testing of cache UI integration with:
 
 import os
 import time
+
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -32,9 +34,9 @@ def setup_teardown():
     initialize_managers("TestROMCacheUI")
     yield
     cleanup_managers()
-    # Reset global cache instance
-    global _rom_cache_instance
-    _rom_cache_instance = None
+    # Reset global cache instance using the new pattern
+    from spritepal.utils.rom_cache import _ROMCacheSingleton
+    _ROMCacheSingleton._instance = None
 
 
 @pytest.fixture
@@ -73,9 +75,9 @@ def mock_rom_cache(rom_cache):
         with patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache") as mock_widget:
             mock_widget.return_value = rom_cache
             yield rom_cache
-    # Clean up global state
-    global _rom_cache_instance
-    _rom_cache_instance = None
+    # Clean up global state using the new pattern
+    from spritepal.utils.rom_cache import _ROMCacheSingleton
+    _ROMCacheSingleton._instance = None
 
 
 @pytest.fixture
@@ -363,9 +365,9 @@ class TestCacheUIHelpers:
         # Get first instance
         cache1 = get_rom_cache()
 
-        # Reset global cache instance
-        import spritepal.utils.rom_cache as rom_cache_module
-        rom_cache_module._rom_cache_instance = None
+        # Reset global cache instance using the new pattern
+        from spritepal.utils.rom_cache import _ROMCacheSingleton
+        _ROMCacheSingleton._instance = None
 
         # Get new instance
         cache2 = get_rom_cache()

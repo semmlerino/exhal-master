@@ -7,10 +7,11 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict
 
 from PIL import Image
 from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     from core.protocols import (
@@ -37,12 +38,13 @@ from ui.row_arrangement_dialog import RowArrangementDialog
 from utils.constants import (
     DEFAULT_TILES_PER_ROW,
     TILE_WIDTH,
+    VRAM_SPRITE_OFFSET,
 )
+from utils.file_validator import FileValidator
 from utils.image_utils import pil_to_qpixmap
 from utils.logging_config import get_logger
-from utils.preview_generator import get_preview_generator, create_vram_preview_request
+from utils.preview_generator import create_vram_preview_request, get_preview_generator
 from utils.settings_manager import get_settings_manager
-from utils.file_validator import FileValidator
 
 
 # Type definitions
@@ -70,6 +72,98 @@ class ROMExtractionParams(TypedDict):
 logger = get_logger(__name__)
 
 
+class ErrorHandlerProtocol(Protocol):
+    """Protocol defining the error handler interface for type safety"""
+
+    def handle_exception(self, exception: Exception, context: str = "") -> None:
+        """Handle an exception with optional context"""
+        ...
+
+    def handle_critical_error(self, title: str, message: str) -> None:
+        """Handle a critical error"""
+        ...
+
+    def handle_warning(self, title: str, message: str) -> None:
+        """Handle a warning"""
+        ...
+
+    def handle_info(self, title: str, message: str) -> None:
+        """Handle an info message"""
+        ...
+
+    def handle_validation_error(
+        self, 
+        error: Exception, 
+        context_info: str, 
+        user_input: str | None = None, 
+        **context_kwargs: Any
+    ) -> Any:
+        """Handle a validation error with context"""
+        ...
+
+
+class MockErrorHandler:
+    """
+    Mock error handler for testing that implements all ErrorHandler methods.
+    
+    This replaces the dangerous Mock() usage that would crash when unmocked 
+    methods are called. Each method logs the call for debugging but never
+    raises exceptions.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the mock error handler"""
+        self._call_log: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+
+    def handle_exception(self, exception: Exception, context: str = "") -> None:
+        """Handle an exception with optional context"""
+        self._log_call("handle_exception", (exception, context), {})
+        logger.info(f"MockErrorHandler.handle_exception: {type(exception).__name__}: {exception} (context: {context})")
+
+    def handle_critical_error(self, title: str, message: str) -> None:
+        """Handle a critical error"""
+        self._log_call("handle_critical_error", (title, message), {})
+        logger.info(f"MockErrorHandler.handle_critical_error: {title} - {message}")
+
+    def handle_warning(self, title: str, message: str) -> None:
+        """Handle a warning"""
+        self._log_call("handle_warning", (title, message), {})
+        logger.info(f"MockErrorHandler.handle_warning: {title} - {message}")
+
+    def handle_info(self, title: str, message: str) -> None:
+        """Handle an info message"""
+        self._log_call("handle_info", (title, message), {})
+        logger.info(f"MockErrorHandler.handle_info: {title} - {message}")
+
+    def handle_validation_error(
+        self, 
+        error: Exception, 
+        context_info: str, 
+        user_input: str | None = None, 
+        **context_kwargs: Any
+    ) -> None:
+        """Handle a validation error with context"""
+        self._log_call("handle_validation_error", (error, context_info, user_input), context_kwargs)
+        user_input_str = f" (user_input: {user_input})" if user_input else ""
+        logger.info(f"MockErrorHandler.handle_validation_error: {type(error).__name__}: {error} in {context_info}{user_input_str}")
+
+    def set_show_dialogs(self, show: bool) -> None:
+        """Mock implementation of set_show_dialogs"""
+        self._log_call("set_show_dialogs", (show,), {})
+        logger.info(f"MockErrorHandler.set_show_dialogs: {show}")
+
+    def _log_call(self, method_name: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+        """Log method call for debugging"""
+        self._call_log.append((method_name, args, kwargs))
+
+    def get_call_log(self) -> list[tuple[str, tuple[Any, ...], dict[str, Any]]]:
+        """Get the log of all method calls for testing"""
+        return self._call_log.copy()
+
+    def clear_call_log(self) -> None:
+        """Clear the call log"""
+        self._call_log.clear()
+
 
 class ExtractionController(QObject):
     """Controller for the extraction workflow"""
@@ -95,15 +189,11 @@ class ExtractionController(QObject):
 
         # Initialize error handler (skip for test mocks)
         try:
-            self.error_handler = get_error_handler(self.main_window)
+            self.error_handler: ErrorHandlerProtocol = get_error_handler(self.main_window)
         except (TypeError, AttributeError):
-            # Handle test scenarios with mock objects
-            from unittest.mock import Mock
-            self.error_handler = Mock()
-            self.error_handler.handle_exception = Mock()
-            self.error_handler.handle_critical_error = Mock()
-            self.error_handler.handle_warning = Mock()
-            self.error_handler.handle_info = Mock()
+            # Handle test scenarios with mock objects - use proper MockErrorHandler
+            # instead of dangerous Mock() that crashes when unmocked methods are called
+            self.error_handler = MockErrorHandler()
 
         # Connect UI signals
         _ = self.main_window.extract_requested.connect(self.start_extraction)
@@ -277,7 +367,7 @@ class ExtractionController(QObject):
 
             # Use PreviewGenerator service for unified preview generation
             logger.debug("Using PreviewGenerator service for preview generation")
-            
+
             # Create preview request
             preview_request = create_vram_preview_request(
                 vram_path=vram_path,
@@ -285,18 +375,18 @@ class ExtractionController(QObject):
                 sprite_name=f"vram_0x{offset:06X}",
                 size=(self.main_window.sprite_preview.width(), self.main_window.sprite_preview.height())
             )
-            
+
             # Generate preview with progress tracking
             def progress_callback(percent: int, message: str) -> None:
                 self.main_window.status_bar.showMessage(f"{message} ({percent}%)")
-            
+
             result = self.preview_generator.generate_preview(preview_request, progress_callback)
-            
+
             if result is None:
                 logger.error("Preview generation failed")
                 self.main_window.status_bar.showMessage("Preview generation failed")
                 return
-            
+
             logger.debug(f"Generated preview with {result.tile_count} tiles, cached: {result.cached}")
             pixmap = result.pixmap
             num_tiles = result.tile_count
@@ -400,7 +490,6 @@ class ExtractionController(QObject):
 
             # Open row arrangement dialog
             # Use main_window as parent only if it's a QWidget (for test compatibility)
-            from PyQt6.QtWidgets import QWidget
             parent = self.main_window if isinstance(self.main_window, QWidget) else None
             dialog = RowArrangementDialog(sprite_file, tiles_per_row, parent)
 
@@ -533,7 +622,6 @@ class ExtractionController(QObject):
 
         # Show injection dialog
         # Use main_window as parent only if it's a QWidget (for test compatibility)
-        from PyQt6.QtWidgets import QWidget
         parent = self.main_window if isinstance(self.main_window, QWidget) else None
         dialog = InjectionDialog(
             parent,

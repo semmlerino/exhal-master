@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
+
+
 import pytest
 
 from spritepal.core.hal_compression import HALCompressionError, HALCompressor

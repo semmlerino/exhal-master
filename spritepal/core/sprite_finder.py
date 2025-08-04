@@ -8,10 +8,10 @@ import tempfile
 from dataclasses import dataclass
 from typing import Any
 
-from PIL import Image
-
+from core.region_analyzer import EmptyRegionConfig, EmptyRegionDetector
 from core.rom_extractor import ROMExtractor
 from core.sprite_visual_validator import SpriteVisualValidator
+from PIL import Image
 from utils.constants import (
     BYTES_PER_TILE,
     ROM_SCAN_STEP_DEFAULT,
@@ -59,10 +59,11 @@ class SpriteCandidate:
 class SpriteFinder:
     """Finds actual character sprites in ROM files"""
 
-    def __init__(self, output_dir: str = "sprite_candidates") -> None:
+    def __init__(self, output_dir: str = "sprite_candidates", region_config: EmptyRegionConfig | None = None) -> None:
         self.extractor = ROMExtractor()
         self.validator = SpriteVisualValidator()
         self.output_dir = output_dir
+        self.region_detector = EmptyRegionDetector(region_config)
 
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
@@ -75,7 +76,8 @@ class SpriteFinder:
         step: int = ROM_SCAN_STEP_DEFAULT,
         min_confidence: float = 0.6,
         save_previews: bool = True,
-        max_candidates: int = 50
+        max_candidates: int = 50,
+        use_region_optimization: bool = True
     ) -> list[SpriteCandidate]:
         """
         Scan ROM for actual character sprites.
@@ -106,15 +108,45 @@ class SpriteFinder:
         if end_offset is None or end_offset > rom_size:
             end_offset = rom_size
 
+        # Get scan ranges based on optimization setting
+        scan_offsets = []
+
+        if use_region_optimization:
+            logger.info("Using empty region optimization for faster scanning")
+
+            # Analyze ROM regions
+            def region_progress(current, total):
+                if current % 100 == 0:
+                    logger.debug(f"Region analysis: {current}/{total} ({(current/total)*100:.1f}%)")
+
+            # Get optimized scan ranges
+            scan_ranges = self.region_detector.get_optimized_scan_ranges(
+                rom_data[start_offset:end_offset],
+                min_gap_size=0x10000  # 64KB minimum gap
+            )
+
+            # Adjust ranges to absolute offsets and generate scan offsets
+            for range_start, range_end in scan_ranges:
+                abs_start = start_offset + range_start
+                abs_end = start_offset + range_end
+                for offset in range(abs_start, min(abs_end, end_offset), step):
+                    scan_offsets.append(offset)
+
+            logger.info(f"Optimized scanning: {len(scan_offsets)} offsets in {len(scan_ranges)} regions")
+        else:
+            # Traditional linear scanning
+            scan_offsets = list(range(start_offset, end_offset, step))
+            logger.info(f"Linear scanning: {len(scan_offsets)} offsets")
+
         # Progress tracking
-        total_offsets = (end_offset - start_offset) // step
+        total_offsets = len(scan_offsets)
         processed = 0
         found_count = 0
 
         logger.info(f"Scanning {total_offsets} offsets...")
 
         # Scan through ROM
-        for offset in range(start_offset, end_offset, step):
+        for offset in scan_offsets:
             processed += 1
 
             # Progress update every 1000 offsets

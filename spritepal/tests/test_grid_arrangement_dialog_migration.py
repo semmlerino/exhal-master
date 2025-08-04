@@ -5,6 +5,9 @@ Validates that the migrated GridArrangementDialog maintains all original functio
 while using the new SplitterDialog architecture.
 """
 
+
+
+
 import contextlib
 import tempfile
 

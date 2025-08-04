@@ -10,7 +10,6 @@ exactly replicating the splitter patterns from existing dialogs.
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSplitter, QWidget
-
 from ui.styles import get_splitter_style
 
 

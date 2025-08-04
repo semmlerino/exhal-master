@@ -59,7 +59,7 @@ PALETTE_PREVIEW_SIZE = 32            # 32x32 pixel palette preview widgets
 PREVIEW_MIN_SIZE = 256               # 256x256 minimum size for preview widgets
 MAX_ZOOM = 20.0                      # Maximum zoom level for preview widgets
 
-# Button and control sizes  
+# Button and control sizes
 BROWSE_BUTTON_MAX_WIDTH = 100        # Maximum width for browse buttons
 OFFSET_LABEL_MIN_WIDTH = 80          # Minimum width for offset hex labels
 OFFSET_SPINBOX_MIN_WIDTH = 100       # Minimum width for offset spinboxes
@@ -74,7 +74,7 @@ CHECKMARK_OFFSET = 10                # Position offset for checkmark indicators
 
 # Border and line widths
 BORDER_THIN = 1                      # Thin border (1px)
-BORDER_THICK = 2                     # Thick border (2px) 
+BORDER_THICK = 2                     # Thick border (2px)
 LINE_NORMAL = 1                      # Normal line width
 LINE_THICK = 3                       # Thick line width
 

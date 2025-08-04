@@ -4,6 +4,7 @@ Simple real integration test to validate testing infrastructure with pytest.
 This test validates the core functionality without complex dialogs that might hang.
 """
 
+
 import sys
 from pathlib import Path
 

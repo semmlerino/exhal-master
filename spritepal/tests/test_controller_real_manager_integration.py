@@ -19,6 +19,7 @@ This replaces heavy mock usage in test_controller.py:
 - Fake signal chains (can't test real cross-manager communication)
 """
 
+
 import sys
 import time
 from pathlib import Path

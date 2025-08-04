@@ -19,6 +19,7 @@ This replaces test_main_window_state_integration.py which heavily mocked:
 - All widget interactions (800+ lines of simulated Qt behavior)
 """
 
+
 import sys
 from pathlib import Path
 

@@ -7,12 +7,12 @@ import os
 from pathlib import Path
 from typing import Any, TypeVar
 
-T = TypeVar('T')
-
 from PyQt6.QtCore import pyqtSignal
 
 from .base_manager import BaseManager
 from .exceptions import SessionError, ValidationError
+
+T = TypeVar("T")
 
 
 class SessionManager(BaseManager):
@@ -35,9 +35,9 @@ class SessionManager(BaseManager):
         # Initialize attributes needed by _initialize() before calling super()
         self._app_name: str
         self._settings_file: Path
-        self._settings: dict[str, Any]
-        self._session_dirty: bool
-        
+        self._settings: dict[str, Any] = {}
+        self._session_dirty: bool = False
+
         self._app_name = app_name
         if settings_path:
             self._settings_file = settings_path

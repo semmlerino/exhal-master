@@ -14,7 +14,6 @@ import pytest
 from spritepal.core.controller import ExtractionController
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.workers import VRAMExtractionWorker
 
 
 @pytest.mark.mock
@@ -25,14 +24,12 @@ class TestVRAMExtractionWorkerMocked:
         self, standard_test_params, mock_extraction_worker
     ):
         """Test worker functionality with mocked Qt components"""
-        from unittest.mock import Mock, patch
-        from pathlib import Path
-        
+
         # Manager setup handled by centralized fixture
         try:
             # Use the pre-configured mock worker from fixtures
             worker = mock_extraction_worker
-            
+
             # Update worker with test parameters
             worker.params = standard_test_params
 

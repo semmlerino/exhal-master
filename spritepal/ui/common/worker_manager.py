@@ -10,8 +10,9 @@ used throughout the SpritePal codebase:
 """
 
 
-from PyQt6.QtCore import QThread
+import contextlib
 
+from PyQt6.QtCore import QThread
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +27,7 @@ class WorkerManager:
     - Qt's built-in cancellation via requestInterruption()
     - Graceful shutdown with timeout handling
     - Debug logging for worker operations
-    
+
     CRITICAL: Never uses QThread.terminate() which can corrupt Qt's internal state.
     Instead uses a multi-stage shutdown process:
     1. Call worker.cancel() if available (BaseWorker pattern)
@@ -73,7 +74,7 @@ class WorkerManager:
         logger.debug(f"Stopping {worker_name} safely")
 
         # Stage 1: Request cancellation via worker.cancel() if available (BaseWorker pattern)
-        if hasattr(worker, 'cancel') and callable(getattr(worker, 'cancel')):
+        if hasattr(worker, "cancel") and callable(worker.cancel):
             logger.debug(f"{worker_name}: Requesting cancellation via worker.cancel()")
             try:
                 worker.cancel()
@@ -194,7 +195,7 @@ class WorkerManager:
         logger.debug(f"{worker_name}: Requesting cancellation")
 
         # Stage 1: Call worker.cancel() if available (BaseWorker pattern)
-        if hasattr(worker, 'cancel') and callable(getattr(worker, 'cancel')):
+        if hasattr(worker, "cancel") and callable(worker.cancel):
             logger.debug(f"{worker_name}: Calling worker.cancel()")
             try:
                 worker.cancel()
@@ -211,7 +212,7 @@ class WorkerManager:
             return True
 
         # Stage 4: Check if worker is respecting interruption requests
-        if check_interruption and hasattr(worker, 'isInterruptionRequested'):
+        if check_interruption and hasattr(worker, "isInterruptionRequested"):
             try:
                 if worker.isInterruptionRequested():
                     logger.debug(f"{worker_name}: Interruption acknowledged, waiting longer")
@@ -259,29 +260,26 @@ class WorkerManager:
 
         # Test interruption responsiveness
         logger.debug(f"{worker_name}: Testing responsiveness")
-        
+
         # Store original interruption state if possible
-        was_interrupted = False
-        if hasattr(worker, 'isInterruptionRequested'):
-            try:
-                was_interrupted = worker.isInterruptionRequested()
-            except Exception:
-                pass
+        if hasattr(worker, "isInterruptionRequested"):
+            with contextlib.suppress(Exception):
+                worker.isInterruptionRequested()
 
         try:
             # Request interruption for testing
             worker.requestInterruption()
-            
+
             # Brief wait to see if worker responds
             responsive = worker.wait(test_timeout)
-            
+
             if responsive:
                 logger.debug(f"{worker_name}: Responsive to interruption")
             else:
                 logger.debug(f"{worker_name}: No response to interruption within {test_timeout}ms")
-                
-            return responsive
-            
+
         except Exception as e:
             logger.warning(f"{worker_name}: Error during responsiveness test: {e}")
             return False
+        else:
+            return responsive

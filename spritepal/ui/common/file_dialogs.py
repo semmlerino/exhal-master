@@ -8,14 +8,13 @@ throughout the SpritePal application.
 import os
 
 from PyQt6.QtWidgets import QFileDialog, QWidget
-
 from utils.settings_manager import get_settings_manager
 
 
 class FileDialogHelper:
     """
     Helper class for standardized file dialog operations
-    
+
     Provides consistent directory selection and file dialog patterns
     used throughout SpritePal's UI components.
     """
@@ -30,19 +29,19 @@ class FileDialogHelper:
     ) -> str:
         """
         Browse for directory with standardized behavior
-        
+
         Args:
             parent: Parent widget for the dialog
             title: Dialog title
             initial_dir: Initial directory to show
             settings_key: Settings key to save/restore last directory
             settings_namespace: Settings namespace for the key
-            
+
         Returns:
             Selected directory path, or empty string if cancelled
         """
         settings = get_settings_manager()
-        
+
         # Determine initial directory
         if initial_dir and os.path.exists(initial_dir):
             start_dir = initial_dir
@@ -52,7 +51,7 @@ class FileDialogHelper:
             start_dir = saved_dir if saved_dir and os.path.exists(saved_dir) else settings.get_default_directory()
         else:
             start_dir = settings.get_default_directory()
-        
+
         # Show directory dialog
         directory = QFileDialog.getExistingDirectory(
             parent,
@@ -60,13 +59,13 @@ class FileDialogHelper:
             start_dir,
             QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
         )
-        
+
         if directory:
             # Save to settings for future use
             if settings_key:
                 settings.set_value(settings_namespace, settings_key, directory)
             settings.set_last_used_directory(directory)
-            
+
         return directory
 
     @staticmethod
@@ -80,7 +79,7 @@ class FileDialogHelper:
     ) -> str:
         """
         Browse for file to open with standardized behavior
-        
+
         Args:
             parent: Parent widget for the dialog
             title: Dialog title
@@ -88,18 +87,15 @@ class FileDialogHelper:
             initial_path: Initial file/directory path
             settings_key: Settings key to save/restore last location
             settings_namespace: Settings namespace for the key
-            
+
         Returns:
             Selected file path, or empty string if cancelled
         """
         settings = get_settings_manager()
-        
+
         # Determine initial directory
         if initial_path and os.path.exists(initial_path):
-            if os.path.isfile(initial_path):
-                start_path = initial_path
-            else:
-                start_path = initial_path
+            start_path = initial_path if os.path.isfile(initial_path) else initial_path
         elif settings_key:
             # Try to restore from settings
             saved_path = settings.get_value(settings_namespace, settings_key, "")
@@ -109,7 +105,7 @@ class FileDialogHelper:
                 start_path = settings.get_default_directory()
         else:
             start_path = settings.get_default_directory()
-        
+
         # Show open file dialog
         filename, _ = QFileDialog.getOpenFileName(
             parent,
@@ -117,13 +113,13 @@ class FileDialogHelper:
             start_path,
             file_filter
         )
-        
+
         if filename:
             # Save to settings for future use
             if settings_key:
                 settings.set_value(settings_namespace, settings_key, filename)
             settings.set_last_used_directory(os.path.dirname(filename))
-            
+
         return filename
 
     @staticmethod
@@ -137,7 +133,7 @@ class FileDialogHelper:
     ) -> str:
         """
         Browse for file to save with standardized behavior
-        
+
         Args:
             parent: Parent widget for the dialog
             title: Dialog title
@@ -145,12 +141,12 @@ class FileDialogHelper:
             initial_path: Initial file/directory path with suggested filename
             settings_key: Settings key to save/restore last location
             settings_namespace: Settings namespace for the key
-            
+
         Returns:
             Selected file path, or empty string if cancelled
         """
         settings = get_settings_manager()
-        
+
         # Determine initial path
         if initial_path:
             start_path = initial_path
@@ -163,7 +159,7 @@ class FileDialogHelper:
                 start_path = settings.get_default_directory()
         else:
             start_path = settings.get_default_directory()
-        
+
         # Show save file dialog
         filename, _ = QFileDialog.getSaveFileName(
             parent,
@@ -171,13 +167,13 @@ class FileDialogHelper:
             start_path,
             file_filter
         )
-        
+
         if filename:
             # Save to settings for future use
             if settings_key:
                 settings.set_value(settings_namespace, settings_key, filename)
             settings.set_last_used_directory(os.path.dirname(filename))
-            
+
         return filename
 
     @staticmethod
@@ -188,17 +184,17 @@ class FileDialogHelper:
     ) -> str:
         """
         Get smart initial directory for file dialogs
-        
+
         Args:
             current_path: Current path to check
             fallback_setting: Settings key for fallback directory
             fallback_namespace: Settings namespace for fallback
-            
+
         Returns:
             Best initial directory to use
         """
         settings = get_settings_manager()
-        
+
         # Check current path first
         if current_path:
             if os.path.isfile(current_path):
@@ -207,13 +203,13 @@ class FileDialogHelper:
                     return dir_path
             elif os.path.isdir(current_path):
                 return current_path
-        
+
         # Check fallback setting
         if fallback_setting:
             saved_dir = settings.get_value(fallback_namespace, fallback_setting, "")
             if saved_dir and os.path.exists(saved_dir):
                 return saved_dir
-        
+
         # Use default directory
         return settings.get_default_directory()
 
@@ -230,7 +226,7 @@ def browse_for_directory(
 
 def browse_for_open_file(
     parent: QWidget | None = None,
-    title: str = "Open File", 
+    title: str = "Open File",
     file_filter: str = "All Files (*.*)",
     initial_path: str = ""
 ) -> str:

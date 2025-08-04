@@ -2,6 +2,8 @@
 Tests for sprite region detection and management functionality.
 """
 
+
+
 import time
 
 import pytest

@@ -4,26 +4,26 @@ Keyboard shortcut handling for MainWindow
 
 from typing import TYPE_CHECKING, Protocol
 
-from PyQt6.QtCore import Qt, QObject
+from PyQt6.QtCore import QObject, Qt
 from PyQt6.QtGui import QKeyEvent
 
 if TYPE_CHECKING:
-    from ui.managers.tab_coordinator import TabCoordinator
     from ui.managers.output_settings_manager import OutputSettingsManager
+    from ui.managers.tab_coordinator import TabCoordinator
     from ui.managers.toolbar_manager import ToolbarManager
 
 
 class KeyboardActionsProtocol(Protocol):
     """Protocol defining the interface for keyboard actions"""
-    
+
     def on_extract_clicked(self) -> None:
         """Handle extract action"""
         ...
-    
+
     def can_open_manual_offset_dialog(self) -> bool:
         """Check if manual offset dialog can be opened"""
         ...
-    
+
     def open_manual_offset_dialog(self) -> None:
         """Open manual offset dialog"""
         ...
@@ -31,16 +31,16 @@ class KeyboardActionsProtocol(Protocol):
 
 class KeyboardShortcutHandler(QObject):
     """Handles keyboard shortcuts for MainWindow"""
-    
+
     def __init__(
         self,
         tab_coordinator: "TabCoordinator",
-        output_settings_manager: "OutputSettingsManager", 
+        output_settings_manager: "OutputSettingsManager",
         toolbar_manager: "ToolbarManager",
         actions_handler: KeyboardActionsProtocol
     ) -> None:
         """Initialize keyboard shortcut handler
-        
+
         Args:
             tab_coordinator: Tab coordinator for tab navigation
             output_settings_manager: Output settings manager for focus shortcuts
@@ -52,13 +52,13 @@ class KeyboardShortcutHandler(QObject):
         self.output_settings_manager = output_settings_manager
         self.toolbar_manager = toolbar_manager
         self.actions_handler = actions_handler
-        
+
     def handle_key_press_event(self, event: QKeyEvent) -> bool:
         """Handle keyboard shortcut events
-        
+
         Args:
             event: Key press event
-            
+
         Returns:
             True if event was handled, False otherwise
         """
@@ -103,14 +103,14 @@ class KeyboardShortcutHandler(QObject):
                 return True
 
         return False
-        
+
     def _navigate_to_next_tab(self) -> None:
         """Navigate to next tab"""
         current = self.tab_coordinator.get_current_tab_index()
         tab_count = self.tab_coordinator.extraction_tabs.count()
         next_tab = (current + 1) % tab_count
         self.tab_coordinator.extraction_tabs.setCurrentIndex(next_tab)
-        
+
     def _navigate_to_previous_tab(self) -> None:
         """Navigate to previous tab"""
         current = self.tab_coordinator.get_current_tab_index()

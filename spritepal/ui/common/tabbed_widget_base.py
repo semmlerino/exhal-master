@@ -58,7 +58,7 @@ class TabbedWidgetBase(QWidget):
         layout.setSpacing(0)
 
         # Create tab widget
-        self._tab_widget = QTabWidget()
+        self._tab_widget = QTabWidget(self)
         self._tab_widget.setTabPosition(QTabWidget.TabPosition.North)
         self._tab_widget.setTabsClosable(False)
         self._tab_widget.setMovable(False)
@@ -173,7 +173,7 @@ class TabbedWidgetBase(QWidget):
         Returns:
             A container widget with proper padding and layout
         """
-        container = QWidget()
+        container = QWidget(self)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(
             TAB_CONTENT_PADDING,

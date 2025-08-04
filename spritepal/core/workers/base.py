@@ -7,7 +7,7 @@ ensuring consistent interfaces, proper error handling, and type safety.
 
 from abc import ABCMeta, abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from PyQt6.QtCore import QMetaObject, QObject, QThread, pyqtSignal
 
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
     from core.managers.factory import ManagerFactory
 
 from core.managers.base_manager import BaseManager
-from utils.logging_config import get_logger
 from ui.common.timing_constants import SLEEP_WORKER
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -28,24 +28,24 @@ def handle_worker_errors(
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator for standardized worker exception handling.
-    
+
     Handles the common exception patterns found across worker classes:
     - Re-raises InterruptedError for proper cancellation handling (or handles it if handle_interruption=True)
     - Catches file I/O errors: (OSError, IOError, PermissionError) - logs only
-    - Catches data format errors: (ValueError, TypeError) - logs only  
+    - Catches data format errors: (ValueError, TypeError) - logs only
     - Optionally catches RuntimeError (for base class compatibility) - logs only
     - Catches general exceptions as fallback - logs AND emits signals
-    
+
     This pattern prevents duplicate signal emissions while ensuring all errors are logged.
-    
+
     Args:
         operation_context: Context string for error messages (e.g., "VRAM extraction")
         handle_interruption: If True, handles InterruptedError instead of re-raising
         include_runtime_error: If True, adds RuntimeError to the handled exceptions
-        
+
     Returns:
         Decorated function that handles exceptions consistently
-        
+
     Usage:
         @handle_worker_errors("VRAM extraction")
         def perform_operation(self) -> None:
@@ -57,7 +57,7 @@ def handle_worker_errors(
         def wrapper(self: "BaseWorker", *args: Any, **kwargs: Any) -> Any:
             try:
                 return func(self, *args, **kwargs)
-                
+
             except InterruptedError:
                 if handle_interruption:
                     logger.info(f"{self._operation_name}: Operation cancelled")
@@ -65,17 +65,17 @@ def handle_worker_errors(
                 else:
                     # Re-raise cancellation to be handled by caller or base class
                     raise
-                
-            except (OSError, IOError, PermissionError) as e:
+
+            except (OSError, PermissionError) as e:
                 error_msg = f"File I/O error during {operation_context}: {e!s}"
                 logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
                 # Note: No signal emission for specific errors - only log
-                    
+
             except (ValueError, TypeError) as e:
                 error_msg = f"Data format error during {operation_context}: {e!s}"
                 logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
                 # Note: No signal emission for specific errors - only log
-                    
+
             except RuntimeError as e:
                 if include_runtime_error:
                     error_msg = f"Runtime error during {operation_context}: {e!s}"
@@ -84,14 +84,14 @@ def handle_worker_errors(
                 else:
                     # If not handling RuntimeError, let it propagate
                     raise
-                    
+
             except Exception as e:
                 error_msg = f"{operation_context} failed: {e!s}"
                 logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
                 # General exception catch: log AND emit signals
                 self.emit_error(error_msg, e)
                 self.operation_finished.emit(False, error_msg)
-                    
+
         return wrapper
     return decorator
 
@@ -202,7 +202,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         # Check internal cancellation flag (BaseWorker pattern)
         if self._is_cancelled:
             raise InterruptedError("Operation was cancelled")
-        
+
         # Check Qt's built-in interruption mechanism
         if self.isInterruptionRequested():
             logger.debug(f"{self._operation_name}: Qt interruption detected")
@@ -218,7 +218,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         """
         while self._is_paused and not self._is_cancelled and not self.isInterruptionRequested():
             self.msleep(int(SLEEP_WORKER * 1000))  # Sleep 100ms
-            
+
         # If we exited due to Qt interruption, update internal state
         if self.isInterruptionRequested() and not self._is_cancelled:
             logger.debug(f"{self._operation_name}: Qt interruption detected during pause")

@@ -14,10 +14,7 @@ from utils.constants import (
     MAX_SPRITE_COUNT_MAIN,
     ROM_ALIGNMENT_GAP_THRESHOLD,
     ROM_MIN_REGION_SIZE,
-    ROM_SIZE_1MB,
-    ROM_SIZE_2MB,
     ROM_SIZE_512KB,
-    SPRITE_DENSITY_THRESHOLD,
 )
 from utils.logging_config import get_logger
 

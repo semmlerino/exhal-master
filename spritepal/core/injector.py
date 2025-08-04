@@ -8,10 +8,8 @@ from typing import Any
 
 from PIL import Image
 from PyQt6.QtCore import QThread, pyqtSignal
-
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,
-    MAX_SPRITE_DIMENSION,
     PIXEL_MASK_4BIT,
     TILE_HEIGHT,
     TILE_WIDTH,

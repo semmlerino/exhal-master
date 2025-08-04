@@ -5,20 +5,20 @@ This module provides realistic Qt mock implementations that behave consistently
 across all test environments, including headless setups.
 """
 
-from typing import Any, Callable, List
+from typing import Any, Callable, Optional
 from unittest.mock import Mock
 
 
 class MockSignal:
     """
     Realistic mock implementation of PyQt6 signals.
-    
+
     This implementation maintains callback lists and properly executes connected
     functions when emit() is called, providing realistic signal behavior for tests.
     """
 
     def __init__(self):
-        self._callbacks: List[Callable] = []
+        self._callbacks: list[Callable] = []
         self.emit = Mock(side_effect=self._emit)
         self.connect = Mock(side_effect=self._connect)
         self.disconnect = Mock(side_effect=self._disconnect)
@@ -27,7 +27,7 @@ class MockSignal:
         """Internal connect implementation that maintains callback list."""
         self._callbacks.append(callback)
 
-    def _disconnect(self, callback: Callable = None) -> None:
+    def _disconnect(self, callback: Optional[Callable] = None) -> None:
         """Internal disconnect implementation."""
         if callback is None:
             self._callbacks.clear()
@@ -65,7 +65,7 @@ class MockQWidget:
         self.isModal = Mock(return_value=False)
         self.setModal = Mock()
         self.deleteLater = Mock()
-        
+
         # Layout support
         self.setLayout = Mock()
         self.layout = Mock(return_value=None)
@@ -73,7 +73,7 @@ class MockQWidget:
 
 class MockQDialog(MockQWidget):
     """Mock implementation of QDialog extending QWidget."""
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.accept = Mock()
@@ -130,12 +130,12 @@ class MockQThread:
 
 class MockQApplication:
     """Mock implementation of QApplication."""
-    
+
     def __init__(self):
         self.processEvents = Mock()
         self.quit = Mock()
         self.exit = Mock()
-        
+
     @classmethod
     def instance(cls):
         """Mock class method that returns a mock app instance."""
@@ -145,7 +145,7 @@ class MockQApplication:
 def create_mock_signals() -> dict[str, MockSignal]:
     """
     Create a standard set of mock signals commonly used in extraction workflows.
-    
+
     Returns:
         Dictionary containing mock signals for common extraction events
     """
@@ -169,31 +169,31 @@ def create_mock_signals() -> dict[str, MockSignal]:
 def create_qt_mock_context():
     """
     Create a complete Qt mock context for headless testing.
-    
+
     Returns:
         Dictionary of Qt module mocks for patching sys.modules
     """
     mock_modules = {
         "PyQt6": Mock(),
         "PyQt6.QtCore": Mock(),
-        "PyQt6.QtGui": Mock(), 
+        "PyQt6.QtGui": Mock(),
         "PyQt6.QtWidgets": Mock(),
         "PyQt6.QtTest": Mock(),
     }
-    
+
     # Configure QtCore
     mock_modules["PyQt6.QtCore"].QObject = Mock
     mock_modules["PyQt6.QtCore"].QThread = MockQThread
     mock_modules["PyQt6.QtCore"].pyqtSignal = MockSignal
     mock_modules["PyQt6.QtCore"].Qt = Mock()
-    
+
     # Configure QtWidgets
     mock_modules["PyQt6.QtWidgets"].QApplication = MockQApplication
     mock_modules["PyQt6.QtWidgets"].QWidget = MockQWidget
     mock_modules["PyQt6.QtWidgets"].QDialog = MockQDialog
     mock_modules["PyQt6.QtWidgets"].QLabel = MockQLabel
-    
+
     # Configure QtGui
     mock_modules["PyQt6.QtGui"].QPixmap = MockQPixmap
-    
+
     return mock_modules

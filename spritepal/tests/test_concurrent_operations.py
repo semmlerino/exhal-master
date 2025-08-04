@@ -11,6 +11,10 @@ Tests use real QThread instances without mocking to find actual race conditions.
 """
 
 import os
+
+
+
+
 import time
 from pathlib import Path
 from unittest.mock import patch

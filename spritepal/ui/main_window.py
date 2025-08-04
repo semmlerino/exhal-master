@@ -3,12 +3,13 @@ Main window for SpritePal application
 """
 
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from core.controller import ExtractionController
     from core.managers.session_manager import SessionManager
 
+from core.managers import get_session_manager
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import (
@@ -22,23 +23,21 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.managers import get_session_manager
 from ui.dialogs import SettingsDialog, UserErrorDialog
 from ui.extraction_panel import ExtractionPanel
+from ui.managers import (
+    KeyboardShortcutHandler,
+    MenuBarManager,
+    OutputSettingsManager,
+    PreviewCoordinator,
+    SessionCoordinator,
+    StatusBarManager,
+    TabCoordinator,
+    ToolbarManager,
+)
 from ui.palette_preview import PalettePreviewWidget
 from ui.rom_extraction_panel import ROMExtractionPanel
 from ui.zoomable_preview import PreviewPanel
-from ui.managers import (
-    MenuBarManager,
-    ToolbarManager,
-    StatusBarManager,
-    OutputSettingsManager,
-    TabCoordinator,
-    PreviewCoordinator,
-    KeyboardShortcutHandler,
-    SessionCoordinator,
-)
 
 
 class ExtractionParams(TypedDict):
@@ -75,7 +74,7 @@ class MainWindow(QMainWindow):
         self.extraction_panel: ExtractionPanel
         self.sprite_preview: PreviewPanel
         self.palette_preview: PalettePreviewWidget
-        
+
         # Manager instances
         self.menu_bar_manager: MenuBarManager
         self.toolbar_manager: ToolbarManager
@@ -85,7 +84,7 @@ class MainWindow(QMainWindow):
         self.preview_coordinator: PreviewCoordinator
         self.keyboard_handler: KeyboardShortcutHandler
         self.session_coordinator: SessionCoordinator
-        
+
         self._output_path = ""
         self._extracted_files = []
         self.session_manager = get_session_manager()
@@ -95,7 +94,8 @@ class MainWindow(QMainWindow):
         self._connect_signals()
 
         # Create controller (lazy import to avoid circular dependency)
-        from core.controller import ExtractionController
+        # Delayed import to avoid circular dependency: main_window -> controller -> main_window
+        from core.controller import ExtractionController  # noqa: PLC0415
         self.controller = ExtractionController(self)
 
         # Restore session after UI is set up
@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 600)
 
         # Create central widget
-        central_widget = QWidget()
+        central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
         # Main horizontal splitter
@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
 
         # Left panel - Input and controls
         left_panel = self._create_left_panel()
-        
+
         # Right panel - Previews (will be created by PreviewCoordinator)
         self.sprite_preview = PreviewPanel()
         self.palette_preview = PalettePreviewWidget()
@@ -142,15 +142,15 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_bar.showMessage("Ready to extract sprites")
-        
+
     def _create_left_panel(self) -> QWidget:
         """Create the left panel with tabs, output settings, and buttons"""
-        left_panel = QWidget()
+        left_panel = QWidget(self)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
 
         # Create tab widget for extraction methods
-        self.extraction_tabs = QTabWidget()
+        self.extraction_tabs = QTabWidget(self)
 
         # ROM extraction tab (first tab, selected by default)
         self.rom_extraction_panel = ROMExtractionPanel()
@@ -164,13 +164,13 @@ class MainWindow(QMainWindow):
         self.extraction_tabs.setToolTip("Switch tabs with Ctrl+Tab/Ctrl+Shift+Tab")
 
         left_layout.addWidget(self.extraction_tabs)
-        
+
         # Output settings will be added by OutputSettingsManager
         # Action buttons will be added by ToolbarManager
-        
+
         left_layout.addStretch()
         return left_panel
-        
+
     def _setup_managers(self) -> None:
         """Set up all UI managers"""
         # Create managers in dependency order
@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
         self.toolbar_manager = ToolbarManager(self, self)
         self.preview_coordinator = PreviewCoordinator(self.sprite_preview, self.palette_preview)
         self.session_coordinator = SessionCoordinator(self, self.extraction_panel, self.output_settings_manager)
-        
+
         # Tab coordinator needs several managers
         self.tab_coordinator = TabCoordinator(
             self.extraction_tabs,
@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
             self.toolbar_manager,
             self
         )
-        
+
         # Keyboard handler needs several managers
         self.keyboard_handler = KeyboardShortcutHandler(
             self.tab_coordinator,
@@ -198,11 +198,11 @@ class MainWindow(QMainWindow):
             self.toolbar_manager,
             self
         )
-        
+
         # Initialize manager UIs
         self.menu_bar_manager.create_menus()
         self.status_bar_manager.setup_status_bar_indicators()
-        
+
         # Add output settings to left panel
         left_panel = self.centralWidget().findChild(QWidget)
         if left_panel:
@@ -211,14 +211,14 @@ class MainWindow(QMainWindow):
                 # Insert output settings group before the stretch
                 output_group = self.output_settings_manager.create_output_settings_group()
                 left_layout.insertWidget(left_layout.count() - 1, output_group)
-                
+
                 # Add toolbar buttons
                 button_layout = QGridLayout()
                 button_layout.setContentsMargins(0, 10, 0, 0)
                 button_layout.setSpacing(5)
                 self.toolbar_manager.create_action_buttons(button_layout)
                 left_layout.insertLayout(left_layout.count() - 1, button_layout)
-        
+
         # Add preview panel to main splitter
         main_splitter = self.centralWidget().findChild(QSplitter)
         if main_splitter:
@@ -233,17 +233,17 @@ class MainWindow(QMainWindow):
             is_vram_tab=False,  # ROM tab is default
             is_grayscale_mode=False
         )
-        
+
         # Update extraction mode
         self._on_extraction_mode_changed(self.extraction_panel.mode_combo.currentIndex())
-        
+
     def _setup_status_bar_indicators(self) -> None:
         """Set up permanent status bar indicators"""
         # Delegate to status bar manager
         self.status_bar_manager.setup_status_bar_indicators()
-        
+
     # Protocol method implementations for managers
-    
+
     # MenuBarActionsProtocol
     def new_extraction(self) -> None:
         """Start a new extraction"""
@@ -258,14 +258,14 @@ class MainWindow(QMainWindow):
 
         # Clear session data
         self.session_coordinator.clear_session()
-        
+
     def show_settings(self) -> None:
         """Show the settings dialog"""
         dialog = SettingsDialog(self)
         dialog.settings_changed.connect(self._on_settings_changed)
         dialog.cache_cleared.connect(self._on_cache_cleared)
         dialog.exec()
-        
+
     def show_cache_manager(self) -> None:
         """Show the cache manager dialog"""
         dialog = SettingsDialog(self)
@@ -273,10 +273,11 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(self._on_settings_changed)
         dialog.cache_cleared.connect(self._on_cache_cleared)
         dialog.exec()
-        
+
     def clear_all_caches(self) -> None:
         """Clear all ROM caches with confirmation"""
-        from utils.rom_cache import get_rom_cache
+        # Delayed import to minimize startup dependencies
+        from utils.rom_cache import get_rom_cache  # noqa: PLC0415
 
         reply = QMessageBox.question(
             self,
@@ -299,7 +300,7 @@ class MainWindow(QMainWindow):
                     "Cache Cleared",
                     f"Successfully removed {removed_count} cache files."
                 )
-            except (OSError, IOError, PermissionError) as e:
+            except (OSError, PermissionError) as e:
                 QMessageBox.critical(
                     self,
                     "File Error",
@@ -311,7 +312,7 @@ class MainWindow(QMainWindow):
                     "Error",
                     f"Failed to clear cache: {e!s}"
                 )
-                
+
     # ToolbarActionsProtocol
     def on_extract_clicked(self) -> None:
         """Handle extract button click"""
@@ -320,64 +321,63 @@ class MainWindow(QMainWindow):
             self._handle_rom_extraction()
         else:
             self._handle_vram_extraction()
-            
+
     def on_open_editor_clicked(self) -> None:
         """Handle open in editor button click"""
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.open_in_editor_requested.emit(sprite_file)
-            
+
     def on_arrange_rows_clicked(self) -> None:
         """Handle arrange rows button click"""
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.arrange_rows_requested.emit(sprite_file)
-            
+
     def on_arrange_grid_clicked(self) -> None:
         """Handle arrange grid button click"""
         if self._output_path:
             sprite_file = f"{self._output_path}.png"
             self.arrange_grid_requested.emit(sprite_file)
-            
+
     def on_inject_clicked(self) -> None:
         """Handle inject to VRAM button click"""
         if self._output_path:
             self.inject_requested.emit()
-            
+
     # OutputSettingsActionsProtocol
     def get_current_vram_path(self) -> str:
         """Get current VRAM path for browse dialog default directory"""
         current_files = self.extraction_panel.get_session_data()
         return current_files.get("vram_path", "")
-        
+
     # TabCoordinatorActionsProtocol
     def get_rom_extraction_params(self) -> dict | None:
         """Get ROM extraction parameters"""
         return self.rom_extraction_panel.get_extraction_params()
-        
+
     def is_vram_extraction_ready(self) -> bool:
         """Check if VRAM extraction is ready"""
         if self.extraction_panel.is_grayscale_mode():
             return self.extraction_panel.has_vram()
-        else:
-            return (self.extraction_panel.has_vram() and 
-                   self.extraction_panel.has_cgram())
-                   
+        return (self.extraction_panel.has_vram() and
+               self.extraction_panel.has_cgram())
+
     def is_grayscale_mode(self) -> bool:
         """Check if in grayscale mode"""
         return self.extraction_panel.is_grayscale_mode()
-        
+
     def get_extraction_mode_index(self) -> int:
         """Get current extraction mode index"""
         return self.extraction_panel.mode_combo.currentIndex()
-        
+
     # KeyboardActionsProtocol
     def can_open_manual_offset_dialog(self) -> bool:
         """Check if manual offset dialog can be opened"""
         return (self.tab_coordinator.is_rom_tab_active() and
                 hasattr(self.rom_extraction_panel, "_manual_offset_mode") and
                 self.rom_extraction_panel._manual_offset_mode)
-                
+
     def open_manual_offset_dialog(self) -> None:
         """Open manual offset dialog"""
         self.rom_extraction_panel._open_manual_offset_dialog()
@@ -390,7 +390,8 @@ class MainWindow(QMainWindow):
             params["output_base"] = self.output_settings_manager.get_output_name()
 
             # Validate parameters using extraction manager
-            from core.managers import get_extraction_manager
+            # Delayed import to avoid initialization order issues
+            from core.managers import get_extraction_manager  # noqa: PLC0415
             try:
                 extraction_manager = get_extraction_manager()
                 extraction_manager.validate_extraction_params(params)
@@ -413,7 +414,7 @@ class MainWindow(QMainWindow):
             self.status_bar_manager.show_message("Extracting sprites from ROM...")
             self.toolbar_manager.set_extract_enabled(False)
             self.controller.start_rom_extraction(params)
-            
+
     def _handle_vram_extraction(self) -> None:
         """Handle VRAM extraction"""
         # VRAM extraction - validation will be handled by controller
@@ -423,7 +424,7 @@ class MainWindow(QMainWindow):
 
         # Emit signal for controller to handle extraction
         self.extract_requested.emit()
-        
+
     def show_cache_operation_badge(self, operation: str) -> None:
         """Show cache operation badge in status bar
 
@@ -489,7 +490,7 @@ class MainWindow(QMainWindow):
         """Handle extraction mode change"""
         # Update checkboxes based on mode
         is_grayscale_mode = mode_index == 1
-        
+
         # Delegate to output settings manager
         self.output_settings_manager.set_extraction_mode_options(is_grayscale_mode)
 
@@ -500,7 +501,7 @@ class MainWindow(QMainWindow):
         """Update the label showing which files will be created"""
         is_vram_tab = self.tab_coordinator.is_vram_tab_active()
         is_grayscale_mode = self.extraction_panel.is_grayscale_mode()
-        
+
         self.output_settings_manager.update_output_info_label(is_vram_tab, is_grayscale_mode)
 
     def _on_rom_extraction_ready(self, ready: bool) -> None:
@@ -546,8 +547,9 @@ class MainWindow(QMainWindow):
     def _on_settings_changed(self) -> None:
         """Handle settings change from settings dialog"""
         # Reload any settings that affect the main window
-        from utils.rom_cache import get_rom_cache
-        from utils.settings_manager import get_settings_manager
+        # Delayed imports to minimize main window startup dependencies
+        from utils.rom_cache import get_rom_cache  # noqa: PLC0415
+        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
 
         settings_manager = get_settings_manager()
         cache_enabled = settings_manager.get_cache_enabled()
@@ -644,66 +646,66 @@ class MainWindow(QMainWindow):
         """Handle keyboard shortcuts"""
         if not a0:
             return
-            
+
         # Delegate to keyboard handler
         if self.keyboard_handler.handle_key_press_event(a0):
             return
-            
+
         super().keyPressEvent(a0)
-    
+
     # Property delegation to managers for test compatibility
     @property
     def extract_button(self):
         """Delegate to toolbar manager"""
-        if hasattr(self, 'toolbar_manager'):
+        if hasattr(self, "toolbar_manager"):
             return self.toolbar_manager.extract_button
         return None
-        
+
     @property
     def open_editor_button(self):
         """Delegate to toolbar manager"""
-        if hasattr(self, 'toolbar_manager'):
+        if hasattr(self, "toolbar_manager"):
             return self.toolbar_manager.open_editor_button
         return None
-        
+
     @property
     def arrange_rows_button(self):
         """Delegate to toolbar manager"""
-        if hasattr(self, 'toolbar_manager'):
+        if hasattr(self, "toolbar_manager"):
             return self.toolbar_manager.arrange_rows_button
         return None
-        
+
     @property
     def arrange_grid_button(self):
         """Delegate to toolbar manager"""
-        if hasattr(self, 'toolbar_manager'):
+        if hasattr(self, "toolbar_manager"):
             return self.toolbar_manager.arrange_grid_button
         return None
-        
+
     @property
     def inject_button(self):
         """Delegate to toolbar manager"""
-        if hasattr(self, 'toolbar_manager'):
+        if hasattr(self, "toolbar_manager"):
             return self.toolbar_manager.inject_button
         return None
-        
+
     @property
     def output_name_edit(self):
         """Delegate to output settings manager"""
-        if hasattr(self, 'output_settings_manager'):
+        if hasattr(self, "output_settings_manager"):
             return self.output_settings_manager.output_name_edit
         return None
-        
+
     @property
     def grayscale_check(self):
         """Delegate to output settings manager"""
-        if hasattr(self, 'output_settings_manager'):
+        if hasattr(self, "output_settings_manager"):
             return self.output_settings_manager.grayscale_check
         return None
-        
+
     @property
     def metadata_check(self):
         """Delegate to output settings manager"""
-        if hasattr(self, 'output_settings_manager'):
+        if hasattr(self, "output_settings_manager"):
             return self.output_settings_manager.metadata_check
         return None

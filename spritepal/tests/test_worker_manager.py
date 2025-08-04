@@ -4,7 +4,12 @@ Test the WorkerManager utility class.
 
 from PyQt6.QtCore import QThread, pyqtSignal
 from ui.common import WorkerManager
-from ui.common.timing_constants import SLEEP_MEDIUM, WORKER_TIMEOUT_SHORT, TEST_TIMEOUT_MEDIUM, WORKER_TIMEOUT_LONG
+from ui.common.timing_constants import (
+    SLEEP_MEDIUM,
+    TEST_TIMEOUT_MEDIUM,
+    WORKER_TIMEOUT_LONG,
+    WORKER_TIMEOUT_SHORT,
+)
 
 
 class DummyWorker(QThread):

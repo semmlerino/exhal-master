@@ -7,6 +7,7 @@ which can cause bugs when the objects are empty but not None.
 """
 
 import re
+from collections import defaultdict
 from pathlib import Path
 
 # Qt object suffixes that might have boolean evaluation issues
@@ -130,7 +131,6 @@ def audit_codebase(root_dir: Path) -> None:
         print(f"Found {len(all_issues)} potential Qt boolean evaluation issues:\n")
 
         # Group by file
-        from collections import defaultdict
         by_file = defaultdict(list)
         for issue in all_issues:
             by_file[issue["file"]].append(issue)

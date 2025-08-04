@@ -7,12 +7,12 @@ This script ensures all dependencies for performance validation are installed.
 
 import subprocess
 import sys
-from pathlib import Path
+
 
 def install_package(package):
     """Install a package using pip."""
     try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
         print(f"✅ Installed {package}")
         return True
     except subprocess.CalledProcessError as e:
@@ -33,21 +33,21 @@ def main():
     """Install performance validation dependencies."""
     print("🔧 Installing Performance Validation Dependencies")
     print("=" * 50)
-    
+
     # Core dependencies for performance testing
     dependencies = [
-        'psutil',           # System/process monitoring
-        'pytest-benchmark', # Precise benchmarking
-        'memory-profiler',  # Memory usage profiling
+        "psutil",           # System/process monitoring
+        "pytest-benchmark", # Precise benchmarking
+        "memory-profiler",  # Memory usage profiling
     ]
-    
+
     all_success = True
-    
+
     for dep in dependencies:
-        if not check_package(dep.replace('-', '_')):
+        if not check_package(dep.replace("-", "_")):
             if not install_package(dep):
                 all_success = False
-    
+
     print("\n" + "=" * 50)
     if all_success:
         print("✅ All performance validation dependencies are ready!")

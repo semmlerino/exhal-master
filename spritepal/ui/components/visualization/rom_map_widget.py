@@ -9,7 +9,6 @@ from typing import override
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QSizePolicy, QWidget
-
 from utils.logging_config import get_logger
 from utils.sprite_regions import SpriteRegion
 

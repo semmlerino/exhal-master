@@ -5,6 +5,8 @@ Tests the BaseWorker and ManagedWorker classes to ensure proper signal
 emission, cancellation/pause mechanisms, and error handling.
 """
 
+
+
 from unittest.mock import Mock, patch
 
 import pytest

@@ -8,6 +8,7 @@ Helps prioritize and fix the most critical type checking issues.
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -72,7 +73,6 @@ class TypeCheckAnalyzer:
 
     def parse_output(self, output: str):
         """Parse basedpyright output into structured data."""
-        import re
 
         # Pattern for error/warning lines
         pattern = r"([^:]+\.py):(\d+):(\d+) - (error|warning): (.+?)\s*\(([^)]+)\)"

@@ -7,10 +7,10 @@ which can occur when instance variables are assigned after super().__init__().
 
 import pytest
 from PyQt6.QtWidgets import QApplication
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
 from spritepal.ui.dialogs import SettingsDialog, UserErrorDialog
-from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from spritepal.ui.dialogs.resume_scan_dialog import ResumeScanDialog
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
 from spritepal.ui.injection_dialog import InjectionDialog
@@ -38,7 +38,7 @@ class TestDialogInitialization:
         assert dialog.browse_tab is not None
         assert dialog.smart_tab is not None
         assert dialog.history_tab is not None
-        
+
         # Verify service adapters are initialized
         assert dialog.preview_service is not None
         assert dialog.validation_service is not None

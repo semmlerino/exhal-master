@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from PyQt6.QtCore import QObject, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
-
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 

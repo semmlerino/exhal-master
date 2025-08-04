@@ -13,8 +13,8 @@ ManualOffsetDialog = UnifiedManualOffsetDialog
 
 __all__ = [
     "ManualOffsetDialog",           # Primary interface (unified dialog)
+    "ResumeScanDialog",
+    "SettingsDialog",
     "UnifiedManualOffsetDialog",    # Explicit new dialog name
-    "ResumeScanDialog", 
-    "SettingsDialog", 
     "UserErrorDialog"
 ]

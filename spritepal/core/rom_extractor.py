@@ -5,28 +5,27 @@ Extracts sprites directly from ROM files using HAL decompression
 
 import math
 import os
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import logging
 else:
-    import logging
-
-from PIL import Image
+    pass
 
 from core.default_palette_loader import DefaultPaletteLoader
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.rom_injector import ROMInjector, SpritePointer
 from core.rom_palette_extractor import ROMPaletteExtractor
 from core.sprite_config_loader import SpriteConfigLoader
+from PIL import Image
 from utils.constants import (
-    BUFFER_SIZE_16KB,
     BUFFER_SIZE_1KB,
     BUFFER_SIZE_2KB,
     BUFFER_SIZE_4KB,
-    BUFFER_SIZE_512B,
-    BUFFER_SIZE_64KB,
     BUFFER_SIZE_8KB,
+    BUFFER_SIZE_16KB,
+    BUFFER_SIZE_64KB,
+    BUFFER_SIZE_512B,
     BYTE_FREQUENCY_SAMPLE_SIZE,
     BYTES_PER_TILE,
     DEFAULT_TILES_PER_ROW,
@@ -36,7 +35,6 @@ from utils.constants import (
     MAX_BYTE_VALUE,
     MIN_SPRITE_TILES,
     PIXEL_SCALE_FACTOR,
-    PREVIEW_TILES_PER_ROW,
     PROGRESS_LOG_INTERVAL,
     PROGRESS_SAVE_INTERVAL,
     ROM_SCAN_STEP_DEFAULT,
@@ -55,7 +53,7 @@ from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 from utils.rom_exceptions import ROMCompressionError
 
-logger: 'logging.Logger' = get_logger(__name__)
+logger: "logging.Logger" = get_logger(__name__)
 
 
 class ROMExtractor:
@@ -221,7 +219,7 @@ class ROMExtractor:
         except HALCompressionError as e:
             logger.exception("HAL decompression failed")
             raise ROMCompressionError(f"Failed to decompress sprite: {e}") from e
-        except (OSError, IOError, PermissionError) as e:
+        except (OSError, PermissionError) as e:
             logger.exception(f"File I/O error during ROM extraction: {e}")
             raise
         except (ValueError, TypeError) as e:
@@ -347,14 +345,14 @@ class ROMExtractor:
                 logger.info(f"Found {len(locations)} sprite locations")
                 return locations
 
-        except (OSError, IOError, PermissionError) as e:
-            logger.exception(f"File I/O error getting sprite locations: {e}")
+        except (OSError, PermissionError):
+            logger.exception("File I/O error getting sprite locations")
             return {}
         except (ImportError, AttributeError) as e:
             logger.warning(f"ROM header parsing not available: {e}")
             return {}
-        except Exception as e:
-            logger.exception(f"Unexpected error getting sprite locations: {e}")
+        except Exception:
+            logger.exception("Unexpected error getting sprite locations")
             return {}
         else:
             logger.warning(f"Unknown ROM: {header.title} - no sprite locations available")
@@ -470,7 +468,7 @@ class ROMExtractor:
                 except HALCompressionError:
                     # Decompression failed, not a valid sprite location
                     continue
-                except (OSError, IOError, MemoryError) as e:
+                except (OSError, MemoryError) as e:
                     logger.debug(f"I/O or memory error at offset 0x{offset:X}: {e}")
                     continue
                 except Exception as e:
@@ -487,22 +485,22 @@ class ROMExtractor:
                 rom_path, scan_params, found_sprites, end_offset, completed=True
             )
 
-        except (OSError, IOError, PermissionError) as e:
-            logger.exception(f"File I/O error during sprite scan: {e}")
+        except (OSError, PermissionError):
+            logger.exception("File I/O error during sprite scan")
             # Save partial results even on failure
             if found_sprites:
                 try:
                     rom_cache.save_partial_scan_results(
                         rom_path, scan_params, found_sprites, resume_offset, completed=False
                     )
-                except (OSError, IOError, PermissionError) as cache_error:
+                except (OSError, PermissionError) as cache_error:
                     logger.warning(f"Failed to save partial results on scan failure: {cache_error}")
             return []
-        except MemoryError as e:
-            logger.exception(f"Memory error during sprite scan: {e}")
+        except MemoryError:
+            logger.exception("Memory error during sprite scan")
             return []
-        except Exception as e:
-            logger.exception(f"Unexpected error during sprite scan: {e}")
+        except Exception:
+            logger.exception("Unexpected error during sprite scan")
             # Save partial results even on failure
             if found_sprites:
                 try:

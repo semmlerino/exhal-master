@@ -5,7 +5,6 @@ Displays detection status, progress information, scanning progress, and cache st
 """
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
-
 from ui.styles import get_muted_text_style, get_panel_style
 
 
@@ -69,7 +68,9 @@ class StatusPanel(QWidget):
 
     def _setup_cache_status(self, layout: QVBoxLayout) -> None:
         """Set up cache status indicators"""
-        from utils.settings_manager import get_settings_manager
+        from utils.settings_manager import (
+            get_settings_manager,  # Delayed import to avoid circular dependency
+        )
 
         settings_manager = get_settings_manager()
 
@@ -112,8 +113,12 @@ class StatusPanel(QWidget):
         if not hasattr(self, "cache_status_widget"):
             return
 
-        from utils.rom_cache import get_rom_cache
-        from utils.settings_manager import get_settings_manager
+        from utils.rom_cache import (
+            get_rom_cache,  # Delayed import to avoid circular dependency
+        )
+        from utils.settings_manager import (
+            get_settings_manager,  # Delayed import to avoid circular dependency
+        )
 
         settings_manager = get_settings_manager()
         cache_enabled = settings_manager.get_cache_enabled()

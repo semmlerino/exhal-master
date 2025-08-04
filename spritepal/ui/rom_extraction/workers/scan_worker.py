@@ -1,7 +1,6 @@
 """Worker thread for scanning ROM for sprite offsets"""
 
 from PyQt6.QtCore import QThread, pyqtSignal
-
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -54,7 +53,9 @@ class SpriteScanWorker(QThread):
             rom_cache = None
             original_start_offset = start_offset  # Save for progress calculations
             if self.use_cache:
-                from utils.rom_cache import get_rom_cache
+                from utils.rom_cache import (
+                    get_rom_cache,  # Delayed import to avoid circular dependency
+                )
                 rom_cache = get_rom_cache()
                 self.cache_status.emit("Checking cache...")
                 logger.debug(f"Checking cache with params: {scan_params}")

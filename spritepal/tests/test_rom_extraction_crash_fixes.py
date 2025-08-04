@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.rom_extraction_panel import SpritePreviewWorker
+from spritepal.ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 
 
 class TestSignalLoopFixes:

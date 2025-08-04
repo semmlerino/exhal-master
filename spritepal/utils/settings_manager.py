@@ -6,8 +6,9 @@ conflicts when both managers save to the same file.
 """
 
 import os
+import threading
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from utils.constants import (
     CACHE_EXPIRATION_MAX_DAYS,
@@ -15,9 +16,7 @@ from utils.constants import (
     CACHE_SIZE_MAX_MB,
     CACHE_SIZE_MIN_MB,
 )
-
-if TYPE_CHECKING:
-    pass
+from utils.thread_safe_singleton import ThreadSafeSingleton
 
 
 class SettingsManager:
@@ -26,8 +25,9 @@ class SettingsManager:
     def __init__(self, app_name: str = "SpritePal") -> None:
         self.app_name: str = app_name
         # Use SessionManager for all storage operations
-        # Late import to avoid circular dependency
-        from core.managers import get_session_manager
+        # REQUIRED DELAYED IMPORT: Prevents circular dependency:
+        # settings_manager -> session_manager -> managers -> settings_manager
+        from core.managers import get_session_manager  # noqa: PLC0415
         self._session_manager = get_session_manager()
         # Initialize default settings if not present
         self._ensure_default_settings()
@@ -197,12 +197,17 @@ class SettingsManager:
         self.save_settings()
 
 
-# Global instance variable
-_settings_manager_instance: SettingsManager | None = None
+class _SettingsManagerSingleton(ThreadSafeSingleton[SettingsManager]):
+    """Thread-safe singleton holder for SettingsManager."""
+    _instance: SettingsManager | None = None
+    _lock = threading.Lock()
+
+    @classmethod
+    def _create_instance(cls) -> SettingsManager:
+        """Create a new SettingsManager instance."""
+        return SettingsManager()
+
 
 def get_settings_manager() -> SettingsManager:
-    """Get the global settings manager instance"""
-    global _settings_manager_instance
-    if _settings_manager_instance is None:
-        _settings_manager_instance = SettingsManager()
-    return _settings_manager_instance
+    """Get the global settings manager instance (thread-safe)"""
+    return _SettingsManagerSingleton.get()

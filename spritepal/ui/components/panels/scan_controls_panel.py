@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.common import WorkerManager
 from ui.components.dialogs import RangeScanDialog
 from ui.components.visualization import ROMMapWidget
@@ -67,11 +66,11 @@ class ScanControlsPanel(QWidget):
 
         # Cache status UI
         self.cache_status_label: QLabel | None = None
-        
+
         # Step 2: Initialize parent
         super().__init__(parent)
         self.setStyleSheet(get_panel_style())
-        
+
         # Step 3: Setup UI and connections
         self._setup_ui()
         self._connect_signals()
@@ -147,23 +146,23 @@ class ScanControlsPanel(QWidget):
 
     def _get_managers_safely(self) -> tuple["ExtractionManager | None", "ROMExtractor | None"]:
         """Get manager references safely with thread protection.
-        
+
         WARNING: The returned references are only safe to use within the calling
         context if that context also holds the mutex. For operations that need
         managers, prefer using _with_managers_safely() instead.
         """
         with QMutexLocker(self._manager_mutex):
             return self.extraction_manager, self.rom_extractor
-    
+
     def _with_managers_safely(self, operation):
         """Execute an operation with manager references under mutex protection.
-        
+
         This prevents TOCTOU race conditions by holding the lock during the entire
         operation. For long operations, extract only necessary data under lock.
-        
+
         Args:
             operation: Callable that takes (extraction_manager, rom_extractor) and returns a result
-            
+
         Returns:
             The result of the operation, or None if managers are not available
         """
@@ -650,6 +649,9 @@ class ScanControlsPanel(QWidget):
             False: Don't use cache (fresh scan)
             None: User cancelled
         """
+        # Local import to avoid circular dependency
+        from ui.dialogs import ResumeScanDialog
+
         try:
             rom_cache = get_rom_cache()
             if not rom_cache.cache_enabled:
@@ -669,7 +671,6 @@ class ScanControlsPanel(QWidget):
             cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
             if cached_progress and not cached_progress.get("completed", False):
                 # Found incomplete cached scan - show ResumeScanDialog
-                from ui.dialogs import ResumeScanDialog
                 user_choice = ResumeScanDialog.show_resume_dialog(cached_progress, self)
 
                 if user_choice == ResumeScanDialog.RESUME:

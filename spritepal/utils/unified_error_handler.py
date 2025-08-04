@@ -8,12 +8,24 @@ It builds upon the existing error_handler.py and integrates with all error patte
 
 from __future__ import annotations
 
+import logging
 import threading
 import traceback
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Generator, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Protocol
+
+# Import core exceptions - these should always be available
+from core.managers.exceptions import (
+    CacheError,
+    ExtractionError,
+    FileOperationError,
+    InjectionError,
+    PreviewError,
+    SessionError,
+    ValidationError,
+)
 
 # Import Qt modules with fallbacks for headless environments
 try:
@@ -23,11 +35,11 @@ try:
 except ImportError:
     # Fallback for environments without Qt
     QT_AVAILABLE = False
-    
+
     class QObject:
         def __init__(self, parent=None):
             self.parent = parent
-    
+
     def pyqtSignal(*args, **kwargs):
         """Mock signal for non-Qt environments"""
         class MockSignal:
@@ -35,7 +47,7 @@ except ImportError:
             def connect(self, *args, **kwargs): pass
             def disconnect(self, *args, **kwargs): pass
         return MockSignal()
-    
+
     class QMessageBox:
         @staticmethod
         def information(*args, **kwargs): pass
@@ -45,83 +57,35 @@ except ImportError:
         def critical(*args, **kwargs): pass
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     try:
         from PyQt6.QtWidgets import QWidget
     except ImportError:
         QWidget = None
 
-# Import exceptions with fallbacks for robust error handling
-try:
-    from core.managers.exceptions import (
-        CacheError,
-        ExtractionError,
-        FileOperationError,
-        InjectionError,
-        ManagerError,
-        PreviewError,
-        SessionError,
-        ValidationError,
-    )
-except ImportError:
-    # Fallback exceptions for when core modules aren't available
-    class ManagerError(Exception):
-        """Base exception for all manager-related errors"""
-        pass
 
-    class ValidationError(ManagerError):
-        """Exception raised when parameter validation fails"""
-        pass
+class IErrorDisplay(Protocol):
+    """Protocol for error display handlers to break circular dependency"""
+    def handle_critical_error(self, title: str, message: str) -> None: ...
+    def handle_warning(self, title: str, message: str) -> None: ...
+    def handle_info(self, title: str, message: str) -> None: ...
 
-    class ExtractionError(ManagerError):
-        """Exception raised during extraction operations"""
-        pass
 
-    class InjectionError(ManagerError):
-        """Exception raised during injection operations"""
-        pass
+# Create a simple console-based error display as default
+class ConsoleErrorDisplay:
+    """Simple console-based error display"""
+    def handle_critical_error(self, title: str, message: str) -> None:
+        print(f"CRITICAL: {title} - {message}")
 
-    class SessionError(ManagerError):
-        """Exception raised during session/settings operations"""
-        pass
+    def handle_warning(self, title: str, message: str) -> None:
+        print(f"WARNING: {title} - {message}")
 
-    class PreviewError(ManagerError):
-        """Exception raised during preview generation"""
-        pass
+    def handle_info(self, title: str, message: str) -> None:
+        print(f"INFO: {title} - {message}")
 
-    class FileOperationError(ManagerError):
-        """Exception raised during file operations"""
-        pass
 
-    class CacheError(ManagerError):
-        """Exception raised during cache operations"""
-        pass
-
-try:
-    from ui.common.error_handler import ErrorHandler, get_error_handler
-except ImportError:
-    # Fallback for when UI modules aren't available
-    class ErrorHandler:
-        def handle_critical_error(self, title: str, message: str) -> None:
-            print(f"CRITICAL: {title} - {message}")
-        
-        def handle_warning(self, title: str, message: str) -> None:
-            print(f"WARNING: {title} - {message}")
-        
-        def handle_info(self, title: str, message: str) -> None:
-            print(f"INFO: {title} - {message}")
-    
-    def get_error_handler(parent=None) -> ErrorHandler:
-        return ErrorHandler()
-
-try:
-    from utils.logging_config import get_logger
-except ImportError:
-    # Fallback logging when logging_config isn't available
-    import logging
-    def get_logger(name: str) -> logging.Logger:
-        return logging.getLogger(name)
-
-logger = get_logger(__name__)
+# Get logger directly without circular import
+logger = logging.getLogger(f"spritepal.{__name__}")
 
 
 class ErrorSeverity(Enum):
@@ -153,9 +117,9 @@ class ErrorCategory(Enum):
 class ErrorContext:
     """Context information for error handling"""
     operation: str                     # What operation was being performed
-    file_path: Optional[str] = None    # File being operated on
-    user_input: Optional[str] = None   # User input that caused error
-    component: Optional[str] = None    # UI component or module name
+    file_path: str | None = None    # File being operated on
+    user_input: str | None = None   # User input that caused error
+    component: str | None = None    # UI component or module name
     recovery_possible: bool = True     # Whether recovery is possible
     additional_info: dict[str, Any] | None = None  # Extra context data
 
@@ -176,7 +140,7 @@ class ErrorResult:
 class UnifiedErrorHandler(QObject):
     """
     Unified error handling service that standardizes error processing.
-    
+
     This class provides:
     - Context-aware error categorization
     - Standardized error message formatting
@@ -184,20 +148,25 @@ class UnifiedErrorHandler(QObject):
     - Integration with existing error handling patterns
     - Support for error chaining and nested contexts
     """
-    
+
     # Signals for different error types (extends existing ErrorHandler)
     error_processed = pyqtSignal(ErrorResult)
     recovery_suggested = pyqtSignal(str, list)  # operation, suggestions
-    
-    def __init__(self, parent: QWidget | None = None):
-        """Initialize the unified error handler"""
+
+    def __init__(self, parent: QWidget | None = None, error_display: IErrorDisplay | None = None):
+        """Initialize the unified error handler
+        
+        Args:
+            parent: Parent widget for Qt integration
+            error_display: Error display handler (injected to break circular dependency)
+        """
         super().__init__(parent)
-        self._base_error_handler = get_error_handler(parent)
+        self._error_display = error_display or ConsoleErrorDisplay()
         self._context_stack: list[ErrorContext] = []
         self._error_count = 0
         self._error_history: list[tuple[Exception, ErrorContext]] = []
         self._max_history = 50
-        
+
         # Error category mappings
         self._exception_category_map = {
             FileOperationError: ErrorCategory.FILE_IO,
@@ -215,7 +184,7 @@ class UnifiedErrorHandler(QObject):
             RuntimeError: ErrorCategory.SYSTEM,
             InterruptedError: ErrorCategory.WORKER_THREAD,
         }
-        
+
         # Recovery suggestion templates
         self._recovery_suggestions = {
             ErrorCategory.FILE_IO: [
@@ -250,16 +219,16 @@ class UnifiedErrorHandler(QObject):
                 "Restart the application",
             ],
         }
-    
+
     @contextmanager
     def error_context(
-        self, 
-        operation: str, 
+        self,
+        operation: str,
         **context_kwargs: Any
     ) -> Generator[ErrorContext, None, None]:
         """
         Context manager for error handling operations.
-        
+
         Usage:
             with error_handler.error_context("extracting sprites", file_path="rom.smc"):
                 # Operation that might fail
@@ -267,7 +236,7 @@ class UnifiedErrorHandler(QObject):
         """
         context = ErrorContext(operation=operation, **context_kwargs)
         self._context_stack.append(context)
-        
+
         try:
             yield context
         except Exception as e:
@@ -277,7 +246,7 @@ class UnifiedErrorHandler(QObject):
         finally:
             if self._context_stack and self._context_stack[-1] == context:
                 self._context_stack.pop()
-    
+
     def handle_file_error(
         self,
         error: OSError,
@@ -292,12 +261,12 @@ class UnifiedErrorHandler(QObject):
             **context_kwargs
         )
         return self._process_error(error, context, ErrorCategory.FILE_IO)
-    
+
     def handle_validation_error(
         self,
-        error: Union[ValidationError, ValueError, TypeError, Exception],
+        error: ValidationError | ValueError | TypeError | Exception,
         context_info: str,
-        user_input: Optional[str] = None,
+        user_input: str | None = None,
         **context_kwargs: Any
     ) -> ErrorResult:
         """Handle validation errors with input context"""
@@ -309,17 +278,17 @@ class UnifiedErrorHandler(QObject):
                 validation_error.__cause__ = error  # Preserve original exception
             else:
                 # For other exception types, wrap them
-                validation_error = ValidationError(f"Validation failed: {str(error)}")
+                validation_error = ValidationError(f"Validation failed: {error!s}")
                 validation_error.__cause__ = error
             error = validation_error
-        
+
         context = ErrorContext(
             operation=context_info,
             user_input=user_input,
             **context_kwargs
         )
         return self._process_error(error, context, ErrorCategory.VALIDATION)
-    
+
     def handle_worker_error(
         self,
         error: Exception,
@@ -334,7 +303,7 @@ class UnifiedErrorHandler(QObject):
             **context_kwargs
         )
         return self._process_error(error, context, ErrorCategory.WORKER_THREAD)
-    
+
     def handle_qt_error(
         self,
         error: Exception,
@@ -349,16 +318,16 @@ class UnifiedErrorHandler(QObject):
             **context_kwargs
         )
         return self._process_error(error, context, ErrorCategory.QT_GUI)
-    
+
     def handle_exception(
         self,
         error: Exception,
-        context: Optional[ErrorContext] = None,
-        category: Optional[ErrorCategory] = None
+        context: ErrorContext | None = None,
+        category: ErrorCategory | None = None
     ) -> ErrorResult:
         """
         General exception handler with automatic categorization.
-        
+
         This is the main entry point for handling any exception.
         """
         # Use current context if none provided
@@ -366,13 +335,13 @@ class UnifiedErrorHandler(QObject):
             context = self._context_stack[-1]
         elif context is None:
             context = ErrorContext(operation="unknown operation")
-        
+
         # Auto-determine category if not provided
         if category is None:
             category = self._categorize_exception(error)
-        
+
         return self._process_error(error, context, category)
-    
+
     def _process_error(
         self,
         error: Exception,
@@ -381,28 +350,28 @@ class UnifiedErrorHandler(QObject):
     ) -> ErrorResult:
         """Core error processing logic"""
         self._error_count += 1
-        
+
         # Add to history
         self._add_to_history(error, context)
-        
+
         # Determine severity
         severity = self._determine_severity(error, category, context)
-        
+
         # Generate user-friendly message
         user_message = self._format_user_message(error, context, category)
-        
+
         # Get technical details
         technical_details = self._format_technical_details(error, context)
-        
+
         # Generate recovery suggestions
         recovery_suggestions = self._generate_recovery_suggestions(
             error, category, context
         )
-        
+
         # Determine action recommendations
         should_retry = self._should_suggest_retry(error, category)
         should_abort = self._should_suggest_abort(error, severity)
-        
+
         # Create result
         result = ErrorResult(
             handled=True,
@@ -414,27 +383,27 @@ class UnifiedErrorHandler(QObject):
             should_retry=should_retry,
             should_abort=should_abort
         )
-        
+
         # Log the error
         self._log_error(error, context, result)
-        
+
         # Emit signals
         self.error_processed.emit(result)
         if recovery_suggestions:
             self.recovery_suggested.emit(context.operation, recovery_suggestions)
-        
+
         # Integrate with existing error handler for UI display
         self._integrate_with_existing_handler(result)
-        
+
         return result
-    
+
     def _categorize_exception(self, error: Exception) -> ErrorCategory:
         """Automatically categorize an exception"""
         for exc_type, category in self._exception_category_map.items():
             if isinstance(error, exc_type):
                 return category
         return ErrorCategory.UNKNOWN
-    
+
     def _determine_severity(
         self,
         error: Exception,
@@ -445,24 +414,24 @@ class UnifiedErrorHandler(QObject):
         # Critical errors
         if isinstance(error, (MemoryError, SystemError)):
             return ErrorSeverity.CRITICAL
-        
+
         # High severity for core functionality
         if category in (ErrorCategory.EXTRACTION, ErrorCategory.INJECTION):
             return ErrorSeverity.HIGH
-        
+
         # Medium severity for file operations
         if category == ErrorCategory.FILE_IO:
             if isinstance(error, PermissionError):
                 return ErrorSeverity.HIGH
             return ErrorSeverity.MEDIUM
-        
+
         # Low severity for validation
         if category == ErrorCategory.VALIDATION:
             return ErrorSeverity.LOW
-        
+
         # Default to medium
         return ErrorSeverity.MEDIUM
-    
+
     def _format_user_message(
         self,
         error: Exception,
@@ -471,32 +440,31 @@ class UnifiedErrorHandler(QObject):
     ) -> str:
         """Format a user-friendly error message"""
         operation = context.operation
-        
+
         if category == ErrorCategory.FILE_IO:
             if context.file_path:
-                return f"Failed to {operation} file '{context.file_path}': {str(error)}"
-            return f"File operation failed during {operation}: {str(error)}"
-        
-        elif category == ErrorCategory.VALIDATION:
+                return f"Failed to {operation} file '{context.file_path}': {error!s}"
+            return f"File operation failed during {operation}: {error!s}"
+
+        if category == ErrorCategory.VALIDATION:
             if context.user_input:
-                return f"Invalid input for {operation}: {str(error)}"
-            return f"Validation failed during {operation}: {str(error)}"
-        
-        elif category == ErrorCategory.WORKER_THREAD:
-            return f"Background operation '{operation}' failed: {str(error)}"
-        
-        elif category == ErrorCategory.EXTRACTION:
-            return f"Sprite extraction failed during {operation}: {str(error)}"
-        
-        elif category == ErrorCategory.INJECTION:
-            return f"Sprite injection failed during {operation}: {str(error)}"
-        
-        elif category == ErrorCategory.CACHE:
-            return f"Cache operation failed during {operation}: {str(error)}"
-        
-        else:
-            return f"Error during {operation}: {str(error)}"
-    
+                return f"Invalid input for {operation}: {error!s}"
+            return f"Validation failed during {operation}: {error!s}"
+
+        if category == ErrorCategory.WORKER_THREAD:
+            return f"Background operation '{operation}' failed: {error!s}"
+
+        if category == ErrorCategory.EXTRACTION:
+            return f"Sprite extraction failed during {operation}: {error!s}"
+
+        if category == ErrorCategory.INJECTION:
+            return f"Sprite injection failed during {operation}: {error!s}"
+
+        if category == ErrorCategory.CACHE:
+            return f"Cache operation failed during {operation}: {error!s}"
+
+        return f"Error during {operation}: {error!s}"
+
     def _format_technical_details(
         self,
         error: Exception,
@@ -504,45 +472,45 @@ class UnifiedErrorHandler(QObject):
     ) -> str:
         """Format technical error details for logging/debugging"""
         details = [
-            f"Exception: {type(error).__name__}: {str(error)}",
+            f"Exception: {type(error).__name__}: {error!s}",
             f"Operation: {context.operation}",
         ]
-        
+
         # Add exception chain information if available
-        if hasattr(error, '__cause__') and error.__cause__ is not None:
-            details.append(f"Caused by: {type(error.__cause__).__name__}: {str(error.__cause__)}")
-        
+        if hasattr(error, "__cause__") and error.__cause__ is not None:
+            details.append(f"Caused by: {type(error.__cause__).__name__}: {error.__cause__!s}")
+
         if context.file_path:
             details.append(f"File: {context.file_path}")
-        
+
         if context.component:
             details.append(f"Component: {context.component}")
-        
+
         if context.user_input:
             details.append(f"User Input: {context.user_input}")
-        
+
         if context.additional_info:
             for key, value in context.additional_info.items():
                 details.append(f"{key}: {value}")
-        
+
         # Add detailed exception chain
         details.append("\nException Chain:")
         current_error = error
         chain_level = 0
         while current_error is not None:
             indent = "  " * chain_level
-            details.append(f"{indent}{type(current_error).__name__}: {str(current_error)}")
-            current_error = getattr(current_error, '__cause__', None)
+            details.append(f"{indent}{type(current_error).__name__}: {current_error!s}")
+            current_error = getattr(current_error, "__cause__", None)
             chain_level += 1
             if chain_level > 10:  # Prevent infinite loops
                 break
-        
+
         # Add stack trace for debugging
         details.append("\nStack trace:")
         details.append(traceback.format_exc())
-        
+
         return "\n".join(details)
-    
+
     def _generate_recovery_suggestions(
         self,
         error: Exception,
@@ -551,53 +519,53 @@ class UnifiedErrorHandler(QObject):
     ) -> list[str]:
         """Generate context-aware recovery suggestions"""
         suggestions = []
-        
+
         # Get base suggestions for category
         base_suggestions = self._recovery_suggestions.get(category, [])
         suggestions.extend(base_suggestions)
-        
+
         # Add specific suggestions based on error type
         if isinstance(error, FileNotFoundError):
             suggestions.insert(0, f"Verify that the file '{context.file_path}' exists")
-        
+
         elif isinstance(error, PermissionError):
             suggestions.insert(0, "Check that you have permission to access the file")
             suggestions.append("Try running the application as administrator")
-        
+
         elif isinstance(error, ValidationError):
             suggestions.insert(0, "Review the input requirements and try again")
-        
+
         elif isinstance(error, InterruptedError):
             suggestions = ["The operation was cancelled", "You can try again"]
-        
+
         # Add context-specific suggestions
         if context.recovery_possible:
             suggestions.append("Try the operation again with different parameters")
         else:
             suggestions.append("This error may require restarting the application")
-        
+
         return list(dict.fromkeys(suggestions))  # Remove duplicates while preserving order
-    
+
     def _should_suggest_retry(self, error: Exception, category: ErrorCategory) -> bool:
         """Determine if a retry should be suggested"""
         # Don't retry validation errors
         if category == ErrorCategory.VALIDATION:
             return False
-        
+
         # Don't retry permission errors
         if isinstance(error, PermissionError):
             return False
-        
+
         # Retry transient errors
         if category in (ErrorCategory.WORKER_THREAD, ErrorCategory.CACHE):
             return True
-        
+
         return True
-    
+
     def _should_suggest_abort(self, error: Exception, severity: ErrorSeverity) -> bool:
         """Determine if operation should be aborted"""
         return severity == ErrorSeverity.CRITICAL
-    
+
     def _log_error(
         self,
         error: Exception,
@@ -605,8 +573,8 @@ class UnifiedErrorHandler(QObject):
         result: ErrorResult
     ) -> None:
         """Log the error with appropriate level"""
-        log_message = f"[{result.category.value}] {context.operation}: {str(error)}"
-        
+        log_message = f"[{result.category.value}] {context.operation}: {error!s}"
+
         if result.severity == ErrorSeverity.CRITICAL:
             logger.critical(log_message, exc_info=error)
         elif result.severity == ErrorSeverity.HIGH:
@@ -615,36 +583,40 @@ class UnifiedErrorHandler(QObject):
             logger.warning(log_message)
         else:
             logger.info(log_message)
-    
+
     def _integrate_with_existing_handler(self, result: ErrorResult) -> None:
-        """Integrate with existing ErrorHandler for UI display"""
+        """Integrate with error display handler for UI display"""
         if result.severity == ErrorSeverity.CRITICAL:
-            self._base_error_handler.handle_critical_error(
+            self._error_display.handle_critical_error(
                 "Critical Error", result.message
             )
         elif result.severity in (ErrorSeverity.HIGH, ErrorSeverity.MEDIUM):
-            self._base_error_handler.handle_warning(
+            self._error_display.handle_warning(
                 "Error", result.message
             )
         else:
-            self._base_error_handler.handle_info(
+            self._error_display.handle_info(
                 "Notice", result.message
             )
-    
+
+    def set_error_display(self, error_display: IErrorDisplay) -> None:
+        """Set the error display handler (for dependency injection)"""
+        self._error_display = error_display
+
     def _add_to_history(self, error: Exception, context: ErrorContext) -> None:
         """Add error to history for analysis"""
         self._error_history.append((error, context))
-        
+
         # Keep history size manageable
         if len(self._error_history) > self._max_history:
             self._error_history = self._error_history[-self._max_history:]
-    
+
     # Convenience decorators and utilities
-    
+
     def create_error_decorator(
         self,
         operation: str,
-        category: Optional[ErrorCategory] = None,
+        category: ErrorCategory | None = None,
         **context_kwargs: Any
     ) -> Callable:
         """Create a decorator for handling errors in a specific operation"""
@@ -659,27 +631,27 @@ class UnifiedErrorHandler(QObject):
                         **context_kwargs
                     )
                     result = self.handle_exception(e, context, category)
-                    
+
                     # Re-raise if not handled or critical
                     if not result.handled or result.should_abort:
                         raise
-                    
+
                     return None
             return wrapper
         return decorator
-    
+
     def get_error_statistics(self) -> dict[str, Any]:
         """Get error statistics for monitoring"""
         categories = {}
         severities = {}
-        
+
         for error, context in self._error_history:
             category = self._categorize_exception(error)
             severity = self._determine_severity(error, category, context)
-            
+
             categories[category.value] = categories.get(category.value, 0) + 1
             severities[severity.value] = severities.get(severity.value, 0) + 1
-        
+
         return {
             "total_errors": self._error_count,
             "categories": categories,
@@ -688,32 +660,74 @@ class UnifiedErrorHandler(QObject):
         }
 
 
-# Global unified error handler
-_unified_error_handler: UnifiedErrorHandler | None = None
-_unified_error_handler_lock = threading.Lock()
+class _UnifiedErrorHandlerSingleton:
+    """Thread-safe singleton holder for UnifiedErrorHandler."""
+    _instance: UnifiedErrorHandler | None = None
+    _lock = threading.Lock()
+    _error_display: IErrorDisplay | None = None
+
+    @classmethod
+    def get(cls, parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
+        """Get or create the global unified error handler (thread-safe)
+        
+        Args:
+            parent: Parent widget for Qt integration
+            error_display: Error display handler (injected to break circular dependency)
+        """
+        # Fast path - check without lock
+        if cls._instance is not None:
+            # Update error display if provided
+            if error_display is not None and cls._instance._error_display != error_display:
+                cls._instance.set_error_display(error_display)
+            return cls._instance
+
+        # Slow path - create with lock
+        with cls._lock:
+            # Double-check pattern
+            if cls._instance is None:
+                # Use provided error display or stored one
+                display = error_display or cls._error_display or ConsoleErrorDisplay()
+                cls._instance = UnifiedErrorHandler(parent, display)
+                cls._error_display = display
+            return cls._instance
+
+    @classmethod
+    def set_error_display(cls, error_display: IErrorDisplay) -> None:
+        """Set the error display handler for future instances"""
+        with cls._lock:
+            cls._error_display = error_display
+            if cls._instance is not None:
+                cls._instance.set_error_display(error_display)
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the global unified error handler (useful for testing)"""
+        with cls._lock:
+            cls._instance = None
 
 
-def get_unified_error_handler(parent: QWidget | None = None) -> UnifiedErrorHandler:
-    """Get or create the global unified error handler (thread-safe)"""
-    global _unified_error_handler
+def get_unified_error_handler(parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
+    """Get or create the global unified error handler (thread-safe)
     
-    # Fast path - check without lock
-    if _unified_error_handler is not None:
-        return _unified_error_handler
+    Args:
+        parent: Parent widget for Qt integration
+        error_display: Error display handler (injected to break circular dependency)
+    """
+    return _UnifiedErrorHandlerSingleton.get(parent, error_display)
+
+
+def set_global_error_display(error_display: IErrorDisplay) -> None:
+    """Set the global error display handler
     
-    # Slow path - create with lock
-    with _unified_error_handler_lock:
-        # Double-check pattern
-        if _unified_error_handler is None:
-            _unified_error_handler = UnifiedErrorHandler(parent)
-        return _unified_error_handler
+    This should be called during application initialization to inject
+    the UI error handler and break the circular dependency.
+    """
+    _UnifiedErrorHandlerSingleton.set_error_display(error_display)
 
 
 def reset_unified_error_handler() -> None:
     """Reset the global unified error handler (useful for testing)"""
-    global _unified_error_handler
-    with _unified_error_handler_lock:
-        _unified_error_handler = None
+    _UnifiedErrorHandlerSingleton.reset()
 
 
 # Convenience functions for common error patterns
@@ -721,12 +735,12 @@ def reset_unified_error_handler() -> None:
 def handle_file_operation_error(
     operation: str,
     file_path: str,
-    error_handler: Optional[UnifiedErrorHandler] = None
+    error_handler: UnifiedErrorHandler | None = None
 ) -> Callable:
     """Decorator for file operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()
-    
+
     return error_handler.create_error_decorator(
         operation=operation,
         category=ErrorCategory.FILE_IO,
@@ -736,12 +750,12 @@ def handle_file_operation_error(
 
 def handle_validation_error(
     operation: str,
-    error_handler: Optional[UnifiedErrorHandler] = None
+    error_handler: UnifiedErrorHandler | None = None
 ) -> Callable:
     """Decorator for validation operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()
-    
+
     return error_handler.create_error_decorator(
         operation=operation,
         category=ErrorCategory.VALIDATION
@@ -751,12 +765,12 @@ def handle_validation_error(
 def handle_worker_operation_error(
     operation: str,
     worker_name: str,
-    error_handler: Optional[UnifiedErrorHandler] = None
+    error_handler: UnifiedErrorHandler | None = None
 ) -> Callable:
     """Decorator for worker operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()
-    
+
     return error_handler.create_error_decorator(
         operation=operation,
         category=ErrorCategory.WORKER_THREAD,

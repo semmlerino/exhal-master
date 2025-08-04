@@ -29,7 +29,19 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
+from ui.common.spacing_constants import (
+    BORDER_THICK,
+    BROWSE_BUTTON_MAX_WIDTH,
+    CHECKMARK_OFFSET,
+    CIRCLE_INDICATOR_MARGIN,
+    CIRCLE_INDICATOR_SIZE,
+    COMBO_BOX_MIN_WIDTH,
+    DROP_ZONE_MIN_HEIGHT,
+    LINE_THICK,
+    OFFSET_LABEL_MIN_WIDTH,
+    OFFSET_SPINBOX_MIN_WIDTH,
+)
+from ui.common.timing_constants import REFRESH_RATE_60FPS
 from ui.styles import (
     get_error_text_style,
     get_hex_label_style,
@@ -39,12 +51,6 @@ from ui.styles import (
     get_success_text_style,
 )
 from utils.constants import VRAM_SPRITE_OFFSET
-from ui.common.spacing_constants import (
-    DROP_ZONE_MIN_HEIGHT, BROWSE_BUTTON_MAX_WIDTH, OFFSET_LABEL_MIN_WIDTH,
-    OFFSET_SPINBOX_MIN_WIDTH, COMBO_BOX_MIN_WIDTH, CIRCLE_INDICATOR_SIZE,
-    CIRCLE_INDICATOR_MARGIN, CHECKMARK_OFFSET, BORDER_THICK, LINE_THICK
-)
-from ui.common.timing_constants import REFRESH_RATE_60FPS
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 
@@ -235,9 +241,9 @@ class ExtractionPanel(QGroupBox):
 
         # Preset selector
         preset_layout = QHBoxLayout()
-        preset_layout.addWidget(QLabel("Preset:"))
+        preset_layout.addWidget(QLabel("Preset:", self))
 
-        self.preset_combo = QComboBox()
+        self.preset_combo = QComboBox(self)
         self.preset_combo.addItems(["Kirby Sprites (0xC000)", "Custom Range"])
         _ = self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_layout.addWidget(self.preset_combo)
@@ -246,7 +252,7 @@ class ExtractionPanel(QGroupBox):
         layout.addLayout(preset_layout)
 
         # Custom offset controls (hidden by default)
-        self.offset_widget = QWidget()
+        self.offset_widget = QWidget(self)
         offset_layout = QVBoxLayout(self.offset_widget)
 
         # Offset label with enhanced display
@@ -292,7 +298,7 @@ class ExtractionPanel(QGroupBox):
         offset_controls_layout = QHBoxLayout()
 
         # Offset spinbox with hex input
-        self.offset_spinbox = QSpinBox()
+        self.offset_spinbox = QSpinBox(self)
         self.offset_spinbox.setMinimum(0)
         self.offset_spinbox.setMaximum(0x10000)
         self.offset_spinbox.setValue(VRAM_SPRITE_OFFSET)
@@ -306,7 +312,7 @@ class ExtractionPanel(QGroupBox):
 
         # Step size selector
         offset_controls_layout.addWidget(QLabel("Step:"))
-        self.step_combo = QComboBox()
+        self.step_combo = QComboBox(self)
         self.step_combo.addItems([
             "0x20 (1 tile)",
             "0x100 (8 tiles)",
@@ -320,7 +326,7 @@ class ExtractionPanel(QGroupBox):
 
         # Quick jump dropdown
         offset_controls_layout.addWidget(QLabel("Quick Jump:"))
-        self.jump_combo = QComboBox()
+        self.jump_combo = QComboBox(self)
         self.jump_combo.addItems([
             "Select...",
             "0x0000 - Start",
@@ -344,7 +350,7 @@ class ExtractionPanel(QGroupBox):
         mode_layout = QHBoxLayout()
         mode_layout.addWidget(QLabel("Extraction Mode:"))
 
-        self.mode_combo = QComboBox()
+        self.mode_combo = QComboBox(self)
         self.mode_combo.addItems(["Full Color (requires CGRAM)", "Grayscale Only"])
         _ = self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
         mode_layout.addWidget(self.mode_combo)
@@ -668,12 +674,12 @@ class ExtractionPanel(QGroupBox):
         """Emit the pending offset change after debounce"""
         # Check if widget is still valid
         try:
-            if not hasattr(self, '_pending_offset'):
+            if not hasattr(self, "_pending_offset"):
                 return
         except (RuntimeError, AttributeError):
             # Widget may have been deleted
             return
-            
+
         logger.debug(f"Timer triggered - emitting pending offset: {self._pending_offset}")
         try:
             if self._pending_offset is not None:
@@ -825,7 +831,7 @@ class ExtractionPanel(QGroupBox):
     def __del__(self) -> None:
         """Destructor to ensure timer is stopped even if cleanup fails."""
         try:
-            if hasattr(self, '_offset_timer') and self._offset_timer is not None:
+            if hasattr(self, "_offset_timer") and self._offset_timer is not None:
                 self._offset_timer.stop()
         except (RuntimeError, AttributeError):
             # Widget may already be deleted
