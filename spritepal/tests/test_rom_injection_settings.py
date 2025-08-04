@@ -9,10 +9,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-
-
-
-
 from spritepal.core.managers import InjectionManager
 from spritepal.ui.injection_dialog import InjectionDialog
 from spritepal.utils.constants import (

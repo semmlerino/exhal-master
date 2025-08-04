@@ -10,7 +10,11 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.managers import cleanup_managers, initialize_managers, validate_manager_dependencies
+from core.managers import (
+    cleanup_managers,
+    initialize_managers,
+    validate_manager_dependencies,
+)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication

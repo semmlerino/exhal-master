@@ -4,10 +4,6 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-
-
-
 from PIL import Image
 
 from spritepal.utils.image_utils import create_checkerboard_pattern, pil_to_qpixmap

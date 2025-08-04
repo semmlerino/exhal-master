@@ -6,8 +6,6 @@ from unittest.mock import Mock
 
 from PIL import Image, ImageDraw
 
-
-
 from spritepal.ui.row_arrangement.grid_arrangement_manager import (
     ArrangementType,
     GridArrangementManager,

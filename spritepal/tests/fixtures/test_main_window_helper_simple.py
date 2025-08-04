@@ -4,7 +4,6 @@ Simplified helper for testing MainWindow functionality without creating Qt widge
 
 import tempfile
 from pathlib import Path
-
 from typing import Any
 from unittest.mock import Mock
 

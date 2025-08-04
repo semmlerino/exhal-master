@@ -105,7 +105,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()
         except Exception as e:
-            raise OSError(f"Error reading ROM file: {e}")
+            raise OSError(f"Error reading ROM file: {e}") from e
 
         # Check cancellation after file read
         if self._cancel_requested.is_set():
@@ -133,7 +133,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                 )
             )
         except Exception as e:
-            raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {e}")
+            raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {e}") from e
 
         # Check cancellation after decompression
         if self._cancel_requested.is_set():

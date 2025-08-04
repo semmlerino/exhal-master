@@ -3,28 +3,17 @@ Unit tests for refactored UI components
 """
 
 import sys
-
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
+from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
+
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
 
 
 class TestROMMapWidget:

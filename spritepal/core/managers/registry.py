@@ -237,7 +237,7 @@ class ManagerRegistry:
             # Validate specific dependency relationships
             # InjectionManager depends on SessionManager
             injection_manager = self._managers.get("injection")
-            session_manager = self._managers.get("session") 
+            session_manager = self._managers.get("session")
 
             if injection_manager and not session_manager:
                 raise ManagerError("InjectionManager requires SessionManager but it's not available")

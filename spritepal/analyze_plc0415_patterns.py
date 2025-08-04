@@ -23,7 +23,7 @@ def analyze_violations():
     # Get all violations
     result = subprocess.run(
         ["./venv/bin/ruff", "check", "--select", "PLC0415", "--output-format", "json"],
-        capture_output=True,
+        check=False, capture_output=True,
         text=True
     )
 
@@ -44,7 +44,7 @@ def analyze_violations():
 
         # Read the line to see what's being imported
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 lines = f.readlines()
                 if line_num <= len(lines):
                     import_line = lines[line_num - 1].strip()
@@ -94,7 +94,7 @@ def analyze_violations():
 
         # Show first 5 examples
         for item in items[:5]:
-            file_path = Path(item['file']).name if '/' in item['file'] else item['file']
+            file_path = Path(item["file"]).name if "/" in item["file"] else item["file"]
             print(f"  {file_path} L{item['line']}")
             print(f"    {item['import']}")
 
@@ -106,7 +106,7 @@ def analyze_violations():
         print(f"\nUNCATEGORIZED ({len(uncategorized)} violations):")
         print("-" * 40)
         for item in uncategorized[:10]:
-            file_path = Path(item['file']).name if '/' in item['file'] else item['file']
+            file_path = Path(item["file"]).name if "/" in item["file"] else item["file"]
             print(f"  {file_path} L{item['line']}")
             print(f"    {item['import']}")
 

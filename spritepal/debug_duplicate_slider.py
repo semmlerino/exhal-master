@@ -54,7 +54,10 @@ def patched_slider_init(self, *args, **kwargs):
 QSlider.__init__ = patched_slider_init
 
 # Now import the actual application components
-from ui.rom_extraction_panel import ManualOffsetDialogSingleton, ROMExtractionPanel  # noqa: E402
+from ui.rom_extraction_panel import (  # noqa: E402
+    ManualOffsetDialogSingleton,
+    ROMExtractionPanel,
+)
 
 
 class DebugWindow(QMainWindow):

@@ -71,6 +71,7 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
 
     Runs in a separate process and handles HAL compression/decompression requests.
     """
+    import os  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
     # Ignore interrupt signals in worker processes
@@ -78,8 +79,13 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
 
     while True:
         try:
-            # Get request from queue (blocking)
-            request = request_queue.get(timeout=1.0)
+            # Get request from queue (blocking) with error handling for closed pipes
+            try:
+                request = request_queue.get(timeout=1.0)
+            except (BrokenPipeError, EOFError, OSError) as e:
+                # Queue closed, main process has shut down
+                logger.debug(f"Worker process {os.getpid()}: Request queue closed, exiting: {e}")
+                break
 
             if request is None:  # Shutdown signal
                 break
@@ -96,19 +102,33 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
                     request_id=request.request_id
                 )
 
-            # Put result in queue
-            result_queue.put(result)
+            # Put result in queue with error handling for closed pipes
+            try:
+                result_queue.put(result)
+            except (BrokenPipeError, EOFError, OSError) as e:
+                # Queue closed, main process has shut down
+                logger.debug(f"Worker process {os.getpid()}: Queue closed, exiting gracefully: {e}")
+                break
 
         except queue.Empty:
             continue  # Keep waiting for requests
+        except (BrokenPipeError, EOFError, OSError) as e:
+            # Pipe/queue closed, exit gracefully
+            logger.debug(f"Worker process {os.getpid()}: Connection closed during request handling: {e}")
+            break
         except Exception as e:
-            # Send error result
-            result = HALResult(
-                success=False,
-                error_message=f"Worker process error: {e!s}",
-                request_id=getattr(request, "request_id", None) if "request" in locals() else None
-            )
-            result_queue.put(result)
+            # Send error result if queue is still open
+            try:
+                result = HALResult(
+                    success=False,
+                    error_message=f"Worker process error: {e!s}",
+                    request_id=getattr(request, "request_id", None) if "request" in locals() else None
+                )
+                result_queue.put(result)
+            except (BrokenPipeError, EOFError, OSError):
+                # Queue closed, exit gracefully
+                logger.debug(f"Worker process {os.getpid()}: Cannot send error result, queue closed")
+                break
 
 
 def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
@@ -304,7 +324,7 @@ class HALProcessPool:
                     self._result_queue.get(timeout=2.0)
                     logger.debug("Pool communication test successful")
                 except queue.Empty:
-                    raise HALPoolError("Pool communication test failed - no response from workers")
+                    raise HALPoolError("Pool communication test failed - no response from workers") from None
 
                 self._pool = True  # Mark as initialized
                 logger.info("HAL process pool initialized successfully")
@@ -545,10 +565,10 @@ class HALProcessPool:
     def __del__(self):
         """Destructor to ensure cleanup happens even if shutdown is not called explicitly."""
         try:
-            if hasattr(self, '_pool') and self._pool is not None and not self._shutdown:
+            if hasattr(self, "_pool") and self._pool is not None and not self._shutdown:
                 logger.debug("HALProcessPool destructor triggered - cleaning up resources")
                 self.shutdown()
-        except Exception as e:
+        except Exception:
             # Ignore errors in destructor to prevent issues during interpreter shutdown
             pass
 

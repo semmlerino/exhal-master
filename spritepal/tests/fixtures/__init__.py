@@ -5,6 +5,7 @@ This package contains reusable test components including Qt mocks,
 test data generators, and common test utilities.
 """
 
+from ..infrastructure.mock_factory import MockFactory
 from ..infrastructure.qt_mocks import (
     MockQLabel,
     MockQPixmap,
@@ -12,7 +13,6 @@ from ..infrastructure.qt_mocks import (
     MockQWidget,
     MockSignal,
 )
-from ..infrastructure.mock_factory import MockFactory
 
 # Create backward compatibility functions
 create_mock_drag_drop_event = MockFactory.create_drag_drop_event

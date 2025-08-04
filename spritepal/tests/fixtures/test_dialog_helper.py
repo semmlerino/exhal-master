@@ -9,10 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import QObject
-
-import json
-
-import json
 from PyQt6.QtWidgets import QApplication
 
 from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog

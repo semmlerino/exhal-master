@@ -9,19 +9,14 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
-
-
-
 import pytest
 from PyQt6.QtWidgets import QApplication, QWidget
-
 from utils.thread_safe_singleton import (
-    ThreadSafeSingleton,
-    QtThreadSafeSingleton,
     LazyThreadSafeSingleton,
-    create_simple_singleton,
+    QtThreadSafeSingleton,
+    ThreadSafeSingleton,
     create_qt_singleton,
+    create_simple_singleton,
 )
 
 
@@ -52,10 +47,8 @@ class TestThreadSafeSingleton:
 
     def setup_method(self):
         """Reset singleton state before each test."""
-        # Clear any existing singleton instances
-        for cls in [TestSingleton, TestQtSingleton, TestLazySingleton]:
-            if hasattr(cls, 'reset'):
-                cls.reset()
+        # Each test defines its own singleton class, so no global reset needed
+        pass
 
     def test_basic_singleton_creation(self):
         """Test basic singleton instance creation."""

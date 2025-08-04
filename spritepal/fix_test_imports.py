@@ -12,7 +12,7 @@ from pathlib import Path
 # Test files to process
 TEST_PATTERNS = [
     "test_*.py",
-    "tests/test_*.py", 
+    "tests/test_*.py",
     "tests/**/test_*.py",
 ]
 
@@ -66,7 +66,7 @@ class ImportMover(ast.NodeTransformer):
         if isinstance(node, ast.Import):
             names = ", ".join(alias.name for alias in node.names)
             return f"import {names}"
-        elif isinstance(node, ast.ImportFrom):
+        if isinstance(node, ast.ImportFrom):
             names = ", ".join(alias.name for alias in node.names)
             module = node.module or ""
             level = "." * node.level
@@ -91,7 +91,7 @@ class ImportMover(ast.NodeTransformer):
 def fix_test_file(file_path: Path) -> bool:
     """Fix imports in a single test file."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # Parse AST

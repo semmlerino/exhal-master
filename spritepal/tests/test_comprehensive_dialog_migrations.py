@@ -8,9 +8,6 @@ and maintain full functionality after migration to the new component architectur
 import contextlib
 import tempfile
 
-
-
-
 import pytest
 from PIL import Image
 

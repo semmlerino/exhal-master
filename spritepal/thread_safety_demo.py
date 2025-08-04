@@ -62,12 +62,12 @@ def demonstrate_thread_safety():
 
         instances.append(instance)
         creation_attempts.append({
-            'thread_id': thread_id,
-            'thread_name': thread_name,
-            'attempt_time': attempt_time,
-            'instance_id': id(instance),
-            'creation_id': instance.creation_id,
-            'creation_thread': instance.creation_thread
+            "thread_id": thread_id,
+            "thread_name": thread_name,
+            "attempt_time": attempt_time,
+            "instance_id": id(instance),
+            "creation_id": instance.creation_id,
+            "creation_thread": instance.creation_thread
         })
 
         return instance
@@ -94,7 +94,7 @@ def demonstrate_thread_safety():
     print(f"First instance: {first_instance}")
 
     # Show creation attempts
-    print(f"\nCreation attempt details:")
+    print("\nCreation attempt details:")
     print(f"{'Thread':<10} {'Attempt Time':<15} {'Instance ID':<12} {'Creation ID':<15} {'Creator Thread'}")
     print("-" * 80)
 
@@ -110,7 +110,7 @@ def demonstrate_thread_safety():
     unique_creation_ids = set(instance.creation_id for instance in instances)
     unique_creator_threads = set(instance.creation_thread for instance in instances)
 
-    print(f"\nVerification:")
+    print("\nVerification:")
     print(f"✓ Unique instance objects: {len(unique_instances)} (should be 1)")
     print(f"✓ Unique creation IDs: {len(unique_creation_ids)} (should be 1)")
     print(f"✓ Unique creator threads: {len(unique_creator_threads)} (should be 1)")
@@ -223,15 +223,15 @@ def main():
         print("✅ Reset functionality: Working correctly")
         print("✅ Resource management: Proper cleanup implemented")
 
-        print(f"\nThe thread-safe singleton implementation provides:")
-        print(f"  • Race condition prevention")
-        print(f"  • Optimal performance with double-checked locking")
-        print(f"  • Qt thread affinity checking (for Qt singletons)")
-        print(f"  • Proper resource cleanup")
-        print(f"  • Reset functionality for testing")
+        print("\nThe thread-safe singleton implementation provides:")
+        print("  • Race condition prevention")
+        print("  • Optimal performance with double-checked locking")
+        print("  • Qt thread affinity checking (for Qt singletons)")
+        print("  • Proper resource cleanup")
+        print("  • Reset functionality for testing")
 
-        print(f"\nThis demonstrates that the SpritePal singleton fixes address all")
-        print(f"identified thread safety issues while maintaining performance.")
+        print("\nThis demonstrates that the SpritePal singleton fixes address all")
+        print("identified thread safety issues while maintaining performance.")
 
     except Exception as e:
         print(f"\n❌ DEMONSTRATION FAILED: {e}")

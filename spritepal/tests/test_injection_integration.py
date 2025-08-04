@@ -6,8 +6,6 @@ import tempfile
 import pytest
 from PIL import Image
 
-
-
 from spritepal.core.extractor import SpriteExtractor
 from spritepal.core.injector import InjectionWorker, SpriteInjector
 from spritepal.core.palette_manager import PaletteManager

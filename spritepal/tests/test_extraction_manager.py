@@ -5,8 +5,6 @@ Tests for ExtractionManager
 import os
 
 import pytest
-
-
 from PIL import Image
 from tests.fixtures.test_managers import create_extraction_manager_fixture
 

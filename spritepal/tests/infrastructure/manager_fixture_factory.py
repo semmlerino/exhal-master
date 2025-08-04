@@ -103,7 +103,10 @@ class RealManagerFixtureFactory:
             manager = self.manager_factory.create_injection_manager(parent=self.qt_parent)
         else:
             # Use singleton manager
-            from core.managers import get_injection_manager, initialize_managers  # noqa: PLC0415
+            from core.managers import (  # noqa: PLC0415
+                get_injection_manager,
+                initialize_managers,
+            )
             if not self._managers_initialized():
                 initialize_managers()
             manager = get_injection_manager()
@@ -136,7 +139,10 @@ class RealManagerFixtureFactory:
             manager = SessionManager(settings_path=settings_path)
         else:
             # Use singleton manager
-            from core.managers import get_session_manager, initialize_managers  # noqa: PLC0415
+            from core.managers import (  # noqa: PLC0415
+                get_session_manager,
+                initialize_managers,
+            )
             if not self._managers_initialized():
                 initialize_managers()
             manager = get_session_manager()

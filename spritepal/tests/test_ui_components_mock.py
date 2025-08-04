@@ -3,10 +3,6 @@ Mock-based tests for UI components that work without Qt display
 """
 
 import sys
-
-
-
-
 from pathlib import Path
 from unittest.mock import Mock, patch
 

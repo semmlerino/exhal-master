@@ -6,7 +6,8 @@ Ensures proper synchronization and Qt thread affinity checking.
 """
 
 import threading
-from typing import Callable, TypeVar, Generic
+from typing import Callable, Generic, TypeVar
+
 from PyQt6.QtCore import QObject, QThread
 from PyQt6.QtWidgets import QApplication
 
@@ -19,7 +20,7 @@ except ImportError:
 
 logger = get_logger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ThreadSafeSingleton(Generic[T]):
@@ -124,7 +125,7 @@ class ThreadSafeSingleton(Generic[T]):
         Args:
             instance: The instance being cleaned up
         """
-        pass  # Default: no cleanup needed
+        # Default: no cleanup needed
 
     @classmethod
     def is_initialized(cls) -> bool:

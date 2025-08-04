@@ -28,7 +28,7 @@ def fix_file(file_path: str) -> bool:
         print(f"  Warning: File not found: {file_path}")
         return False
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     # Find the shebang, docstring, and existing imports
@@ -90,7 +90,7 @@ def fix_file(file_path: str) -> bool:
             continue
 
         # Handle imports
-        if (stripped.startswith("import ") or stripped.startswith("from ") or 
+        if (stripped.startswith("import ") or stripped.startswith("from ") or
             (stripped and any(line.strip().startswith(imp) for imp in ["import ", "from "]))):
             if import_start_line is None:
                 import_start_line = i
@@ -144,17 +144,16 @@ def fix_file(file_path: str) -> bool:
         # Determine import type
         if stripped.startswith("from .") or stripped.startswith("from core") or stripped.startswith("from ui") or stripped.startswith("from utils"):
             local_imports.append(line)
-        elif any(stripped.startswith(f"from {pkg}") or stripped.startswith(f"import {pkg}") 
+        elif any(stripped.startswith(f"from {pkg}") or stripped.startswith(f"import {pkg}")
                 for pkg in ["PyQt6", "PySide6", "numpy", "PIL", "pytest"]):
             third_party_imports.append(line)
+        # Check if it's a known stdlib module
+        elif any(stripped.startswith(f"import {mod}") or stripped.startswith(f"from {mod}")
+              for mod in ["os", "sys", "time", "datetime", "pathlib", "tempfile", "traceback", "json", "re", "typing", "collections", "itertools", "functools"]):
+            stdlib_imports.append(line)
         else:
-            # Check if it's a known stdlib module
-            if any(stripped.startswith(f"import {mod}") or stripped.startswith(f"from {mod}") 
-                  for mod in ["os", "sys", "time", "datetime", "pathlib", "tempfile", "traceback", "json", "re", "typing", "collections", "itertools", "functools"]):
-                stdlib_imports.append(line)
-            else:
-                # Default to third party if unsure
-                third_party_imports.append(line)
+            # Default to third party if unsure
+            third_party_imports.append(line)
 
     # Add organized imports
     if stdlib_imports:

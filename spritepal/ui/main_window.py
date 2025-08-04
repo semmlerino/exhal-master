@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
         self._output_path: str
         self._extracted_files: list[str]
         self.session_manager: SessionManager
-        self.controller: ExtractionController
+        self.controller: "ExtractionController"
         self.extraction_tabs: QTabWidget
         self.rom_extraction_panel: ROMExtractionPanel
         self.extraction_panel: ExtractionPanel

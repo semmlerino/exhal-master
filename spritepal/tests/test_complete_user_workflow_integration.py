@@ -5,8 +5,6 @@ Tests end-to-end user scenarios from file drop to editor launch.
 
 import shutil
 import sys
-
-
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch

@@ -6,12 +6,6 @@ using MockFactory to create lightweight, fast, and reliable test implementations
 """
 
 import time
-
-import time
-
-import time
-import time
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import Mock, call
 

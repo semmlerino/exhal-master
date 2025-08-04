@@ -3,13 +3,6 @@ Test dialog lifecycle to prevent Qt widget deletion issues.
 These tests ensure dialogs can be safely opened, closed, and reopened.
 """
 
-from PyQt6.QtWidgets import QWidget
-
-from PyQt6.QtWidgets import QWidget
-
-from PyQt6.QtWidgets import QWidget
-
-from PyQt6.QtWidgets import QWidget
 import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget

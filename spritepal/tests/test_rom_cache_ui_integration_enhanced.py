@@ -10,8 +10,6 @@ This module provides comprehensive testing of cache UI integration with:
 
 import os
 import time
-
-
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

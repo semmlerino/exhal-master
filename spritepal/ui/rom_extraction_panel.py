@@ -72,7 +72,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
     _creator_panel: "ROMExtractionPanel | None" = None
     _lock = threading.Lock()
 
-    @classmethod 
+    @classmethod
     def _create_instance(cls, creator_panel: "ROMExtractionPanel" = None) -> "UnifiedManualOffsetDialog":
         """Create a new dialog instance (thread-safe, main thread only)."""
         # Ensure we're on the main thread for Qt object creation
@@ -106,19 +106,18 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         if cls.safe_qt_call(lambda: instance.isVisible()):
             logger.debug(f"Reusing existing ManualOffsetDialog singleton instance (ID: {getattr(instance, '_debug_id', 'Unknown')})")
             return instance
-        else:
-            # Dialog exists but is not visible - check if it's still valid
-            try:
-                cls._ensure_main_thread()
-                # Test if the dialog is still valid by checking a property
-                _ = instance.isVisible()
-                logger.warning("[DEBUG] Existing dialog not visible, but still valid")
-            except RuntimeError:
-                # Dialog has been destroyed by Qt but our reference is stale
-                logger.debug("Stale dialog reference detected, cleaning up")
-                cls.reset()
-                # Get new instance
-                instance = cls.get(creator_panel)
+        # Dialog exists but is not visible - check if it's still valid
+        try:
+            cls._ensure_main_thread()
+            # Test if the dialog is still valid by checking a property
+            _ = instance.isVisible()
+            logger.warning("[DEBUG] Existing dialog not visible, but still valid")
+        except RuntimeError:
+            # Dialog has been destroyed by Qt but our reference is stale
+            logger.debug("Stale dialog reference detected, cleaning up")
+            cls.reset()
+            # Get new instance
+            instance = cls.get(creator_panel)
 
         return instance
 

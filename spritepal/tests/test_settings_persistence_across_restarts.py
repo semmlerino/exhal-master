@@ -14,22 +14,6 @@ import builtins
 import contextlib
 import json
 from pathlib import Path
-
-import spritepal.core.managers.registry
-import spritepal.utils.rom_cache
-
-import spritepal.core.managers.registry
-import spritepal.utils.rom_cache
-
-import spritepal.core.managers.registry
-import spritepal.utils.rom_cache
-
-import spritepal.core.managers.registry
-import spritepal.utils.rom_cache
-import spritepal.utils.settings_manager
-import spritepal.utils.settings_manager
-import spritepal.utils.settings_manager
-import spritepal.utils.settings_manager
 from unittest.mock import patch
 
 import pytest

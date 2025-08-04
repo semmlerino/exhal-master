@@ -4,8 +4,6 @@ Unit tests for GridImageProcessor
 
 from unittest.mock import Mock
 
-
-
 import pytest
 from PIL import Image
 

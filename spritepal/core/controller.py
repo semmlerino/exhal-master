@@ -92,10 +92,10 @@ class ErrorHandlerProtocol(Protocol):
         ...
 
     def handle_validation_error(
-        self, 
-        error: Exception, 
-        context_info: str, 
-        user_input: str | None = None, 
+        self,
+        error: Exception,
+        context_info: str,
+        user_input: str | None = None,
         **context_kwargs: Any
     ) -> Any:
         """Handle a validation error with context"""
@@ -136,10 +136,10 @@ class MockErrorHandler:
         logger.info(f"MockErrorHandler.handle_info: {title} - {message}")
 
     def handle_validation_error(
-        self, 
-        error: Exception, 
-        context_info: str, 
-        user_input: str | None = None, 
+        self,
+        error: Exception,
+        context_info: str,
+        user_input: str | None = None,
         **context_kwargs: Any
     ) -> None:
         """Handle a validation error with context"""
