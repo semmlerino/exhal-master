@@ -128,7 +128,7 @@ class SmartPreviewCoordinator(QObject):
         self._ui_timer.timeout.connect(self._handle_ui_update)
 
         # Worker pool and dual-tier caching
-        self._worker_pool = PreviewWorkerPool(max_workers=4)
+        self._worker_pool = PreviewWorkerPool(max_workers=8)
         self._worker_pool.preview_ready.connect(self._on_worker_preview_ready)
         self._worker_pool.preview_error.connect(self._on_worker_preview_error)
 

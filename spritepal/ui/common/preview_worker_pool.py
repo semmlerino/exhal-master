@@ -92,23 +92,30 @@ class PooledPreviewWorker(SpritePreviewWorker):
         """Run preview generation with periodic cancellation checks."""
         # Import validation functions from parent class
 
-        # Check cancellation before file operations
-        if self._cancel_requested.is_set():
+        # Check both Qt interruption and our cancel flag
+        if self._cancel_requested.is_set() or self.isInterruptionRequested():
+            logger.debug(f"Request {self._current_request_id} cancelled before starting")
             return
 
         # Validate ROM path
         if not self.rom_path or not self.rom_path.strip():
             raise FileNotFoundError("No ROM path provided")
 
-        # Read ROM data
+        # Read ROM data with interruption check
         try:
+            # Check interruption before file I/O
+            if self.isInterruptionRequested():
+                logger.debug(f"Request {self._current_request_id} interrupted before file read")
+                return
+                
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()
         except Exception as e:
             raise OSError(f"Error reading ROM file: {e}") from e
 
         # Check cancellation after file read
-        if self._cancel_requested.is_set():
+        if self._cancel_requested.is_set() or self.isInterruptionRequested():
+            logger.debug(f"Request {self._current_request_id} cancelled after file read")
             return
 
         # Validate ROM size and offset
@@ -119,24 +126,41 @@ class PooledPreviewWorker(SpritePreviewWorker):
             raise ValueError(f"Offset 0x{self.offset:X} beyond ROM size 0x{rom_size:X}")
 
         # Check cancellation before decompression
-        if self._cancel_requested.is_set():
+        if self._cancel_requested.is_set() or self.isInterruptionRequested():
+            logger.debug(f"Request {self._current_request_id} cancelled before decompression")
             return
 
         # Use conservative size for manual offsets during dragging
         expected_size = 4096  # 4KB for fast preview during dragging
 
         try:
+            # Check interruption right before expensive operation
+            if self.isInterruptionRequested():
+                logger.debug(f"Request {self._current_request_id} interrupted before extraction")
+                return
+                
             # Extract sprite data with size limit
             compressed_size, tile_data = (
                 self.extractor.rom_injector.find_compressed_sprite(
                     rom_data, self.offset, expected_size
                 )
             )
+            
+            # Check interruption immediately after expensive operation
+            if self.isInterruptionRequested():
+                logger.debug(f"Request {self._current_request_id} interrupted after extraction")
+                return
+                
         except Exception as e:
+            # Don't raise if we were interrupted
+            if self.isInterruptionRequested() or self._cancel_requested.is_set():
+                logger.debug(f"Request {self._current_request_id} cancelled during extraction")
+                return
             raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {e}") from e
 
         # Check cancellation after decompression
-        if self._cancel_requested.is_set():
+        if self._cancel_requested.is_set() or self.isInterruptionRequested():
+            logger.debug(f"Request {self._current_request_id} cancelled after decompression")
             return
 
         # Validate extracted data
@@ -177,7 +201,7 @@ class PreviewWorkerPool(QObject):
     preview_ready = pyqtSignal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
     preview_error = pyqtSignal(int, str)  # request_id, error_msg
 
-    def __init__(self, max_workers: int = 4, idle_timeout: int = 30000):
+    def __init__(self, max_workers: int = 8, idle_timeout: int = 30000):
         super().__init__()
 
         self._max_workers = max_workers
@@ -195,6 +219,11 @@ class PreviewWorkerPool(QObject):
         # Pool management
         self._worker_count = 0
         self._last_activity = time.time()
+        self._zombie_workers = set()  # Track stuck workers
+        
+        # Request throttling to prevent overwhelming the pool
+        self._last_request_time = 0
+        self._min_request_interval = 0.01  # 10ms minimum between requests
 
         # Cleanup timer
         self._cleanup_timer = QTimer(self)
@@ -216,6 +245,19 @@ class PreviewWorkerPool(QObject):
             logger.warning("Cannot submit request - pool is shutting down")
             return
 
+        # Throttle rapid requests to prevent overwhelming the pool
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < self._min_request_interval:
+            # Too fast, queue for later processing instead
+            logger.debug(f"Throttling request {request.request_id}, queuing for later")
+            self._request_queue.put((request.priority, current_time, request, extractor, rom_cache))
+            # Schedule deferred processing
+            QTimer.singleShot(int(self._min_request_interval * 1000), self._process_queued_requests)
+            return
+        
+        self._last_request_time = current_time
+
         with QMutexLocker(self._mutex):
             # Cancel any existing requests with lower priority
             self._cancel_lower_priority_requests(request.priority)
@@ -223,8 +265,11 @@ class PreviewWorkerPool(QObject):
             # Get or create a worker
             worker = self._get_available_worker()
             if worker is None:
-                logger.warning("No workers available for request")
-                self.preview_error.emit(request.request_id, "No workers available")
+                # Queue the request instead of rejecting it
+                logger.debug(f"No workers available, queuing request {request.request_id}")
+                self._request_queue.put((request.priority, current_time, request, extractor, rom_cache))
+                # Try to process queue after a short delay
+                QTimer.singleShot(50, self._process_queued_requests)
                 return
 
             # Setup worker for this request with ROM cache
@@ -254,14 +299,27 @@ class PreviewWorkerPool(QObject):
         else:
             return worker
 
-        # Create new worker if under limit
-        if self._worker_count < self._max_workers:
+        # Create new worker if under limit (accounting for zombies)
+        effective_count = self._worker_count - len(self._zombie_workers)
+        if effective_count < self._max_workers:
             worker = PooledPreviewWorker(weakref.ref(self))
             self._worker_count += 1
-            logger.debug(f"Created new worker (count: {self._worker_count})")
+            logger.debug(f"Created new worker (count: {self._worker_count}, zombies: {len(self._zombie_workers)})")
             return worker
 
-        logger.warning("Worker pool at capacity")
+        # Check if we have too many zombies and need to clean them
+        if len(self._zombie_workers) > 2:
+            logger.warning(f"Too many zombie workers ({len(self._zombie_workers)}), attempting cleanup")
+            self._cleanup_zombie_workers()
+            # Try again after cleanup
+            effective_count = self._worker_count - len(self._zombie_workers)
+            if effective_count < self._max_workers:
+                worker = PooledPreviewWorker(weakref.ref(self))
+                self._worker_count += 1
+                logger.debug(f"Created new worker after zombie cleanup")
+                return worker
+
+        logger.debug(f"Worker pool at capacity (workers: {self._worker_count}, zombies: {len(self._zombie_workers)})")
         return None
 
     def _return_worker(self, worker: PooledPreviewWorker) -> None:
@@ -279,12 +337,56 @@ class PreviewWorkerPool(QObject):
                 try:
                     self._available_workers.put_nowait(worker)
                     logger.debug("Worker returned to pool")
+                    # Process any queued requests now that a worker is available
+                    QTimer.singleShot(0, self._process_queued_requests)
                 except queue.Full:
                     # Pool full, clean up worker
                     logger.debug("Available worker pool full, cleaning up worker")
                     self._cleanup_worker(worker)
             else:
                 self._cleanup_worker(worker)
+    
+    def _process_queued_requests(self) -> None:
+        """Process any queued requests when workers become available."""
+        if self._shutdown_requested.is_set():
+            return
+        
+        # Try to process one request from the queue
+        try:
+            if not self._request_queue.empty():
+                priority, timestamp, request, extractor, rom_cache = self._request_queue.get_nowait()
+                
+                # Check if request is still recent (not stale)
+                age = time.time() - timestamp
+                if age > 2.0:  # Discard requests older than 2 seconds
+                    logger.debug(f"Discarding stale request {request.request_id} (age: {age:.2f}s)")
+                    # Try next request
+                    QTimer.singleShot(0, self._process_queued_requests)
+                    return
+                
+                # Try to submit the request
+                with QMutexLocker(self._mutex):
+                    worker = self._get_available_worker()
+                    if worker:
+                        # Setup and start worker
+                        worker.setup_request(request, extractor, rom_cache)
+                        worker.preview_ready.connect(self._on_worker_ready)
+                        worker.preview_error.connect(self._on_worker_error)
+                        self._active_workers.add(worker)
+                        self._last_activity = time.time()
+                        worker.start()
+                        logger.debug(f"Processed queued request {request.request_id}")
+                        
+                        # Check for more queued requests
+                        if not self._request_queue.empty():
+                            QTimer.singleShot(10, self._process_queued_requests)
+                    else:
+                        # No worker available, put request back
+                        self._request_queue.put((priority, timestamp, request, extractor, rom_cache))
+        except queue.Empty:
+            pass
+        except Exception as e:
+            logger.warning(f"Error processing queued request: {e}")
 
     def _cancel_lower_priority_requests(self, priority: int) -> None:
         """Cancel active requests with lower priority."""
@@ -333,18 +435,60 @@ class PreviewWorkerPool(QObject):
                 if workers_to_cleanup:
                     logger.debug(f"Cleaned up {len(workers_to_cleanup)} idle workers")
 
+    def _cleanup_zombie_workers(self) -> None:
+        """Clean up zombie workers that are no longer responsive."""
+        cleaned = 0
+        for zombie in list(self._zombie_workers):
+            if not zombie.isRunning():
+                # Zombie has finally stopped
+                self._zombie_workers.discard(zombie)
+                zombie.deleteLater()
+                cleaned += 1
+        
+        if cleaned > 0:
+            logger.info(f"Cleaned up {cleaned} zombie workers")
+    
     def _cleanup_worker(self, worker: PooledPreviewWorker) -> None:
-        """Clean up a single worker."""
+        """Clean up a single worker safely without using terminate()."""
         try:
-            # Cancel any current operation
+            # First, cancel any current operation
             worker.cancel_current_request()
-
-            # Use WorkerManager for safe cleanup with longer timeout for preview workers
-            # Preview workers may be doing file I/O and decompression, so need more time
-            WorkerManager.cleanup_worker(worker, timeout=2000)  # 2 seconds for preview workers
+            
+            # Request interruption via Qt mechanism
+            worker.requestInterruption()
+            
+            # Give worker time to finish gracefully
+            if worker.isRunning():
+                if worker.wait(500):  # Half second initial wait
+                    logger.debug("Worker stopped after cancellation")
+                    worker.deleteLater()
+                    return
+            
+            # If still running, try quit
+            if worker.isRunning():
+                worker.quit()
+                if worker.wait(1000):  # 1 second for quit
+                    logger.debug("Worker stopped after quit")
+                else:
+                    # Worker is stuck, but we can't safely terminate
+                    # Mark it as zombie and remove from pool
+                    logger.warning(f"Worker not responding to quit after 1s, marking as zombie")
+                    self._zombie_workers.add(worker)
+                    # Decrement worker count so we can create a replacement
+                    if self._worker_count > 0:
+                        self._worker_count -= 1
+            
+            # Schedule for deletion regardless
+            # This is safe even if the thread is still running
+            worker.deleteLater()
 
         except Exception as e:
             logger.warning(f"Error cleaning up worker: {e}")
+            # Try to delete anyway
+            try:
+                worker.deleteLater()
+            except:
+                pass
 
     def cleanup(self) -> None:
         """Clean up the entire worker pool."""
@@ -381,15 +525,15 @@ class PreviewWorkerPool(QObject):
                     # Request interruption
                     worker.requestInterruption()
                     
-                    # Give worker a chance to finish gracefully
+                    # Give worker a short chance to finish gracefully
                     if worker.isRunning():
-                        if not worker.wait(1000):  # Wait up to 1 second
-                            logger.warning(f"Worker still running after 1s, forcing quit")
+                        if not worker.wait(200):  # Wait only 200ms
+                            logger.debug(f"Worker still running, requesting quit")
                             worker.quit()
-                            if not worker.wait(500):  # Additional 500ms after quit
-                                logger.error(f"Worker failed to stop after quit, may cause QThread warning")
+                            if not worker.wait(300):  # Additional 300ms after quit
+                                logger.warning(f"Worker not responding to quit, will be cleaned up by Qt")
                     
-                    # Schedule for deletion
+                    # Schedule for deletion (safe even if still running)
                     worker.deleteLater()
                 except Exception as e:
                     logger.warning(f"Error during worker cleanup: {e}")
