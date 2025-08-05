@@ -1,0 +1,268 @@
+{
+  "cpu_stats": {
+    "report": "         172 function calls in 0.000 seconds\n\n   Ordered by: cumulative time\n   List reduced from 76 to 20 due to restriction <20>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:79(test_cache_operations)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/rom_cache.py:1024(get_rom_cache)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/rom_cache.py:1009(get)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1660(_log)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/rom_cache.py:53(__init__)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/rom_cache.py:26(get_settings_manager)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/settings_manager.py:211(get_settings_manager)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/thread_safe_singleton.py:53(get)\n        1    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1517(debug)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1645(makeRecord)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:298(__init__)\n        1    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1558(error)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1686(handle)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1746(callHandlers)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1011(handle)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:1148(emit)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/settings_manager.py:205(_create_instance)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/settings_manager.py:25(__init__)\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py:296(get_session_manager)\n        2    0.000    0.000    0.000    0.000 /usr/lib/python3.12/logging/__init__.py:988(format)\n\n\n",
+    "top_functions": [
+      {
+        "function": "__init__",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 298,
+        "call_count": 2,
+        "total_time": 5.1024000000000005e-05,
+        "cumulative_time": 9.231e-05,
+        "time_per_call": 2.5512000000000002e-05
+      },
+      {
+        "function": "<method 'disable' of '_lsprof.Profiler' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1,
+        "total_time": 1.3843000000000001e-05,
+        "cumulative_time": 1.3843000000000001e-05,
+        "time_per_call": 1.3843000000000001e-05
+      },
+      {
+        "function": "_log",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1660,
+        "call_count": 2,
+        "total_time": 9.838000000000001e-06,
+        "cumulative_time": 0.000197492,
+        "time_per_call": 4.919000000000001e-06
+      },
+      {
+        "function": "findCaller",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1611,
+        "call_count": 2,
+        "total_time": 8.418e-06,
+        "cumulative_time": 1.8742e-05,
+        "time_per_call": 4.209e-06
+      },
+      {
+        "function": "isEnabledFor",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1790,
+        "call_count": 2,
+        "total_time": 7.782000000000001e-06,
+        "cumulative_time": 1.0880000000000001e-05,
+        "time_per_call": 3.8910000000000005e-06
+      },
+      {
+        "function": "emit",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1148,
+        "call_count": 2,
+        "total_time": 7.218e-06,
+        "cumulative_time": 4.8239000000000004e-05,
+        "time_per_call": 3.609e-06
+      },
+      {
+        "function": "_get_manager",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py",
+        "line": 203,
+        "call_count": 1,
+        "total_time": 7.056000000000001e-06,
+        "cumulative_time": 8.392e-06,
+        "time_per_call": 7.056000000000001e-06
+      },
+      {
+        "function": "<method 'get' of 'dict' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 6,
+        "total_time": 6.955e-06,
+        "cumulative_time": 6.955e-06,
+        "time_per_call": 1.1591666666666667e-06
+      },
+      {
+        "function": "get",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/rom_cache.py",
+        "line": 1009,
+        "call_count": 1,
+        "total_time": 6.795e-06,
+        "cumulative_time": 0.00020190600000000001,
+        "time_per_call": 6.795e-06
+      },
+      {
+        "function": "get_session_manager",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py",
+        "line": 296,
+        "call_count": 1,
+        "total_time": 6.565000000000001e-06,
+        "cumulative_time": 2.7554e-05,
+        "time_per_call": 6.565000000000001e-06
+      },
+      {
+        "function": "basename",
+        "file": "<frozen posixpath>",
+        "line": 169,
+        "call_count": 2,
+        "total_time": 6.53e-06,
+        "cumulative_time": 1.0537000000000001e-05,
+        "time_per_call": 3.265e-06
+      },
+      {
+        "function": "get",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/thread_safe_singleton.py",
+        "line": 53,
+        "call_count": 1,
+        "total_time": 6.4900000000000005e-06,
+        "cumulative_time": 0.00018477,
+        "time_per_call": 6.4900000000000005e-06
+      },
+      {
+        "function": "callHandlers",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1746,
+        "call_count": 2,
+        "total_time": 6.058e-06,
+        "cumulative_time": 6.5744e-05,
+        "time_per_call": 3.029e-06
+      },
+      {
+        "function": "test_cache_operations",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py",
+        "line": 79,
+        "call_count": 1,
+        "total_time": 6.025000000000001e-06,
+        "cumulative_time": 0.00021046200000000002,
+        "time_per_call": 6.025000000000001e-06
+      },
+      {
+        "function": "format",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 690,
+        "call_count": 2,
+        "total_time": 5.755e-06,
+        "cumulative_time": 2.0223000000000003e-05,
+        "time_per_call": 2.8775e-06
+      }
+    ],
+    "total_functions": 76,
+    "total_calls": 172
+  },
+  "memory_stats": {
+    "baseline_memory_mb": 65.05078125,
+    "peak_memory_mb": 65.05078125,
+    "current_memory_mb": 65.05078125,
+    "total_growth_mb": 0.0,
+    "growth_rate_mb_per_sec": 0.0,
+    "snapshot_count": 4,
+    "top_memory_consumers": [
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 187",
+        "size_mb": 0.0010881423950195312,
+        "count": 20
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 191",
+        "size_mb": 0.0009136199951171875,
+        "count": 16
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 560",
+        "size_mb": 0.0007781982421875,
+        "count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 423",
+        "size_mb": 0.0007781982421875,
+        "count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/logging/__init__.py\", line 170",
+        "size_mb": 0.0004520416259765625,
+        "count": 8
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 186",
+        "size_mb": 0.00044536590576171875,
+        "count": 4
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py\", line 219",
+        "size_mb": 0.00036334991455078125,
+        "count": 5
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py\", line 79",
+        "size_mb": 0.00029754638671875,
+        "count": 3
+      },
+      {
+        "file": "  File \"<frozen posixpath>\", line 42",
+        "size_mb": 0.00029087066650390625,
+        "count": 5
+      },
+      {
+        "file": "  File \"<frozen posixpath>\", line 54",
+        "size_mb": 0.0002803802490234375,
+        "count": 5
+      }
+    ],
+    "potential_leaks": [
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 560",
+        "size_increase_mb": 0.00025177001953125,
+        "count_increase": 2,
+        "current_size_mb": 0.0007781982421875,
+        "current_count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 423",
+        "size_increase_mb": 0.00025177001953125,
+        "count_increase": 2,
+        "current_size_mb": 0.0007781982421875,
+        "current_count": 6
+      }
+    ]
+  },
+  "io_stats": {
+    "cache_efficiency": {
+      "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+    },
+    "file_operations": {
+      "read_count": 1082,
+      "write_count": 362,
+      "read_bytes": 24068096,
+      "write_bytes": 4096,
+      "read_mb": 22.953125,
+      "write_mb": 0.00390625
+    }
+  },
+  "thread_stats": {
+    "total_threads": 1,
+    "active_threads": 1,
+    "daemon_threads": 0,
+    "qt_threads": 0,
+    "thread_details": [
+      {
+        "name": "MainThread",
+        "daemon": false,
+        "alive": true,
+        "ident": 139922786906240
+      }
+    ]
+  },
+  "qt_stats": {
+    "error": "No QApplication instance found"
+  },
+  "manager_stats": {
+    "managers_initialized": false,
+    "available_managers": {},
+    "manager_memory": {}
+  },
+  "worker_stats": {
+    "total_worker_threads": 0,
+    "active_workers": 0,
+    "worker_details": []
+  },
+  "cache_stats": {
+    "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+  },
+  "timing_stats": {
+    "total_profiling_time": 0.0011515617370605469,
+    "profiling_start": 1754395823.1810925,
+    "profiling_end": 1754395823.182244
+  }
+}

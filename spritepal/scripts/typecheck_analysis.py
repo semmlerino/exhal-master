@@ -189,7 +189,8 @@ class TypeCheckAnalyzer:
             if error_type in self.error_groups:
                 report["critical_errors"].extend(self.error_groups[error_type][:3])
 
-        with open(filename, "w") as f:
+        filename_path = Path(filename)
+        with filename_path.open("w") as f:
             json.dump(report, f, indent=2)
 
         print(f"\n💾 Report saved to: {filename}")

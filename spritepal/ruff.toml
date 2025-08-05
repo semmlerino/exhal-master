@@ -1,0 +1,84 @@
+# Ruff configuration for SpritePal
+
+# Exclude analysis and temporary scripts
+exclude = [
+    "analyze_*.py",
+    "demo_*.py",
+    "test_*.py",
+    "fix_*.py",
+    "check_*.py",
+    "validate_*.py",
+    "build_*.py",
+    "run_*.py",
+    "runtime_*.py",
+    "memory_*.py",
+    "pattern_*.py",
+    "quick_*.py",
+    "*_test.py",
+    "scripts/analysis/**",
+    "scripts/install_*.py",
+    "scripts/profile_*.py",
+    "scripts/run_*.py"
+]
+
+# Lint configuration
+[lint]
+# Select specific rules
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T10",  # flake8-debugger
+    "ISC",  # flake8-implicit-str-concat
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "PTH",  # flake8-use-pathlib
+    "PD",   # pandas-vet
+    "PLC",  # pylint conventions
+    "PLE",  # pylint errors
+    "PLR",  # pylint refactor
+    "PLW",  # pylint warnings
+    "RUF",  # ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",    # line too long (handled by formatter)
+    "N802",    # function name should be lowercase (Qt overrides)
+    "N806",    # variable in function should be lowercase (Qt constants)
+    "PLR0913", # too many arguments
+    "PLR2004", # magic value comparison
+    "RET504",  # unnecessary variable assignment before return
+    "SIM108",  # use ternary operator
+    "UP007",   # use X | Y for union types (compatibility)
+]
+
+# Per-file ignores for special cases
+[lint.per-file-ignores]
+# Qt method overrides require specific naming
+"ui/**/*.py" = ["N802", "N806"]
+# AST visitors require visit_* naming
+"**/ast*.py" = ["N802"]
+"**/visitor*.py" = ["N802"]
+# Test files can have more flexible naming and assertions
+"tests/**/*.py" = ["N802", "PLR2004", "S101"]
+
+# Configure specific rules
+[lint.pep8-naming]
+classmethod-decorators = ["classmethod", "pydantic.validator"]
+
+[lint.isort]
+known-first-party = ["core", "ui", "utils", "tests"]
+
+[lint.pylint]
+max-args = 8
+max-returns = 6
+max-branches = 12
+max-statements = 50

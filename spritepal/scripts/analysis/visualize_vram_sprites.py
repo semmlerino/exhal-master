@@ -62,7 +62,7 @@ def create_grayscale_image(pixels: np.ndarray) -> Image.Image:
 
 def main():
     # Find all VRAM region files
-    region_files = list(Path(".").glob("vram_*_VRAM.dmp_*.bin"))
+    region_files = list(Path().glob("vram_*_VRAM.dmp_*.bin"))
 
     if not region_files:
         print("No VRAM region files found")
@@ -72,7 +72,7 @@ def main():
         print(f"\nProcessing: {region_file}")
 
         # Read the data
-        with open(region_file, "rb") as f:
+        with region_file.open("rb") as f:
             data = f.read()
 
         print(f"  Size: {len(data)} bytes ({len(data) // 32} tiles)")

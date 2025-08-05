@@ -6,6 +6,7 @@ Palette preview widget for SpritePal
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
+
 from ui.common.spacing_constants import BORDER_THIN, PALETTE_PREVIEW_SIZE
 
 

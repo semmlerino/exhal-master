@@ -1,0 +1,71 @@
+================================================================================
+SPRITEPAL PERFORMANCE PROFILING REPORT
+================================================================================
+
+PROFILING SUMMARY
+----------------------------------------
+Total profiling time: 0.74 seconds
+
+MEMORY ANALYSIS
+----------------------------------------
+Baseline memory: 65.07 MB
+Peak memory: 73.25 MB
+Current memory: 73.25 MB
+Total growth: 8.18 MB
+WARNING: MEMORY LEAK - Growth rate 10.992 MB/sec
+
+Top Memory Consumers:
+  •   File "<frozen importlib._bootstrap_external>", line 753: 0.08 MB (617 objects)
+  •   File "<frozen abc>", line 106: 0.02 MB (86 objects)
+  •   File "<frozen abc>", line 107: 0.01 MB (101 objects)
+  •   File "/usr/lib/python3.12/typing.py", line 2872: 0.01 MB (39 objects)
+  •   File "/usr/lib/python3.12/typing.py", line 897: 0.01 MB (57 objects)
+
+CPU PERFORMANCE ANALYSIS
+----------------------------------------
+Total functions analyzed: 303
+Total function calls: 114071
+
+Top CPU Bottlenecks:
+  • <built-in method time.sleep> (~:0)
+    Time: 0.465s, Calls: 19
+  • test_worker_lifecycle (/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:153)
+    Time: 0.036s, Calls: 1
+  • __init__ (/usr/lib/python3.12/logging/__init__.py:298)
+    Time: 0.029s, Calls: 1500
+  • <method 'write' of '_io.TextIOWrapper' objects> (~:0)
+    Time: 0.022s, Calls: 1500
+  • <built-in method posix.stat> (~:0)
+    Time: 0.018s, Calls: 23
+
+THREAD ANALYSIS
+----------------------------------------
+Total threads: 4
+Active threads: 4
+Qt threads: 0
+Worker threads: 0
+
+QT OBJECTS ANALYSIS
+----------------------------------------
+Qt analysis error: No QApplication instance found
+
+MANAGER ANALYSIS
+----------------------------------------
+Managers initialized: False
+
+ROM CACHE ANALYSIS
+----------------------------------------
+Cache analysis error: Cannot analyze cache: Session manager not initialized. Call initialize_managers() first.
+
+I/O PERFORMANCE ANALYSIS
+----------------------------------------
+Read operations: 1445
+Write operations: 1959
+Data read: 31.0 MB
+Data written: 0.0 MB
+
+PERFORMANCE RECOMMENDATIONS
+----------------------------------------
+• CRITICAL: Investigate memory leaks - growth rate exceeds 0.1 MB/sec
+
+================================================================================

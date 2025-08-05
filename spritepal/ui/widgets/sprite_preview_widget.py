@@ -4,19 +4,24 @@ Shows visual preview of sprites with optional palette support
 """
 
 
-from core.default_palette_loader import DefaultPaletteLoader
-from core.managers import get_extraction_manager
 from PIL import Image
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtGui import QAction, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
+    QMenu,
+    QMessageBox,
+    QProgressDialog,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
+
+from core.default_palette_loader import DefaultPaletteLoader
+from core.managers import get_extraction_manager
+from core.visual_similarity_search import VisualSimilarityEngine
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.common.spacing_constants import (
     COLOR_MUTED,
@@ -33,6 +38,7 @@ class SpritePreviewWidget(QWidget):
     """Widget for displaying sprite previews with palette selection"""
 
     palette_changed = pyqtSignal(int)  # Emitted when palette selection changes
+    similarity_search_requested = pyqtSignal(int)  # Emitted when user wants to search for similar sprites
 
     def __init__(self, title: str = "Sprite Preview", parent: QWidget | None = None) -> None:
         # Step 1: Declare instance variables with type hints
@@ -42,6 +48,10 @@ class SpritePreviewWidget(QWidget):
         self.current_palette_index = 8  # Default sprite palette
         self.sprite_data: bytes | None = None
         self.default_palette_loader = DefaultPaletteLoader()
+
+        # Similarity search related
+        self.current_offset: int = 0  # Current sprite offset for similarity search
+        self.similarity_engine: VisualSimilarityEngine | None = None
 
         # UI components (initialized in _setup_ui)
         self.preview_label: QLabel | None = None
@@ -70,6 +80,10 @@ class SpritePreviewWidget(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding  # Use ALL available space
         )
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Enable context menu for similarity search
+        self.preview_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.preview_label.customContextMenuRequested.connect(self._show_context_menu)
 
         # Start with visible empty state style
         self._apply_empty_state_style()
@@ -551,3 +565,163 @@ class SpritePreviewWidget(QWidget):
 
         # Default calculation for empty state
         return int(width * 0.6)  # Reasonable aspect ratio
+
+    def set_current_offset(self, offset: int) -> None:
+        """Set the current sprite offset for similarity search."""
+        self.current_offset = offset
+
+    def _show_context_menu(self, position) -> None:
+        """Show context menu with similarity search option."""
+        # Only show context menu if we have a sprite loaded
+        if self.sprite_pixmap is None or self.sprite_pixmap.isNull():
+            return
+
+        menu = QMenu(self)
+
+        # Find Similar Sprites action
+        similar_action = QAction("Find Similar Sprites...", self)
+        similar_action.setToolTip("Search for visually similar sprites in the ROM")
+        similar_action.triggered.connect(self._find_similar_sprites)
+        menu.addAction(similar_action)
+
+        # Show menu at cursor position
+        global_pos = self.preview_label.mapToGlobal(position)
+        menu.exec(global_pos)
+
+    def _find_similar_sprites(self) -> None:
+        """Handle similarity search request."""
+        if self.sprite_pixmap is None or self.sprite_pixmap.isNull():
+            QMessageBox.information(
+                self,
+                "No Sprite",
+                "Please load a sprite first before searching for similar ones."
+            )
+            return
+
+        try:
+            # Convert QPixmap to PIL Image for similarity search
+            image = self._qpixmap_to_pil_image(self.sprite_pixmap)
+            if image is None:
+                QMessageBox.warning(
+                    self,
+                    "Conversion Error",
+                    "Could not convert sprite image for similarity search."
+                )
+                return
+
+            # Show progress dialog for indexing
+            progress_dialog = QProgressDialog(
+                "Indexing sprites for similarity search...",
+                "Cancel",
+                0, 0,  # Indeterminate progress
+                self
+            )
+            progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+            progress_dialog.setMinimumDuration(500)  # Show after 500ms
+            progress_dialog.show()
+
+            # Start similarity search in a separate thread
+            self._start_similarity_search_async(image, progress_dialog)
+
+        except Exception as e:
+            logger.exception("Error starting similarity search")
+            QMessageBox.critical(
+                self,
+                "Search Error",
+                f"Failed to start similarity search: {e!s}"
+            )
+
+    def _qpixmap_to_pil_image(self, pixmap: QPixmap) -> Image.Image | None:
+        """Convert QPixmap to PIL Image."""
+        try:
+            # Convert QPixmap to QImage
+            qimage = pixmap.toImage()
+
+            # Convert QImage to PIL Image
+            width = qimage.width()
+            height = qimage.height()
+
+            # Get raw bytes from QImage
+            ptr = qimage.bits()
+            ptr.setsize(height * width * 4)  # 4 bytes per pixel (RGBA)
+            img_data = bytes(ptr)
+
+            # Create PIL image
+            pil_image = Image.frombytes("RGBA", (width, height), img_data, "raw", "BGRA")
+            return pil_image.convert("RGB")  # Convert to RGB for similarity search
+
+        except Exception:
+            logger.exception("Error converting QPixmap to PIL Image")
+            return None
+
+    def _start_similarity_search_async(self, target_image: Image.Image, progress_dialog: QProgressDialog) -> None:
+        """Start similarity search in background thread."""
+        # For now, implement synchronous search
+        # In a real implementation, this should be moved to a worker thread
+
+        try:
+            # Get extraction manager for ROM access
+            extraction_manager = get_extraction_manager()
+            if not extraction_manager:
+                progress_dialog.close()
+                QMessageBox.warning(
+                    self,
+                    "No ROM Data",
+                    "ROM extraction manager not available. Please load a ROM first."
+                )
+                return
+
+            # Create or get similarity engine
+            if self.similarity_engine is None:
+                self.similarity_engine = VisualSimilarityEngine()
+
+            # Index current sprite
+            self.similarity_engine.index_sprite(
+                self.current_offset,
+                target_image,
+                {"source": "preview_widget"}
+            )
+
+            # TODO: Index other sprites from ROM
+            # This would require accessing sprite data from the ROM
+            # For now, show a message that indexing is not fully implemented
+
+            progress_dialog.close()
+
+            # Perform similarity search
+            matches = self.similarity_engine.find_similar(
+                target_image,
+                max_results=10,
+                similarity_threshold=0.7
+            )
+
+            # Show results
+            self._show_similarity_results(matches)
+
+        except Exception as e:
+            progress_dialog.close()
+            logger.exception("Error during similarity search")
+            QMessageBox.critical(
+                self,
+                "Search Error",
+                f"Similarity search failed: {e!s}"
+            )
+
+    def _show_similarity_results(self, matches) -> None:
+        """Show similarity search results."""
+
+        if not matches:
+            QMessageBox.information(
+                self,
+                "No Similar Sprites",
+                "No similar sprites found.\n\n"
+                "Note: Similarity search requires indexing sprites from the ROM, "
+                "which is not fully implemented yet. Currently only the current "
+                "sprite is indexed for demonstration purposes."
+            )
+            return
+
+        # Show results dialog
+        dialog = show_similarity_results(matches, self.current_offset, self)
+        dialog.sprite_selected.connect(self.similarity_search_requested.emit)
+        dialog.exec()

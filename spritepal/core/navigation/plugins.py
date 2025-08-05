@@ -102,7 +102,7 @@ class StrategyPlugin(NavigationPlugin):
     def initialize(self) -> bool:
         """Initialize and register strategies."""
         try:
-            from .strategies import get_strategy_registry
+            from .strategies import get_strategy_registry  # noqa: PLC0415
             registry = get_strategy_registry()
 
             for strategy_class in self.strategy_classes:
@@ -127,7 +127,7 @@ class StrategyPlugin(NavigationPlugin):
     def cleanup(self) -> None:
         """Unregister strategies."""
         try:
-            from .strategies import get_strategy_registry
+            from .strategies import get_strategy_registry  # noqa: PLC0415
             registry = get_strategy_registry()
 
             for strategy in self.registered_strategies:

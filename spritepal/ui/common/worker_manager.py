@@ -13,6 +13,7 @@ used throughout the SpritePal codebase:
 import contextlib
 
 from PyQt6.QtCore import QThread
+
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -74,10 +75,10 @@ class WorkerManager:
         logger.debug(f"Stopping {worker_name} safely")
 
         # Stage 1: Request cancellation via worker.cancel() if available (BaseWorker pattern)
-        if hasattr(worker, "cancel") and callable(worker.cancel):
+        if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
             logger.debug(f"{worker_name}: Requesting cancellation via worker.cancel()")
             try:
-                worker.cancel()
+                getattr(worker, "cancel")()  # Type-safe method call
             except Exception as e:
                 logger.warning(f"{worker_name}: Error calling cancel(): {e}")
 
@@ -195,10 +196,10 @@ class WorkerManager:
         logger.debug(f"{worker_name}: Requesting cancellation")
 
         # Stage 1: Call worker.cancel() if available (BaseWorker pattern)
-        if hasattr(worker, "cancel") and callable(worker.cancel):
+        if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
             logger.debug(f"{worker_name}: Calling worker.cancel()")
             try:
-                worker.cancel()
+                getattr(worker, "cancel")()  # Type-safe method call
             except Exception as e:
                 logger.warning(f"{worker_name}: Error during cancel(): {e}")
 

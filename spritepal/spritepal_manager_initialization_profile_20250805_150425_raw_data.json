@@ -1,0 +1,261 @@
+{
+  "cpu_stats": {
+    "report": "         54466 function calls (53161 primitive calls) in 0.461 seconds\n\n   Ordered by: cumulative time\n   List reduced from 934 to 20 due to restriction <20>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000    0.462    0.462 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:36(initialize_managers)\n     85/4    0.001    0.000    0.403    0.101 <frozen importlib._bootstrap>:1349(_find_and_load)\n     85/4    0.001    0.000    0.403    0.101 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)\n    193/7    0.000    0.000    0.396    0.057 <frozen importlib._bootstrap>:480(_call_with_frames_removed)\n     21/4    0.000    0.000    0.391    0.098 {built-in method builtins.__import__}\n     80/5    0.001    0.000    0.391    0.078 <frozen importlib._bootstrap>:911(_load_unlocked)\n     69/5    0.000    0.000    0.391    0.078 <frozen importlib._bootstrap_external>:989(exec_module)\n   143/14    0.009    0.000    0.382    0.027 {built-in method builtins.exec}\n        1    0.000    0.000    0.365    0.365 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/__init__.py:1(<module>)\n        1    0.000    0.000    0.201    0.201 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/extraction_manager.py:1(<module>)\n       69    0.001    0.000    0.134    0.002 <frozen importlib._bootstrap_external>:1062(get_code)\n      373    0.129    0.000    0.129    0.000 {built-in method posix.stat}\n      356    0.000    0.000    0.121    0.000 <frozen importlib._bootstrap_external>:140(_path_stat)\n        1    0.000    0.000    0.114    0.114 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/rom_extractor.py:1(<module>)\n       84    0.001    0.000    0.104    0.001 <frozen importlib._bootstrap>:1240(_find_spec)\n       82    0.000    0.000    0.102    0.001 <frozen importlib._bootstrap_external>:1520(find_spec)\n       82    0.000    0.000    0.102    0.001 <frozen importlib._bootstrap_external>:1491(_get_spec)\n      165    0.004    0.000    0.096    0.001 <frozen importlib._bootstrap_external>:1593(find_spec)\n        1    0.000    0.000    0.090    0.090 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/injection_manager.py:1(<module>)\n       69    0.000    0.000    0.085    0.001 <frozen importlib._bootstrap_external>:1183(get_data)\n\n\n",
+    "top_functions": [
+      {
+        "function": "<built-in method posix.stat>",
+        "file": "~",
+        "line": 0,
+        "call_count": 373,
+        "total_time": 0.128840803,
+        "cumulative_time": 0.128903202,
+        "time_per_call": 0.00034541770241286864
+      },
+      {
+        "function": "<built-in method _imp.create_dynamic>",
+        "file": "~",
+        "line": 0,
+        "call_count": 7,
+        "total_time": 0.076344914,
+        "cumulative_time": 0.080794555,
+        "time_per_call": 0.010906416285714286
+      },
+      {
+        "function": "<built-in method _io.open_code>",
+        "file": "~",
+        "line": 0,
+        "call_count": 69,
+        "total_time": 0.042434565,
+        "cumulative_time": 0.042434565,
+        "time_per_call": 0.0006149936956521739
+      },
+      {
+        "function": "<method 'read' of '_io.BufferedReader' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 69,
+        "total_time": 0.027833536000000002,
+        "cumulative_time": 0.027833536000000002,
+        "time_per_call": 0.00040338457971014497
+      },
+      {
+        "function": "<built-in method posix.read>",
+        "file": "~",
+        "line": 0,
+        "call_count": 78,
+        "total_time": 0.015394135000000001,
+        "cumulative_time": 0.015394135000000001,
+        "time_per_call": 0.00019736070512820514
+      },
+      {
+        "function": "<method '__exit__' of '_io._IOBase' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 72,
+        "total_time": 0.01522947,
+        "cumulative_time": 0.01522947,
+        "time_per_call": 0.00021152041666666667
+      },
+      {
+        "function": "__set_name__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 254,
+        "call_count": 416,
+        "total_time": 0.013134686000000001,
+        "cumulative_time": 0.022737684,
+        "time_per_call": 3.1573764423076925e-05
+      },
+      {
+        "function": "<built-in method marshal.loads>",
+        "file": "~",
+        "line": 0,
+        "call_count": 69,
+        "total_time": 0.012313371,
+        "cumulative_time": 0.012313371,
+        "time_per_call": 0.00017845465217391306
+      },
+      {
+        "function": "<built-in method builtins.exec>",
+        "file": "~",
+        "line": 0,
+        "call_count": 14,
+        "total_time": 0.008943832,
+        "cumulative_time": 0.381636397,
+        "time_per_call": 0.0006388451428571429
+      },
+      {
+        "function": "__setitem__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 390,
+        "call_count": 467,
+        "total_time": 0.007503883,
+        "cumulative_time": 0.011362401000000001,
+        "time_per_call": 1.6068271948608136e-05
+      },
+      {
+        "function": "<method 'poll' of 'select.poll' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 5,
+        "total_time": 0.006926426,
+        "cumulative_time": 0.006926426,
+        "time_per_call": 0.0013852852
+      },
+      {
+        "function": "<built-in method posix.listdir>",
+        "file": "~",
+        "line": 0,
+        "call_count": 8,
+        "total_time": 0.0054485440000000005,
+        "cumulative_time": 0.0054485440000000005,
+        "time_per_call": 0.0006810680000000001
+      },
+      {
+        "function": "find_spec",
+        "file": "<frozen importlib._bootstrap_external>",
+        "line": 1593,
+        "call_count": 165,
+        "total_time": 0.003966023,
+        "cumulative_time": 0.09632911200000001,
+        "time_per_call": 2.403650303030303e-05
+      },
+      {
+        "function": "<method 'get' of 'mappingproxy' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 2410,
+        "total_time": 0.003167341,
+        "cumulative_time": 0.003167341,
+        "time_per_call": 1.3142493775933611e-06
+      },
+      {
+        "function": "<built-in method builtins.isinstance>",
+        "file": "~",
+        "line": 0,
+        "call_count": 4576,
+        "total_time": 0.002891166,
+        "cumulative_time": 0.006347321,
+        "time_per_call": 6.318107517482518e-07
+      }
+    ],
+    "total_functions": 934,
+    "total_calls": 53161
+  },
+  "memory_stats": {
+    "baseline_memory_mb": 18.5078125,
+    "peak_memory_mb": 66.73828125,
+    "current_memory_mb": 66.73828125,
+    "total_growth_mb": 48.23046875,
+    "growth_rate_mb_per_sec": 99.89612431581463,
+    "snapshot_count": 4,
+    "top_memory_consumers": [
+      {
+        "file": "  File \"<frozen importlib._bootstrap_external>\", line 753",
+        "size_mb": 2.4294185638427734,
+        "count": 17901
+      },
+      {
+        "file": "  File \"<frozen importlib._bootstrap>\", line 488",
+        "size_mb": 1.1638479232788086,
+        "count": 7828
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 277",
+        "size_mb": 0.1150360107421875,
+        "count": 718
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/typing.py\", line 170",
+        "size_mb": 0.04894447326660156,
+        "count": 776
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/multiprocessing/managers.py\", line 964",
+        "size_mb": 0.047484397888183594,
+        "count": 586
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 596",
+        "size_mb": 0.04120635986328125,
+        "count": 117
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/dataclasses.py\", line 473",
+        "size_mb": 0.028717994689941406,
+        "count": 303
+      },
+      {
+        "file": "  File \"<string>\", line 1",
+        "size_mb": 0.0287017822265625,
+        "count": 292
+      },
+      {
+        "file": "  File \"<frozen importlib._bootstrap_external>\", line 1656",
+        "size_mb": 0.02313232421875,
+        "count": 16
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 271",
+        "size_mb": 0.02191162109375,
+        "count": 359
+      }
+    ],
+    "potential_leaks": [
+      {
+        "file": "  File \"<string>\", line 1",
+        "size_increase_mb": 0.00019073486328125,
+        "count_increase": 3,
+        "current_size_mb": 0.0287017822265625,
+        "current_count": 292
+      }
+    ]
+  },
+  "io_stats": {
+    "cache_efficiency": {
+      "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+    },
+    "file_operations": {
+      "read_count": 1034,
+      "write_count": 352,
+      "read_bytes": 29188096,
+      "write_bytes": 4096,
+      "read_mb": 27.8359375,
+      "write_mb": 0.00390625
+    }
+  },
+  "thread_stats": {
+    "total_threads": 1,
+    "active_threads": 1,
+    "daemon_threads": 0,
+    "qt_threads": 0,
+    "thread_details": [
+      {
+        "name": "MainThread",
+        "daemon": false,
+        "alive": true,
+        "ident": 140377928142976
+      }
+    ]
+  },
+  "qt_stats": {
+    "error": "No QApplication instance found"
+  },
+  "manager_stats": {
+    "managers_initialized": false,
+    "available_managers": {},
+    "manager_memory": {}
+  },
+  "worker_stats": {
+    "total_worker_threads": 0,
+    "active_workers": 0,
+    "worker_details": []
+  },
+  "cache_stats": {
+    "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+  },
+  "timing_stats": {
+    "total_profiling_time": 0.4740111827850342,
+    "profiling_start": 1754402660.2830524,
+    "profiling_end": 1754402660.7570636
+  }
+}

@@ -351,7 +351,8 @@ class PerformanceValidationRunner:
             return
 
         try:
-            with open(filepath, "w") as f:
+            filepath_obj = Path(filepath)
+            with filepath_obj.open("w") as f:
                 json.dump(self.results, f, indent=2, default=str)
             print(f"📊 Results exported to: {filepath}")
         except Exception as e:

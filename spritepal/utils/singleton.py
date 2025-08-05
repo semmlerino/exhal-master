@@ -1,3 +1,4 @@
+# Fixed singleton.py
 """
 Thread-safe singleton implementation for SpritePal.
 
@@ -6,7 +7,7 @@ for global variables and the PLW0603 error.
 """
 
 import threading
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 T = TypeVar("T")
 
@@ -23,8 +24,8 @@ class ThreadSafeSingleton(type):
 
     This ensures only one instance exists and handles thread safety automatically.
     """
-    _instances: dict[type[Any], Any] = {}
-    _lock: threading.Lock = threading.Lock()
+    _instances: ClassVar[dict[type[Any], Any]] = {}
+    _lock: ClassVar[threading.Lock] = threading.Lock()
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         # Fast path - check without lock
@@ -41,11 +42,11 @@ class ThreadSafeSingleton(type):
         return cls._instances[cls]
 
     @classmethod
-    def clear_instance(mcs, cls: type[T]) -> None:
+    def clear_instance(cls, target_cls: type[T]) -> None:
         """Clear a specific singleton instance (useful for testing)."""
-        with mcs._lock:
-            if cls in mcs._instances:
-                del mcs._instances[cls]
+        with cls._lock:
+            if target_cls in cls._instances:
+                del cls._instances[target_cls]
 
     @classmethod
     def clear_all_instances(cls) -> None:
@@ -60,7 +61,7 @@ class SimpleSingleton(type):
 
     Use this for cases where thread safety is not required.
     """
-    _instances: dict[type[Any], Any] = {}
+    _instances: ClassVar[dict[type[Any], Any]] = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         if cls not in cls._instances:
@@ -68,7 +69,7 @@ class SimpleSingleton(type):
         return cls._instances[cls]
 
     @classmethod
-    def clear_instance(mcs, cls: type[T]) -> None:
+    def clear_instance(cls, target_cls: type[T]) -> None:
         """Clear a specific singleton instance (useful for testing)."""
-        if cls in mcs._instances:
-            del mcs._instances[cls]
+        if target_cls in cls._instances:
+            del cls._instances[target_cls]

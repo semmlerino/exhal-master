@@ -5,8 +5,10 @@ Session coordination for MainWindow save/restore functionality
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from core.managers import get_session_manager
 from PyQt6.QtCore import QObject
+
+from core.managers import get_session_manager
+from utils.settings_manager import get_settings_manager
 
 if TYPE_CHECKING:
     from core.managers.session_manager import SessionManager
@@ -37,7 +39,7 @@ class SessionCoordinator(QObject):
         self.output_settings_manager = output_settings_manager
         self.session_manager: SessionManager = get_session_manager()
 
-    def restore_session(self) -> None:
+    def restore_session(self) -> bool:
         """Restore the previous session"""
         # Validate file paths
         session_data = self.session_manager.get_session_data()
@@ -71,7 +73,6 @@ class SessionCoordinator(QObject):
 
     def _restore_window_geometry(self) -> None:
         """Restore window geometry if enabled in settings"""
-        from utils.settings_manager import get_settings_manager
 
         settings_manager = get_settings_manager()
         if settings_manager.get("ui", "restore_position", False):

@@ -6,9 +6,10 @@ Based on research findings that sprites are at 0x4000 or 0x6000, not 0xC000
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
 from utils.logging_config import get_logger
@@ -21,7 +22,8 @@ def analyze_vram_at_correct_offsets(vram_path: str):
 
     logger.info(f"Analyzing VRAM dump: {vram_path}")
 
-    with open(vram_path, "rb") as f:
+    vram_path_obj = Path(vram_path)
+    with vram_path_obj.open("rb") as f:
         vram_data = f.read()
 
     logger.info(f"VRAM size: {len(vram_data)} bytes")
@@ -69,7 +71,7 @@ def analyze_vram_at_correct_offsets(vram_path: str):
                 logger.info(f"  {hex_str}")
 
         # Convert to PNG for visual inspection
-        output_path = f"vram_{os.path.basename(vram_path)}_{offset:04X}.png"
+        output_path = f"vram_{Path(vram_path).name}_{offset:04X}.png"
         try:
             _ = extractor._convert_4bpp_to_png(sprite_data, output_path)
             logger.info(f"\nSaved preview: {output_path}")
@@ -82,7 +84,8 @@ def check_rom_pointers(rom_path: str):
 
     logger.info(f"\nChecking ROM pointer table in: {rom_path}")
 
-    with open(rom_path, "rb") as f:
+    rom_path_obj = Path(rom_path)
+    with rom_path_obj.open("rb") as f:
         rom_data = f.read()
 
     # Convert SNES address $FF:0002 to file offset
@@ -114,13 +117,13 @@ def main():
 
     # Check parent directory
     parent_dir = ".."
-    print(f"Checking directory: {os.path.abspath(parent_dir)}")
+    print(f"Checking directory: {Path(parent_dir).resolve()}")
     try:
-        files = os.listdir(parent_dir)
+        files = [f.name for f in Path(parent_dir).iterdir()]
         print(f"Found {len(files)} files in parent directory")
         for file in files:
             if file.endswith("_VRAM.dmp") or ("VRAM" in file and file.endswith(".dmp")):
-                full_path = os.path.join(parent_dir, file)
+                full_path = Path(parent_dir) / file
                 print(f"Found VRAM file: {file}")
                 vram_files.append(full_path)
     except Exception as e:
@@ -140,7 +143,7 @@ def main():
     # Check ROM pointers
     rom_files = ["Kirby Super Star (USA).sfc", "Kirby's Fun Pak (Europe).sfc"]
     for rom_file in rom_files:
-        if os.path.exists(rom_file):
+        if Path(rom_file).exists():
             check_rom_pointers(rom_file)
 
 

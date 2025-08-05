@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from core.controller import ExtractionController
     from core.managers.session_manager import SessionManager
 
-from core.managers import get_session_manager
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import (
@@ -23,6 +22,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from core.managers import get_session_manager
 from ui.dialogs import SettingsDialog, UserErrorDialog
 from ui.extraction_panel import ExtractionPanel
 from ui.managers import (
@@ -68,7 +69,7 @@ class MainWindow(QMainWindow):
         self._output_path: str
         self._extracted_files: list[str]
         self.session_manager: SessionManager
-        self.controller: "ExtractionController"
+        self.controller: ExtractionController
         self.extraction_tabs: QTabWidget
         self.rom_extraction_panel: ROMExtractionPanel
         self.extraction_panel: ExtractionPanel
@@ -207,7 +208,7 @@ class MainWindow(QMainWindow):
         left_panel = self.centralWidget().findChild(QWidget)
         if left_panel:
             left_layout = left_panel.layout()
-            if left_layout:
+            if left_layout is not None:
                 # Insert output settings group before the stretch
                 output_group = self.output_settings_manager.create_output_settings_group()
                 left_layout.insertWidget(left_layout.count() - 1, output_group)
@@ -349,7 +350,8 @@ class MainWindow(QMainWindow):
     def get_current_vram_path(self) -> str:
         """Get current VRAM path for browse dialog default directory"""
         current_files = self.extraction_panel.get_session_data()
-        return current_files.get("vram_path", "")
+        vram_path = current_files.get("vram_path", "")
+        return str(vram_path) if vram_path is not None else ""
 
     # TabCoordinatorActionsProtocol
     def get_rom_extraction_params(self) -> dict | None:
@@ -457,8 +459,8 @@ class MainWindow(QMainWindow):
 
         # Connect output settings manager signals
         self.output_settings_manager.output_name_changed.connect(self._on_output_name_changed)
-        self.output_settings_manager.grayscale_toggled.connect(lambda: self._update_output_info_label())
-        self.output_settings_manager.metadata_toggled.connect(lambda: self._update_output_info_label())
+        self.output_settings_manager.grayscale_toggled.connect(self._update_output_info_label)
+        self.output_settings_manager.metadata_toggled.connect(self._update_output_info_label)
 
     def _on_files_changed(self) -> None:
         """Handle when input files change"""
@@ -561,7 +563,7 @@ class MainWindow(QMainWindow):
 
         # Update or hide cache status indicators through manager
         if show_indicators:
-            if not hasattr(self.status_bar_manager, "cache_status_widget") or not self.status_bar_manager.cache_status_widget:
+            if not hasattr(self.status_bar_manager, "cache_status_widget") or self.status_bar_manager.cache_status_widget is None:
                 # Re-create indicators if they were previously hidden
                 self.status_bar_manager.setup_status_bar_indicators()
             else:

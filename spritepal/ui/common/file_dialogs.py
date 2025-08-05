@@ -5,9 +5,10 @@ Provides helper functions and classes for consistent file dialog usage
 throughout the SpritePal application.
 """
 
-import os
+from pathlib import Path
 
 from PyQt6.QtWidgets import QFileDialog, QWidget
+
 from utils.settings_manager import get_settings_manager
 
 
@@ -43,12 +44,12 @@ class FileDialogHelper:
         settings = get_settings_manager()
 
         # Determine initial directory
-        if initial_dir and os.path.exists(initial_dir):
+        if initial_dir and Path(initial_dir).exists():
             start_dir = initial_dir
         elif settings_key:
             # Try to restore from settings
             saved_dir = settings.get_value(settings_namespace, settings_key, "")
-            start_dir = saved_dir if saved_dir and os.path.exists(saved_dir) else settings.get_default_directory()
+            start_dir = saved_dir if saved_dir and Path(saved_dir).exists() else settings.get_default_directory()
         else:
             start_dir = settings.get_default_directory()
 
@@ -94,12 +95,12 @@ class FileDialogHelper:
         settings = get_settings_manager()
 
         # Determine initial directory
-        if initial_path and os.path.exists(initial_path):
-            start_path = initial_path if os.path.isfile(initial_path) else initial_path
+        if initial_path and Path(initial_path).exists():
+            start_path = initial_path if Path(initial_path).is_file() else initial_path
         elif settings_key:
             # Try to restore from settings
             saved_path = settings.get_value(settings_namespace, settings_key, "")
-            if saved_path and os.path.exists(saved_path):
+            if saved_path and Path(saved_path).exists():
                 start_path = saved_path
             else:
                 start_path = settings.get_default_directory()
@@ -118,7 +119,7 @@ class FileDialogHelper:
             # Save to settings for future use
             if settings_key:
                 settings.set_value(settings_namespace, settings_key, filename)
-            settings.set_last_used_directory(os.path.dirname(filename))
+            settings.set_last_used_directory(str(Path(filename).parent))
 
         return filename
 
@@ -153,7 +154,7 @@ class FileDialogHelper:
         elif settings_key:
             # Try to restore from settings
             saved_path = settings.get_value(settings_namespace, settings_key, "")
-            if saved_path and os.path.exists(os.path.dirname(saved_path)):
+            if saved_path and Path(saved_path).parent.exists():
                 start_path = saved_path
             else:
                 start_path = settings.get_default_directory()
@@ -172,7 +173,7 @@ class FileDialogHelper:
             # Save to settings for future use
             if settings_key:
                 settings.set_value(settings_namespace, settings_key, filename)
-            settings.set_last_used_directory(os.path.dirname(filename))
+            settings.set_last_used_directory(str(Path(filename).parent))
 
         return filename
 
@@ -197,17 +198,18 @@ class FileDialogHelper:
 
         # Check current path first
         if current_path:
-            if os.path.isfile(current_path):
-                dir_path = os.path.dirname(current_path)
-                if os.path.exists(dir_path):
-                    return dir_path
-            elif os.path.isdir(current_path):
+            current = Path(current_path)
+            if current.is_file():
+                dir_path = current.parent
+                if dir_path.exists():
+                    return str(dir_path)
+            elif current.is_dir():
                 return current_path
 
         # Check fallback setting
         if fallback_setting:
             saved_dir = settings.get_value(fallback_namespace, fallback_setting, "")
-            if saved_dir and os.path.exists(saved_dir):
+            if saved_dir and Path(saved_dir).exists():
                 return saved_dir
 
         # Use default directory

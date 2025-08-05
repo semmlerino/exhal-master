@@ -213,6 +213,11 @@ CACHE_EXPIRATION_MIN_DAYS = 1      # Minimum cache expiration in days
 CACHE_EXPIRATION_MAX_DAYS = 365    # Maximum cache expiration in days
 CACHE_EXPIRATION_TO_SECONDS = 24 * 3600  # Convert days to seconds multiplier
 
+# Sprite size constraints for advanced search
+MIN_SPRITE_SIZE = 0x100            # Minimum sprite size (256 bytes, 8 tiles)
+MAX_SPRITE_SIZE = 0x10000          # Maximum sprite size (64KB, 2048 tiles)
+DEFAULT_SCAN_STEP = ROM_SCAN_STEP_DEFAULT  # Default scan step for sprite finding
+
 # Miscellaneous
 FILE_READ_HEADER_SIZE = 16         # Bytes to read for file header validation
 TILE_VALIDITY_THRESHOLD = 10       # Minimum valid tiles for sprite detection

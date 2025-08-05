@@ -46,7 +46,7 @@ class PaletteManager:
 
     def _extract_palettes(self) -> None:
         """Extract all palettes from CGRAM data"""
-        self.palettes = {}
+        self.palettes.clear()
 
         if self.cgram_data is None:
             return

@@ -7,6 +7,7 @@ from PIL import Image
 from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPainter, QPen
 from PyQt6.QtWidgets import QListWidget, QWidget
+
 from utils.image_utils import pil_to_qpixmap
 
 

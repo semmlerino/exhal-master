@@ -3,15 +3,16 @@ Comprehensive sprite finder that scans ROMs for actual character sprites
 """
 
 import json
-import os
 import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 from core.region_analyzer import EmptyRegionConfig, EmptyRegionDetector
 from core.rom_extractor import ROMExtractor
 from core.sprite_visual_validator import SpriteVisualValidator
-from PIL import Image
 from utils.constants import (
     BYTES_PER_TILE,
     ROM_SCAN_STEP_DEFAULT,
@@ -101,7 +102,7 @@ class SpriteFinder:
         candidates = []
 
         # Read ROM data
-        with open(rom_path, "rb") as f:
+        with Path(rom_path).open("rb") as f:
             rom_data = f.read()
 
         rom_size = len(rom_data)
@@ -198,11 +199,11 @@ class SpriteFinder:
                         preview_path = None
                         if save_previews:
                             preview_name = f"sprite_{offset:06X}_conf{int(confidence*100)}.png"
-                            preview_path = os.path.join(self.output_dir, preview_name)
+                            preview_path = Path(self.output_dir) / preview_name
 
                             # Copy temp image to preview
                             img = Image.open(temp_image_path)
-                            img.save(preview_path)
+                            img.save(str(preview_path))
                             logger.debug(f"Saved preview: {preview_path}")
 
                         candidate = SpriteCandidate(
@@ -225,8 +226,8 @@ class SpriteFinder:
 
                 finally:
                     # Clean up temp file
-                    if temp_image_path and os.path.exists(temp_image_path):
-                        os.unlink(temp_image_path)
+                    if temp_image_path and Path(temp_image_path).exists():
+                        Path(temp_image_path).unlink(missing_ok=True)
 
             except Exception:
                 # Decompression or validation failed, continue
@@ -249,8 +250,8 @@ class SpriteFinder:
 
     def _save_results_summary(self, rom_path: str, candidates: list[SpriteCandidate]) -> None:
         """Save a summary of found sprites"""
-        rom_name = os.path.basename(rom_path)
-        summary_path = os.path.join(self.output_dir, f"sprite_search_results_{rom_name}.json")
+        rom_name = Path(rom_path).name
+        summary_path = Path(self.output_dir) / f"sprite_search_results_{rom_name}.json"
 
         summary = {
             "rom_file": rom_name,
@@ -258,14 +259,14 @@ class SpriteFinder:
             "candidates": [c.to_dict() for c in candidates]
         }
 
-        with open(summary_path, "w") as f:
+        with summary_path.open("w") as f:
             json.dump(summary, f, indent=2)
 
         logger.info(f"Saved results summary: {summary_path}")
 
         # Also create a simple text report
-        report_path = os.path.join(self.output_dir, f"sprite_search_report_{rom_name}.txt")
-        with open(report_path, "w") as f:
+        report_path = Path(self.output_dir) / f"sprite_search_report_{rom_name}.txt"
+        with report_path.open("w") as f:
             f.write(f"Sprite Search Report for {rom_name}\n")
             f.write("=" * 60 + "\n\n")
             f.write(f"Found {len(candidates)} sprite candidates\n\n")
@@ -317,3 +318,52 @@ class SpriteFinder:
                 break
 
         return all_candidates
+
+    def find_sprite_at_offset(self, rom_data: bytes, offset: int) -> dict[str, Any] | None:
+        """
+        Try to find and validate a sprite at a specific offset.
+
+        Args:
+            rom_data: ROM data bytes
+            offset: Offset to check
+
+        Returns:
+            Sprite info dict if found, None otherwise
+        """
+        try:
+            # Try to decompress sprite at this offset
+            compressed_size, sprite_data = self.extractor.rom_injector.find_compressed_sprite(
+                rom_data, offset, expected_size=None
+            )
+
+            if len(sprite_data) == 0:
+                return None
+
+            # Quick validation of tile data
+            tile_count = len(sprite_data) // BYTES_PER_TILE
+            if tile_count < 16 or tile_count > 2048:  # Reasonable sprite size
+                return None
+
+            # Quick pre-validation
+            is_valid, quick_confidence = self.validator.validate_tile_data(
+                sprite_data, tile_count
+            )
+
+            if not is_valid or quick_confidence < 0.4:  # Lower threshold for single offset
+                return None
+
+            # Build sprite info dict compatible with existing interfaces
+            return {
+                "offset": offset,
+                "offset_hex": f"0x{offset:X}",
+                "compressed_size": compressed_size,
+                "decompressed_size": len(sprite_data),
+                "tile_count": tile_count,
+                "quality": quick_confidence,
+                "alignment": "perfect" if len(sprite_data) % BYTES_PER_TILE == 0 else f"{len(sprite_data) % BYTES_PER_TILE} extra bytes"
+            }
+
+
+        except Exception:
+            # Decompression or validation failed
+            return None

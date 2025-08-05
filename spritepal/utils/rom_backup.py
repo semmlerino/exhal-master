@@ -2,9 +2,9 @@
 ROM backup utilities for SpritePal
 """
 
-import os
 import shutil
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from utils.logging_config import get_logger
@@ -34,27 +34,28 @@ class ROMBackupManager:
         Raises:
             ROMBackupError: If backup creation fails
         """
-        if not os.path.exists(rom_path):
+        if not Path(rom_path).exists():
             raise ROMBackupError(f"ROM file not found: {rom_path}")
 
         # Determine backup directory
         if backup_dir is None:
-            backup_dir = os.path.dirname(rom_path)
+            backup_dir = str(Path(rom_path).parent)
 
         # Create backup subdirectory
-        backup_subdir = os.path.join(backup_dir, "spritepal_backups")
-        os.makedirs(backup_subdir, exist_ok=True)
+        backup_subdir = Path(backup_dir) / "spritepal_backups"
+        backup_subdir.mkdir(exist_ok=True)
 
         # Generate backup filename
-        rom_name = os.path.basename(rom_path)
-        rom_base, rom_ext = os.path.splitext(rom_name)
+        rom_path_obj = Path(rom_path)
+        rom_base = rom_path_obj.stem
+        rom_ext = rom_path_obj.suffix
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         backup_name = f"{rom_base}_backup_{timestamp}{rom_ext}"
-        backup_path = os.path.join(backup_subdir, backup_name)
+        backup_path = backup_subdir / backup_name
 
         try:
             # Copy ROM to backup
-            _ = shutil.copy2(rom_path, backup_path)
+            _ = shutil.copy2(rom_path, str(backup_path))
             logger.info(f"Created backup: {backup_name}")
 
             # Clean up old backups
@@ -63,19 +64,18 @@ class ROMBackupManager:
         except Exception as e:
             raise ROMBackupError(f"Failed to create backup: {e}") from e
         else:
-            return backup_path
+            return str(backup_path)
 
     @classmethod
-    def _cleanup_old_backups(cls, backup_dir: str, rom_base: str, rom_ext: str) -> None:
+    def _cleanup_old_backups(cls, backup_dir: Path, rom_base: str, rom_ext: str) -> None:
         """Remove old backups keeping only the most recent ones"""
         try:
             # Find all backups for this ROM
             backups = []
 
-            for file in os.listdir(backup_dir):
-                if file.startswith(f"{rom_base}_backup_") and file.endswith(rom_ext):
-                    file_path = os.path.join(backup_dir, file)
-                    mtime = os.path.getmtime(file_path)
+            for file_path in backup_dir.iterdir():
+                if file_path.name.startswith(f"{rom_base}_backup_") and file_path.name.endswith(rom_ext):
+                    mtime = file_path.stat().st_mtime
                     backups.append((mtime, file_path))
 
             # Sort by modification time (newest first)
@@ -83,8 +83,8 @@ class ROMBackupManager:
 
             # Remove old backups
             for _, backup_path in backups[cls.MAX_BACKUPS_PER_ROM :]:
-                os.remove(backup_path)
-                logger.info(f"Removed old backup: {os.path.basename(backup_path)}")
+                backup_path.unlink()
+                logger.info(f"Removed old backup: {backup_path.name}")
 
         except Exception as e:
             logger.warning(f"Failed to cleanup old backups: {e}")
@@ -100,26 +100,26 @@ class ROMBackupManager:
             Path to latest backup or None if no backups exist
         """
         if backup_dir is None:
-            backup_dir = os.path.dirname(rom_path)
+            backup_dir = str(Path(rom_path).parent)
 
-        backup_subdir = os.path.join(backup_dir, "spritepal_backups")
-        if not os.path.exists(backup_subdir):
+        backup_subdir = Path(backup_dir) / "spritepal_backups"
+        if not backup_subdir.exists():
             return None
 
-        rom_name = os.path.basename(rom_path)
-        rom_base, rom_ext = os.path.splitext(rom_name)
+        rom_path_obj = Path(rom_path)
+        rom_base = rom_path_obj.stem
+        rom_ext = rom_path_obj.suffix
 
         latest_backup = None
         latest_mtime = 0
 
         try:
-            for file in os.listdir(backup_subdir):
-                if file.startswith(f"{rom_base}_backup_") and file.endswith(rom_ext):
-                    file_path = os.path.join(backup_subdir, file)
-                    mtime = os.path.getmtime(file_path)
+            for file_path in backup_subdir.iterdir():
+                if file_path.name.startswith(f"{rom_base}_backup_") and file_path.name.endswith(rom_ext):
+                    mtime = file_path.stat().st_mtime
                     if mtime > latest_mtime:
                         latest_mtime = mtime
-                        latest_backup = file_path
+                        latest_backup = str(file_path)
         except Exception:
             pass
 
@@ -137,7 +137,7 @@ class ROMBackupManager:
         Raises:
             ROMBackupError: If restore fails
         """
-        if not os.path.exists(backup_path):
+        if not Path(backup_path).exists():
             raise ROMBackupError(f"Backup file not found: {backup_path}")
 
         try:
@@ -156,31 +156,32 @@ class ROMBackupManager:
         Returns:
             List of backup info dicts with keys: path, size, timestamp
         """
-        if backup_dir is None:
-            backup_dir = os.path.dirname(rom_path)
+        rom_path_obj = Path(rom_path)
 
-        backup_subdir = os.path.join(backup_dir, "spritepal_backups")
-        if not os.path.exists(backup_subdir):
+        if backup_dir is None:
+            backup_dir = str(rom_path_obj.parent)
+
+        backup_subdir = Path(backup_dir) / "spritepal_backups"
+        if not backup_subdir.exists():
             return []
 
-        rom_name = os.path.basename(rom_path)
-        rom_base, rom_ext = os.path.splitext(rom_name)
+        rom_base = rom_path_obj.stem
+        rom_ext = rom_path_obj.suffix
 
         backups = []
 
         try:
-            for file in os.listdir(backup_subdir):
-                if file.startswith(f"{rom_base}_backup_") and file.endswith(rom_ext):
-                    file_path = os.path.join(backup_subdir, file)
-                    stat = os.stat(file_path)
+            for file_path in backup_subdir.iterdir():
+                if file_path.name.startswith(f"{rom_base}_backup_") and file_path.name.endswith(rom_ext):
+                    stat = file_path.stat()
 
                     # Extract timestamp from filename
-                    timestamp_str = file[len(f"{rom_base}_backup_") : -len(rom_ext)]
+                    timestamp_str = file_path.name[len(f"{rom_base}_backup_") : -len(rom_ext)]
 
                     backups.append(
                         {
-                            "path": file_path,
-                            "filename": file,
+                            "path": str(file_path),  # Convert to string for compatibility
+                            "filename": file_path.name,
                             "size": stat.st_size,
                             "mtime": stat.st_mtime,
                             "timestamp_str": timestamp_str,

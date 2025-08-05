@@ -47,13 +47,13 @@ def main():
     print("=" * 60)
 
     # Find all ROM files
-    rom_files = list(Path(".").glob("*.sfc")) + list(Path(".").glob("*.smc"))
+    rom_files = list(Path().glob("*.sfc")) + list(Path().glob("*.smc"))
 
     for rom_file in rom_files:
         print(f"\nROM: {rom_file.name}")
         print("-" * 40)
 
-        with open(rom_file, "rb") as f:
+        with rom_file.open("rb") as f:
             rom_data = f.read()
 
         # Skip SMC header if present

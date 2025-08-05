@@ -1,0 +1,31 @@
+{
+  "exclude": [
+    "analyze_*.py",
+    "demo_*.py",
+    "test_*.py",
+    "fix_*.py",
+    "check_*.py",
+    "validate_*.py",
+    "build_*.py",
+    "run_*.py",
+    "runtime_*.py",
+    "memory_*.py",
+    "pattern_*.py",
+    "quick_*.py",
+    "**/scripts/analysis/**",
+    "**/scripts/install_*.py",
+    "**/scripts/profile_*.py",
+    "**/scripts/run_*.py"
+  ],
+  "include": [
+    "core/**",
+    "ui/**",
+    "utils/**"
+  ],
+  "typeCheckingMode": "standard",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportOptionalMemberAccess": false,
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Linux"
+}

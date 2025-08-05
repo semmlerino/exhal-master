@@ -1,0 +1,64 @@
+================================================================================
+SPRITEPAL PERFORMANCE PROFILING REPORT
+================================================================================
+
+PROFILING SUMMARY
+----------------------------------------
+Total profiling time: 0.00 seconds
+
+MEMORY ANALYSIS
+----------------------------------------
+Baseline memory: 65.05 MB
+Peak memory: 65.05 MB
+Current memory: 65.05 MB
+Total growth: 0.00 MB
+
+Top Memory Consumers:
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 187: 0.00 MB (20 objects)
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 191: 0.00 MB (16 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: 0.00 MB (6 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: 0.00 MB (6 objects)
+  •   File "/usr/lib/python3.12/logging/__init__.py", line 170: 0.00 MB (8 objects)
+
+POTENTIAL MEMORY LEAKS:
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: +0.00 MB
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: +0.00 MB
+
+CPU PERFORMANCE ANALYSIS
+----------------------------------------
+Total functions analyzed: 76
+Total function calls: 172
+
+Top CPU Bottlenecks:
+
+THREAD ANALYSIS
+----------------------------------------
+Total threads: 1
+Active threads: 1
+Qt threads: 0
+Worker threads: 0
+
+QT OBJECTS ANALYSIS
+----------------------------------------
+Qt analysis error: No QApplication instance found
+
+MANAGER ANALYSIS
+----------------------------------------
+Managers initialized: False
+
+ROM CACHE ANALYSIS
+----------------------------------------
+Cache analysis error: Cannot analyze cache: Session manager not initialized. Call initialize_managers() first.
+
+I/O PERFORMANCE ANALYSIS
+----------------------------------------
+Read operations: 1082
+Write operations: 362
+Data read: 23.0 MB
+Data written: 0.0 MB
+
+PERFORMANCE RECOMMENDATIONS
+----------------------------------------
+• MEDIUM: Investigate 2 potential memory leak sources
+
+================================================================================

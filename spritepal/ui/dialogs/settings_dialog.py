@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.components import BaseDialog
 from ui.styles import get_button_style, get_muted_text_style
 from utils.rom_cache import get_rom_cache
@@ -337,7 +338,7 @@ class SettingsDialog(BaseDialog):
             self.cache_size_label.setText(f"{size_mb:.1f} MB")
 
             # Update status bar
-            if self.status_bar:
+            if self.status_bar is not None:
                 self.status_bar.showMessage(f"Cache refreshed: {total_files} files, {size_mb:.1f} MB")
 
         except Exception as e:
@@ -345,7 +346,7 @@ class SettingsDialog(BaseDialog):
             self.cache_dir_label.setText("Error reading cache")
             self.cache_files_label.setText("N/A")
             self.cache_size_label.setText("N/A")
-            if self.status_bar:
+            if self.status_bar is not None:
                 self.status_bar.showMessage(f"Error reading cache: {e!s}")
 
     def _on_cache_enabled_changed(self, checked: bool):
@@ -416,7 +417,7 @@ class SettingsDialog(BaseDialog):
                 self._update_cache_stats()
 
                 # Show result
-                if self.status_bar:
+                if self.status_bar is not None:
                     self.status_bar.showMessage(f"Cache cleared: {removed_count} files removed")
 
                 # Emit signal

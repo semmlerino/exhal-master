@@ -6,7 +6,6 @@ This script analyzes performance bottlenecks in the preview generation workflow
 and calculates potential benefits from ROM cache integration.
 """
 
-import os
 import tempfile
 import threading
 import time
@@ -117,7 +116,8 @@ class PerformanceAnalyzer:
             for _iteration in range(iterations):
                 for offset in offsets:
                     # Current approach: read entire ROM file each time
-                    with open(rom_file, "rb") as f:
+                    rom_file_path = Path(rom_file)
+                    with rom_file_path.open("rb") as f:
                         rom_data = f.read()
                         file_reads += 1
 
@@ -125,7 +125,7 @@ class PerformanceAnalyzer:
                     compressed_size, sprite_data = self.extractor.find_compressed_sprite(rom_data, offset)
                     decompression_calls += 1
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         end_time = time.perf_counter()
 
@@ -165,7 +165,8 @@ class PerformanceAnalyzer:
 
         try:
             # Initial ROM load (one-time cost)
-            with open(rom_file, "rb") as f:
+            rom_file_path = Path(rom_file)
+            with rom_file_path.open("rb") as f:
                 rom_data = f.read()
                 file_reads += 1
 
@@ -189,7 +190,7 @@ class PerformanceAnalyzer:
             end_time = time.perf_counter()
 
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         current_memory = self.process.memory_info().rss
         peak_memory = tracemalloc.get_traced_memory()[1]
@@ -230,7 +231,8 @@ class PerformanceAnalyzer:
                     # Simulate file system contention
                     contention_start = time.perf_counter()
                     with lock:  # Simulate file system lock contention
-                        with open(rom_file, "rb") as f:
+                        rom_file_path = Path(rom_file)
+                        with rom_file_path.open("rb") as f:
                             rom_data = f.read()
                             thread_results["file_reads"] += 1
                     contention_end = time.perf_counter()
@@ -241,7 +243,7 @@ class PerformanceAnalyzer:
                     thread_results["decompression_calls"] += 1
 
             finally:
-                os.unlink(rom_file)
+                Path(rom_file).unlink()
                 results.append(thread_results)
 
         # Distribute offsets among threads
@@ -296,13 +298,14 @@ class PerformanceAnalyzer:
         rom_file = self.create_test_rom_file()
         try:
             for offset in offsets[:10]:  # Limit to prevent excessive memory usage
-                with open(rom_file, "rb") as f:
+                rom_file_path = Path(rom_file)
+                with rom_file_path.open("rb") as f:
                     rom_data = f.read()  # 4MB each time
                     # Process immediately and discard
                     compressed_size, sprite_data = self.extractor.find_compressed_sprite(rom_data, offset)
                     del rom_data  # Explicit cleanup
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         current_peak, current_total = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -317,7 +320,8 @@ class PerformanceAnalyzer:
 
         try:
             # Single ROM load
-            with open(rom_file, "rb") as f:
+            rom_file_path = Path(rom_file)
+            with rom_file_path.open("rb") as f:
                 rom_data = f.read()
 
             # Process all offsets with caching
@@ -327,7 +331,7 @@ class PerformanceAnalyzer:
                     compressed_size, sprite_data = self.extractor.find_compressed_sprite(rom_data, offset)
                     sprite_cache[cache_key] = sprite_data
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         cached_peak, cached_total = tracemalloc.get_traced_memory()
         tracemalloc.stop()
@@ -519,7 +523,7 @@ def main():
 
     # Write report to file
     report_file = Path(__file__).parent / "rom_cache_performance_analysis.txt"
-    with open(report_file, "w") as f:
+    with report_file.open("w") as f:
         f.write(report)
 
     print("\nPerformance analysis complete!")

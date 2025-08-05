@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common import WorkerManager
 from ui.components.dialogs import RangeScanDialog
 from ui.components.visualization import ROMMapWidget
@@ -272,7 +273,7 @@ class ScanControlsPanel(QWidget):
         self.found_sprites.clear()
 
         # Clear existing sprites from ROM map
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.clear_sprites()
 
         # Update status
@@ -319,7 +320,7 @@ class ScanControlsPanel(QWidget):
             return
 
         # Clean up existing range scan worker with enhanced error handling
-        if self.range_scan_worker:
+        if self.range_scan_worker is not None:
             try:
                 WorkerManager.cleanup_worker(self.range_scan_worker, timeout=3000)
             except RuntimeError as e:
@@ -367,7 +368,7 @@ class ScanControlsPanel(QWidget):
         self.found_sprites.append((offset, quality))
 
         # Add to ROM map visualization
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.add_found_sprite(offset, quality)
 
         # Calculate progress percentage based on current offset
@@ -400,7 +401,7 @@ class ScanControlsPanel(QWidget):
 
     def _toggle_pause(self):
         """Toggle pause/resume for the current scan"""
-        if not self.range_scan_worker:
+        if self.range_scan_worker is None:
             return
 
         if self.range_scan_worker.is_paused():
@@ -410,7 +411,7 @@ class ScanControlsPanel(QWidget):
 
     def _stop_scan(self):
         """Stop the current scan"""
-        if self.range_scan_worker:
+        if self.range_scan_worker is not None:
             self.range_scan_worker.stop_scan()
 
     def _on_scan_paused(self):

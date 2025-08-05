@@ -15,34 +15,37 @@ try:
     from utils.logging_config import get_logger
 except ImportError:
     import logging
-    def get_logger(name: str) -> logging.Logger:
-        return logging.getLogger(name)
+    def get_logger(module_name: str) -> logging.Logger:
+        return logging.getLogger(module_name)
 
 logger = get_logger(__name__)
 
 T = TypeVar("T")
+TSingleton = TypeVar("TSingleton")
+TQt = TypeVar("TQt")
+TLazy = TypeVar("TLazy")
 
 
 class ThreadSafeSingleton(Generic[T]):
     """
     Thread-safe singleton base class using double-checked locking pattern.
-    
+
     This class provides a thread-safe singleton pattern that can be subclassed
     to create thread-safe singleton instances of any type.
-    
+
     Example:
         class MyManager:
             def __init__(self):
                 self.data = "initialized"
-        
+
         class MyManagerSingleton(ThreadSafeSingleton[MyManager]):
             _instance: MyManager | None = None
             _lock = threading.Lock()
-            
+
             @classmethod
             def _create_instance(cls) -> MyManager:
                 return MyManager()
-        
+
         # Usage
         manager = MyManagerSingleton.get()
     """
@@ -54,15 +57,15 @@ class ThreadSafeSingleton(Generic[T]):
     def get(cls, *args, **kwargs) -> T:
         """
         Get or create the singleton instance (thread-safe).
-        
+
         Uses double-checked locking pattern for optimal performance:
         - Fast path: Check instance without lock
         - Slow path: Acquire lock, double-check, then create if needed
-        
+
         Args:
             *args: Arguments to pass to _create_instance
             **kwargs: Keyword arguments to pass to _create_instance
-            
+
         Returns:
             The singleton instance
         """
@@ -83,17 +86,17 @@ class ThreadSafeSingleton(Generic[T]):
     def _create_instance(cls, *args, **kwargs) -> T:
         """
         Create a new instance of the singleton.
-        
+
         This method must be overridden by subclasses to define
         how to create the singleton instance.
-        
+
         Args:
             *args: Arguments for instance creation
             **kwargs: Keyword arguments for instance creation
-            
+
         Returns:
             New instance of type T
-            
+
         Raises:
             NotImplementedError: If not overridden by subclass
         """
@@ -103,7 +106,7 @@ class ThreadSafeSingleton(Generic[T]):
     def reset(cls) -> None:
         """
         Reset the singleton instance (thread-safe).
-        
+
         This is primarily useful for testing scenarios where you need
         to clear the singleton state between tests.
         """
@@ -118,10 +121,10 @@ class ThreadSafeSingleton(Generic[T]):
     def _cleanup_instance(cls, instance: T) -> None:
         """
         Perform cleanup before resetting instance.
-        
+
         Override this method in subclasses if cleanup is needed
         before the singleton instance is reset.
-        
+
         Args:
             instance: The instance being cleaned up
         """
@@ -131,38 +134,38 @@ class ThreadSafeSingleton(Generic[T]):
     def is_initialized(cls) -> bool:
         """
         Check if the singleton instance has been created (thread-safe).
-        
+
         Returns:
             True if instance exists, False otherwise
         """
         return cls._instance is not None
 
 
-class QtThreadSafeSingleton(ThreadSafeSingleton[T]):
+class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
     """
     Thread-safe singleton for Qt objects with thread affinity checking.
-    
+
     This singleton ensures that:
     1. Instance creation is thread-safe
     2. Qt method calls only happen on the main thread
     3. Proper cleanup of Qt objects
-    
+
     Example:
         from PyQt6.QtWidgets import QDialog
-        
+
         class MyDialog(QDialog):
             def __init__(self, parent=None):
                 super().__init__(parent)
-        
+
         class MyDialogSingleton(QtThreadSafeSingleton[MyDialog]):
             _instance: MyDialog | None = None
             _lock = threading.Lock()
-            
+
             @classmethod
             def _create_instance(cls, parent=None) -> MyDialog:
                 cls._ensure_main_thread()
                 return MyDialog(parent)
-        
+
         # Usage
         dialog = MyDialogSingleton.get()
     """
@@ -171,7 +174,7 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[T]):
     def _ensure_main_thread(cls) -> None:
         """
         Ensure that the current thread is the main Qt thread.
-        
+
         Raises:
             RuntimeError: If called from a non-main thread
         """
@@ -190,19 +193,19 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[T]):
             )
 
     @classmethod
-    def safe_qt_call(cls, qt_method: Callable[[], T]) -> T | None:
+    def safe_qt_call(cls, qt_method: Callable[[], TQt]) -> TQt | None:
         """
         Safely call a Qt method, returning None if not on main thread.
-        
+
         This method allows you to safely call Qt methods that might be
         called from worker threads, returning None instead of crashing.
-        
+
         Args:
             qt_method: A callable that invokes a Qt method
-            
+
         Returns:
             Result of qt_method if on main thread, None otherwise
-            
+
         Example:
             result = MyDialogSingleton.safe_qt_call(lambda: dialog.isVisible())
         """
@@ -214,13 +217,13 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[T]):
             return None
 
     @classmethod
-    def _cleanup_instance(cls, instance: T) -> None:
+    def _cleanup_instance(cls, instance: TQt) -> None:
         """
         Cleanup Qt object instance.
-        
+
         For Qt objects, we should call deleteLater() if it's a QObject
         to ensure proper cleanup in the Qt event loop.
-        
+
         Args:
             instance: The Qt instance being cleaned up
         """
@@ -233,10 +236,10 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[T]):
                 logger.warning(f"Could not schedule deletion for {type(instance).__name__} (wrong thread)")
 
 
-class LazyThreadSafeSingleton(ThreadSafeSingleton[T]):
+class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
     """
     Thread-safe singleton with lazy initialization support.
-    
+
     Provides additional functionality for singletons that need
     deferred initialization or conditional creation.
     """
@@ -245,26 +248,26 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[T]):
     _initialization_lock: threading.Lock = threading.Lock()
 
     @classmethod
-    def get_if_initialized(cls) -> T | None:
+    def get_if_initialized(cls) -> TLazy | None:
         """
         Get the singleton instance only if it's already been initialized.
-        
+
         Returns:
             The singleton instance if initialized, None otherwise
         """
         return cls._instance if cls._initialized else None
 
     @classmethod
-    def initialize(cls, *args, **kwargs) -> T:
+    def initialize(cls, *args, **kwargs) -> TLazy:
         """
         Explicitly initialize the singleton instance.
-        
+
         This allows for controlled initialization separate from first access.
-        
+
         Args:
             *args: Arguments for instance creation
             **kwargs: Keyword arguments for instance creation
-            
+
         Returns:
             The initialized singleton instance
         """
@@ -273,31 +276,30 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[T]):
                 cls._instance = cls._create_instance(*args, **kwargs)
                 cls._initialized = True
                 logger.debug(f"Initialized singleton instance of {cls.__name__}")
-            return cls._instance
+            return cls._instance  # type: ignore[return-value]  # Instance is guaranteed to exist after initialization
 
     @classmethod
     def reset(cls) -> None:
         """Reset both the instance and initialization state."""
-        with cls._lock:
-            with cls._initialization_lock:
-                if cls._instance is not None:
-                    cls._cleanup_instance(cls._instance)
-                cls._instance = None
-                cls._initialized = False
+        with cls._lock, cls._initialization_lock:
+            if cls._instance is not None:
+                cls._cleanup_instance(cls._instance)
+            cls._instance = None
+            cls._initialized = False
 
 
 # Convenience functions for common patterns
 
-def create_simple_singleton(instance_type: type[T]) -> type[ThreadSafeSingleton[T]]:
+def create_simple_singleton(instance_type: "type[T]") -> "type[ThreadSafeSingleton[T]]":
     """
     Create a simple thread-safe singleton class for a given type.
-    
+
     Args:
         instance_type: The type to create a singleton for
-        
+
     Returns:
         A singleton class for the given type
-        
+
     Example:
         MyManager = SomeManagerClass
         MyManagerSingleton = create_simple_singleton(MyManager)
@@ -315,16 +317,16 @@ def create_simple_singleton(instance_type: type[T]) -> type[ThreadSafeSingleton[
     return SimpleSingleton
 
 
-def create_qt_singleton(qt_type: type[T]) -> type[QtThreadSafeSingleton[T]]:
+def create_qt_singleton(qt_type: "type[T]") -> "type[QtThreadSafeSingleton[T]]":
     """
     Create a thread-safe Qt singleton class for a given Qt type.
-    
+
     Args:
         qt_type: The Qt type to create a singleton for
-        
+
     Returns:
         A Qt singleton class for the given type
-        
+
     Example:
         MyDialog = SomeDialogClass
         MyDialogSingleton = create_qt_singleton(MyDialog)

@@ -1,0 +1,271 @@
+{
+  "cpu_stats": {
+    "report": "         117814 function calls (114071 primitive calls) in 0.734 seconds\n\n   Ordered by: cumulative time\n   List reduced from 303 to 20 due to restriction <20>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n       15    0.001    0.000    0.782    0.052 {built-in method wait}\n        1    0.036    0.036    0.734    0.734 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:153(test_worker_lifecycle)\n     15/5    0.008    0.001    0.658    0.132 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:168(run)\n  1500/19    0.465    0.000    0.533    0.028 {built-in method time.sleep}\n1500/1232    0.010    0.000    0.309    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/base.py:159(emit_progress)\n1500/1240    0.007    0.000    0.287    0.000 /usr/lib/python3.12/logging/__init__.py:1517(debug)\n1500/1240    0.005    0.000    0.159    0.000 /usr/lib/python3.12/logging/__init__.py:1660(_log)\n1500/1240    0.002    0.000    0.093    0.000 /usr/lib/python3.12/logging/__init__.py:1686(handle)\n1500/1240    0.004    0.000    0.090    0.000 /usr/lib/python3.12/logging/__init__.py:1746(callHandlers)\n1500/1240    0.002    0.000    0.087    0.000 /usr/lib/python3.12/logging/__init__.py:1011(handle)\n     1500    0.003    0.000    0.062    0.000 /usr/lib/python3.12/logging/__init__.py:1645(makeRecord)\n     1500    0.029    0.000    0.059    0.000 /usr/lib/python3.12/logging/__init__.py:298(__init__)\n3000/2688    0.004    0.000    0.051    0.000 /usr/lib/python3.12/logging/__init__.py:968(acquire)\n     1500    0.003    0.000    0.042    0.000 /usr/lib/python3.12/logging/__init__.py:1148(emit)\n      7/1    0.000    0.000    0.037    0.037 <frozen importlib._bootstrap>:1349(_find_and_load)\n      7/1    0.000    0.000    0.037    0.037 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)\n     13/1    0.000    0.000    0.037    0.037 <frozen importlib._bootstrap>:480(_call_with_frames_removed)\n        1    0.000    0.000    0.037    0.037 {built-in method builtins.__import__}\n      6/1    0.000    0.000    0.033    0.033 <frozen importlib._bootstrap>:911(_load_unlocked)\n      6/1    0.000    0.000    0.033    0.033 <frozen importlib._bootstrap_external>:989(exec_module)\n\n\n",
+    "top_functions": [
+      {
+        "function": "<built-in method time.sleep>",
+        "file": "~",
+        "line": 0,
+        "call_count": 19,
+        "total_time": 0.46527462100000005,
+        "cumulative_time": 0.532961381,
+        "time_per_call": 0.024488137947368423
+      },
+      {
+        "function": "test_worker_lifecycle",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py",
+        "line": 153,
+        "call_count": 1,
+        "total_time": 0.035630168000000004,
+        "cumulative_time": 0.734320223,
+        "time_per_call": 0.035630168000000004
+      },
+      {
+        "function": "__init__",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 298,
+        "call_count": 1500,
+        "total_time": 0.029324259000000002,
+        "cumulative_time": 0.058836808000000004,
+        "time_per_call": 1.9549506000000003e-05
+      },
+      {
+        "function": "<method 'write' of '_io.TextIOWrapper' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1500,
+        "total_time": 0.021919766,
+        "cumulative_time": 0.021971814000000003,
+        "time_per_call": 1.4613177333333333e-05
+      },
+      {
+        "function": "<built-in method posix.stat>",
+        "file": "~",
+        "line": 0,
+        "call_count": 23,
+        "total_time": 0.017891582,
+        "cumulative_time": 0.017891582,
+        "time_per_call": 0.0007778948695652174
+      },
+      {
+        "function": "<method 'emit' of 'PyQt6.QtCore.pyqtBoundSignal' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1522,
+        "total_time": 0.01349237,
+        "cumulative_time": 0.013214140000000001,
+        "time_per_call": 8.864894875164257e-06
+      },
+      {
+        "function": "emit_progress",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/base.py",
+        "line": 159,
+        "call_count": 1232,
+        "total_time": 0.009953278000000001,
+        "cumulative_time": 0.30896666100000003,
+        "time_per_call": 8.078959415584416e-06
+      },
+      {
+        "function": "run",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py",
+        "line": 168,
+        "call_count": 5,
+        "total_time": 0.008026961,
+        "cumulative_time": 0.657607127,
+        "time_per_call": 0.0016053922000000003
+      },
+      {
+        "function": "<method 'acquire' of '_thread.RLock' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 2697,
+        "total_time": 0.007977607000000001,
+        "cumulative_time": 0.0068001450000000005,
+        "time_per_call": 2.95795587690026e-06
+      },
+      {
+        "function": "debug",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1517,
+        "call_count": 1240,
+        "total_time": 0.006974836000000001,
+        "cumulative_time": 0.287131572,
+        "time_per_call": 5.624867741935484e-06
+      },
+      {
+        "function": "findCaller",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1611,
+        "call_count": 1500,
+        "total_time": 0.006936977,
+        "cumulative_time": 0.01323229,
+        "time_per_call": 4.624651333333333e-06
+      },
+      {
+        "function": "<method 'get' of 'dict' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 4528,
+        "total_time": 0.006093821,
+        "cumulative_time": 0.006093821,
+        "time_per_call": 1.3458085247349825e-06
+      },
+      {
+        "function": "<built-in method _io.open_code>",
+        "file": "~",
+        "line": 0,
+        "call_count": 6,
+        "total_time": 0.006040259,
+        "cumulative_time": 0.006040259,
+        "time_per_call": 0.0010067098333333333
+      },
+      {
+        "function": "_log",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 1660,
+        "call_count": 1240,
+        "total_time": 0.005112823000000001,
+        "cumulative_time": 0.15911973000000001,
+        "time_per_call": 4.12324435483871e-06
+      },
+      {
+        "function": "_format",
+        "file": "/usr/lib/python3.12/logging/__init__.py",
+        "line": 455,
+        "call_count": 1500,
+        "total_time": 0.004609319000000001,
+        "cumulative_time": 0.004609319000000001,
+        "time_per_call": 3.072879333333334e-06
+      }
+    ],
+    "total_functions": 303,
+    "total_calls": 114071
+  },
+  "memory_stats": {
+    "baseline_memory_mb": 65.07421875,
+    "peak_memory_mb": 73.25,
+    "current_memory_mb": 73.25,
+    "total_growth_mb": 8.17578125,
+    "growth_rate_mb_per_sec": 10.992247470611069,
+    "snapshot_count": 4,
+    "top_memory_consumers": [
+      {
+        "file": "  File \"<frozen importlib._bootstrap_external>\", line 753",
+        "size_mb": 0.08218765258789062,
+        "count": 617
+      },
+      {
+        "file": "  File \"<frozen abc>\", line 106",
+        "size_mb": 0.021890640258789062,
+        "count": 86
+      },
+      {
+        "file": "  File \"<frozen abc>\", line 107",
+        "size_mb": 0.009792327880859375,
+        "count": 101
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/typing.py\", line 2872",
+        "size_mb": 0.00916290283203125,
+        "count": 39
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/typing.py\", line 897",
+        "size_mb": 0.0064830780029296875,
+        "count": 57
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 596",
+        "size_mb": 0.0048675537109375,
+        "count": 11
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 269",
+        "size_mb": 0.00308990478515625,
+        "count": 23
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py\", line 24",
+        "size_mb": 0.0027494430541992188,
+        "count": 12
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/typing.py\", line 171",
+        "size_mb": 0.00267791748046875,
+        "count": 27
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py\", line 158",
+        "size_mb": 0.0025911331176757812,
+        "count": 12
+      }
+    ],
+    "potential_leaks": []
+  },
+  "io_stats": {
+    "cache_efficiency": {
+      "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+    },
+    "file_operations": {
+      "read_count": 1445,
+      "write_count": 1959,
+      "read_bytes": 32538624,
+      "write_bytes": 4096,
+      "read_mb": 31.03125,
+      "write_mb": 0.00390625
+    }
+  },
+  "thread_stats": {
+    "total_threads": 4,
+    "active_threads": 4,
+    "daemon_threads": 3,
+    "qt_threads": 0,
+    "thread_details": [
+      {
+        "name": "MainThread",
+        "daemon": false,
+        "alive": true,
+        "ident": 139922786906240
+      },
+      {
+        "name": "Dummy-2",
+        "daemon": true,
+        "alive": true,
+        "ident": 139922577024704
+      },
+      {
+        "name": "Dummy-3",
+        "daemon": true,
+        "alive": true,
+        "ident": 139922585417408
+      },
+      {
+        "name": "Dummy-4",
+        "daemon": true,
+        "alive": true,
+        "ident": 139922568632000
+      }
+    ]
+  },
+  "qt_stats": {
+    "error": "No QApplication instance found"
+  },
+  "manager_stats": {
+    "managers_initialized": false,
+    "available_managers": {},
+    "manager_memory": {}
+  },
+  "worker_stats": {
+    "total_worker_threads": 0,
+    "active_workers": 0,
+    "worker_details": []
+  },
+  "cache_stats": {
+    "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+  },
+  "timing_stats": {
+    "total_profiling_time": 0.7431685924530029,
+    "profiling_start": 1754395823.1975777,
+    "profiling_end": 1754395823.9407463
+  }
+}

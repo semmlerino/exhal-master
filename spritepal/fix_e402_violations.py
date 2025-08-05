@@ -56,7 +56,7 @@ def fix_file(file_path: str) -> bool:
 
         # Handle module docstring
         if not in_docstring and not import_lines and not other_lines:
-            if stripped.startswith('"""') or stripped.startswith("'''"):
+            if stripped.startswith(('"""', "'''")):
                 docstring_quotes = '"""' if stripped.startswith('"""') else "'''"
                 in_docstring = True
                 docstring_lines.append(line)
@@ -90,8 +90,7 @@ def fix_file(file_path: str) -> bool:
             continue
 
         # Handle imports
-        if (stripped.startswith("import ") or stripped.startswith("from ") or
-            (stripped and any(line.strip().startswith(imp) for imp in ["import ", "from "]))):
+        if (stripped.startswith(("import ", "from ")) or (stripped and any(line.strip().startswith(imp) for imp in ["import ", "from "]))):
             if import_start_line is None:
                 import_start_line = i
             import_lines.append(line)
@@ -118,7 +117,7 @@ def fix_file(file_path: str) -> bool:
     new_lines.extend(docstring_lines)
 
     # Add blank line after docstring if needed
-    if docstring_lines and not docstring_lines[-1].strip() == "":
+    if docstring_lines and docstring_lines[-1].strip() != "":
         new_lines.append("\n")
 
     # Add path setup if exists
@@ -128,7 +127,7 @@ def fix_file(file_path: str) -> bool:
             new_lines.append("\n")
         new_lines.extend(path_setup_lines)
         # Ensure blank line after path setup
-        if not path_setup_lines[-1].strip() == "":
+        if path_setup_lines[-1].strip() != "":
             new_lines.append("\n")
 
     # Sort and organize imports
@@ -142,13 +141,13 @@ def fix_file(file_path: str) -> bool:
             continue
 
         # Determine import type
-        if stripped.startswith("from .") or stripped.startswith("from core") or stripped.startswith("from ui") or stripped.startswith("from utils"):
+        if stripped.startswith(("from .", "from core", "from ui", "from utils")):
             local_imports.append(line)
-        elif any(stripped.startswith(f"from {pkg}") or stripped.startswith(f"import {pkg}")
+        elif any(stripped.startswith((f"from {pkg}", f"import {pkg}"))
                 for pkg in ["PyQt6", "PySide6", "numpy", "PIL", "pytest"]):
             third_party_imports.append(line)
         # Check if it's a known stdlib module
-        elif any(stripped.startswith(f"import {mod}") or stripped.startswith(f"from {mod}")
+        elif any(stripped.startswith((f"import {mod}", f"from {mod}"))
               for mod in ["os", "sys", "time", "datetime", "pathlib", "tempfile", "traceback", "json", "re", "typing", "collections", "itertools", "functools"]):
             stdlib_imports.append(line)
         else:

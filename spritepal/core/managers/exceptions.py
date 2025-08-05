@@ -1,7 +1,7 @@
 """
 Custom exceptions for manager classes
 """
-from typing import Optional
+# No imports needed for basic exceptions
 
 
 class ManagerError(Exception):
@@ -35,7 +35,7 @@ class FileOperationError(ManagerError):
 class CacheError(ManagerError):
     """Exception raised during cache operations"""
 
-    def __init__(self, message: str, cache_path: Optional[str] = None):
+    def __init__(self, message: str, cache_path: str | None = None):
         super().__init__(message)
         self.cache_path = cache_path
 
@@ -46,3 +46,7 @@ class CacheCorruptionError(CacheError):
 
 class CachePermissionError(CacheError):
     """Exception raised when cache access is denied due to permissions"""
+
+
+class NavigationError(ManagerError):
+    """Exception raised during navigation operations"""

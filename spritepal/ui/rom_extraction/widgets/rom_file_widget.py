@@ -4,6 +4,7 @@ from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
+
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 

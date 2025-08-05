@@ -30,7 +30,7 @@ def analyze_method_complexity(source_code: str, method_name: str) -> dict[str, A
                 "timer_operations": []
             }
 
-        def visit_FunctionDef(self, node):  # noqa: N802
+        def visit_FunctionDef(self, node):
             """Visit function definition nodes - AST visitor pattern requires this exact name."""
             if node.name == method_name:
                 self.in_target_method = True
@@ -40,7 +40,7 @@ def analyze_method_complexity(source_code: str, method_name: str) -> dict[str, A
             else:
                 self.generic_visit(node)
 
-        def visit_Call(self, node):  # noqa: N802
+        def visit_Call(self, node):
             """Visit call nodes - AST visitor pattern requires this exact name."""
             if self.in_target_method:
                 self.method_stats["function_calls"] += 1
@@ -78,19 +78,19 @@ def analyze_method_complexity(source_code: str, method_name: str) -> dict[str, A
 
             self.generic_visit(node)
 
-        def visit_For(self, node):  # noqa: N802
+        def visit_For(self, node):
             """Visit for loop nodes - AST visitor pattern requires this exact name."""
             if self.in_target_method:
                 self.method_stats["loops"] += 1
             self.generic_visit(node)
 
-        def visit_While(self, node):  # noqa: N802
+        def visit_While(self, node):
             """Visit while loop nodes - AST visitor pattern requires this exact name."""
             if self.in_target_method:
                 self.method_stats["loops"] += 1
             self.generic_visit(node)
 
-        def visit_If(self, node):  # noqa: N802
+        def visit_If(self, node):
             """Visit if statement nodes - AST visitor pattern requires this exact name."""
             if self.in_target_method:
                 self.method_stats["conditionals"] += 1

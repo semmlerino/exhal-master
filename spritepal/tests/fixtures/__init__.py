@@ -5,8 +5,8 @@ This package contains reusable test components including Qt mocks,
 test data generators, and common test utilities.
 """
 
-from ..infrastructure.mock_factory import MockFactory
-from ..infrastructure.qt_mocks import (
+from spritepal.tests.infrastructure.mock_factory import MockFactory
+from spritepal.tests.infrastructure.qt_mocks import (
     MockQLabel,
     MockQPixmap,
     MockQThread,

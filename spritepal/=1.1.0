@@ -1,0 +1,8 @@
+Requirement already satisfied: ruff in /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/.venv/lib/python3.12/site-packages (0.12.7)
+Collecting basedpyright
+  Downloading basedpyright-1.31.1-py3-none-any.whl.metadata (2.3 kB)
+Collecting nodejs-wheel-binaries>=20.13.1 (from basedpyright)
+  Downloading nodejs_wheel_binaries-22.18.0-py2.py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.6 kB)
+Downloading basedpyright-1.31.1-py3-none-any.whl (11.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.5/11.5 MB 499.5 kB/s eta 0:00:00
+Downloading nodejs_wheel_binaries-22.18.0-py2.py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (58.3 MB)

@@ -11,9 +11,10 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-from core.managers.exceptions import ExtractionError, ValidationError
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget
+
+from core.managers.exceptions import ExtractionError, ValidationError
 from utils.error_integration import (
     ErrorHandlerMixin,
     enhanced_handle_worker_errors,

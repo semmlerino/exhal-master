@@ -5,12 +5,20 @@ This module provides a single, comprehensive factory for creating all types of m
 used across the test suite, eliminating duplication and inconsistencies.
 """
 
-from typing import Optional
+from typing import Any, Optional, cast
 from unittest.mock import Mock
 
 from .qt_mocks import (
     MockSignal,
     create_mock_signals,
+)
+from .test_protocols import (
+    MockExtractionManagerProtocol,
+    MockExtractionWorkerProtocol,
+    MockInjectionManagerProtocol,
+    MockMainWindowProtocol,
+    MockSessionManagerProtocol,
+    MockSignalCoordinatorProtocol,
 )
 
 
@@ -23,7 +31,7 @@ class MockFactory:
     """
 
     @staticmethod
-    def create_main_window(with_extraction_params: bool = True) -> Mock:
+    def create_main_window(with_extraction_params: bool = True) -> MockMainWindowProtocol:
         """
         Create a comprehensive mock main window.
 
@@ -69,10 +77,10 @@ class MockFactory:
         window.show = Mock()
         window.close = Mock()
 
-        return window
+        return cast(MockMainWindowProtocol, window)
 
     @staticmethod
-    def create_extraction_worker() -> Mock:
+    def create_extraction_worker() -> MockExtractionWorkerProtocol:
         """
         Create a mock extraction worker with proper signal behavior.
 
@@ -93,10 +101,10 @@ class MockFactory:
         worker.wait = Mock(return_value=True)
         worker.isRunning = Mock(return_value=False)
 
-        return worker
+        return cast(MockExtractionWorkerProtocol, worker)
 
     @staticmethod
-    def create_extraction_manager() -> Mock:
+    def create_extraction_manager() -> MockExtractionManagerProtocol:
         """
         Create a mock extraction manager.
 
@@ -114,10 +122,10 @@ class MockFactory:
         for signal_name, signal in signals.items():
             setattr(manager, signal_name, signal)
 
-        return manager
+        return cast(MockExtractionManagerProtocol, manager)
 
     @staticmethod
-    def create_injection_manager() -> Mock:
+    def create_injection_manager() -> MockInjectionManagerProtocol:
         """
         Create a mock injection manager.
 
@@ -135,10 +143,10 @@ class MockFactory:
         manager.injection_complete = MockSignal()
         manager.injection_failed = MockSignal()
 
-        return manager
+        return cast(MockInjectionManagerProtocol, manager)
 
     @staticmethod
-    def create_session_manager() -> Mock:
+    def create_session_manager() -> MockSessionManagerProtocol:
         """
         Create a mock session manager.
 
@@ -151,7 +159,7 @@ class MockFactory:
         manager.get_recent_files = Mock(return_value=[])
         manager.add_recent_file = Mock()
 
-        return manager
+        return cast(MockSessionManagerProtocol, manager)
 
     @staticmethod
     def create_file_dialogs() -> dict[str, Mock]:
@@ -190,7 +198,7 @@ class MockFactory:
         return qimage
 
     @staticmethod
-    def create_drag_drop_event(file_paths: Optional[list[str]] = None) -> Mock:
+    def create_drag_drop_event(file_paths: Optional[list[str | None]] = None) -> Mock:
         """
         Create a mock drag and drop event.
 
@@ -315,7 +323,7 @@ class MockFactory:
         }
 
     @staticmethod
-    def create_signal_coordinator(services: Optional[dict[str, Mock]] = None) -> Mock:
+    def create_signal_coordinator(services: Optional[dict[str, Mock | None]] = None) -> MockSignalCoordinatorProtocol:
         """
         Create a mock signal coordinator for dialog testing.
 
@@ -355,7 +363,7 @@ class MockFactory:
         coordinator.get_current_offset = Mock(return_value=0x200000)
         coordinator.cleanup = Mock()
 
-        return coordinator
+        return cast(MockSignalCoordinatorProtocol, coordinator)
 
     @staticmethod
     def create_manual_offset_dialog_tabs() -> dict[str, Mock]:
@@ -412,17 +420,17 @@ class MockFactory:
 
 
 # Convenience functions for backward compatibility
-def create_mock_main_window(**kwargs) -> Mock:
+def create_mock_main_window(**kwargs: Any) -> MockMainWindowProtocol:
     """Backward compatibility function."""
     return MockFactory.create_main_window(**kwargs)
 
 
-def create_mock_extraction_worker() -> Mock:
+def create_mock_extraction_worker() -> MockExtractionWorkerProtocol:
     """Backward compatibility function."""
     return MockFactory.create_extraction_worker()
 
 
-def create_mock_extraction_manager() -> Mock:
+def create_mock_extraction_manager() -> MockExtractionManagerProtocol:
     """Backward compatibility function."""
     return MockFactory.create_extraction_manager()
 
@@ -432,7 +440,7 @@ def create_unified_dialog_services() -> dict[str, Mock]:
     return MockFactory.create_unified_dialog_services()
 
 
-def create_signal_coordinator(services: Optional[dict[str, Mock]] = None) -> Mock:
+def create_signal_coordinator(services: Optional[dict[str, Mock | None]] = None) -> MockSignalCoordinatorProtocol:
     """Convenience function for signal coordinator mock."""
     return MockFactory.create_signal_coordinator(services)
 

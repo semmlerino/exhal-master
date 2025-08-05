@@ -5,13 +5,15 @@ Simple VRAM analyzer to extract sprite patterns
 
 import os
 import sys
+from pathlib import Path
 
 
 def analyze_vram(vram_path: str):
     """Analyze VRAM dump and show sprite patterns"""
 
     print(f"Loading VRAM dump: {vram_path}")
-    with open(vram_path, "rb") as f:
+    vram_path_obj = Path(vram_path)
+    with vram_path_obj.open("rb") as f:
         vram_data = f.read()
 
     print(f"VRAM size: {len(vram_data)} bytes")
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     vram_path = sys.argv[1]
-    if not os.path.exists(vram_path):
+    if not Path(vram_path).exists():
         print(f"File not found: {vram_path}")
         sys.exit(1)
 

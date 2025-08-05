@@ -2,21 +2,27 @@
 Manager for handling all extraction operations
 """
 
-import os
 import time
 from dataclasses import asdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     from core.extractor import SpriteExtractor
     from core.palette_manager import PaletteManager
     from core.rom_extractor import ROMExtractor
 
+from PIL import Image
+from PyQt6.QtCore import QObject, pyqtSignal
+
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
 from core.rom_extractor import ROMExtractor
-from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
 from utils.constants import (
     BYTES_PER_TILE,
     DEFAULT_PREVIEW_HEIGHT,
@@ -35,15 +41,15 @@ class ExtractionManager(BaseManager):
     """Manages all extraction workflows (VRAM and ROM)"""
 
     # Additional signals specific to extraction
-    extraction_progress: pyqtSignal = pyqtSignal(str)  # Progress message
-    preview_generated: pyqtSignal = pyqtSignal(object, int)  # PIL Image, tile count
-    palettes_extracted: pyqtSignal = pyqtSignal(dict)  # Palette data
-    active_palettes_found: pyqtSignal = pyqtSignal(list)  # Active palette indices
-    files_created: pyqtSignal = pyqtSignal(list)  # List of created files
-    cache_operation_started: pyqtSignal = pyqtSignal(str, str)  # Operation type, cache type
-    cache_hit: pyqtSignal = pyqtSignal(str, float)  # Cache type, time saved in seconds
-    cache_miss: pyqtSignal = pyqtSignal(str)  # Cache type
-    cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
+    extraction_progress = pyqtSignal(str)  # Progress message
+    preview_generated = pyqtSignal(object, int)  # PIL Image, tile count
+    palettes_extracted = pyqtSignal(dict)  # Palette data
+    active_palettes_found = pyqtSignal(list)  # Active palette indices
+    files_created = pyqtSignal(list)  # List of created files
+    cache_operation_started = pyqtSignal(str, str)  # Operation type, cache type
+    cache_hit = pyqtSignal(str, float)  # Cache type, time saved in seconds
+    cache_miss = pyqtSignal(str)  # Cache type
+    cache_saved = pyqtSignal(str, int)  # Cache type, number of items saved
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the extraction manager"""
@@ -54,6 +60,7 @@ class ExtractionManager(BaseManager):
 
         super().__init__("ExtractionManager", parent)
 
+    @override
     def _initialize(self) -> None:
         """Initialize extraction components"""
         self._sprite_extractor = SpriteExtractor()
@@ -62,6 +69,7 @@ class ExtractionManager(BaseManager):
         self._is_initialized = True
         self._logger.info("ExtractionManager initialized")
 
+    @override
     def cleanup(self) -> None:
         """Cleanup extraction resources"""
         # Clear any active operations to prevent "already active" warnings
@@ -153,10 +161,13 @@ class ExtractionManager(BaseManager):
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "VRAM extraction")
+            raise
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, operation, "VRAM extraction")
+            raise
         except Exception as e:
             self._handle_operation_error(e, operation, ExtractionError, "VRAM extraction")
+            raise
         else:
             return extracted_files
         finally:
@@ -256,14 +267,16 @@ class ExtractionManager(BaseManager):
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "ROM extraction")
+            raise
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, operation, "ROM extraction")
+            raise
         except Exception as e:
             if not isinstance(e, ExtractionError):
                 self._handle_operation_error(e, operation, ExtractionError, "ROM extraction")
             else:
                 self._handle_error(e, operation)
-                raise
+            raise
         else:
             return extracted_files
         finally:
@@ -320,10 +333,13 @@ class ExtractionManager(BaseManager):
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "preview generation")
+            raise
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, operation, "preview generation")
+            raise
         except Exception as e:
             self._handle_operation_error(e, operation, ExtractionError, "preview generation")
+            raise
         else:
             return tile_data, width, height
         finally:
@@ -432,7 +448,7 @@ class ExtractionManager(BaseManager):
 
                 # Prepare extraction parameters
                 extraction_params = {
-                    "source": os.path.basename(source_path),
+                    "source": Path(source_path).name,
                     "offset": source_offset if source_offset is not None else 0xC000,
                     "tile_count": num_tiles,
                     "extraction_size": num_tiles * BYTES_PER_TILE,
@@ -554,10 +570,13 @@ class ExtractionManager(BaseManager):
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, "get_known_sprite_locations", "getting sprite locations")
+            raise
         except (ImportError, AttributeError) as e:
             self._handle_operation_error(e, "get_known_sprite_locations", ExtractionError, "ROM analysis not available")
+            raise
         except Exception as e:
             self._handle_operation_error(e, "get_known_sprite_locations", ExtractionError, "getting sprite locations")
+            raise
         else:
             return locations
 
@@ -582,10 +601,13 @@ class ExtractionManager(BaseManager):
             return asdict(header)
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, "read_rom_header", "reading ROM header")
+            raise
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, "read_rom_header", "reading ROM header")
+            raise
         except Exception as e:
             self._handle_operation_error(e, "read_rom_header", ExtractionError, "reading ROM header")
+            raise
 
     def _raise_extraction_failed(self, message: str) -> None:
         """Helper method to raise ExtractionError (for TRY301 compliance)"""

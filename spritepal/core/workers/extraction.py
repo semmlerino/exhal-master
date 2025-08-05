@@ -7,12 +7,23 @@ to the ExtractionManager while providing consistent threading interfaces.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict, override
+from typing import TYPE_CHECKING, TypedDict, cast
+
+try:
+    from typing import NotRequired
+except ImportError:
+    from typing_extensions import NotRequired
+
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
+    from PyQt6.QtCore import QObject
+
     from core.managers import ExtractionManager
     from core.managers.factory import ManagerFactory
-    from PyQt6.QtCore import QObject
 
 from core.managers import get_extraction_manager
 from utils.logging_config import get_logger
@@ -28,25 +39,25 @@ logger = get_logger(__name__)
 
 
 # Type definitions for extraction parameters
-class VRAMExtractionParams(TypedDict, total=False):
+class VRAMExtractionParams(TypedDict):
     """Type definition for VRAM extraction parameters"""
     vram_path: str
-    cgram_path: str | None
-    oam_path: str | None
-    vram_offset: int | None
     output_base: str
     create_grayscale: bool
     create_metadata: bool
     grayscale_mode: bool
+    cgram_path: NotRequired[str | None]
+    oam_path: NotRequired[str | None]
+    vram_offset: NotRequired[int | None]
 
 
-class ROMExtractionParams(TypedDict, total=False):
+class ROMExtractionParams(TypedDict):
     """Type definition for ROM extraction parameters"""
     rom_path: str
     sprite_offset: int
     output_base: str
     sprite_name: str
-    cgram_path: str | None
+    cgram_path: NotRequired[str | None]
 
 
 class VRAMExtractionWorker(ExtractionWorkerBase):
@@ -72,8 +83,8 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
         if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
 
-        # Type cast for better type checking
-        extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type checking - we know this is ExtractionManager from __init__
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Connect all standard signals using helper
         helper.connect_progress_signals("extraction_progress", 50)
@@ -87,7 +98,7 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
     def perform_operation(self) -> None:
         """Perform VRAM extraction via manager."""
         # Type cast for better type safety
-        extraction_manager: ExtractionManager = self.manager
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Check for cancellation before starting
         self.check_cancellation()
@@ -150,7 +161,7 @@ class ROMExtractionWorker(ExtractionWorkerBase):
     def perform_operation(self) -> None:
         """Perform ROM extraction via manager."""
         # Type cast for better type safety
-        extraction_manager: ExtractionManager = self.manager
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Check for cancellation before starting
         self.check_cancellation()
@@ -218,8 +229,8 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
         if not helper.validate_manager_type(get_extraction_manager, "VRAM extraction"):
             return
 
-        # Type cast for better type checking
-        extraction_manager: ExtractionManager = self.manager
+        # Type cast for better type checking - we know this is ExtractionManager from __init__
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Connect all standard signals using helper
         helper.connect_progress_signals("extraction_progress", 50)
@@ -233,7 +244,7 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
     def perform_operation(self) -> None:
         """Perform VRAM extraction via worker-owned manager."""
         # Type cast for better type safety
-        extraction_manager: ExtractionManager = self.manager
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Check for cancellation before starting
         self.check_cancellation()
@@ -313,7 +324,7 @@ class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMix
     def perform_operation(self) -> None:
         """Perform ROM extraction via worker-owned manager."""
         # Type cast for better type safety
-        extraction_manager: ExtractionManager = self.manager
+        extraction_manager = cast(ExtractionManager, self.manager)
 
         # Check for cancellation before starting
         self.check_cancellation()

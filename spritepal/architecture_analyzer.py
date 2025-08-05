@@ -17,6 +17,7 @@ import ast
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -39,8 +40,8 @@ class ComponentAnalysis:
 class ArchitectureAnalyzer:
     """Analyzes architecture patterns and performance implications."""
 
-    def __init__(self, base_path: str):
-        self.base_path = base_path
+    def __init__(self, base_path: str | Path):
+        self.base_path = Path(base_path) if isinstance(base_path, str) else base_path
         self.qt_widgets = {
             "QWidget", "QDialog", "QMainWindow", "QTabWidget", "QVBoxLayout",
             "QHBoxLayout", "QGridLayout", "QLabel", "QPushButton", "QLineEdit",
@@ -54,9 +55,9 @@ class ArchitectureAnalyzer:
         print("Analyzing Simplified Dialog System...")
 
         # Main dialog file
-        dialog_file = os.path.join(self.base_path, "ui/dialogs/manual_offset_dialog_simplified.py")
+        dialog_file = self.base_path / "ui/dialogs/manual_offset_dialog_simplified.py"
 
-        if not os.path.exists(dialog_file):
+        if not dialog_file.exists():
             return ComponentAnalysis(
                 name="Simplified System",
                 file_count=0, line_count=0, class_count=0, method_count=0,
@@ -76,8 +77,8 @@ class ArchitectureAnalyzer:
         ]
 
         for file_path in supporting_files:
-            full_path = os.path.join(self.base_path, file_path)
-            if os.path.exists(full_path):
+            full_path = self.base_path / file_path
+            if full_path.exists():
                 file_analysis = self._analyze_file(full_path)
                 analysis = self._merge_analysis(analysis, file_analysis)
 
@@ -106,9 +107,9 @@ class ArchitectureAnalyzer:
         print("Analyzing Modular Dialog System...")
 
         # Modular system directory
-        modular_dir = os.path.join(self.base_path, "ui/dialogs/manual_offset")
+        modular_dir = self.base_path / "ui/dialogs/manual_offset"
 
-        if not os.path.exists(modular_dir):
+        if not modular_dir.exists():
             return ComponentAnalysis(
                 name="Modular System",
                 file_count=0, line_count=0, class_count=0, method_count=0,
@@ -121,7 +122,7 @@ class ArchitectureAnalyzer:
         for root, _dirs, files in os.walk(modular_dir):
             for file in files:
                 if file.endswith(".py") and not file.startswith("__"):
-                    modular_files.append(os.path.join(root, file))
+                    modular_files.append(Path(root) / file)
 
         # Analyze all modular files
         combined_analysis = {
@@ -156,7 +157,8 @@ class ArchitectureAnalyzer:
     def _analyze_file(self, file_path: str) -> dict:
         """Analyze a single Python file."""
         try:
-            with open(file_path, encoding="utf-8") as f:
+            file_path_obj = Path(file_path)
+            with file_path_obj.open(encoding="utf-8") as f:
                 content = f.read()
 
             # Parse AST
@@ -466,7 +468,7 @@ class ArchitectureAnalyzer:
 
 def main():
     """Main analysis function."""
-    base_path = os.path.dirname(os.path.abspath(__file__))
+    base_path = Path(__file__).resolve().parent
     analyzer = ArchitectureAnalyzer(base_path)
     analyzer.generate_performance_report()
 

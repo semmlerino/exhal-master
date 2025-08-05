@@ -5,6 +5,7 @@ Find real character sprites in Kirby Super Star ROMs
 
 import os
 import sys
+from pathlib import Path
 
 try:
     import cv2
@@ -14,7 +15,7 @@ except ImportError:
     sys.exit(1)
 
 # Add spritepal directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.sprite_finder import SpriteFinder
 from utils.logging_config import get_logger
@@ -35,7 +36,7 @@ def main():
     finder = SpriteFinder(output_dir="real_sprite_candidates")
 
     for rom_file in rom_files:
-        if not os.path.exists(rom_file):
+        if not Path(rom_file).exists():
             logger.warning(f"ROM file not found: {rom_file}")
             continue
 

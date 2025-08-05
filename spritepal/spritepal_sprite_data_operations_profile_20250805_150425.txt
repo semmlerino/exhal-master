@@ -1,0 +1,71 @@
+================================================================================
+SPRITEPAL PERFORMANCE PROFILING REPORT
+================================================================================
+
+PROFILING SUMMARY
+----------------------------------------
+Total profiling time: 3.62 seconds
+
+MEMORY ANALYSIS
+----------------------------------------
+Baseline memory: 76.84 MB
+Peak memory: 79.79 MB
+Current memory: 79.79 MB
+Total growth: 2.94 MB
+WARNING: MEMORY LEAK - Growth rate 0.813 MB/sec
+
+Top Memory Consumers:
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 185: 0.00 MB (20 objects)
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 189: 0.00 MB (11 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: 0.00 MB (6 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: 0.00 MB (6 objects)
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 184: 0.00 MB (4 objects)
+
+POTENTIAL MEMORY LEAKS:
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: +0.00 MB
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: +0.00 MB
+
+CPU PERFORMANCE ANALYSIS
+----------------------------------------
+Total functions analyzed: 12
+Total function calls: 1642571
+
+Top CPU Bottlenecks:
+  • test_sprite_operations (/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:315)
+    Time: 2.773s, Calls: 1
+  • <method 'to_bytes' of 'int' objects> (~:0)
+    Time: 0.833s, Calls: 1638400
+
+THREAD ANALYSIS
+----------------------------------------
+Total threads: 4
+Active threads: 4
+Qt threads: 0
+Worker threads: 0
+
+QT OBJECTS ANALYSIS
+----------------------------------------
+Qt analysis error: No QApplication instance found
+
+MANAGER ANALYSIS
+----------------------------------------
+Managers initialized: False
+
+ROM CACHE ANALYSIS
+----------------------------------------
+Cache analysis error: Cannot analyze cache: Session manager not initialized. Call initialize_managers() first.
+
+I/O PERFORMANCE ANALYSIS
+----------------------------------------
+Read operations: 1858
+Write operations: 3551
+Data read: 43.3 MB
+Data written: 0.0 MB
+
+PERFORMANCE RECOMMENDATIONS
+----------------------------------------
+• CRITICAL: Investigate memory leaks - growth rate exceeds 0.1 MB/sec
+• MEDIUM: Investigate 2 potential memory leak sources
+• HIGH: Optimize test_sprite_operations - consumes 2.77s
+
+================================================================================

@@ -1,0 +1,75 @@
+================================================================================
+SPRITEPAL PERFORMANCE PROFILING REPORT
+================================================================================
+
+PROFILING SUMMARY
+----------------------------------------
+Total profiling time: 1.16 seconds
+
+MEMORY ANALYSIS
+----------------------------------------
+Baseline memory: 18.21 MB
+Peak memory: 47.96 MB
+Current memory: 47.96 MB
+Total growth: 29.75 MB
+WARNING: MEMORY LEAK - Growth rate 25.562 MB/sec
+
+Top Memory Consumers:
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 185: 0.00 MB (26 objects)
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 189: 0.00 MB (16 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: 0.00 MB (6 objects)
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: 0.00 MB (6 objects)
+  •   File "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py", line 184: 0.00 MB (4 objects)
+
+POTENTIAL MEMORY LEAKS:
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 560: +0.00 MB
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 423: +0.00 MB
+  •   File "/usr/lib/python3.12/tracemalloc.py", line 558: +0.00 MB
+
+CPU PERFORMANCE ANALYSIS
+----------------------------------------
+Total functions analyzed: 9
+Total function calls: 500015
+
+Top CPU Bottlenecks:
+  • test_byte_conversion_patterns (/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py:67)
+    Time: 0.766s, Calls: 1
+  • <method 'to_bytes' of 'int' objects> (~:0)
+    Time: 0.150s, Calls: 200000
+  • <method 'append' of 'list' objects> (~:0)
+    Time: 0.127s, Calls: 200000
+  • <built-in method _struct.pack> (~:0)
+    Time: 0.099s, Calls: 100001
+
+THREAD ANALYSIS
+----------------------------------------
+Total threads: 1
+Active threads: 1
+Qt threads: 0
+Worker threads: 0
+
+QT OBJECTS ANALYSIS
+----------------------------------------
+Qt analysis error: No QApplication instance found
+
+MANAGER ANALYSIS
+----------------------------------------
+Managers initialized: False
+
+ROM CACHE ANALYSIS
+----------------------------------------
+Cache analysis error: Cannot analyze cache: Session manager not initialized. Call initialize_managers() first.
+
+I/O PERFORMANCE ANALYSIS
+----------------------------------------
+Read operations: 473
+Write operations: 13
+Data read: 0.0 MB
+Data written: 0.0 MB
+
+PERFORMANCE RECOMMENDATIONS
+----------------------------------------
+• CRITICAL: Investigate memory leaks - growth rate exceeds 0.1 MB/sec
+• MEDIUM: Investigate 3 potential memory leak sources
+
+================================================================================

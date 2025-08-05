@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.components.visualization import ROMMapWidget
 from ui.styles import get_panel_style
 
@@ -268,7 +269,7 @@ class ImportExportPanel(QWidget):
 
             # Clear existing sprites
             self.found_sprites.clear()
-            if self.rom_map:
+            if self.rom_map is not None:
                 self.rom_map.clear_sprites()
 
             # Import sprites
@@ -301,7 +302,7 @@ class ImportExportPanel(QWidget):
                     # Add to found sprites
                     self.found_sprites.append((offset, quality))
                     imported_sprites.append((offset, quality))
-                    if self.rom_map:
+                    if self.rom_map is not None:
                         self.rom_map.add_found_sprite(offset, quality)
                     imported_count += 1
 

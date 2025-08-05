@@ -8,6 +8,11 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
+
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
 if TYPE_CHECKING:
@@ -52,12 +57,14 @@ class InjectionManager(BaseManager):
 
         super().__init__("InjectionManager", parent)
 
+    @override
     def _initialize(self) -> None:
         """Initialize injection components"""
         self._current_worker = None
         self._is_initialized = True
         self._logger.info("InjectionManager initialized")
 
+    @override
     def cleanup(self) -> None:
         """Cleanup injection resources"""
         if self._current_worker:
@@ -291,7 +298,7 @@ class InjectionManager(BaseManager):
         try:
             session_manager = self._get_session_manager()
             vram_path = session_manager.get("session", "vram_path", "")
-            if vram_path and os.path.exists(vram_path):
+            if vram_path and Path(vram_path).exists():
                 return vram_path
         except (OSError, ValueError):
             pass
@@ -301,14 +308,14 @@ class InjectionManager(BaseManager):
 
     def _try_metadata_vram(self, metadata_path: str, sprite_path: str) -> str:
         """Try to get VRAM path from metadata file"""
-        if not metadata_path or not os.path.exists(metadata_path):
+        if not metadata_path or not Path(metadata_path).exists():
             return ""
 
         try:
-            with open(metadata_path) as f:
+            with Path(metadata_path).open() as f:
                 metadata = json.load(f)
             vram_path = metadata.get("source_vram", "")
-            if vram_path and os.path.exists(vram_path):
+            if vram_path and Path(vram_path).exists():
                 return vram_path
         except (OSError, ValueError):
             pass
@@ -342,7 +349,7 @@ class InjectionManager(BaseManager):
         try:
             session_manager = self._get_session_manager()
             recent_vram = session_manager.get_recent_files("vram")
-            if recent_vram and os.path.exists(recent_vram[0]):
+            if recent_vram and Path(recent_vram[0]).exists():
                 return recent_vram[0]
         except (OSError, ValueError):
             pass
@@ -357,7 +364,7 @@ class InjectionManager(BaseManager):
             last_injection_vram = session_manager.get(
                 SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM, ""
             )
-            if last_injection_vram and os.path.exists(last_injection_vram):
+            if last_injection_vram and Path(last_injection_vram).exists():
                 return last_injection_vram
         except (OSError, ValueError):
             pass
@@ -375,11 +382,11 @@ class InjectionManager(BaseManager):
         Returns:
             Parsed metadata dict with extraction info, or None if loading fails
         """
-        if not metadata_path or not os.path.exists(metadata_path):
+        if not metadata_path or not Path(metadata_path).exists():
             return None
 
         try:
-            with open(metadata_path) as f:
+            with Path(metadata_path).open() as f:
                 metadata = json.load(f)
 
             # Parse extraction info if available
@@ -525,14 +532,14 @@ class InjectionManager(BaseManager):
             Error dict if validation fails, None if valid
         """
         # Check file exists and is readable
-        if not os.path.exists(rom_path):
+        if not Path(rom_path).exists():
             return {"error": f"ROM file not found: {rom_path}", "error_type": "FileNotFoundError"}
 
         if not os.access(rom_path, os.R_OK):
             return {"error": f"Cannot read ROM file: {rom_path}", "error_type": "PermissionError"}
 
         # Check file size is reasonable for a SNES ROM
-        file_size = os.path.getsize(rom_path)
+        file_size = Path(rom_path).stat().st_size
         if file_size < 0x8000:  # Minimum reasonable SNES ROM size (32KB)
             return {"error": f"File too small to be a valid SNES ROM: {file_size} bytes", "error_type": "ValueError"}
 
@@ -598,7 +605,7 @@ class InjectionManager(BaseManager):
         session_data = session_manager.get_session_data()
         if SETTINGS_KEY_VRAM_PATH in session_data:
             vram_path = session_data[SETTINGS_KEY_VRAM_PATH]
-            if vram_path and os.path.exists(vram_path):
+            if vram_path and Path(vram_path).exists():
                 return vram_path
 
         # Check last used injection VRAM

@@ -3,19 +3,20 @@ ROM injection functionality for SpritePal.
 Handles injection of edited sprites directly into ROM files.
 """
 
-import os
 import struct
 import tempfile
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.injector import SpriteInjector
 from core.rom_validator import ROMValidator
 from core.sprite_config_loader import SpriteConfigLoader
 from core.sprite_validator import SpriteValidator
-from PyQt6.QtCore import QThread, pyqtSignal
 from utils.constants import (
     ROM_CHECKSUM_COMPLEMENT_MASK,
     ROM_HEADER_OFFSET_HIROM,
@@ -66,14 +67,14 @@ class ROMInjector(SpriteInjector):
     def read_rom_header(self, rom_path: str) -> ROMHeader:
         """Read and parse SNES ROM header"""
         logger.info(f"Reading ROM header from: {rom_path}")
-        with open(rom_path, "rb") as f:
+        with Path(rom_path).open("rb") as f:
             # Try to detect header offset (SMC header is 512 bytes)
             f.seek(0)
             f.read(SMC_HEADER_SIZE)
 
             # Check for SMC header
             header_offset = 0
-            rom_size = os.path.getsize(rom_path)
+            rom_size = Path(rom_path).stat().st_size
             if rom_size % 1024 == SMC_HEADER_SIZE:
                 header_offset = SMC_HEADER_SIZE
                 logger.debug(f"SMC header detected ({SMC_HEADER_SIZE} bytes), ROM size: {rom_size} bytes")
@@ -273,7 +274,7 @@ class ROMInjector(SpriteInjector):
             return compressed_size, decompressed
 
         finally:
-            os.unlink(tmp_rom)
+            Path(tmp_rom).unlink(missing_ok=True)
 
     def _validate_sprite_data(self, data: bytes) -> bool:
         """
@@ -434,7 +435,7 @@ class ROMInjector(SpriteInjector):
         try:
             start_time = time.time()
             logger.info(
-                f"Starting ROM injection: {os.path.basename(sprite_path)} -> offset 0x{sprite_offset:X}"
+                f"Starting ROM injection: {Path(sprite_path).name} -> offset 0x{sprite_offset:X}"
             )
 
             # Validate ROM before modification
@@ -456,7 +457,7 @@ class ROMInjector(SpriteInjector):
             self.header = self.read_rom_header(rom_path)
 
             # Load ROM data
-            with open(rom_path, "rb") as f:
+            with Path(rom_path).open("rb") as f:
                 self.rom_data = bytearray(f.read())
 
             # Convert PNG to 4bpp
@@ -498,7 +499,7 @@ class ROMInjector(SpriteInjector):
 
             # Check if compressed data fits
             if compressed_size > original_size:
-                os.unlink(compressed_path)
+                Path(compressed_path).unlink(missing_ok=True)
                 suggestion = (
                     "standard compression"
                     if fast_compression
@@ -512,9 +513,9 @@ class ROMInjector(SpriteInjector):
                 )
 
             # Read compressed data
-            with open(compressed_path, "rb") as f:
+            with Path(compressed_path).open("rb") as f:
                 compressed_data = f.read()
-            os.unlink(compressed_path)
+            Path(compressed_path).unlink(missing_ok=True)
 
             # Inject compressed data into ROM
             logger.info(f"Injecting {compressed_size} bytes of compressed data at offset 0x{sprite_offset:X}")
@@ -535,7 +536,7 @@ class ROMInjector(SpriteInjector):
 
             # Write output ROM
             logger.info(f"Writing modified ROM to: {output_path}")
-            with open(output_path, "wb") as f:
+            with Path(output_path).open("wb") as f:
                 f.write(self.rom_data)
             logger.debug(f"Successfully wrote {len(self.rom_data)} bytes to output ROM")
 

@@ -5,9 +5,10 @@ This module provides the foundation for all worker threads in SpritePal,
 ensuring consistent interfaces, proper error handling, and type safety.
 """
 
+import weakref
 from abc import ABCMeta, abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
 from PyQt6.QtCore import QMetaObject, QObject, QThread, pyqtSignal
 
@@ -20,12 +21,16 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Type variables for proper type preservation in decorators
+P = ParamSpec("P")
+R = TypeVar("R")
+
 
 def handle_worker_errors(
     operation_context: str = "operation",
     handle_interruption: bool = False,
     include_runtime_error: bool = False
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator for standardized worker exception handling.
 
@@ -52,11 +57,13 @@ def handle_worker_errors(
             # Your operation code here
             pass
     """
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
-        def wrapper(self: "BaseWorker", *args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            # Extract self from args for proper BaseWorker access
+            self: BaseWorker = args[0]  # type: ignore[assignment]
             try:
-                return func(self, *args, **kwargs)
+                return func(*args, **kwargs)
 
             except InterruptedError:
                 if handle_interruption:
@@ -124,6 +131,27 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         self._is_cancelled = False
         self._is_paused = False
         self._operation_name = self.__class__.__name__
+        self._signal_connections: list[QMetaObject.Connection] = []
+
+        # Register cleanup to prevent signal leaks
+        self.finished.connect(self._cleanup_connections)
+
+    def _cleanup_connections(self) -> None:
+        """Clean up signal connections to prevent memory leaks"""
+        connection_count = len(self._signal_connections)
+        for connection in self._signal_connections:
+            try:
+                QObject.disconnect(connection)
+            except Exception as e:
+                logger.debug(f"Error disconnecting signal: {e}")
+        self._signal_connections.clear()
+        logger.debug(f"{self._operation_name}: Cleaned up {connection_count} signal connections")
+
+    def connect_signal_with_tracking(self, signal, slot) -> QMetaObject.Connection:
+        """Connect a signal and track the connection for cleanup"""
+        connection = signal.connect(slot)
+        self._signal_connections.append(connection)
+        return connection
 
     def cancel(self) -> None:
         """Request cancellation of the operation."""
@@ -247,7 +275,7 @@ class ManagedWorker(BaseWorker):
     def __init__(
         self,
         manager: BaseManager | None = None,
-        manager_factory: Optional["ManagerFactory"] = None,
+        manager_factory: "ManagerFactory | None" = None,
         parent: QObject | None = None
     ) -> None:
         super().__init__(parent)
@@ -263,6 +291,11 @@ class ManagedWorker(BaseWorker):
         self.manager = manager
         self._manager_factory = manager_factory
         self._connections: list[QMetaObject.Connection] = []
+        self._weak_manager_ref: weakref.ReferenceType | None = None
+
+        # Store weak reference to manager to avoid circular references
+        if manager is not None:
+            self._weak_manager_ref = weakref.ref(manager)
 
         # If using factory pattern, manager will be created by subclass
         if manager_factory is not None:
@@ -280,10 +313,14 @@ class ManagedWorker(BaseWorker):
 
     def disconnect_manager_signals(self) -> None:
         """Disconnect all manager signals for cleanup."""
+        connection_count = len(self._connections)
         for connection in self._connections:
-            QObject.disconnect(connection)
+            try:
+                QObject.disconnect(connection)
+            except Exception as e:
+                logger.debug(f"Error disconnecting signal: {e}")
         self._connections.clear()
-        logger.debug(f"{self._operation_name}: Disconnected {len(self._connections)} manager signals")
+        logger.debug(f"{self._operation_name}: Disconnected {connection_count} manager signals")
 
     @handle_worker_errors("managed operation", handle_interruption=True, include_runtime_error=True)
     def _execute_managed_operation(self) -> None:
@@ -306,6 +343,9 @@ class ManagedWorker(BaseWorker):
             self._execute_managed_operation()
         finally:
             self.disconnect_manager_signals()
+            # Clear manager reference to prevent retention
+            self._weak_manager_ref = None
+            self.manager = None
 
     @abstractmethod
     def perform_operation(self) -> None:

@@ -2,9 +2,8 @@
 Tests for ExtractionManager
 """
 
-import os
-
 import pytest
+from pathlib import Path
 from PIL import Image
 from tests.fixtures.test_managers import create_extraction_manager_fixture
 
@@ -64,7 +63,7 @@ class TestExtractionManager:
         # Valid params
         params = {
             "vram_path": temp_files["vram"],
-            "output_base": os.path.join(temp_files["output_dir"], "test"),
+            "output_base": str(Path(temp_files["output_dir"]) / "test"),
             "cgram_path": temp_files["cgram"],
             "oam_path": temp_files["oam"]
         }
@@ -86,7 +85,7 @@ class TestExtractionManager:
         params = {
             "rom_path": temp_files["rom"],
             "offset": 0x1000,
-            "output_base": os.path.join(temp_files["output_dir"], "test")
+            "output_base": str(Path(temp_files["output_dir"]) / "test")
         }
         extraction_manager.validate_extraction_params(params)
 
@@ -122,7 +121,7 @@ class TestExtractionManager:
             assert len(files) >= 1
             output_png = f"{vram_params['output_base']}.png"
             assert output_png in files
-            assert os.path.exists(output_png)
+            assert Path(output_png).exists()
 
             # Verify the extracted image is real and has reasonable dimensions
             img = Image.open(output_png)
@@ -143,7 +142,7 @@ class TestExtractionManager:
 
     def test_extract_from_vram_already_running(self, extraction_manager, temp_files):
         """Test preventing concurrent VRAM extractions"""
-        output_base = os.path.join(temp_files["output_dir"], "test")
+        output_base = str(Path(temp_files["output_dir"]) / "test")
 
         # Start an extraction
         extraction_manager._start_operation("vram_extraction")
@@ -182,7 +181,7 @@ class TestExtractionManager:
             extraction_manager.validate_extraction_params(test_params)
 
             # Verify the parameters are well-formed
-            assert os.path.exists(test_params["rom_path"])
+            assert Path(test_params["rom_path"]).exists()
             assert test_params["offset"] >= 0
             assert test_params["output_base"].endswith(("sprite", "rom_sprite"))
 

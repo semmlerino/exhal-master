@@ -5,6 +5,7 @@ Image processing for sprite row extraction
 from typing import Any
 
 from PIL import Image
+
 from utils.exceptions import FileFormatError
 
 

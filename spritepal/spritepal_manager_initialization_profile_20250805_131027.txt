@@ -1,0 +1,75 @@
+================================================================================
+SPRITEPAL PERFORMANCE PROFILING REPORT
+================================================================================
+
+PROFILING SUMMARY
+----------------------------------------
+Total profiling time: 0.48 seconds
+
+MEMORY ANALYSIS
+----------------------------------------
+Baseline memory: 18.11 MB
+Peak memory: 66.57 MB
+Current memory: 66.57 MB
+Total growth: 48.46 MB
+WARNING: MEMORY LEAK - Growth rate 100.146 MB/sec
+
+Top Memory Consumers:
+  •   File "<frozen importlib._bootstrap_external>", line 753: 2.38 MB (17504 objects)
+  •   File "<frozen importlib._bootstrap>", line 488: 1.16 MB (7824 objects)
+  •   File "/usr/lib/python3.12/enum.py", line 277: 0.12 MB (718 objects)
+  •   File "/usr/lib/python3.12/typing.py", line 170: 0.05 MB (776 objects)
+  •   File "/usr/lib/python3.12/multiprocessing/managers.py", line 964: 0.05 MB (586 objects)
+
+POTENTIAL MEMORY LEAKS:
+  •   File "<string>", line 1: +0.00 MB
+
+CPU PERFORMANCE ANALYSIS
+----------------------------------------
+Total functions analyzed: 921
+Total function calls: 52347
+
+Top CPU Bottlenecks:
+  • <built-in method posix.stat> (~:0)
+    Time: 0.132s, Calls: 370
+  • <built-in method _imp.create_dynamic> (~:0)
+    Time: 0.067s, Calls: 7
+  • <built-in method _io.open_code> (~:0)
+    Time: 0.049s, Calls: 68
+  • <method 'read' of '_io.BufferedReader' objects> (~:0)
+    Time: 0.027s, Calls: 68
+  • <method '__exit__' of '_io._IOBase' objects> (~:0)
+    Time: 0.017s, Calls: 71
+
+THREAD ANALYSIS
+----------------------------------------
+Total threads: 1
+Active threads: 1
+Qt threads: 0
+Worker threads: 0
+
+QT OBJECTS ANALYSIS
+----------------------------------------
+Qt analysis error: No QApplication instance found
+
+MANAGER ANALYSIS
+----------------------------------------
+Managers initialized: False
+
+ROM CACHE ANALYSIS
+----------------------------------------
+Cache analysis error: Cannot analyze cache: Session manager not initialized. Call initialize_managers() first.
+
+I/O PERFORMANCE ANALYSIS
+----------------------------------------
+Read operations: 1030
+Write operations: 346
+Data read: 22.9 MB
+Data written: 0.0 MB
+
+PERFORMANCE RECOMMENDATIONS
+----------------------------------------
+• CRITICAL: Investigate memory leaks - growth rate exceeds 0.1 MB/sec
+• MEDIUM: Investigate 1 potential memory leak sources
+
+================================================================================

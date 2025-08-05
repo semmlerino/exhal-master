@@ -6,10 +6,11 @@ Qt's object lifecycle and enabling both singleton and per-worker patterns.
 """
 
 import threading
-from typing import TYPE_CHECKING, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
+
 from utils.logging_config import get_logger
 
 from .extraction_manager import ExtractionManager
@@ -24,11 +25,11 @@ logger = get_logger(__name__)
 class ManagerFactory(Protocol):
     """Protocol for manager factory implementations."""
 
-    def create_extraction_manager(self, parent: Optional[QObject] = None) -> ExtractionManager:
+    def create_extraction_manager(self, parent: QObject | None = None) -> ExtractionManager:
         """Create an ExtractionManager instance."""
         ...
 
-    def create_injection_manager(self, parent: Optional[QObject] = None) -> InjectionManager:
+    def create_injection_manager(self, parent: QObject | None = None) -> InjectionManager:
         """Create an InjectionManager instance."""
         ...
 
@@ -54,7 +55,7 @@ class StandardManagerFactory:
         self.default_parent_strategy: str = default_parent_strategy
         self._logger: logging.Logger = get_logger(f"{__name__}.StandardManagerFactory")
 
-    def _get_default_parent(self, requested_parent: Optional[QObject]) -> Optional[QObject]:
+    def _get_default_parent(self, requested_parent: QObject | None) -> QObject | None:
         """
         Get the appropriate parent based on strategy and request.
 
@@ -90,7 +91,7 @@ class StandardManagerFactory:
         self._logger.warning(f"Unknown parent strategy: {self.default_parent_strategy}")
         return None
 
-    def create_extraction_manager(self, parent: Optional[QObject] = None) -> ExtractionManager:
+    def create_extraction_manager(self, parent: QObject | None = None) -> ExtractionManager:
         """
         Create an ExtractionManager instance with proper Qt parent.
 
@@ -106,7 +107,7 @@ class StandardManagerFactory:
         self._logger.debug(f"Created ExtractionManager with parent: {qt_parent}")
         return manager
 
-    def create_injection_manager(self, parent: Optional[QObject] = None) -> InjectionManager:
+    def create_injection_manager(self, parent: QObject | None = None) -> InjectionManager:
         """
         Create an InjectionManager instance with proper Qt parent.
 
@@ -134,7 +135,7 @@ class SingletonManagerFactory:
     def __init__(self) -> None:
         self._logger: logging.Logger = get_logger(f"{__name__}.SingletonManagerFactory")
 
-    def create_extraction_manager(self, parent: Optional[QObject] = None) -> ExtractionManager:
+    def create_extraction_manager(self, parent: QObject | None = None) -> ExtractionManager:
         """
         Get the singleton ExtractionManager from global registry.
 
@@ -158,7 +159,7 @@ class SingletonManagerFactory:
         self._logger.debug("Returned singleton ExtractionManager")
         return manager
 
-    def create_injection_manager(self, parent: Optional[QObject] = None) -> InjectionManager:
+    def create_injection_manager(self, parent: QObject | None = None) -> InjectionManager:
         """
         Get the singleton InjectionManager from global registry.
 
@@ -185,7 +186,7 @@ class SingletonManagerFactory:
 
 class _DefaultFactoryHolder:
     """Holds the default factory instance without using global keyword."""
-    _instance: Optional[ManagerFactory] = None
+    _instance: ManagerFactory | None = None
     _lock = threading.Lock()
 
     @classmethod
@@ -249,10 +250,10 @@ def create_per_worker_factory(worker: QObject) -> ManagerFactory:
 
     # Create a custom factory that uses the worker as default parent
     class WorkerOwnedFactory:
-        def create_extraction_manager(self, parent: Optional[QObject] = None) -> ExtractionManager:
+        def create_extraction_manager(self, parent: QObject | None = None) -> ExtractionManager:
             return factory.create_extraction_manager(parent or worker)
 
-        def create_injection_manager(self, parent: Optional[QObject] = None) -> InjectionManager:
+        def create_injection_manager(self, parent: QObject | None = None) -> InjectionManager:
             return factory.create_injection_manager(parent or worker)
 
     return WorkerOwnedFactory()

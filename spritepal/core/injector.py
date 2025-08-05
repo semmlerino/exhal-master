@@ -6,8 +6,14 @@ Handles reinsertion of edited sprites back into VRAM
 import json
 from typing import Any
 
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
+
 from PIL import Image
 from PyQt6.QtCore import QThread, pyqtSignal
+
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,
     PIXEL_MASK_4BIT,
@@ -279,6 +285,7 @@ class InjectionWorker(QThread):
         self.metadata_path: str | None = metadata_path
         self.injector: SpriteInjector = SpriteInjector()
 
+    @override
     def run(self) -> None:
         """Run the injection process"""
         logger.info(f"Starting injection worker: sprite={self.sprite_path}, vram_in={self.vram_input}, vram_out={self.vram_output}")

@@ -35,7 +35,8 @@ class CodeAnalyzer:
         dialog_file = self.base_path / "ui/dialogs/manual_offset_unified_integrated.py"
 
         # Read the file content
-        with open(dialog_file) as f:
+        dialog_path = Path(dialog_file)
+        with dialog_path.open() as f:
             content = f.read()
             content.split("\n")
 
@@ -687,7 +688,7 @@ def main():
 
     # Write report to file
     report_file = base_path / "rom_cache_integration_analysis.txt"
-    with open(report_file, "w") as f:
+    with report_file.open("w") as f:
         f.write(report)
 
     print("\nCode integration analysis complete!")

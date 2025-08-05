@@ -11,7 +11,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PIL import Image
 
@@ -21,10 +21,10 @@ class TestDataSet:
     """Represents a complete set of test data for extraction/injection testing."""
     name: str
     description: str
-    vram_path: Optional[str] = None
-    cgram_path: Optional[str] = None
-    oam_path: Optional[str] = None
-    rom_path: Optional[str] = None
+    vram_path: str | None = None
+    cgram_path: str | None = None
+    oam_path: str | None = None
+    rom_path: str | None = None
     sprite_images: list[str] = None
     metadata_files: list[str] = None
 
@@ -46,7 +46,7 @@ class TestDataRepository:
     - Test data validation and integrity checking
     """
 
-    def __init__(self, base_test_data_dir: Optional[str] = None):
+    def __init__(self, base_test_data_dir: str | None = None):
         """
         Initialize the test data repository.
 
@@ -143,7 +143,7 @@ class TestDataRepository:
             description="Comprehensive generated test data for full workflow testing"
         )
 
-    def get_data_set(self, name: str) -> Optional[TestDataSet]:
+    def get_data_set(self, name: str) -> TestDataSet | None:
         """
         Get a test data set by name.
 
@@ -422,7 +422,7 @@ class TestDataRepository:
         # Create 4bpp tile data pattern
         return ((index * 7) ^ (index >> 2)) % 256
 
-    def _find_existing_file(self, candidates: list[Path]) -> Optional[Path]:
+    def _find_existing_file(self, candidates: list[Path]) -> Path | None:
         """Find the first existing file from a list of candidates."""
         for candidate in candidates:
             if candidate.exists() and candidate.is_file():
@@ -507,7 +507,7 @@ class TestDataRepository:
 
 class _TestDataRepositorySingleton:
     """Singleton holder for TestDataRepository."""
-    _instance: Optional[TestDataRepository] = None
+    _instance: TestDataRepository | None = None
 
     @classmethod
     def get(cls) -> TestDataRepository:

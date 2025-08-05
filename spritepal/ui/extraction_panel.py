@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common.spacing_constants import (
     BORDER_THICK,
     BROWSE_BUTTON_MAX_WIDTH,

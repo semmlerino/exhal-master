@@ -5,7 +5,6 @@ Simplified performance analysis for ROM cache integration opportunities.
 This script analyzes performance bottlenecks without external dependencies.
 """
 
-import os
 import tempfile
 import time
 from dataclasses import dataclass
@@ -76,7 +75,8 @@ class PerformanceAnalyzer:
             for _iteration in range(iterations):
                 for offset in offsets:
                     # Current approach: read entire ROM file each time
-                    with open(rom_file, "rb") as f:
+                    rom_file_path = Path(rom_file)
+                    with rom_file_path.open("rb") as f:
                         rom_data = f.read()
                         file_reads += 1
                         total_data_read_mb += len(rom_data) / (1024 * 1024)
@@ -88,7 +88,7 @@ class PerformanceAnalyzer:
             end_time = time.perf_counter()
 
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         metrics = PerformanceMetrics(
             operation_name="current_approach",
@@ -117,7 +117,8 @@ class PerformanceAnalyzer:
 
         try:
             # One-time ROM load
-            with open(rom_file, "rb") as f:
+            rom_file_path = Path(rom_file)
+            with rom_file_path.open("rb") as f:
                 rom_data = f.read()
                 file_reads += 1
                 total_data_read_mb += len(rom_data) / (1024 * 1024)
@@ -142,7 +143,7 @@ class PerformanceAnalyzer:
             end_time = time.perf_counter()
 
         finally:
-            os.unlink(rom_file)
+            Path(rom_file).unlink()
 
         metrics = PerformanceMetrics(
             operation_name="rom_cache_approach",
@@ -483,7 +484,7 @@ def main():
 
     # Write report to file
     report_file = Path(__file__).parent / "rom_cache_performance_analysis_comprehensive.txt"
-    with open(report_file, "w") as f:
+    with report_file.open("w") as f:
         f.write(report)
 
     print("\nComprehensive performance analysis complete!")

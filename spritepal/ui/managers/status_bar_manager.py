@@ -5,7 +5,10 @@ Status bar management for MainWindow
 import logging
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
+
 from ui.styles import get_muted_text_style
+from utils.rom_cache import get_rom_cache
+from utils.settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,6 @@ class StatusBarManager:
 
     def setup_status_bar_indicators(self) -> None:
         """Set up permanent status bar indicators"""
-        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
 
         settings_manager = get_settings_manager()
 
@@ -72,8 +74,6 @@ class StatusBarManager:
 
     def update_cache_status(self) -> None:
         """Update cache status indicator"""
-        from utils.rom_cache import get_rom_cache
-        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
 
         settings_manager = get_settings_manager()
 
@@ -92,7 +92,7 @@ class StatusBarManager:
                 stats = rom_cache.get_cache_stats()
 
                 # Update icon (✓ for enabled, ✗ for disabled)
-                if self.cache_icon_label:
+                if self.cache_icon_label is not None:
                     self.cache_icon_label.setText("✓ Cache:")
                     self.cache_icon_label.setStyleSheet("color: green;")
 
@@ -101,7 +101,7 @@ class StatusBarManager:
                 size_bytes = stats.get("total_size_bytes", 0)
                 size_mb = size_bytes / (1024 * 1024)
 
-                if self.cache_info_label:
+                if self.cache_info_label is not None:
                     self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
 
                 # Update tooltip
@@ -116,30 +116,30 @@ class StatusBarManager:
                 tooltip += f"- Scan progress: {scan_caches}\n"
                 tooltip += f"Total size: {size_mb:.1f} MB"
 
-                if self.cache_status_widget:
+                if self.cache_status_widget is not None:
                     self.cache_status_widget.setToolTip(tooltip)
 
             except (OSError, PermissionError) as e:
                 logger.warning(f"File I/O error getting cache stats: {e}")
-                if self.cache_icon_label:
+                if self.cache_icon_label is not None:
                     self.cache_icon_label.setText("⚠ Cache:")
             except Exception as e:
                 logger.warning(f"Error getting cache stats: {e}")
-                if self.cache_icon_label:
+                if self.cache_icon_label is not None:
                     self.cache_icon_label.setText("⚠ Cache:")
                     self.cache_icon_label.setStyleSheet("color: orange;")
-                if self.cache_info_label:
+                if self.cache_info_label is not None:
                     self.cache_info_label.setText("Error")
-                if self.cache_status_widget:
+                if self.cache_status_widget is not None:
                     self.cache_status_widget.setToolTip("Error reading cache statistics")
         else:
             # Cache disabled
-            if self.cache_icon_label:
+            if self.cache_icon_label is not None:
                 self.cache_icon_label.setText("✗ Cache:")
                 self.cache_icon_label.setStyleSheet("color: gray;")
-            if self.cache_info_label:
+            if self.cache_info_label is not None:
                 self.cache_info_label.setText("Disabled")
-            if self.cache_status_widget:
+            if self.cache_status_widget is not None:
                 self.cache_status_widget.setToolTip("ROM caching is disabled")
 
     def show_cache_operation_badge(self, operation: str) -> None:
@@ -148,13 +148,13 @@ class StatusBarManager:
         Args:
             operation: Operation description (e.g., "Loading", "Saving", "Reading")
         """
-        if self.cache_operation_badge:
+        if self.cache_operation_badge is not None:
             self.cache_operation_badge.setText(operation)
             self.cache_operation_badge.setVisible(True)
 
     def hide_cache_operation_badge(self) -> None:
         """Hide cache operation badge"""
-        if self.cache_operation_badge:
+        if self.cache_operation_badge is not None:
             self.cache_operation_badge.setVisible(False)
 
     def show_message(self, message: str, timeout: int = 0) -> None:
@@ -175,7 +175,7 @@ class StatusBarManager:
 
     def remove_cache_indicators(self) -> None:
         """Remove cache indicators from status bar"""
-        if self.cache_status_widget:
+        if self.cache_status_widget is not None:
             self.status_bar.removeWidget(self.cache_status_widget)
             self.cache_status_widget.deleteLater()
             self.cache_status_widget = None

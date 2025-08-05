@@ -1,606 +1,942 @@
 #!/usr/bin/env python3
 """
-Performance Profiler for Manual Offset Dialog Preview Updates
+Comprehensive Performance Profiler for SpritePal Application
 
-This module provides comprehensive performance analysis of the preview update
-mechanism in the manual offset dialog, focusing on:
-1. CPU time analysis of preview methods
-2. Worker thread creation/cleanup overhead
-3. Signal emission and handling latency
-4. Memory usage during rapid slider movements
-5. Blocking operations identification
-
-Uses built-in Python profiling tools for maximum compatibility.
+This profiling script provides detailed analysis of:
+- Memory usage and leaks
+- CPU bottlenecks
+- I/O efficiency
+- Thread contention
+- Qt object lifecycle
+- Manager singleton patterns
+- Worker thread performance
+- ROM cache efficiency
+- Large data structure handling
 """
 
 import cProfile
 import gc
 import io
+import json
 import pstats
+import sys
+import threading
 import time
 import tracemalloc
-import weakref
+from collections import defaultdict
 from contextlib import contextmanager
-from dataclasses import dataclass
-from threading import Lock
-from typing import Callable, Optional
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 import psutil
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+
+try:
+    # LineProfiler not needed - unused
+    from memory_profiler import profile as memory_profile
+    MEMORY_PROFILER_AVAILABLE = True
+except ImportError:
+    MEMORY_PROFILER_AVAILABLE = False
+    def memory_profile(func):
+        return func
+
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.resolve()))
+
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
 @dataclass
-class PerformanceMetrics:
-    """Container for performance measurements."""
+class ProfileMetrics:
+    """Container for profiling metrics"""
+    cpu_stats: dict[str, Any] = field(default_factory=dict)
+    memory_stats: dict[str, Any] = field(default_factory=dict)
+    io_stats: dict[str, Any] = field(default_factory=dict)
+    thread_stats: dict[str, Any] = field(default_factory=dict)
+    qt_stats: dict[str, Any] = field(default_factory=dict)
+    manager_stats: dict[str, Any] = field(default_factory=dict)
+    worker_stats: dict[str, Any] = field(default_factory=dict)
+    cache_stats: dict[str, Any] = field(default_factory=dict)
+    timing_stats: dict[str, Any] = field(default_factory=dict)
 
-    # Timing metrics (milliseconds)
-    preview_update_time: float = 0.0
-    worker_creation_time: float = 0.0
-    worker_cleanup_time: float = 0.0
-    signal_emission_time: float = 0.0
-    signal_handling_time: float = 0.0
 
-    # Memory metrics (bytes)
-    memory_before: int = 0
-    memory_after: int = 0
-    memory_peak: int = 0
+class MemoryTracker:
+    """Track memory usage patterns and detect leaks"""
 
-    # Threading metrics
-    active_threads: int = 0
-    worker_threads_created: int = 0
-    worker_threads_destroyed: int = 0
+    def __init__(self):
+        self.snapshots = []
+        self.peak_memory = 0
+        self.baseline_memory = 0
+        self.gc_stats = []
 
-    # Frame rate metrics
-    update_frequency: float = 0.0  # Hz
-    frame_drops: int = 0
+    def start_tracking(self):
+        """Start memory tracking"""
+        tracemalloc.start()
+        self.baseline_memory = self._get_current_memory()
+        logger.info(f"Memory tracking started. Baseline: {self.baseline_memory:.2f} MB")
 
-    # Cache metrics
-    cache_hits: int = 0
-    cache_misses: int = 0
+    def take_snapshot(self, label: str = ""):
+        """Take a memory snapshot"""
+        if not tracemalloc.is_tracing():
+            return None
 
-    def __str__(self) -> str:
-        return (
-            f"PerformanceMetrics(\n"
-            f"  Preview Update: {self.preview_update_time:.2f}ms\n"
-            f"  Worker Creation: {self.worker_creation_time:.2f}ms\n"
-            f"  Worker Cleanup: {self.worker_cleanup_time:.2f}ms\n"
-            f"  Signal Emission: {self.signal_emission_time:.2f}ms\n"
-            f"  Signal Handling: {self.signal_handling_time:.2f}ms\n"
-            f"  Memory Delta: {(self.memory_after - self.memory_before) / 1024:.1f}KB\n"
-            f"  Memory Peak: {self.memory_peak / 1024:.1f}KB\n"
-            f"  Active Threads: {self.active_threads}\n"
-            f"  Update Frequency: {self.update_frequency:.1f}Hz\n"
-            f"  Frame Drops: {self.frame_drops}\n"
-            f"  Cache Hit Rate: {self.cache_hits / max(1, self.cache_hits + self.cache_misses) * 100:.1f}%\n"
-            f")"
-        )
+        snapshot = tracemalloc.take_snapshot()
+        current_memory = self._get_current_memory()
+
+        self.snapshots.append({
+            'label': label,
+            'timestamp': time.time(),
+            'memory_mb': current_memory,
+            'snapshot': snapshot
+        })
+
+        self.peak_memory = max(self.peak_memory, current_memory)
+
+        logger.debug(f"Memory snapshot '{label}': {current_memory:.2f} MB")
+        return snapshot
+
+    def _get_current_memory(self) -> float:
+        """Get current memory usage in MB"""
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024
+
+    def analyze_memory_growth(self) -> dict[str, Any]:
+        """Analyze memory growth patterns"""
+        if len(self.snapshots) < 2:
+            return {"error": "Need at least 2 snapshots for analysis"}
+
+        first_snapshot = self.snapshots[0]
+        last_snapshot = self.snapshots[-1]
+
+        memory_growth = last_snapshot['memory_mb'] - first_snapshot['memory_mb']
+
+        # Analyze top memory consumers
+        top_stats = last_snapshot['snapshot'].statistics('lineno')[:20]
+
+        # Compare snapshots to find memory leaks
+        leaked_objects = []
+        if len(self.snapshots) >= 2:
+            try:
+                # Compare last two snapshots
+                prev_snapshot = self.snapshots[-2]['snapshot']
+                current_snapshot = last_snapshot['snapshot']
+
+                # Find top differences
+                top_stats_prev = prev_snapshot.statistics('lineno')
+                top_stats_current = current_snapshot.statistics('lineno')
+
+                # Create lookup for previous stats
+                prev_stats_dict = {stat.traceback: stat for stat in top_stats_prev}
+
+                for stat in top_stats_current[:10]:
+                    prev_stat = prev_stats_dict.get(stat.traceback)
+                    if prev_stat:
+                        size_diff = stat.size - prev_stat.size
+                        count_diff = stat.count - prev_stat.count
+
+                        if size_diff > 0:  # Memory increase
+                            leaked_objects.append({
+                                'file': str(stat.traceback.format()[0]) if stat.traceback.format() else "Unknown",
+                                'size_increase_mb': size_diff / 1024 / 1024,
+                                'count_increase': count_diff,
+                                'current_size_mb': stat.size / 1024 / 1024,
+                                'current_count': stat.count
+                            })
+            except Exception as e:
+                logger.warning(f"Error analyzing memory leaks: {e}")
+
+        return {
+            'baseline_memory_mb': self.baseline_memory,
+            'peak_memory_mb': self.peak_memory,
+            'current_memory_mb': last_snapshot['memory_mb'],
+            'total_growth_mb': memory_growth,
+            'growth_rate_mb_per_sec': memory_growth / (last_snapshot['timestamp'] - first_snapshot['timestamp']) if len(self.snapshots) > 1 else 0,
+            'snapshot_count': len(self.snapshots),
+            'top_memory_consumers': [
+                {
+                    'file': str(stat.traceback.format()[0]) if stat.traceback.format() else "Unknown",
+                    'size_mb': stat.size / 1024 / 1024,
+                    'count': stat.count
+                }
+                for stat in top_stats[:10]
+            ],
+            'potential_leaks': sorted(leaked_objects, key=lambda x: x['size_increase_mb'], reverse=True)[:10]
+        }
+
+    def stop_tracking(self):
+        """Stop memory tracking"""
+        if tracemalloc.is_tracing():
+            tracemalloc.stop()
+
+
+class CPUProfiler:
+    """Profile CPU usage and identify bottlenecks"""
+
+    def __init__(self):
+        self.profiler = None
+        self.profile_data = None
+
+    @contextmanager
+    def profile_context(self):
+        """Context manager for CPU profiling"""
+        self.profiler = cProfile.Profile()
+        self.profiler.enable()
+        try:
+            yield
+        finally:
+            self.profiler.disable()
+
+    def analyze_cpu_usage(self) -> dict[str, Any]:
+        """Analyze CPU profiling results"""
+        if not self.profiler:
+            return {"error": "No profiling data available"}
+
+        # Create string buffer to capture stats
+        stats_buffer = io.StringIO()
+        stats = pstats.Stats(self.profiler, stream=stats_buffer)
+        stats.sort_stats('cumulative')
+
+        # Get top functions by cumulative time
+        stats.print_stats(20)
+        cpu_report = stats_buffer.getvalue()
+
+        # Get detailed stats
+        stats.sort_stats('tottime')
+        top_functions = []
+
+        for func_key, (cc, _nc, tt, ct, _callers) in stats.stats.items():
+            filename, line_num, func_name = func_key
+            top_functions.append({
+                'function': func_name,
+                'file': filename,
+                'line': line_num,
+                'call_count': cc,
+                'total_time': tt,
+                'cumulative_time': ct,
+                'time_per_call': tt / cc if cc > 0 else 0
+            })
+
+        # Sort by total time and take top 15
+        top_functions.sort(key=lambda x: x['total_time'], reverse=True)
+
+        return {
+            'report': cpu_report,
+            'top_functions': top_functions[:15],
+            'total_functions': len(stats.stats),
+            'total_calls': sum(cc for cc, nc, tt, ct, callers in stats.stats.values())
+        }
+
+
+class ThreadAnalyzer:
+    """Analyze thread usage and contention"""
+
+    def __init__(self):
+        self.thread_info = {}
+        self.lock_contention = defaultdict(list)
+
+    def analyze_threads(self) -> dict[str, Any]:
+        """Analyze current thread state"""
+        threads = threading.enumerate()
+        thread_stats = []
+
+        for thread in threads:
+            thread_info = {
+                'name': thread.name,
+                'daemon': thread.daemon,
+                'alive': thread.is_alive(),
+                'ident': thread.ident
+            }
+
+            # Check if it's a QThread
+            if hasattr(thread, 'isRunning'):
+                thread_info['qt_thread'] = True
+                thread_info['qt_running'] = thread.isRunning()
+                thread_info['qt_finished'] = thread.isFinished()
+
+            thread_stats.append(thread_info)
+
+        return {
+            'total_threads': len(threads),
+            'active_threads': len([t for t in threads if t.is_alive()]),
+            'daemon_threads': len([t for t in threads if t.daemon]),
+            'qt_threads': len([t for t in thread_stats if t.get('qt_thread', False)]),
+            'thread_details': thread_stats
+        }
+
+
+class QtObjectTracker:
+    """Track Qt object creation and lifecycle"""
+
+    def __init__(self):
+        self.qt_objects = {}
+        self.widget_counts = defaultdict(int)
+
+    def analyze_qt_objects(self) -> dict[str, Any]:
+        """Analyze Qt object usage"""
+        try:
+            from PyQt6.QtCore import QObject
+            from PyQt6.QtWidgets import QApplication, QWidget
+
+            # Get application instance
+            app = QApplication.instance()
+            if not app:
+                return {"error": "No QApplication instance found"}
+
+            # Count widgets
+            all_widgets = app.allWidgets()
+            widget_types = defaultdict(int)
+
+            for widget in all_widgets:
+                widget_type = type(widget).__name__
+                widget_types[widget_type] += 1
+
+            # Get top-level widgets
+            top_level_widgets = app.topLevelWidgets()
+
+            return {
+                'total_widgets': len(all_widgets),
+                'top_level_widgets': len(top_level_widgets),
+                'widget_types': dict(widget_types),
+                'top_widget_types': sorted(widget_types.items(), key=lambda x: x[1], reverse=True)[:10]
+            }
+
+        except ImportError:
+            return {"error": "PyQt6 not available"}
+        except Exception as e:
+            return {"error": f"Qt analysis failed: {e}"}
+
+
+class ManagerProfiler:
+    """Profile manager singleton usage and lifecycle"""
+
+    def analyze_managers(self) -> dict[str, Any]:
+        """Analyze manager instances"""
+        try:
+            from core.managers.registry import are_managers_initialized, get_registry
+
+            registry = get_registry()
+            manager_stats = {
+                'managers_initialized': are_managers_initialized(),
+                'available_managers': {},
+                'manager_memory': {}
+            }
+
+            if are_managers_initialized():
+                try:
+                    # Try to get each manager and analyze it
+                    managers_to_check = [
+                        ('session', 'get_session_manager'),
+                        ('extraction', 'get_extraction_manager'),
+                        ('injection', 'get_injection_manager')
+                    ]
+
+                    for manager_name, getter_name in managers_to_check:
+                        try:
+                            getter = getattr(registry, getter_name)
+                            manager = getter()
+
+                            manager_info = {
+                                'initialized': manager.is_initialized() if hasattr(manager, 'is_initialized') else True,
+                                'type': type(manager).__name__,
+                                'memory_size': sys.getsizeof(manager)
+                            }
+
+                            # Check for common performance-relevant attributes
+                            if hasattr(manager, '_cache'):
+                                cache_size = len(manager._cache) if hasattr(manager._cache, '__len__') else 'unknown'
+                                manager_info['cache_size'] = cache_size
+
+                            manager_stats['available_managers'][manager_name] = manager_info
+
+                        except Exception as e:
+                            manager_stats['available_managers'][manager_name] = {'error': str(e)}
+
+                except Exception as e:
+                    manager_stats['registry_error'] = str(e)
+
+            return manager_stats
+
+        except ImportError as e:
+            return {"error": f"Cannot import manager registry: {e}"}
+
+
+class WorkerProfiler:
+    """Profile worker thread performance"""
+
+    def analyze_workers(self) -> dict[str, Any]:
+        """Analyze worker thread patterns"""
+        threads = threading.enumerate()
+        worker_threads = []
+
+        for thread in threads:
+            # Check if it looks like a worker thread
+            if (hasattr(thread, 'is_cancelled') or
+                'worker' in thread.name.lower() or
+                'Worker' in type(thread).__name__):
+
+                worker_info = {
+                    'name': thread.name,
+                    'type': type(thread).__name__,
+                    'alive': thread.is_alive(),
+                    'daemon': thread.daemon
+                }
+
+                # Check for worker-specific attributes
+                if hasattr(thread, 'is_cancelled'):
+                    worker_info['cancelled'] = thread.is_cancelled
+                if hasattr(thread, 'is_paused'):
+                    worker_info['paused'] = thread.is_paused
+                if hasattr(thread, 'isRunning'):
+                    worker_info['qt_running'] = thread.isRunning()
+
+                worker_threads.append(worker_info)
+
+        return {
+            'total_worker_threads': len(worker_threads),
+            'active_workers': len([w for w in worker_threads if w['alive']]),
+            'worker_details': worker_threads
+        }
+
+
+class IOAnalyzer:
+    """Analyze I/O patterns and efficiency"""
+
+    def __init__(self):
+        self.io_operations = []
+
+    def analyze_cache_efficiency(self) -> dict[str, Any]:
+        """Analyze ROM cache efficiency"""
+        try:
+            from utils.rom_cache import get_rom_cache
+
+            cache = get_rom_cache()
+            cache_stats = cache.get_cache_stats()
+
+            # Add efficiency metrics
+            if cache_stats.get('total_files', 0) > 0:
+                avg_file_size = cache_stats['total_size_bytes'] / cache_stats['total_files']
+                cache_stats['avg_file_size_bytes'] = avg_file_size
+                cache_stats['total_size_mb'] = cache_stats['total_size_bytes'] / 1024 / 1024
+
+            return cache_stats
+
+        except Exception as e:
+            return {"error": f"Cannot analyze cache: {e}"}
+
+    def analyze_file_operations(self) -> dict[str, Any]:
+        """Analyze file I/O patterns"""
+        process = psutil.Process()
+
+        try:
+            io_counters = process.io_counters()
+            return {
+                'read_count': io_counters.read_count,
+                'write_count': io_counters.write_count,
+                'read_bytes': io_counters.read_bytes,
+                'write_bytes': io_counters.write_bytes,
+                'read_mb': io_counters.read_bytes / 1024 / 1024,
+                'write_mb': io_counters.write_bytes / 1024 / 1024
+            }
+        except AttributeError:
+            return {"error": "I/O counters not available on this platform"}
 
 
 class PerformanceProfiler:
-    """
-    Comprehensive performance profiler for the manual offset dialog.
-
-    This profiler instruments the preview update mechanism to measure:
-    - CPU time spent in critical methods
-    - Memory allocation patterns
-    - Worker thread lifecycle overhead
-    - Signal emission/handling latency
-    - UI responsiveness metrics
-    """
+    """Main profiler orchestrating all analysis"""
 
     def __init__(self):
-        self._metrics = PerformanceMetrics()
-        self._lock = Lock()
-        self._profiler: Optional[cProfile.Profile] = None
-        self._memory_profiler: Optional[tracemalloc.Traceback] = None
-
-        # Timing measurement state
-        self._timing_stack: list[tuple[str, float]] = []
-        self._method_times: dict[str, list[float]] = {}
-
-        # Memory tracking
-        self._memory_snapshots: list[tuple[float, int]] = []
-
-        # Frame rate tracking
-        self._frame_timestamps: list[float] = []
-        self._last_update_time = 0.0
-
-        # Thread tracking
-        self._thread_refs: list[weakref.ReferenceType] = []
-
-        # Cache tracking
-        self._cache_stats = {"hits": 0, "misses": 0}
-
-    @contextmanager
-    def profile_cpu(self, enable: bool = True):
-        """Context manager for CPU profiling."""
-        if not enable:
-            yield
-            return
-
-        self._profiler = cProfile.Profile()
-        self._profiler.enable()
-
-        try:
-            yield
-        finally:
-            self._profiler.disable()
-
-    @contextmanager
-    def profile_memory(self, enable: bool = True):
-        """Context manager for memory profiling."""
-        if not enable:
-            yield
-            return
-
-        tracemalloc.start()
-        gc.collect()  # Clean start
-
-        snapshot_before = tracemalloc.take_snapshot()
-        memory_before = self._get_process_memory()
-
-        try:
-            yield
-        finally:
-            memory_after = self._get_process_memory()
-            snapshot_after = tracemalloc.take_snapshot()
-
-            # Calculate memory delta
-            self._metrics.memory_before = memory_before
-            self._metrics.memory_after = memory_after
-
-            # Find peak memory usage
-            top_stats = snapshot_after.compare_to(snapshot_before, "lineno")
-            if top_stats:
-                self._metrics.memory_peak = max(stat.size for stat in top_stats[:10])
-
-            tracemalloc.stop()
-
-    @contextmanager
-    def time_method(self, method_name: str):
-        """Context manager for timing method execution."""
-        start_time = time.perf_counter()
-
-        with self._lock:
-            self._timing_stack.append((method_name, start_time))
-
-        try:
-            yield
-        finally:
-            end_time = time.perf_counter()
-            duration_ms = (end_time - start_time) * 1000
-
-            with self._lock:
-                self._timing_stack.pop()
-
-                if method_name not in self._method_times:
-                    self._method_times[method_name] = []
-                self._method_times[method_name].append(duration_ms)
-
-    def record_frame_update(self):
-        """Record a frame update for FPS calculation."""
-        current_time = time.perf_counter()
-
-        with self._lock:
-            self._frame_timestamps.append(current_time)
-
-            # Keep only last 100 frames for calculation
-            if len(self._frame_timestamps) > 100:
-                self._frame_timestamps.pop(0)
-
-            # Detect frame drops (> 33ms between updates = < 30 FPS)
-            if self._last_update_time > 0:
-                frame_time = current_time - self._last_update_time
-                if frame_time > 0.033:  # 33ms
-                    self._metrics.frame_drops += 1
-
-            self._last_update_time = current_time
-
-    def record_worker_creation(self):
-        """Record worker thread creation."""
-        with self._lock:
-            self._metrics.worker_threads_created += 1
-
-    def record_worker_destruction(self):
-        """Record worker thread destruction."""
-        with self._lock:
-            self._metrics.worker_threads_destroyed += 1
-
-    def record_cache_hit(self):
-        """Record cache hit."""
-        with self._lock:
-            self._cache_stats["hits"] += 1
-
-    def record_cache_miss(self):
-        """Record cache miss."""
-        with self._lock:
-            self._cache_stats["misses"] += 1
-
-    def _get_process_memory(self) -> int:
-        """Get current process memory usage in bytes."""
-        try:
-            process = psutil.Process()
-            return process.memory_info().rss
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return 0
-
-    def calculate_metrics(self) -> PerformanceMetrics:
-        """Calculate final performance metrics."""
-        with self._lock:
-            # Calculate average method times
-            if "_update_preview" in self._method_times:
-                times = self._method_times["_update_preview"]
-                self._metrics.preview_update_time = sum(times) / len(times) if times else 0
-
-            if "worker_creation" in self._method_times:
-                times = self._method_times["worker_creation"]
-                self._metrics.worker_creation_time = sum(times) / len(times) if times else 0
-
-            if "worker_cleanup" in self._method_times:
-                times = self._method_times["worker_cleanup"]
-                self._metrics.worker_cleanup_time = sum(times) / len(times) if times else 0
-
-            if "signal_emission" in self._method_times:
-                times = self._method_times["signal_emission"]
-                self._metrics.signal_emission_time = sum(times) / len(times) if times else 0
-
-            if "signal_handling" in self._method_times:
-                times = self._method_times["signal_handling"]
-                self._metrics.signal_handling_time = sum(times) / len(times) if times else 0
-
-            # Calculate update frequency
-            if len(self._frame_timestamps) > 1:
-                time_span = self._frame_timestamps[-1] - self._frame_timestamps[0]
-                frame_count = len(self._frame_timestamps) - 1
-                self._metrics.update_frequency = frame_count / time_span if time_span > 0 else 0
-
-            # Get current thread count
-            self._metrics.active_threads = len([ref for ref in self._thread_refs if ref() is not None])
-
-            # Cache statistics
-            self._metrics.cache_hits = self._cache_stats["hits"]
-            self._metrics.cache_misses = self._cache_stats["misses"]
-
-        return self._metrics
-
-    def get_cpu_profile_report(self) -> str:
-        """Get CPU profiling report."""
-        if not self._profiler:
-            return "No CPU profiling data available"
-
-        # Capture profiling output
-        stream = io.StringIO()
-        stats = pstats.Stats(self._profiler, stream=stream)
-        stats.sort_stats("cumulative")
-        stats.print_stats(30)  # Top 30 functions
-
-        return stream.getvalue()
-
-    def get_method_timing_report(self) -> str:
-        """Get detailed method timing report."""
-        if not self._method_times:
-            return "No method timing data available"
-
-        report = "Method Timing Analysis:\n"
-        report += "=" * 50 + "\n"
-
-        for method_name, times in self._method_times.items():
-            if times:
-                avg_time = sum(times) / len(times)
-                min_time = min(times)
-                max_time = max(times)
-                std_dev = (sum((t - avg_time) ** 2 for t in times) / len(times)) ** 0.5
-
-                report += f"\n{method_name}:\n"
-                report += f"  Average: {avg_time:.2f}ms\n"
-                report += f"  Min:     {min_time:.2f}ms\n"
-                report += f"  Max:     {max_time:.2f}ms\n"
-                report += f"  StdDev:  {std_dev:.2f}ms\n"
-                report += f"  Calls:   {len(times)}\n"
-
-        return report
-
-    def get_bottleneck_analysis(self) -> str:
-        """Analyze performance bottlenecks."""
-        metrics = self.calculate_metrics()
-
-        bottlenecks = []
-
-        # Check preview update time
-        if metrics.preview_update_time > 16:  # > 60 FPS target
-            bottlenecks.append(f"Preview update time ({metrics.preview_update_time:.1f}ms) exceeds 60 FPS target (16ms)")
-
-        # Check worker creation overhead
-        if metrics.worker_creation_time > 5:
-            bottlenecks.append(f"Worker creation time ({metrics.worker_creation_time:.1f}ms) is high")
-
-        # Check worker cleanup overhead
-        if metrics.worker_cleanup_time > 100:
-            bottlenecks.append(f"Worker cleanup time ({metrics.worker_cleanup_time:.1f}ms) is excessive")
-
-        # Check signal handling latency
-        if metrics.signal_emission_time > 1:
-            bottlenecks.append(f"Signal emission time ({metrics.signal_emission_time:.1f}ms) is high")
-
-        if metrics.signal_handling_time > 2:
-            bottlenecks.append(f"Signal handling time ({metrics.signal_handling_time:.1f}ms) is high")
-
-        # Check memory usage
-        memory_delta_mb = (metrics.memory_after - metrics.memory_before) / (1024 * 1024)
-        if memory_delta_mb > 10:
-            bottlenecks.append(f"Memory usage increased by {memory_delta_mb:.1f}MB")
-
-        # Check frame rate
-        if metrics.update_frequency < 30:
-            bottlenecks.append(f"Update frequency ({metrics.update_frequency:.1f}Hz) is below 30 FPS")
-
-        if metrics.frame_drops > 5:
-            bottlenecks.append(f"Frame drops ({metrics.frame_drops}) indicate poor performance")
-
-        # Check cache efficiency
-        cache_hit_rate = metrics.cache_hits / max(1, metrics.cache_hits + metrics.cache_misses) * 100
-        if cache_hit_rate < 70:
-            bottlenecks.append(f"Cache hit rate ({cache_hit_rate:.1f}%) is low")
-
-        if not bottlenecks:
-            return "No significant performance bottlenecks detected."
-
-        return "Performance Bottlenecks:\n" + "\n".join(f"• {b}" for b in bottlenecks)
-
-
-class PreviewUpdateProfiler(QObject):
-    """
-    Specialized profiler for the preview update mechanism.
-
-    This class instruments the actual preview update flow to measure
-    real-world performance during slider interactions.
-    """
-
-    profiling_complete = pyqtSignal(object)  # PerformanceMetrics
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self._profiler = PerformanceProfiler()
-        self._dialog_ref: Optional[weakref.ReferenceType] = None
-        self._original_methods: dict[str, Callable] = {}
-
-        # Simulation state
-        self._simulation_timer = QTimer(self)
-        self._simulation_timer.timeout.connect(self._simulate_slider_movement)
-        self._simulation_offsets = []
-        self._simulation_index = 0
-
-    def instrument_dialog(self, dialog):
-        """Instrument the dialog for performance monitoring."""
-        self._dialog_ref = weakref.ref(dialog)
-
-        # Store original methods
-        if hasattr(dialog, "_update_preview"):
-            self._original_methods["_update_preview"] = dialog._update_preview
-            dialog._update_preview = self._instrumented_update_preview
-
-        if hasattr(dialog, "_cleanup_workers"):
-            self._original_methods["_cleanup_workers"] = dialog._cleanup_workers
-            dialog._cleanup_workers = self._instrumented_cleanup_workers
-
-        # Instrument smart preview coordinator if available
-        if hasattr(dialog, "_smart_preview_coordinator") and dialog._smart_preview_coordinator:
-            coordinator = dialog._smart_preview_coordinator
-
-            if hasattr(coordinator, "_handle_drag_preview"):
-                self._original_methods["_handle_drag_preview"] = coordinator._handle_drag_preview
-                coordinator._handle_drag_preview = self._instrumented_handle_drag_preview
-
-        logger.info("Dialog instrumented for performance monitoring")
-
-    def _instrumented_update_preview(self):
-        """Instrumented version of _update_preview."""
-        dialog = self._dialog_ref() if self._dialog_ref else None
-        if not dialog:
-            return
-
-        with self._profiler.time_method("_update_preview"):
-            self._profiler.record_frame_update()
-
-            # Call original method
-            original = self._original_methods.get("_update_preview")
-            if original:
-                original()
-
-    def _instrumented_cleanup_workers(self):
-        """Instrumented version of _cleanup_workers."""
-        dialog = self._dialog_ref() if self._dialog_ref else None
-        if not dialog:
-            return
-
-        with self._profiler.time_method("worker_cleanup"):
-            self._profiler.record_worker_destruction()
-
-            # Call original method
-            original = self._original_methods.get("_cleanup_workers")
-            if original:
-                original()
-
-    def _instrumented_handle_drag_preview(self):
-        """Instrumented version of _handle_drag_preview."""
-        with self._profiler.time_method("handle_drag_preview"):
-            self._profiler.record_frame_update()
-
-            # Call original method
-            original = self._original_methods.get("_handle_drag_preview")
-            if original:
-                original()
-
-    def start_performance_test(self, duration_seconds: int = 10,
-                             slider_movements: int = 50):
-        """Start automated performance test."""
-        logger.info(f"Starting performance test: {duration_seconds}s, {slider_movements} movements")
-
-        # Generate test offsets
-        start_offset = 0x200000
-        end_offset = 0x400000
-        step = (end_offset - start_offset) // slider_movements
-
-        self._simulation_offsets = [
-            start_offset + i * step for i in range(slider_movements)
-        ]
-        self._simulation_index = 0
-
-        # Start profiling
-        with self._profiler.profile_cpu(True):
-            with self._profiler.profile_memory(True):
-                # Start simulation timer (simulate 60 FPS slider updates)
-                self._simulation_timer.start(16)  # 16ms = 60 FPS
-
-                # Stop after duration
-                QTimer.singleShot(duration_seconds * 1000, self._finish_performance_test)
-
-    def _simulate_slider_movement(self):
-        """Simulate slider movement for testing."""
-        dialog = self._dialog_ref() if self._dialog_ref else None
-        if not dialog or not self._simulation_offsets:
-            return
-
-        # Get next offset
-        offset = self._simulation_offsets[self._simulation_index]
-        self._simulation_index = (self._simulation_index + 1) % len(self._simulation_offsets)
-
-        # Update dialog offset
-        if hasattr(dialog, "set_offset"):
-            dialog.set_offset(offset)
-
-    def _finish_performance_test(self):
-        """Finish performance test and emit results."""
-        self._simulation_timer.stop()
-
-        # Calculate final metrics
-        metrics = self._profiler.calculate_metrics()
-
-        logger.info("Performance test completed")
-        logger.info(f"Results: {metrics}")
-
-        self.profiling_complete.emit(metrics)
-
-    def get_detailed_report(self) -> str:
-        """Get comprehensive performance report."""
-        report = "Performance Analysis Report\n"
-        report += "=" * 50 + "\n\n"
-
-        # Metrics summary
-        metrics = self._profiler.calculate_metrics()
-        report += str(metrics) + "\n\n"
-
-        # Method timing details
-        report += self._profiler.get_method_timing_report() + "\n\n"
-
-        # Bottleneck analysis
-        report += self._profiler.get_bottleneck_analysis() + "\n\n"
-
-        # CPU profiling details
-        report += "CPU Profiling Details:\n"
-        report += "-" * 30 + "\n"
-        report += self._profiler.get_cpu_profile_report() + "\n\n"
-
-        return report
-
-
-def analyze_debounce_timing_impact():
-    """
-    Analyze the impact of different debounce timing configurations.
-
-    Tests:
-    - Current 100ms debounce vs proposed 16ms
-    - Worker cleanup timeout impact (1000ms vs shorter)
-    - Cache hit rate with different update frequencies
-    """
-
-    logger.info("Analyzing debounce timing impact...")
-
-    # Test configurations
-    configs = [
-        {"name": "Current (100ms debounce)", "debounce_ms": 100, "cleanup_ms": 1000},
-        {"name": "Proposed (16ms debounce)", "debounce_ms": 16, "cleanup_ms": 500},
-        {"name": "Aggressive (8ms debounce)", "debounce_ms": 8, "cleanup_ms": 250},
-        {"name": "Conservative (200ms debounce)", "debounce_ms": 200, "cleanup_ms": 2000},
-    ]
-
-    results = {}
-
-    for config in configs:
-        logger.info(f"Testing configuration: {config['name']}")
-
-        # Simulate timing behavior
-        PerformanceProfiler()
-
-        # Simulate rapid slider movements
-        update_count = 0
-        dropped_updates = 0
-        total_time = 0
-
-        for i in range(100):  # 100 slider movements
-            i * 10  # 10ms intervals (fast movement)
-
-            # Check if update would be processed
-            if total_time >= config["debounce_ms"]:
-                update_count += 1
-                total_time = 0
-
-                # Simulate processing time
-                processing_time = 5  # 5ms base processing time
-                total_time += processing_time
-            else:
-                dropped_updates += 1
-                total_time += 10
-
-        # Calculate effectiveness
-        update_rate = update_count / 1.0  # Updates per second
-        responsiveness = update_count / (update_count + dropped_updates) * 100
-
-        results[config["name"]] = {
-            "update_rate": update_rate,
-            "responsiveness": responsiveness,
-            "debounce_ms": config["debounce_ms"],
-            "cleanup_ms": config["cleanup_ms"]
+        self.memory_tracker = MemoryTracker()
+        self.cpu_profiler = CPUProfiler()
+        self.thread_analyzer = ThreadAnalyzer()
+        self.qt_tracker = QtObjectTracker()
+        self.manager_profiler = ManagerProfiler()
+        self.worker_profiler = WorkerProfiler()
+        self.io_analyzer = IOAnalyzer()
+        self.start_time = None
+
+    def start_profiling(self):
+        """Start comprehensive profiling"""
+        self.start_time = time.time()
+        self.memory_tracker.start_tracking()
+        self.memory_tracker.take_snapshot("profiling_start")
+        logger.info("Performance profiling started")
+
+    def profile_operation(self, operation_name: str, operation_func, *args, **kwargs):
+        """Profile a specific operation"""
+        logger.info(f"Profiling operation: {operation_name}")
+
+        # Take pre-operation snapshot
+        self.memory_tracker.take_snapshot(f"before_{operation_name}")
+
+        # Profile CPU usage
+        with self.cpu_profiler.profile_context():
+            start_time = time.time()
+            try:
+                result = operation_func(*args, **kwargs)
+                success = True
+                error = None
+            except Exception as e:
+                result = None
+                success = False
+                error = str(e)
+                logger.error(f"Operation {operation_name} failed: {e}")
+
+        end_time = time.time()
+        operation_time = end_time - start_time
+
+        # Take post-operation snapshot
+        self.memory_tracker.take_snapshot(f"after_{operation_name}")
+
+        logger.info(f"Operation {operation_name} completed in {operation_time:.2f}s")
+
+        return {
+            'result': result,
+            'success': success,
+            'error': error,
+            'execution_time': operation_time
         }
 
-    # Generate report
-    report = "Debounce Timing Analysis\n"
-    report += "=" * 40 + "\n\n"
+    def generate_comprehensive_report(self) -> ProfileMetrics:
+        """Generate comprehensive performance report"""
+        end_time = time.time()
+        total_time = end_time - self.start_time if self.start_time else 0
 
-    for name, result in results.items():
-        report += f"{name}:\n"
-        report += f"  Update Rate: {result['update_rate']:.1f} updates/sec\n"
-        report += f"  Responsiveness: {result['responsiveness']:.1f}%\n"
-        report += f"  Debounce: {result['debounce_ms']}ms\n"
-        report += f"  Cleanup: {result['cleanup_ms']}ms\n\n"
+        self.memory_tracker.take_snapshot("profiling_end")
 
-    # Recommendations
-    report += "Recommendations:\n"
-    report += "-" * 20 + "\n"
+        metrics = ProfileMetrics()
 
-    best_config = max(results.items(), key=lambda x: x[1]["responsiveness"])
-    report += f"Best responsiveness: {best_config[0]} ({best_config[1]['responsiveness']:.1f}%)\n"
+        # CPU Analysis
+        metrics.cpu_stats = self.cpu_profiler.analyze_cpu_usage()
 
-    balanced_config = min(results.items(),
-                         key=lambda x: abs(x[1]["debounce_ms"] - 50))  # Target ~50ms
-    report += f"Best balance: {balanced_config[0]}\n"
+        # Memory Analysis
+        metrics.memory_stats = self.memory_tracker.analyze_memory_growth()
 
-    logger.info("Debounce timing analysis complete")
-    return report
+        # Thread Analysis
+        metrics.thread_stats = self.thread_analyzer.analyze_threads()
+
+        # Qt Object Analysis
+        metrics.qt_stats = self.qt_tracker.analyze_qt_objects()
+
+        # Manager Analysis
+        metrics.manager_stats = self.manager_profiler.analyze_managers()
+
+        # Worker Analysis
+        metrics.worker_stats = self.worker_profiler.analyze_workers()
+
+        # I/O Analysis
+        metrics.io_stats = {
+            'cache_efficiency': self.io_analyzer.analyze_cache_efficiency(),
+            'file_operations': self.io_analyzer.analyze_file_operations()
+        }
+
+        # Cache-specific analysis
+        metrics.cache_stats = self.io_analyzer.analyze_cache_efficiency()
+
+        # Timing statistics
+        metrics.timing_stats = {
+            'total_profiling_time': total_time,
+            'profiling_start': self.start_time,
+            'profiling_end': end_time
+        }
+
+        return metrics
+
+    def stop_profiling(self):
+        """Stop profiling and cleanup"""
+        self.memory_tracker.stop_tracking()
+        logger.info("Performance profiling stopped")
+
+
+def format_report(metrics: ProfileMetrics) -> str:
+    """Format profiling results into readable report"""
+    report = []
+    report.append("=" * 80)
+    report.append("SPRITEPAL PERFORMANCE PROFILING REPORT")
+    report.append("=" * 80)
+    report.append("")
+
+    # Timing Summary
+    report.append("PROFILING SUMMARY")
+    report.append("-" * 40)
+    total_time = metrics.timing_stats.get('total_profiling_time', 0)
+    report.append(f"Total profiling time: {total_time:.2f} seconds")
+    report.append("")
+
+    # Memory Analysis
+    report.append("MEMORY ANALYSIS")
+    report.append("-" * 40)
+    mem_stats = metrics.memory_stats
+    if 'error' not in mem_stats:
+        report.append(f"Baseline memory: {mem_stats.get('baseline_memory_mb', 0):.2f} MB")
+        report.append(f"Peak memory: {mem_stats.get('peak_memory_mb', 0):.2f} MB")
+        report.append(f"Current memory: {mem_stats.get('current_memory_mb', 0):.2f} MB")
+        report.append(f"Total growth: {mem_stats.get('total_growth_mb', 0):.2f} MB")
+
+        growth_rate = mem_stats.get('growth_rate_mb_per_sec', 0)
+        if growth_rate > 0.1:
+            report.append(f"WARNING: MEMORY LEAK - Growth rate {growth_rate:.3f} MB/sec")
+
+        # Top memory consumers
+        report.append("\nTop Memory Consumers:")
+        for consumer in mem_stats.get('top_memory_consumers', [])[:5]:
+            report.append(f"  • {consumer['file']}: {consumer['size_mb']:.2f} MB ({consumer['count']} objects)")
+
+        # Potential leaks
+        leaks = mem_stats.get('potential_leaks', [])
+        if leaks:
+            report.append("\nPOTENTIAL MEMORY LEAKS:")
+            for leak in leaks[:3]:
+                report.append(f"  • {leak['file']}: +{leak['size_increase_mb']:.2f} MB")
+    else:
+        report.append(f"Memory analysis error: {mem_stats['error']}")
+    report.append("")
+
+    # CPU Analysis
+    report.append("CPU PERFORMANCE ANALYSIS")
+    report.append("-" * 40)
+    cpu_stats = metrics.cpu_stats
+    if 'error' not in cpu_stats:
+        report.append(f"Total functions analyzed: {cpu_stats.get('total_functions', 0)}")
+        report.append(f"Total function calls: {cpu_stats.get('total_calls', 0)}")
+
+        report.append("\nTop CPU Bottlenecks:")
+        for func in cpu_stats.get('top_functions', [])[:5]:
+            if func['total_time'] > 0.01:  # Only show functions taking >10ms
+                report.append(f"  • {func['function']} ({func['file']}:{func['line']})")
+                report.append(f"    Time: {func['total_time']:.3f}s, Calls: {func['call_count']}")
+    else:
+        report.append(f"CPU analysis error: {cpu_stats['error']}")
+    report.append("")
+
+    # Thread Analysis
+    report.append("THREAD ANALYSIS")
+    report.append("-" * 40)
+    thread_stats = metrics.thread_stats
+    report.append(f"Total threads: {thread_stats.get('total_threads', 0)}")
+    report.append(f"Active threads: {thread_stats.get('active_threads', 0)}")
+    report.append(f"Qt threads: {thread_stats.get('qt_threads', 0)}")
+    report.append(f"Worker threads: {metrics.worker_stats.get('total_worker_threads', 0)}")
+
+    if thread_stats.get('total_threads', 0) > 20:
+        report.append("WARNING: HIGH THREAD COUNT - Consider thread pooling")
+    report.append("")
+
+    # Qt Objects Analysis
+    report.append("QT OBJECTS ANALYSIS")
+    report.append("-" * 40)
+    qt_stats = metrics.qt_stats
+    if 'error' not in qt_stats:
+        report.append(f"Total widgets: {qt_stats.get('total_widgets', 0)}")
+        report.append(f"Top-level widgets: {qt_stats.get('top_level_widgets', 0)}")
+
+        if qt_stats.get('total_widgets', 0) > 1000:
+            report.append("WARNING: HIGH WIDGET COUNT - Potential memory usage issue")
+
+        report.append("\nTop Widget Types:")
+        for widget_type, count in qt_stats.get('top_widget_types', [])[:5]:
+            report.append(f"  • {widget_type}: {count}")
+    else:
+        report.append(f"Qt analysis error: {qt_stats['error']}")
+    report.append("")
+
+    # Manager Analysis
+    report.append("MANAGER ANALYSIS")
+    report.append("-" * 40)
+    manager_stats = metrics.manager_stats
+    report.append(f"Managers initialized: {manager_stats.get('managers_initialized', False)}")
+
+    available_managers = manager_stats.get('available_managers', {})
+    for name, info in available_managers.items():
+        if 'error' in info:
+            report.append(f"  • {name}: ERROR - {info['error']}")
+        else:
+            status = "✓" if info.get('initialized', True) else "✗"
+            memory_kb = info.get('memory_size', 0) / 1024
+            report.append(f"  • {name} {status}: {info.get('type', 'Unknown')} ({memory_kb:.1f} KB)")
+            if 'cache_size' in info:
+                report.append(f"    Cache size: {info['cache_size']}")
+    report.append("")
+
+    # Cache Analysis
+    report.append("ROM CACHE ANALYSIS")
+    report.append("-" * 40)
+    cache_stats = metrics.cache_stats
+    if 'error' not in cache_stats:
+        if cache_stats.get('cache_enabled', False):
+            report.append("Cache enabled: ✓")
+            report.append(f"Cache directory: {cache_stats.get('cache_dir', 'Unknown')}")
+            report.append(f"Total cache files: {cache_stats.get('total_files', 0)}")
+            report.append(f"Total cache size: {cache_stats.get('total_size_mb', 0):.1f} MB")
+            report.append(f"Sprite location caches: {cache_stats.get('sprite_location_caches', 0)}")
+            report.append(f"Scan progress caches: {cache_stats.get('scan_progress_caches', 0)}")
+            report.append(f"Preview caches: {cache_stats.get('preview_caches', 0)}")
+
+            # Cache efficiency warning
+            if cache_stats.get('total_size_mb', 0) > 500:
+                report.append("WARNING: LARGE CACHE - Consider cleanup")
+        else:
+            report.append("Cache disabled")
+    else:
+        report.append(f"Cache analysis error: {cache_stats['error']}")
+    report.append("")
+
+    # I/O Analysis
+    report.append("I/O PERFORMANCE ANALYSIS")
+    report.append("-" * 40)
+    io_stats = metrics.io_stats.get('file_operations', {})
+    if 'error' not in io_stats:
+        report.append(f"Read operations: {io_stats.get('read_count', 0)}")
+        report.append(f"Write operations: {io_stats.get('write_count', 0)}")
+        report.append(f"Data read: {io_stats.get('read_mb', 0):.1f} MB")
+        report.append(f"Data written: {io_stats.get('write_mb', 0):.1f} MB")
+    else:
+        report.append(f"I/O analysis error: {io_stats['error']}")
+    report.append("")
+
+    # Performance Recommendations
+    report.append("PERFORMANCE RECOMMENDATIONS")
+    report.append("-" * 40)
+    recommendations = generate_recommendations(metrics)
+    for recommendation in recommendations:
+        report.append(f"• {recommendation}")
+
+    report.append("")
+    report.append("=" * 80)
+
+    return "\n".join(report)
+
+
+def generate_recommendations(metrics: ProfileMetrics) -> list[str]:
+    """Generate performance optimization recommendations"""
+    recommendations = []
+
+    # Memory recommendations
+    mem_stats = metrics.memory_stats
+    if 'error' not in mem_stats:
+        growth_rate = mem_stats.get('growth_rate_mb_per_sec', 0)
+        if growth_rate > 0.1:
+            recommendations.append("CRITICAL: Investigate memory leaks - growth rate exceeds 0.1 MB/sec")
+
+        if mem_stats.get('peak_memory_mb', 0) > 1000:
+            recommendations.append("HIGH: Consider memory optimization - peak usage over 1GB")
+
+        leaks = mem_stats.get('potential_leaks', [])
+        if leaks:
+            recommendations.append(f"MEDIUM: Investigate {len(leaks)} potential memory leak sources")
+
+    # Thread recommendations
+    thread_count = metrics.thread_stats.get('total_threads', 0)
+    if thread_count > 20:
+        recommendations.append("MEDIUM: High thread count - consider thread pooling")
+
+    worker_count = metrics.worker_stats.get('total_worker_threads', 0)
+    if worker_count > 10:
+        recommendations.append("LOW: Many worker threads active - ensure proper cleanup")
+
+    # Qt recommendations
+    qt_stats = metrics.qt_stats
+    if 'error' not in qt_stats:
+        widget_count = qt_stats.get('total_widgets', 0)
+        if widget_count > 1000:
+            recommendations.append("HIGH: Excessive widget count - review widget lifecycle")
+
+    # Cache recommendations
+    cache_stats = metrics.cache_stats
+    if 'error' not in cache_stats and cache_stats.get('cache_enabled', False):
+        cache_size_mb = cache_stats.get('total_size_mb', 0)
+        if cache_size_mb > 500:
+            recommendations.append("LOW: Large cache size - schedule periodic cleanup")
+
+        if cache_stats.get('total_files', 0) > 1000:
+            recommendations.append("LOW: Many cache files - consider cache consolidation")
+
+    # CPU recommendations
+    cpu_stats = metrics.cpu_stats
+    if 'error' not in cpu_stats:
+        top_functions = cpu_stats.get('top_functions', [])
+        if top_functions:
+            slowest = top_functions[0]
+            if slowest.get('total_time', 0) > 1.0:
+                recommendations.append(f"HIGH: Optimize {slowest['function']} - consumes {slowest['total_time']:.2f}s")
+
+    # Manager recommendations
+    manager_stats = metrics.manager_stats
+    available_managers = manager_stats.get('available_managers', {})
+    for name, info in available_managers.items():
+        if 'error' in info:
+            recommendations.append(f"MEDIUM: Fix manager initialization issue for {name}")
+
+    if not recommendations:
+        recommendations.append("No critical performance issues detected")
+
+    return recommendations
+
+
+def save_report(metrics: ProfileMetrics, filename: str | None = None):
+    """Save profiling report to file"""
+    if filename is None:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        filename = f"spritepal_performance_report_{timestamp}.txt"
+
+    report_text = format_report(metrics)
+
+    with Path(filename).open('w') as f:
+        f.write(report_text)
+
+    # Also save raw metrics as JSON for further analysis
+    json_filename = filename.replace('.txt', '_raw_data.json')
+
+    # Convert metrics to JSON-serializable format
+    json_data = {
+        'cpu_stats': metrics.cpu_stats,
+        'memory_stats': metrics.memory_stats,
+        'io_stats': metrics.io_stats,
+        'thread_stats': metrics.thread_stats,
+        'qt_stats': metrics.qt_stats,
+        'manager_stats': metrics.manager_stats,
+        'worker_stats': metrics.worker_stats,
+        'cache_stats': metrics.cache_stats,
+        'timing_stats': metrics.timing_stats
+    }
+
+    with Path(json_filename).open('w') as f:
+        json.dump(json_data, f, indent=2, default=str)
+
+    logger.info(f"Performance report saved to {filename}")
+    logger.info(f"Raw data saved to {json_filename}")
+
+    return filename, json_filename
+
+
+# Specialized profiling functions for SpritePal components
+
+def profile_worker_lifecycle():
+    """Profile worker thread creation and cleanup patterns"""
+    profiler = PerformanceProfiler()
+    profiler.start_profiling()
+
+    def simulate_worker_operations():
+        """Simulate typical worker operations"""
+        # Simulate ROM extraction operations
+        time.sleep(0.1)  # Simulate work
+        gc.collect()  # Force collection to see cleanup patterns
+
+    # Profile multiple worker cycles
+    for i in range(5):
+        profiler.profile_operation(f"worker_cycle_{i}", simulate_worker_operations)
+
+    metrics = profiler.generate_comprehensive_report()
+    profiler.stop_profiling()
+
+    return metrics
+
+
+def profile_manager_singleton_access():
+    """Profile manager singleton access patterns"""
+    profiler = PerformanceProfiler()
+    profiler.start_profiling()
+
+    def simulate_manager_access():
+        """Simulate manager access patterns"""
+        try:
+            from core.managers.registry import get_registry
+            registry = get_registry()
+            # Simulate multiple manager accesses
+            for _ in range(10):
+                if hasattr(registry, 'get_session_manager'):
+                    try:
+                        registry.get_session_manager()
+                    except:
+                        pass  # Expected if not initialized
+        except ImportError:
+            pass
+
+    profiler.profile_operation("manager_access", simulate_manager_access)
+
+    metrics = profiler.generate_comprehensive_report()
+    profiler.stop_profiling()
+
+    return metrics
+
+
+def profile_rom_cache_operations():
+    """Profile ROM cache efficiency"""
+    profiler = PerformanceProfiler()
+    profiler.start_profiling()
+
+    def simulate_cache_operations():
+        """Simulate ROM cache operations"""
+        try:
+            from utils.rom_cache import get_rom_cache
+            cache = get_rom_cache()
+
+            # Simulate cache operations
+            test_rom_path = "test_rom.sfc"
+            test_data = b"test_data" * 1000  # 9KB test data
+
+            # Test save operations
+            cache.save_preview_data(test_rom_path, 0x200000, test_data, 32, 32)
+
+            # Test load operations
+            cache.get_preview_data(test_rom_path, 0x200000)
+
+            # Test cache stats
+            cache.get_cache_stats()
+
+        except Exception as e:
+            logger.debug(f"Cache simulation error: {e}")
+
+    profiler.profile_operation("cache_operations", simulate_cache_operations)
+
+    metrics = profiler.generate_comprehensive_report()
+    profiler.stop_profiling()
+
+    return metrics
 
 
 if __name__ == "__main__":
-    # Example usage
-    app = QApplication([])
+    # Comprehensive profiling example
+    print("Starting SpritePal Performance Analysis...")
 
-    # Analyze debounce timing impact
-    timing_report = analyze_debounce_timing_impact()
-    print(timing_report)
+    profiler = PerformanceProfiler()
+    profiler.start_profiling()
 
-    # Note: Full dialog profiling requires the actual dialog instance
-    # This would be done by importing and running the dialog with instrumentation
+    # Simulate some operations (replace with actual SpritePal operations)
+    time.sleep(2)  # Simulate work
+
+    # Generate and save comprehensive report
+    metrics = profiler.generate_comprehensive_report()
+    profiler.stop_profiling()
+
+    # Save reports
+    report_file, json_file = save_report(metrics)
+    print(f"Performance analysis complete. Report saved to: {report_file}")
+
+    # Quick summary
+    print("\nQuick Summary:")
+    print(format_report(metrics)[:2000] + "..." if len(format_report(metrics)) > 2000 else format_report(metrics))
+
+    # Run specialized profiling
+    print("\nRunning specialized profiling...")
+
+    # Profile worker lifecycle
+    print("Profiling worker lifecycle...")
+    worker_metrics = profile_worker_lifecycle()
+    worker_report, _ = save_report(worker_metrics, "worker_lifecycle_profile.txt")
+    print(f"Worker lifecycle profile saved to: {worker_report}")
+
+    # Profile manager access
+    print("Profiling manager singleton access...")
+    manager_metrics = profile_manager_singleton_access()
+    manager_report, _ = save_report(manager_metrics, "manager_access_profile.txt")
+    print(f"Manager access profile saved to: {manager_report}")
+
+    # Profile ROM cache
+    print("Profiling ROM cache operations...")
+    cache_metrics = profile_rom_cache_operations()
+    cache_report, _ = save_report(cache_metrics, "rom_cache_profile.txt")
+    print(f"ROM cache profile saved to: {cache_report}")
+
+    print("\nSpritePal performance analysis complete!")

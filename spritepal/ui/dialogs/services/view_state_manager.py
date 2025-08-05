@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from PyQt6.QtCore import QObject, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QGuiApplication
+
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 
@@ -87,7 +88,7 @@ class ViewStateManager(QObject):
         self.dialog_widget.setWindowFlags(self._original_window_flags)
         self.dialog_widget.showNormal()
 
-        if self._normal_geometry:
+        if self._normal_geometry is not None:
             self.dialog_widget.setGeometry(self._normal_geometry)
             logger.debug(f"GEOMETRY: Restored normal geometry: {self._normal_geometry}")
 

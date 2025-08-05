@@ -49,7 +49,7 @@ def setup_logging(
 
     # Clear the log file on startup by opening in write mode first
     try:
-        with open(log_file, "w") as f:
+        with log_file.open("w") as f:
             _ = f.write("")  # Clear the file
     except Exception:
         # If we can't clear it, that's okay, just continue
@@ -66,28 +66,7 @@ def setup_logging(
         )
         file_handler.setFormatter(file_formatter)
 
-        # Override emit, shouldRollover, and _open methods to handle FileNotFoundError gracefully
-        original_emit = file_handler.emit
-        original_should_rollover = file_handler.shouldRollover
-        original_open = file_handler._open
-
-        def safe_emit(record: logging.LogRecord) -> None:
-            try:
-                original_emit(record)
-            except (FileNotFoundError, OSError):
-                # If log directory was cleaned up (e.g., in tests), silently ignore
-                # This prevents cascade failures in threaded operations
-                pass
-
-        def safe_should_rollover(record: logging.LogRecord) -> bool:
-            try:
-                return original_should_rollover(record)
-            except (FileNotFoundError, OSError):
-                # If log directory was cleaned up, don't rollover
-                return False
-
         # Create a permanent null stream to avoid file handle closure issues
-
         class PermanentNullStream:
             """A null stream that can never be closed"""
             def write(self, data: str) -> None:
@@ -107,21 +86,43 @@ def setup_logging(
 
         _null_stream = PermanentNullStream()
 
-        def safe_open() -> Any:
-            try:
-                # Check if log directory still exists before opening
-                log_dir = Path(file_handler.baseFilename).parent
-                if not log_dir.exists():
-                    # Log directory was cleaned up, return permanent null stream
-                    return _null_stream
-                return original_open()
-            except (FileNotFoundError, OSError):
-                # If anything fails, return permanent null stream
-                return _null_stream
+        # Create a safe wrapper handler instead of modifying methods
+        class SafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
+            """A safer rotating file handler that handles directory cleanup gracefully."""
 
-        file_handler.emit = safe_emit
-        file_handler.shouldRollover = safe_should_rollover
-        file_handler._open = safe_open
+            def emit(self, record: logging.LogRecord) -> None:
+                try:
+                    super().emit(record)
+                except (FileNotFoundError, OSError):
+                    # If log directory was cleaned up (e.g., in tests), silently ignore
+                    # This prevents cascade failures in threaded operations
+                    pass
+
+            def shouldRollover(self, record: logging.LogRecord) -> bool:
+                try:
+                    return bool(super().shouldRollover(record))
+                except (FileNotFoundError, OSError):
+                    # If log directory was cleaned up, don't rollover
+                    return False
+
+            def _open(self) -> Any:
+                try:
+                    # Check if log directory still exists before opening
+                    log_dir = Path(self.baseFilename).parent
+                    if not log_dir.exists():
+                        # Log directory was cleaned up, return permanent null stream
+                        return _null_stream
+                    return super()._open()
+                except (FileNotFoundError, OSError):
+                    # If anything fails, return permanent null stream
+                    return _null_stream
+
+        # Replace the file handler with our safe version
+        file_handler = SafeRotatingFileHandler(
+            log_file, maxBytes=5_000_000, backupCount=3  # 5MB
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(file_formatter)
 
         logger.addHandler(console_handler)
         logger.addHandler(file_handler)

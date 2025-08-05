@@ -9,9 +9,10 @@ import sys
 import tempfile
 import time
 from contextlib import contextmanager
+from pathlib import Path
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core.hal_compression import HALCompressor
 from core.region_analyzer import EmptyRegionDetector
@@ -145,7 +146,8 @@ def benchmark_empty_region_detection(rom_path: str):
     logger.info("\n=== Empty Region Detection Benchmark ===")
 
     # Read ROM data
-    with open(rom_path, "rb") as f:
+    rom_path_obj = Path(rom_path)
+    with rom_path_obj.open("rb") as f:
         rom_data = f.read()
 
     rom_size = len(rom_data)
@@ -189,8 +191,8 @@ def benchmark_sprite_finder(rom_path: str):
     logger.info("\n=== Sprite Finder Benchmark ===")
 
     # Create output directory
-    output_dir = "benchmark_output"
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = Path("benchmark_output")
+    output_dir.mkdir(exist_ok=True)
 
     # Test 1: Traditional scanning (no optimizations)
     logger.info("\nTest 1: Traditional scanning")
@@ -250,8 +252,9 @@ def main():
 
     finally:
         # Cleanup
-        if os.path.exists(rom_path):
-            os.unlink(rom_path)
+        rom_path_obj = Path(rom_path)
+        if rom_path_obj.exists():
+            rom_path_obj.unlink()
             logger.info(f"Cleaned up test ROM: {rom_path}")
 
 

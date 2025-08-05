@@ -12,9 +12,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from PyQt6.QtCore import pyqtSignal
+
 from core.managers.base_manager import BaseManager
 from core.managers.exceptions import NavigationError
-from PyQt6.QtCore import pyqtSignal
 from utils.logging_config import get_logger
 
 from .data_structures import NavigationContext, NavigationHint, SpriteLocation
@@ -40,8 +41,7 @@ class NavigationManager(BaseManager):
 
     def __init__(self, parent=None) -> None:
         """Initialize navigation manager."""
-        super().__init__("NavigationManager", parent)
-
+        # Initialize all attributes BEFORE calling super().__init__()
         # Core data structures
         self._region_maps: dict[str, SpriteRegionMap] = {}  # ROM path -> region map
         self._navigation_context = NavigationContext()
@@ -67,6 +67,9 @@ class NavigationManager(BaseManager):
             "cache_misses": 0,
             "average_hint_time": 0.0
         }
+
+        # Now call super().__init__() which triggers _initialize()
+        super().__init__("NavigationManager", parent)
 
     def _initialize(self) -> None:
         """Initialize the navigation manager."""

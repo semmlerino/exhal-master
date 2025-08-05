@@ -29,9 +29,15 @@ from core.managers.exceptions import (
 
 # Import Qt modules with fallbacks for headless environments
 try:
-    from PyQt6.QtCore import QObject, pyqtSignal
-    from PyQt6.QtWidgets import QMessageBox
+    from PyQt6.QtCore import QObject as QtQObject
+    from PyQt6.QtCore import pyqtSignal as QtPyqtSignal
+    from PyQt6.QtWidgets import QMessageBox as QtQMessageBox
     QT_AVAILABLE = True
+
+    # Use Qt classes directly
+    QObject = QtQObject
+    pyqtSignal = QtPyqtSignal
+    QMessageBox = QtQMessageBox
 except ImportError:
     # Fallback for environments without Qt
     QT_AVAILABLE = False
@@ -61,7 +67,7 @@ if TYPE_CHECKING:
     try:
         from PyQt6.QtWidgets import QWidget
     except ImportError:
-        QWidget = None
+        QWidget = None  # type: ignore[misc,assignment]
 
 
 class IErrorDisplay(Protocol):
@@ -155,7 +161,7 @@ class UnifiedErrorHandler(QObject):
 
     def __init__(self, parent: QWidget | None = None, error_display: IErrorDisplay | None = None):
         """Initialize the unified error handler
-        
+
         Args:
             parent: Parent widget for Qt integration
             error_display: Error display handler (injected to break circular dependency)
@@ -441,29 +447,42 @@ class UnifiedErrorHandler(QObject):
         """Format a user-friendly error message"""
         operation = context.operation
 
-        if category == ErrorCategory.FILE_IO:
-            if context.file_path:
-                return f"Failed to {operation} file '{context.file_path}': {error!s}"
-            return f"File operation failed during {operation}: {error!s}"
+        # Define message templates for each category
+        category_templates = {
+            ErrorCategory.FILE_IO: self._format_file_io_message,
+            ErrorCategory.VALIDATION: self._format_validation_message,
+        }
 
-        if category == ErrorCategory.VALIDATION:
-            if context.user_input:
-                return f"Invalid input for {operation}: {error!s}"
-            return f"Validation failed during {operation}: {error!s}"
+        # Simple category messages
+        simple_messages = {
+            ErrorCategory.WORKER_THREAD: f"Background operation '{operation}' failed: {error!s}",
+            ErrorCategory.EXTRACTION: f"Sprite extraction failed during {operation}: {error!s}",
+            ErrorCategory.INJECTION: f"Sprite injection failed during {operation}: {error!s}",
+            ErrorCategory.CACHE: f"Cache operation failed during {operation}: {error!s}",
+        }
 
-        if category == ErrorCategory.WORKER_THREAD:
-            return f"Background operation '{operation}' failed: {error!s}"
+        # Use specific formatter if available
+        if category in category_templates:
+            return category_templates[category](operation, error, context)
 
-        if category == ErrorCategory.EXTRACTION:
-            return f"Sprite extraction failed during {operation}: {error!s}"
+        # Use simple message if available
+        if category in simple_messages:
+            return simple_messages[category]
 
-        if category == ErrorCategory.INJECTION:
-            return f"Sprite injection failed during {operation}: {error!s}"
-
-        if category == ErrorCategory.CACHE:
-            return f"Cache operation failed during {operation}: {error!s}"
-
+        # Default message
         return f"Error during {operation}: {error!s}"
+
+    def _format_file_io_message(self, operation: str, error: Exception, context: ErrorContext) -> str:
+        """Format file I/O specific error message"""
+        if context.file_path:
+            return f"Failed to {operation} file '{context.file_path}': {error!s}"
+        return f"File operation failed during {operation}: {error!s}"
+
+    def _format_validation_message(self, operation: str, error: Exception, context: ErrorContext) -> str:
+        """Format validation specific error message"""
+        if context.user_input:
+            return f"Invalid input for {operation}: {error!s}"
+        return f"Validation failed during {operation}: {error!s}"
 
     def _format_technical_details(
         self,
@@ -669,7 +688,7 @@ class _UnifiedErrorHandlerSingleton:
     @classmethod
     def get(cls, parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
         """Get or create the global unified error handler (thread-safe)
-        
+
         Args:
             parent: Parent widget for Qt integration
             error_display: Error display handler (injected to break circular dependency)
@@ -708,7 +727,7 @@ class _UnifiedErrorHandlerSingleton:
 
 def get_unified_error_handler(parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
     """Get or create the global unified error handler (thread-safe)
-    
+
     Args:
         parent: Parent widget for Qt integration
         error_display: Error display handler (injected to break circular dependency)
@@ -718,7 +737,7 @@ def get_unified_error_handler(parent: QWidget | None = None, error_display: IErr
 
 def set_global_error_display(error_display: IErrorDisplay) -> None:
     """Set the global error display handler
-    
+
     This should be called during application initialization to inject
     the UI error handler and break the circular dependency.
     """

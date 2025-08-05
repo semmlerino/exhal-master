@@ -11,6 +11,7 @@ from typing import Callable
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -50,32 +51,32 @@ class HexOffsetInput(QWidget):
         self._external_callback = external_change_callback
 
         # Create UI components
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         # prefix label
         if label_prefix:
             self.prefix_label = QLabel(label_prefix)
-            self.layout.addWidget(self.prefix_label)
+            self._layout.addWidget(self.prefix_label)
 
         # Hex input field
         self.hex_edit = QLineEdit()
         self.hex_edit.setPlaceholderText(placeholder)
         self.hex_edit.setMaximumWidth(input_width)
         _ = self.hex_edit.textChanged.connect(self._on_text_changed)
-        self.layout.addWidget(self.hex_edit)
+        self._layout.addWidget(self.hex_edit)
 
         # Decimal display components (optional)
         if self._with_decimal_display:
             self.equals_label = QLabel("(hex) = ")
-            self.layout.addWidget(self.equals_label)
+            self._layout.addWidget(self.equals_label)
 
             self.decimal_label = QLabel("")
             self.decimal_label.setMinimumWidth(decimal_width)
-            self.layout.addWidget(self.decimal_label)
+            self._layout.addWidget(self.decimal_label)
 
             self.decimal_suffix_label = QLabel("(decimal)")
-            self.layout.addWidget(self.decimal_suffix_label)
+            self._layout.addWidget(self.decimal_suffix_label)
         else:
             self.decimal_label = None
 

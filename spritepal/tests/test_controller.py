@@ -6,6 +6,7 @@ import importlib
 import os
 import sys
 from pathlib import Path
+from typing import Any, Generator
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -16,14 +17,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import spritepal.core.controller
 from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import cleanup_managers, initialize_managers
 from spritepal.core.workers import VRAMExtractionWorker
 
 
 class TestControllerImports:
     """Test that controller module imports work correctly"""
 
-    def test_controller_imports(self):
+    def test_controller_imports(self) -> None:
         """Test that all imports in controller module work without errors"""
         # This test will catch import-time errors like missing pil_to_qpixmap
         try:
@@ -36,7 +36,7 @@ class TestControllerImports:
         except Exception as e:
             pytest.fail(f"Unexpected error importing controller module: {e}")
 
-    def test_pil_to_qpixmap_import(self, tmp_path):
+    def test_pil_to_qpixmap_import(self, tmp_path: Any) -> None:
         """Test that pil_to_qpixmap function is available in controller module"""
         # Test that pil_to_qpixmap is imported and available
         from spritepal.core import controller
@@ -58,25 +58,23 @@ class TestExtractionController:
     """Test ExtractionController functionality"""
 
     @pytest.fixture
-    def mock_main_window(self):
+    def mock_main_window(self) -> Any:
         """Create mock main window"""
-        from .fixtures.qt_mocks import create_mock_main_window
+        from .infrastructure.qt_mocks import create_mock_main_window
         return create_mock_main_window()
 
     @pytest.fixture
-    def controller(self, mock_main_window):
-        """Create controller instance"""
-        # Initialize managers for this test
-        initialize_managers("TestApp")
-
-        try:
+    def controller(self, mock_main_window: Any, manager_context_factory: Any) -> Generator[Any, None, None]:
+        """Create controller instance with proper manager context"""
+        with manager_context_factory() as context:
             controller = ExtractionController(mock_main_window)
+            # Inject the context managers
+            controller.extraction_manager = context.get_manager("extraction", object)
+            controller.injection_manager = context.get_manager("injection", object) 
+            controller.session_manager = context.get_manager("session", object)
             yield controller
-        finally:
-            # Clean up managers
-            cleanup_managers()
 
-    def test_init_connects_signals(self, controller, mock_main_window):
+    def test_init_connects_signals(self, controller: Any, mock_main_window: Any) -> None:
         """Test controller initialization connects signals"""
         # Verify signals are connected
         mock_main_window.extract_requested.connect.assert_called_once()
@@ -134,10 +132,10 @@ class TestExtractionController:
         self, mock_worker_class, controller, mock_main_window
     ):
         """Test starting extraction with valid parameters"""
-        from .infrastructure.test_data_repository import get_test_data_repository
-
-        # Use TestDataRepository to create realistic files that pass defensive validation
-        repo = get_test_data_repository()
+        # Use test data repository to create realistic files
+        from .infrastructure.test_data_repository import TestDataRepository
+         
+        repo = TestDataRepository()
         test_data = repo.get_vram_extraction_data("medium")  # Creates 64KB VRAM file
 
         try:
@@ -404,15 +402,18 @@ class TestVRAMExtractionWorker:
         }
 
     @pytest.fixture
-    def worker(self, worker_params):
-        """Create worker instance with mocked manager"""
-        with patch("spritepal.core.workers.extraction.get_extraction_manager") as mock_get_manager:
-            mock_manager = Mock()
-            mock_get_manager.return_value = mock_manager
-            worker = VRAMExtractionWorker(worker_params)
-            # Store the mock manager for test access
-            worker._test_mock_manager = mock_manager
-            return worker
+    def worker(self, worker_params, manager_context_factory):
+        """Create worker instance with test manager context"""
+        with manager_context_factory() as context:
+            # Mock the manager context for the worker
+            with patch("spritepal.core.workers.extraction.get_extraction_manager") as mock_get_manager:
+                test_manager = context.get_manager("extraction", object)
+                mock_get_manager.return_value = test_manager
+                
+                worker = VRAMExtractionWorker(worker_params)
+                # Store the test manager for test access
+                worker._test_manager = test_manager
+                yield worker
 
     def test_init_creates_components(self, worker, worker_params):
         """Test worker initialization stores parameters"""
@@ -420,15 +421,14 @@ class TestVRAMExtractionWorker:
         assert worker.manager is not None  # Manager is set during initialization in new pattern
         assert worker._connections == []  # No connections yet
 
-
     @patch("spritepal.utils.image_utils.pil_to_qpixmap")
     def test_run_full_workflow_success(self, mock_pil_to_qpixmap, worker):
         """Test successful full workflow execution"""
-        # Use the mock manager from the worker fixture
-        mock_manager = worker._test_mock_manager
+        # Use the test manager from the worker fixture
+        test_manager = worker._test_manager
 
         # Mock extraction result
-        mock_manager.extract_from_vram.return_value = [
+        test_manager.extract_from_vram.return_value = [
             "output.png", "output.pal.json", "output.metadata.json"
         ]
 
@@ -445,7 +445,7 @@ class TestVRAMExtractionWorker:
         worker.perform_operation()
 
         # Verify manager was called with correct params
-        mock_manager.extract_from_vram.assert_called_once_with(
+        test_manager.extract_from_vram.assert_called_once_with(
             vram_path=worker.params["vram_path"],
             output_base=worker.params["output_base"],
             cgram_path=worker.params.get("cgram_path"),
@@ -623,7 +623,7 @@ class TestRealControllerImplementation:
     @pytest.fixture
     def window_helper(self, tmp_path):
         """Create window helper for real controller testing"""
-        from tests.fixtures.test_main_window_helper_simple import (
+        from tests.infrastructure.test_main_window_helper_simple import (
             TestMainWindowHelperSimple,
         )
         helper = TestMainWindowHelperSimple(str(tmp_path))
@@ -631,17 +631,15 @@ class TestRealControllerImplementation:
         helper.cleanup()
 
     @pytest.fixture
-    def real_controller(self, window_helper):
-        """Create real controller with window helper"""
-        # Initialize managers for this test
-        initialize_managers("TestApp")
-
-        try:
+    def real_controller(self, window_helper, manager_context_factory):
+        """Create real controller with window helper and proper manager context"""
+        with manager_context_factory() as context:
             controller = ExtractionController(window_helper)
+            # Inject context managers
+            controller.extraction_manager = context.get_manager("extraction", object)
+            controller.injection_manager = context.get_manager("injection", object)
+            controller.session_manager = context.get_manager("session", object)
             yield controller
-        finally:
-            # Clean up managers
-            cleanup_managers()
 
     @pytest.mark.integration
     def test_real_controller_initialization(self, real_controller, window_helper):
@@ -835,21 +833,20 @@ class TestControllerWorkerIntegration:
         return window
 
     @pytest.fixture
-    def controller(self, mock_main_window):
-        """Create controller instance for mocked tests - no real managers"""
-        # CRITICAL FIX FOR BUG #27: Don't initialize real managers in mocked tests
-        # Create controller with mocked window
-        controller = ExtractionController(mock_main_window)
+    def controller(self, mock_main_window, manager_context_factory):
+        """Create controller instance for mocked tests with proper manager context"""
+        with manager_context_factory() as context:
+            controller = ExtractionController(mock_main_window)
 
-        # Mock all manager dependencies to ensure complete isolation
-        controller.extraction_manager = Mock()
-        controller.injection_manager = Mock()
-        controller.session_manager = Mock()
+            # Mock all manager dependencies to ensure complete isolation
+            controller.extraction_manager = context.get_manager("extraction", object)
+            controller.injection_manager = context.get_manager("injection", object)
+            controller.session_manager = context.get_manager("session", object)
 
-        # Mock validation to always pass for mocked tests
-        controller.extraction_manager.validate_extraction_params = Mock(return_value=None)
+            # Mock validation to always pass for mocked tests
+            controller.extraction_manager.validate_extraction_params = Mock(return_value=None)
 
-        return controller
+            yield controller
 
     @patch("spritepal.core.controller.VRAMExtractionWorker")
     @patch("os.path.exists")
@@ -992,3 +989,74 @@ class TestControllerWorkerIntegration:
 
         # Verify mock class was called twice
         assert mock_worker_class.call_count == 2
+
+
+# Manager Context Integration Tests for Controllers
+class TestControllerManagerContextIntegration:
+    """Test controller integration with manager context system."""
+    
+    def test_controller_manager_access(self, manager_context_factory):
+        """Test that controller can access managers through context."""
+        from .infrastructure.qt_mocks import create_mock_main_window
+        
+        with manager_context_factory() as context:
+            mock_window = create_mock_main_window()
+            controller = ExtractionController(mock_window)
+            
+            # Inject context managers
+            controller.extraction_manager = context.get_manager("extraction", object)
+            controller.injection_manager = context.get_manager("injection", object)
+            controller.session_manager = context.get_manager("session", object)
+            
+            # Verify manager access
+            assert controller.extraction_manager is not None
+            assert controller.injection_manager is not None
+            assert controller.session_manager is not None
+    
+    def test_controller_context_isolation(self, manager_context_factory):
+        """Test that controllers are properly isolated with their own contexts."""
+        from .infrastructure.qt_mocks import create_mock_main_window
+        
+        # First context
+        with manager_context_factory(name="context1") as ctx1:
+            mock_window1 = create_mock_main_window()
+            controller1 = ExtractionController(mock_window1)
+            controller1.extraction_manager = ctx1.get_manager("extraction", object)
+            
+            # Set unique value on manager
+            controller1.extraction_manager.test_value = "controller1"
+        
+        # Second context should be isolated
+        with manager_context_factory(name="context2") as ctx2:
+            mock_window2 = create_mock_main_window()
+            controller2 = ExtractionController(mock_window2)
+            controller2.extraction_manager = ctx2.get_manager("extraction", object)
+            
+            # Set different value on manager
+            controller2.extraction_manager.test_value = "controller2"
+            
+            # Verify isolation
+            assert controller2.extraction_manager is not controller1.extraction_manager
+            assert controller2.extraction_manager.test_value == "controller2"
+    
+    def test_controller_manager_state_persistence(self, manager_context_factory):
+        """Test that manager state persists within a context for controllers."""
+        from .infrastructure.qt_mocks import create_mock_main_window
+        
+        with manager_context_factory() as context:
+            # Create first controller
+            mock_window1 = create_mock_main_window()
+            controller1 = ExtractionController(mock_window1)
+            controller1.extraction_manager = context.get_manager("extraction", object)
+            
+            # Modify manager state
+            controller1.extraction_manager.test_state = "persistent_value"
+            
+            # Create second controller in same context
+            mock_window2 = create_mock_main_window()
+            controller2 = ExtractionController(mock_window2)
+            controller2.extraction_manager = context.get_manager("extraction", object)
+            
+            # Manager state should persist
+            assert controller2.extraction_manager is controller1.extraction_manager
+            assert controller2.extraction_manager.test_state == "persistent_value"

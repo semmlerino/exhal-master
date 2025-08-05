@@ -5,15 +5,19 @@ These classes extend the base worker classes with domain-specific
 signals and behavior for extraction, injection, and scanning operations.
 """
 
-from typing import TYPE_CHECKING, Any, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from core.managers import ExtractionManager, InjectionManager
-    from core.managers.factory import ManagerFactory
     from PIL import Image
 
-from core.managers.base_manager import BaseManager
+    from core.managers import ExtractionManager, InjectionManager
+    from core.managers.factory import ManagerFactory
+
 from PyQt6.QtCore import QObject, pyqtSignal
+
+from core.managers.base_manager import BaseManager
 from utils.logging_config import get_logger
 
 from .base import BaseWorker, ManagedWorker
@@ -165,7 +169,7 @@ class WorkerOwnedManagerMixin:
 
     @staticmethod
     def create_worker_owned_manager(
-        manager_factory: Optional["ManagerFactory"],
+        manager_factory: "ManagerFactory" | None,
         manager_creator_func,
         parent: QObject | None = None
     ) -> BaseManager:

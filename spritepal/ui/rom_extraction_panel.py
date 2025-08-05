@@ -2,11 +2,11 @@
 ROM extraction panel for SpritePal
 """
 
-import os
 import threading
+from operator import itemgetter
+from pathlib import Path
 from typing import Any
 
-from core.managers import get_extraction_manager
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from core.managers import get_extraction_manager
 from ui.common import WorkerManager
 from ui.components.navigation import SpriteNavigator
 from ui.dialogs import ResumeScanDialog, UnifiedManualOffsetDialog, UserErrorDialog
@@ -39,6 +41,9 @@ from ui.rom_extraction.widgets import (
     SpriteSelectorWidget,
 )
 from ui.rom_extraction.workers import SpriteScanWorker
+from ui.rom_extraction.workers.similarity_indexing_worker import (
+    SimilarityIndexingWorker,
+)
 from utils.constants import (
     SETTINGS_KEY_LAST_INPUT_ROM,
     SETTINGS_NS_ROM_INJECTION,
@@ -48,6 +53,20 @@ from utils.settings_manager import get_settings_manager
 from utils.thread_safe_singleton import QtThreadSafeSingleton
 
 logger = get_logger(__name__)
+
+
+class ScanDialog(QDialog):
+    """Dialog for sprite scanning with typed attributes."""
+    
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        # Typed attributes that will be set during initialization
+        self.cache_status_label: QLabel
+        self.progress_bar: QProgressBar
+        self.results_text: QTextEdit
+        self.button_box: QDialogButtonBox
+        self.apply_btn: QPushButton | None
+        self.rom_cache: Any = None  # Cache object, type depends on implementation
 
 # UI Spacing Constants
 SPACING_SMALL = 6
@@ -64,7 +83,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
     """
     Thread-safe application-wide singleton for manual offset dialog.
     Ensures only one dialog instance exists across the entire application.
-    
+
     This singleton uses proper thread synchronization and Qt thread affinity checking
     to prevent crashes when accessed from worker threads.
     """
@@ -195,6 +214,7 @@ class ROMExtractionPanel(QWidget):
         # Worker references to track and clean up
         self.search_worker = None
         self.scan_worker = None
+        self.similarity_indexing_worker = None
 
         # Navigation components
         self.sprite_navigator = None
@@ -207,25 +227,64 @@ class ROMExtractionPanel(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Main panel for controls (no longer need splitter since preview is removed)
+        # Create main panel with controls
+        main_panel = self._create_main_panel()
+        main_layout.addWidget(main_panel)
+        self.setLayout(main_layout)
+
+    def _create_main_panel(self) -> QWidget:
+        """Create the main panel containing all controls.
+
+        Returns:
+            QWidget: The configured main panel
+        """
         main_panel = QWidget(self)
         layout = QVBoxLayout()
         layout.setSpacing(SPACING_LARGE)
         layout.setContentsMargins(SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM)
 
-        # ROM file selection widget
+        # Add all widget groups
+        self._add_rom_controls(layout)
+        self._add_navigation_controls(layout)
+        self._add_mode_controls(layout)
+        self._add_manual_offset_controls(layout)
+        self._add_status_indicators(layout)
+        self._add_output_controls(layout)
+
+        # Add vertical spacer at the bottom
+        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred))
+        main_panel.setLayout(layout)
+        return main_panel
+
+    def _add_rom_controls(self, layout: QVBoxLayout):
+        """Add ROM file selection controls to the layout.
+
+        Args:
+            layout: Layout to add controls to
+        """
         self.rom_file_widget = ROMFileWidget()
         self.rom_file_widget.browse_clicked.connect(self._browse_rom)
         self.rom_file_widget.partial_scan_detected.connect(self._on_partial_scan_detected)
         layout.addWidget(self.rom_file_widget)
 
-        # Sprite Navigator - new integrated navigation system
+    def _add_navigation_controls(self, layout: QVBoxLayout):
+        """Add sprite navigation controls to the layout.
+
+        Args:
+            layout: Layout to add controls to
+        """
         self.sprite_navigator = SpriteNavigator()
         self.sprite_navigator.offset_changed.connect(self._on_navigator_offset_changed)
         self.sprite_navigator.sprite_selected.connect(self._on_navigator_sprite_selected)
         layout.addWidget(self.sprite_navigator)
 
-        # Mode selector widget (kept for backward compatibility)
+    def _add_mode_controls(self, layout: QVBoxLayout):
+        """Add mode selection and sprite selector controls to the layout.
+
+        Args:
+            layout: Layout to add controls to
+        """
+        # Mode selector widget
         self.mode_selector_widget = ModeSelectorWidget()
         self.mode_selector_widget.mode_changed.connect(self._on_mode_changed)
         layout.addWidget(self.mode_selector_widget)
@@ -237,13 +296,45 @@ class ROMExtractionPanel(QWidget):
         self.sprite_selector_widget.setVisible(False)  # Hide by default (manual mode is default)
         layout.addWidget(self.sprite_selector_widget)
 
-        # Manual offset control button (replaces embedded widget)
-        self.manual_offset_button = QPushButton("Open Manual Offset Control")
-        self.manual_offset_button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
-        _ = self.manual_offset_button.clicked.connect(self._open_manual_offset_dialog)
-        self.manual_offset_button.setVisible(True)  # Show by default (manual mode)
-        self.manual_offset_button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
-        self.manual_offset_button.setStyleSheet("""
+    def _add_manual_offset_controls(self, layout: QVBoxLayout):
+        """Add manual offset control button and status to the layout.
+
+        Args:
+            layout: Layout to add controls to
+        """
+        # Create and style the manual offset button
+        self.manual_offset_button = self._create_manual_offset_button()
+        layout.addWidget(self.manual_offset_button)
+
+        # Manual offset status label
+        self.manual_offset_status = self._create_manual_offset_status()
+        layout.addWidget(self.manual_offset_status)
+
+        # Initialize dialog reference
+        self._manual_offset_dialog = None  # Legacy - now managed by singleton
+        self._manual_offset = 0x200000  # Default offset
+
+    def _create_manual_offset_button(self) -> QPushButton:
+        """Create and configure the manual offset control button.
+
+        Returns:
+            QPushButton: The configured button
+        """
+        button = QPushButton("Open Manual Offset Control")
+        button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
+        _ = button.clicked.connect(self._open_manual_offset_dialog)
+        button.setVisible(True)  # Show by default (manual mode)
+        button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
+        button.setStyleSheet(self._get_manual_offset_button_style())
+        return button
+
+    def _get_manual_offset_button_style(self) -> str:
+        """Get the stylesheet for the manual offset button.
+
+        Returns:
+            str: CSS stylesheet
+        """
+        return """
             QPushButton {
                 background-color: #4488dd;
                 color: white;
@@ -258,26 +349,59 @@ class ROMExtractionPanel(QWidget):
             QPushButton:pressed {
                 background-color: #3377cc;
             }
-        """)
-        layout.addWidget(self.manual_offset_button)
+        """
 
-        # Manual offset status label
-        self.manual_offset_status = QLabel("Use Manual Offset Control to explore ROM offsets")
-        self.manual_offset_status.setStyleSheet("""
+    def _create_manual_offset_status(self) -> QLabel:
+        """Create and configure the manual offset status label.
+
+        Returns:
+            QLabel: The configured status label
+        """
+        status = QLabel("Use Manual Offset Control to explore ROM offsets")
+        status.setStyleSheet("""
             padding: 8px;
             background: #2b2b2b;
             border: 1px solid #444444;
             border-radius: 4px;
             color: #cccccc;
         """)
-        self.manual_offset_status.setWordWrap(True)
-        self.manual_offset_status.setVisible(True)
-        layout.addWidget(self.manual_offset_status)
+        status.setWordWrap(True)
+        status.setVisible(True)
+        return status
 
-        # Reference to dialog (managed by singleton)
-        self._manual_offset_dialog = None  # Legacy - now managed by singleton
-        self._manual_offset = 0x200000  # Default offset
+    def _add_status_indicators(self, layout: QVBoxLayout):
+        """Add similarity status indicator to the layout.
 
+        Args:
+            layout: Layout to add indicators to
+        """
+        self.similarity_status = QLabel("Similarity search ready")
+        self.similarity_status.setStyleSheet(self._get_similarity_status_style())
+        self.similarity_status.setWordWrap(True)
+        self.similarity_status.setVisible(False)  # Hidden until ROM is loaded
+        layout.addWidget(self.similarity_status)
+
+    def _get_similarity_status_style(self) -> str:
+        """Get the stylesheet for the similarity status label.
+
+        Returns:
+            str: CSS stylesheet
+        """
+        return """
+            padding: 6px;
+            background: #1a3d5c;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            color: #bbdefb;
+            font-size: 12px;
+        """
+
+    def _add_output_controls(self, layout: QVBoxLayout):
+        """Add CGRAM and output name controls to the layout.
+
+        Args:
+            layout: Layout to add controls to
+        """
         # CGRAM selector widget
         self.cgram_selector_widget = CGRAMSelectorWidget()
         self.cgram_selector_widget.browse_clicked.connect(self._browse_cgram)
@@ -288,14 +412,6 @@ class ROMExtractionPanel(QWidget):
         self.output_name_widget.text_changed.connect(self._check_extraction_ready)
         self.output_name_widget.text_changed.connect(self.output_name_changed.emit)
         layout.addWidget(self.output_name_widget)
-
-        # Add smaller vertical spacer at the bottom (reduced to not dominate manual offset widget)
-        layout.addItem(QSpacerItem(0, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred))
-        main_panel.setLayout(layout)
-
-        # Add main panel to layout
-        main_layout.addWidget(main_panel)
-        self.setLayout(main_layout)
 
     def _browse_rom(self):
         """Browse for ROM file"""
@@ -339,7 +455,7 @@ class ROMExtractionPanel(QWidget):
                 SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM, ""
             )
 
-            if last_rom and os.path.exists(last_rom):
+            if last_rom and Path(last_rom).exists():
                 logger.info(f"Loading last used ROM: {last_rom}")
                 self._load_rom_file(last_rom)
             elif last_rom:
@@ -361,7 +477,7 @@ class ROMExtractionPanel(QWidget):
 
             # Get ROM size for slider limits
             try:
-                with open(filename, "rb") as f:
+                with Path(filename).open("rb") as f:
                     f.seek(0, 2)  # Seek to end
                     self.rom_size = f.tell()
                     # Update dialog if it exists
@@ -369,7 +485,7 @@ class ROMExtractionPanel(QWidget):
                     if current_dialog is not None:
                         current_dialog.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
                     # Update navigator
-                    if self.sprite_navigator:
+                    if self.sprite_navigator is not None:
                         self.sprite_navigator.set_rom_data(self.rom_path, self.rom_size, self.extraction_manager)
                     logger.debug(f"ROM size: {self.rom_size} bytes (0x{self.rom_size:X})")
             except Exception as e:
@@ -379,7 +495,7 @@ class ROMExtractionPanel(QWidget):
             # Save to settings
             settings = get_settings_manager()
             settings.set_value(SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM, filename)
-            settings.set_last_used_directory(os.path.dirname(filename))
+            settings.set_last_used_directory(str(Path(filename).parent))
             logger.debug(f"Saved ROM to settings: {filename}")
 
             # Read ROM header for info display
@@ -410,10 +526,13 @@ class ROMExtractionPanel(QWidget):
             # Load sprite locations from ROM
             self._load_rom_sprites()
 
+            # Initialize similarity indexing worker for this ROM
+            self._init_similarity_indexing_worker()
+
             # Notify that files changed
             self.files_changed.emit()
 
-            logger.info(f"Successfully loaded ROM: {os.path.basename(filename)}")
+            logger.info(f"Successfully loaded ROM: {Path(filename).name}")
 
         except Exception:
             logger.exception("Error loading ROM file %s", filename)
@@ -489,7 +608,7 @@ class ROMExtractionPanel(QWidget):
 
         # Try to use ROM directory as default
         default_dir = (
-            os.path.dirname(self.rom_path)
+            str(Path(self.rom_path).parent)
             if self.rom_path
             else settings.get_default_directory()
         )
@@ -503,7 +622,7 @@ class ROMExtractionPanel(QWidget):
 
         if filename:
             self.cgram_selector_widget.set_cgram_path(filename)
-            settings.set_last_used_directory(os.path.dirname(filename))
+            settings.set_last_used_directory(str(Path(filename).parent))
 
     def _load_rom_sprites(self):
         """Load known sprite locations from ROM"""
@@ -567,6 +686,89 @@ class ROMExtractionPanel(QWidget):
             logger.exception("Failed to load sprite locations")
             self.sprite_selector_widget.add_sprite("Error loading ROM", None)
             self.sprite_selector_widget.set_enabled(False)
+
+    def _init_similarity_indexing_worker(self):
+        """Initialize similarity indexing worker for the current ROM"""
+        if not self.rom_path:
+            return
+
+        try:
+            # Clean up existing worker if any
+            if self.similarity_indexing_worker is not None:
+                WorkerManager.cleanup_worker(self.similarity_indexing_worker)
+                self.similarity_indexing_worker = None
+
+            # Create new similarity indexing worker
+            self.similarity_indexing_worker = SimilarityIndexingWorker(self.rom_path)
+
+            # Connect signals for progress updates
+            self.similarity_indexing_worker.progress.connect(self._on_similarity_progress)
+            self.similarity_indexing_worker.sprite_indexed.connect(self._on_sprite_indexed)
+            self.similarity_indexing_worker.index_saved.connect(self._on_index_saved)
+            self.similarity_indexing_worker.index_loaded.connect(self._on_index_loaded)
+            self.similarity_indexing_worker.operation_finished.connect(self._on_similarity_finished)
+            self.similarity_indexing_worker.error.connect(self._on_similarity_error)
+
+            # Show similarity status
+            self.similarity_status.setVisible(True)
+            indexed_count = self.similarity_indexing_worker.get_indexed_count()
+            if indexed_count > 0:
+                self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites loaded)")
+            else:
+                self.similarity_status.setText("Similarity indexing ready - sprites will be indexed as found")
+
+            logger.info(f"Initialized similarity indexing worker for ROM: {Path(self.rom_path).name}")
+
+        except Exception as e:
+            logger.exception(f"Failed to initialize similarity indexing worker: {e}")
+            self.similarity_status.setText(f"Similarity indexing error: {e}")
+            self.similarity_status.setStyleSheet("""
+                padding: 6px;
+                background: #3d1a1a;
+                border: 1px solid #f44336;
+                border-radius: 4px;
+                color: #ffcdd2;
+                font-size: 12px;
+            """)
+
+    def _on_similarity_progress(self, percent: int, message: str):
+        """Handle similarity indexing progress updates"""
+        self.similarity_status.setText(f"Indexing sprites: {percent}% - {message}")
+
+    def _on_sprite_indexed(self, offset: int):
+        """Handle individual sprite indexing completion"""
+        logger.debug(f"Sprite at 0x{offset:X} indexed for similarity search")
+
+    def _on_index_saved(self, index_path: str):
+        """Handle similarity index save completion"""
+        logger.info(f"Similarity index saved to: {index_path}")
+
+    def _on_index_loaded(self, sprite_count: int):
+        """Handle similarity index loading"""
+        logger.info(f"Loaded {sprite_count} sprites from similarity index")
+
+    def _on_similarity_finished(self, success: bool, message: str):
+        """Handle similarity indexing completion"""
+        if success:
+            indexed_count = self.similarity_indexing_worker.get_indexed_count()
+            self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites)")
+            logger.info(f"Similarity indexing complete: {message}")
+        else:
+            self.similarity_status.setText(f"Similarity indexing failed: {message}")
+            logger.error(f"Similarity indexing failed: {message}")
+
+    def _on_similarity_error(self, error_message: str, exception: Exception):
+        """Handle similarity indexing errors"""
+        self.similarity_status.setText(f"Similarity error: {error_message}")
+        self.similarity_status.setStyleSheet("""
+            padding: 6px;
+            background: #3d1a1a;
+            border: 1px solid #f44336;
+            border-radius: 4px;
+            color: #ffcdd2;
+            font-size: 12px;
+        """)
+        logger.error(f"Similarity indexing error: {error_message}", exc_info=exception)
 
     def _on_sprite_changed(self, index: int):
         """Handle sprite selection change"""
@@ -691,16 +893,95 @@ class ROMExtractionPanel(QWidget):
             return
 
         try:
-            # Create scanning dialog
-            dialog = QDialog(self)
-            dialog.setWindowTitle("Find Sprites")
-            dialog.setMinimumSize(600, 400)
+            dialog = self._create_scan_dialog()
+            self._setup_scan_worker(dialog)
+            dialog.exec()
+        except Exception as e:
+            logger.exception("Error in sprite scanning")
+            self.state_manager.finish_scanning(success=False, error=str(e))
+            UserErrorDialog.show_error(
+                self,
+                "Failed to scan for sprites",
+                f"Technical details: {e!s}"
+            )
 
-            layout = QVBoxLayout()
+    def _create_scan_dialog(self) -> ScanDialog:
+        """Create and configure the sprite scanning dialog.
 
-            # Cache status label
-            cache_status_label = QLabel("Checking cache...")
-            cache_status_label.setStyleSheet("""
+        Returns:
+            Configured ScanDialog instance
+        """
+        dialog = ScanDialog(self)
+        dialog.setWindowTitle("Find Sprites")
+        dialog.setMinimumSize(600, 400)
+
+        # Build dialog UI
+        layout = QVBoxLayout()
+
+        # Create UI components
+        cache_status_label = self._create_cache_status_label()
+        progress_bar = self._create_progress_bar()
+        results_text = self._create_results_text()
+        button_box = self._create_button_box()
+
+        # Add to layout
+        layout.addWidget(cache_status_label)
+        layout.addWidget(progress_bar)
+        layout.addWidget(results_text)
+        layout.addWidget(button_box)
+
+        dialog.setLayout(layout)
+
+        # Store references for later access
+        dialog.cache_status_label = cache_status_label
+        dialog.progress_bar = progress_bar
+        dialog.results_text = results_text
+        dialog.button_box = button_box
+        dialog.apply_btn = button_box.button(QDialogButtonBox.StandardButton.Apply)
+
+        return dialog
+
+    def _create_cache_status_label(self) -> QLabel:
+        """Create the cache status label."""
+        label = QLabel("Checking cache...")
+        label.setStyleSheet(self._get_cache_status_style("checking"))
+        return label
+
+    def _create_progress_bar(self) -> QProgressBar:
+        """Create the progress bar."""
+        progress_bar = QProgressBar()
+        progress_bar.setTextVisible(True)
+        return progress_bar
+
+    def _create_results_text(self) -> QTextEdit:
+        """Create the results text area."""
+        results_text = QTextEdit()
+        results_text.setReadOnly(True)
+        results_text.setPlainText("Starting sprite scan...\n\n")
+        return results_text
+
+    def _create_button_box(self) -> QDialogButtonBox:
+        """Create the button box with Close and Apply buttons."""
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Close | QDialogButtonBox.StandardButton.Apply
+        )
+        apply_btn = button_box.button(QDialogButtonBox.StandardButton.Apply)
+        if apply_btn:
+            apply_btn.setText("Use Selected Offset")
+            apply_btn.setEnabled(False)
+        return button_box
+
+    def _get_cache_status_style(self, status: str) -> str:
+        """Get the stylesheet for cache status label based on status.
+
+        Args:
+            status: Status type (checking, resuming, fresh, saved, error)
+
+        Returns:
+            CSS stylesheet string
+        """
+        styles = {
+            "checking": """
                 QLabel {
                     background-color: #e3f2fd;
                     border: 1px solid #2196f3;
@@ -709,309 +990,362 @@ class ROMExtractionPanel(QWidget):
                     font-weight: bold;
                     color: #1976d2;
                 }
-            """)
-            layout.addWidget(cache_status_label)
+            """,
+            "resuming": """
+                QLabel {
+                    background-color: #e8f5e9;
+                    border: 1px solid #4caf50;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                    color: #2e7d32;
+                }
+            """,
+            "fresh": """
+                QLabel {
+                    background-color: #fff3e0;
+                    border: 1px solid #ff9800;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                    color: #e65100;
+                }
+            """,
+            "saving": """
+                QLabel {
+                    background-color: #e1f5fe;
+                    border: 1px solid #039be5;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                    color: #01579b;
+                }
+            """,
+            "saved": """
+                QLabel {
+                    background-color: #c8e6c9;
+                    border: 1px solid #4caf50;
+                    border-radius: 4px;
+                    padding: 8px;
+                    font-weight: bold;
+                    color: #1b5e20;
+                }
+            """
+        }
+        return styles.get(status, styles["checking"])
 
-            # Progress bar
-            progress_bar = QProgressBar()
-            progress_bar.setTextVisible(True)
-            layout.addWidget(progress_bar)
+    def _setup_scan_worker(self, dialog: ScanDialog) -> None:
+        """Set up the scan worker and connect signals.
 
-            # Results text area
-            results_text = QTextEdit()
-            results_text.setReadOnly(True)
-            results_text.setPlainText("Starting sprite scan...\n\n")
-            layout.addWidget(results_text)
+        Args:
+            dialog: The scan dialog containing UI elements
+        """
+        # Clean up any existing scan worker
+        WorkerManager.cleanup_worker(self.scan_worker)
 
-            # Buttons
-            button_box = QDialogButtonBox(
-                QDialogButtonBox.StandardButton.Close | QDialogButtonBox.StandardButton.Apply
+        # Check cache and get user preference
+        use_cache = self._check_scan_cache(dialog)
+        if use_cache is None:
+            # User cancelled
+            dialog.reject()
+            return
+
+        # Create scan worker
+        self.scan_worker = SpriteScanWorker(self.rom_path, self.rom_extractor, use_cache=use_cache, parent=self)
+
+        # Create scan context to pass data between handlers
+        scan_context = ScanContext()
+
+        # Connect worker signals
+        self._connect_scan_signals(dialog, scan_context)
+
+        # Connect dialog signals
+        self._connect_dialog_signals(dialog, scan_context)
+
+        # Start scanning
+        self.scan_worker.start()
+
+    def _check_scan_cache(self, dialog: ScanDialog) -> bool | None:
+        """Check for cached scan results and get user preference.
+
+        Args:
+            dialog: The scan dialog
+
+        Returns:
+            True to use cache, False to start fresh, None if cancelled
+        """
+        from utils.rom_cache import get_rom_cache  # Delayed import
+        rom_cache = get_rom_cache()
+
+        # Define scan parameters (must match SpriteScanWorker)
+        scan_params = {
+            "start_offset": 0xC0000,
+            "end_offset": 0xF0000,
+            "alignment": 0x100
+        }
+
+        partial_cache = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+
+        # Store cache reference for later use
+        dialog.rom_cache = rom_cache
+
+        if partial_cache and not partial_cache.get("completed", False):
+            # Show resume dialog
+            user_choice = ResumeScanDialog.show_resume_dialog(partial_cache, self)
+
+            if user_choice == ResumeScanDialog.CANCEL:
+                return None
+            if user_choice == ResumeScanDialog.START_FRESH:
+                self._update_cache_status(dialog, "fresh", "Starting fresh scan (ignoring cache)")
+                return False
+            # RESUME
+            self._update_cache_status(dialog, "resuming", "📊 Resuming from cached progress...")
+            return True
+        self._update_cache_status(dialog, "fresh", "No cache found - starting fresh scan")
+        return True
+
+    def _update_cache_status(self, dialog: ScanDialog, status: str, text: str) -> None:
+        """Update the cache status label.
+
+        Args:
+            dialog: The scan dialog
+            status: Status type for styling
+            text: Status text to display
+        """
+        dialog.cache_status_label.setText(text)
+        dialog.cache_status_label.setStyleSheet(self._get_cache_status_style(status))
+
+    def _connect_scan_signals(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+        """Connect scan worker signals to handlers.
+
+        Args:
+            dialog: The scan dialog
+            context: Scan context for sharing data
+        """
+        self.scan_worker.progress_detailed.connect(
+            lambda c, t: self._on_scan_progress(dialog, c, t)
+        )
+        self.scan_worker.sprite_found.connect(
+            lambda info: self._on_sprite_found(dialog, context, info)
+        )
+        self.scan_worker.finished.connect(
+            lambda: self._on_scan_complete(dialog, context)
+        )
+        self.scan_worker.cache_status.connect(
+            lambda status: self._on_cache_status(dialog, status)
+        )
+        self.scan_worker.cache_progress.connect(
+            lambda progress: self._on_cache_progress(dialog, progress)
+        )
+
+        # Connect to similarity indexing if available
+        if self.similarity_indexing_worker is not None:
+            self.scan_worker.sprite_found.connect(self.similarity_indexing_worker.on_sprite_found)
+            self.scan_worker.finished.connect(self.similarity_indexing_worker.on_scan_finished)
+
+    def _on_scan_progress(self, dialog: ScanDialog, current: int, total: int) -> None:
+        """Handle scan progress update."""
+        dialog.progress_bar.setValue(int((current / total) * 100))
+        dialog.progress_bar.setFormat(f"Scanning... {current}/{total}")
+
+    def _on_sprite_found(self, dialog: ScanDialog, context: 'ScanContext', sprite_info: dict) -> None:
+        """Handle sprite found during scan."""
+        context.found_offsets.append(sprite_info)
+
+        # Update results text
+        text = self._format_sprite_info(sprite_info)
+        current_text = dialog.results_text.toPlainText()
+        dialog.results_text.setPlainText(current_text + text)
+
+        # Update navigator
+        if self.sprite_navigator is not None:
+            self.sprite_navigator.add_found_sprite(
+                sprite_info["offset"], sprite_info.get("quality", 1.0)
             )
-            apply_btn = button_box.button(QDialogButtonBox.StandardButton.Apply)
-            if apply_btn:
-                apply_btn.setText("Use Selected Offset")
-                apply_btn.setEnabled(False)
 
-            layout.addWidget(button_box)
-            dialog.setLayout(layout)
+        # Enable apply button after first find
+        if len(context.found_offsets) == 1 and dialog.apply_btn:
+            dialog.apply_btn.setEnabled(True)
 
-            # Clean up any existing scan worker
-            WorkerManager.cleanup_worker(self.scan_worker)
+    def _format_sprite_info(self, sprite_info: dict) -> str:
+        """Format sprite info for display."""
+        text = f"Found sprite at {sprite_info['offset_hex']}:\n"
+        text += f"  - Tiles: {sprite_info['tile_count']}\n"
+        text += f"  - Alignment: {sprite_info['alignment']}\n"
+        text += f"  - Quality: {sprite_info['quality']:.2f}\n"
+        text += f"  - Size: {sprite_info['compressed_size']} bytes compressed\n"
+        if "size_limit_used" in sprite_info:
+            text += f"  - Size limit: {sprite_info['size_limit_used']} bytes\n"
+        text += "\n"
+        return text
 
-            # Check for cached scan results
-            from utils.rom_cache import (
-                get_rom_cache,  # Delayed import to avoid circular dependency
-            )
-            rom_cache = get_rom_cache()
+    def _on_scan_complete(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+        """Handle scan completion."""
+        dialog.progress_bar.setValue(100)
+        dialog.progress_bar.setFormat("Scan complete")
 
-            # Define scan parameters (must match SpriteScanWorker)
-            scan_params = {
-                "start_offset": 0xC0000,
-                "end_offset": 0xF0000,
-                "alignment": 0x100
+        # Update results text
+        summary_text = self._format_scan_summary(context.found_offsets)
+        current_text = dialog.results_text.toPlainText()
+        dialog.results_text.setPlainText(current_text + summary_text)
+
+        if context.found_offsets:
+            # Save results to cache
+            self._save_scan_results_to_cache(dialog, context.found_offsets)
+
+            # Update navigator
+            if self.sprite_navigator is not None:
+                sprites_with_quality = [(s["offset"], s.get("quality", 1.0))
+                                      for s in context.found_offsets]
+                self.sprite_navigator.set_found_sprites(sprites_with_quality)
+        # No sprites found
+        elif dialog.apply_btn:
+            dialog.apply_btn.setEnabled(False)
+
+    def _format_scan_summary(self, found_offsets: list) -> str:
+        """Format scan completion summary."""
+        text = f"\nScan complete! Found {len(found_offsets)} valid sprite locations.\n"
+
+        if found_offsets:
+            text += "\nBest quality sprites:\n"
+            # Sort by quality
+            sorted_sprites = sorted(found_offsets, key=itemgetter("quality"), reverse=True)
+
+            for i, sprite in enumerate(sorted_sprites[:5]):
+                size_info = ""
+                if "size_limit_used" in sprite:
+                    size_info = f", {sprite['size_limit_used']/1024:.0f}KB limit"
+                text += (f"{i+1}. {sprite['offset_hex']} - Quality: {sprite['quality']:.2f}, "
+                        f"{sprite['tile_count']} tiles{size_info}\n")
+        else:
+            text += "\nNo valid sprites found in scanned range.\n"
+
+        return text
+
+    def _save_scan_results_to_cache(self, dialog: ScanDialog, found_offsets: list) -> None:
+        """Save scan results to cache."""
+        self._update_cache_status(dialog, "saving", "💾 Saving results to cache...")
+        QApplication.processEvents()
+
+        # Convert to cache format
+        sprite_locations = {}
+        for sprite in found_offsets:
+            name = f"scanned_0x{sprite['offset']:X}"
+            sprite_locations[name] = {
+                "offset": sprite["offset"],
+                "compressed_size": sprite.get("compressed_size"),
+                "quality": sprite.get("quality", 0.0)
             }
-            partial_cache = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
 
-            # Determine whether to use cache based on user choice
-            use_cache = True  # Default to using cache
-
-            if partial_cache and not partial_cache.get("completed", False):
-                # Show resume dialog to ask user
-                user_choice = ResumeScanDialog.show_resume_dialog(partial_cache, self)
-
-                if user_choice == ResumeScanDialog.CANCEL:
-                    # User cancelled - close scan dialog and return
-                    dialog.reject()
-                    return
-                if user_choice == ResumeScanDialog.START_FRESH:
-                    use_cache = False
-                    cache_status_label.setText("Starting fresh scan (ignoring cache)")
-                    cache_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #fff3e0;
-                            border: 1px solid #ff9800;
-                            border-radius: 4px;
-                            padding: 8px;
-                            font-weight: bold;
-                            color: #e65100;
-                        }
-                    """)
-                else:  # RESUME
-                    cache_status_label.setText("📊 Resuming from cached progress...")
-                    cache_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #e8f5e9;
-                            border: 1px solid #4caf50;
-                            border-radius: 4px;
-                            padding: 8px;
-                            font-weight: bold;
-                            color: #2e7d32;
-                        }
-                    """)
-            else:
-                cache_status_label.setText("No cache found - starting fresh scan")
-                cache_status_label.setStyleSheet("""
-                    QLabel {
-                        background-color: #fff3e0;
-                        border: 1px solid #ff9800;
-                        border-radius: 4px;
-                        padding: 8px;
-                        font-weight: bold;
-                        color: #e65100;
-                    }
-                """)
-
-            # Run scan in worker thread with cache preference
-            self.scan_worker = SpriteScanWorker(self.rom_path, self.rom_extractor, use_cache=use_cache)
-
-            found_offsets = []
-            selected_offset = None
-
-            # Make scan_params accessible to all handler functions
-
-            def on_progress(current, total):
-                progress_bar.setValue(int((current / total) * 100))
-                progress_bar.setFormat(f"Scanning... {current}/{total}")
-
-            def on_sprite_found(sprite_info):
-                nonlocal found_offsets
-                found_offsets.append(sprite_info)
-
-                text = results_text.toPlainText()
-                text += f"Found sprite at {sprite_info['offset_hex']}:\n"
-                text += f"  - Tiles: {sprite_info['tile_count']}\n"
-                text += f"  - Alignment: {sprite_info['alignment']}\n"
-                text += f"  - Quality: {sprite_info['quality']:.2f}\n"
-                text += f"  - Size: {sprite_info['compressed_size']} bytes compressed\n"
-                if "size_limit_used" in sprite_info:
-                    text += f"  - Size limit: {sprite_info['size_limit_used']} bytes\n"
-                text += "\n"
-                results_text.setPlainText(text)
-
-                # Update navigator with found sprite
-                if self.sprite_navigator:
-                    self.sprite_navigator.add_found_sprite(
-                        sprite_info["offset"], sprite_info.get("quality", 1.0)
-                    )
-
-                # Enable apply button after first find
-                if len(found_offsets) == 1 and apply_btn:
-                    apply_btn.setEnabled(True)
-
-            def on_scan_complete():
-                progress_bar.setValue(100)
-                progress_bar.setFormat("Scan complete")
-
-                text = results_text.toPlainText()
-                text += f"\nScan complete! Found {len(found_offsets)} valid sprite locations.\n"
-
-                if found_offsets:
-                    text += "\nBest quality sprites:\n"
-                    # Sort by quality before displaying
-                    sorted_sprites = sorted(found_offsets, key=lambda x: x["quality"], reverse=True)
-                    for i, sprite in enumerate(sorted_sprites[:5]):
-                        size_info = f", {sprite['size_limit_used']/1024:.0f}KB limit" if "size_limit_used" in sprite else ""
-                        text += f"{i+1}. {sprite['offset_hex']} - Quality: {sprite['quality']:.2f}, {sprite['tile_count']} tiles{size_info}\n"
-
-                    # Save to cache with visual feedback
-                    cache_status_label.setText("💾 Saving results to cache...")
-                    cache_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #e1f5fe;
-                            border: 1px solid #039be5;
-                            border-radius: 4px;
-                            padding: 8px;
-                            font-weight: bold;
-                            color: #01579b;
-                        }
-                    """)
-                    QApplication.processEvents()
-
-                    # Convert found sprites to cache format
-                    sprite_locations = {}
-                    for sprite in found_offsets:
-                        name = f"scanned_0x{sprite['offset']:X}"
-                        sprite_locations[name] = {
-                            "offset": sprite["offset"],
-                            "compressed_size": sprite.get("compressed_size"),
-                            "quality": sprite.get("quality", 0.0)
-                        }
-
-                    # Save to cache (rom_cache is from outer scope)
-                    if rom_cache and rom_cache.save_sprite_locations(self.rom_path, sprite_locations):
-                        cache_status_label.setText(f"✅ Saved {len(found_offsets)} sprites to cache")
-                        cache_status_label.setStyleSheet("""
-                            QLabel {
-                                background-color: #c8e6c9;
-                                border: 1px solid #4caf50;
-                                border-radius: 4px;
-                                padding: 8px;
-                                font-weight: bold;
-                                color: #1b5e20;
-                            }
-                        """)
-                        text += "\n✅ Results saved to cache for faster future scans.\n"
-
-                        # Update navigator with complete sprite list
-                        if self.sprite_navigator:
-                            sprites_with_quality = [(s["offset"], s.get("quality", 1.0))
-                                                  for s in found_offsets]
-                            self.sprite_navigator.set_found_sprites(sprites_with_quality)
-                    else:
-                        cache_status_label.setText("⚠️ Could not save to cache")
-                        text += "\n⚠️ Could not save results to cache.\n"
-                else:
-                    text += "\nNo valid sprites found in scanned range.\n"
-                    if apply_btn:
-                        apply_btn.setEnabled(False)
-
-                results_text.setPlainText(text)
-
-            def on_apply():
-                nonlocal selected_offset
-                if found_offsets:
-                    # Use the best quality offset
-                    selected_offset = found_offsets[0]["offset"]
-                    dialog.accept()
-
-            def on_cache_status(status):
-                cache_status_label.setText(f"💾 {status}")
-                # Update style based on status
-                if "Saving" in status:
-                    cache_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #e1f5fe;
-                            border: 1px solid #039be5;
-                            border-radius: 4px;
-                            padding: 8px;
-                            font-weight: bold;
-                            color: #01579b;
-                        }
-                    """)
-                elif "Resuming" in status:
-                    cache_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #e8f5e9;
-                            border: 1px solid #4caf50;
-                            border-radius: 4px;
-                            padding: 8px;
-                            font-weight: bold;
-                            color: #2e7d32;
-                        }
-                    """)
-
-            def on_cache_progress(progress):
-                # Update cache save progress indicator
-                if progress > 0:
-                    cache_status_label.setText(f"💾 Saving progress ({progress}%)...")
-
-            # Connect signals
-            self.scan_worker.progress.connect(on_progress)
-            self.scan_worker.sprite_found.connect(on_sprite_found)
-            self.scan_worker.finished.connect(on_scan_complete)
-            self.scan_worker.cache_status.connect(on_cache_status)
-            self.scan_worker.cache_progress.connect(on_cache_progress)
-
-            def on_dialog_finished(result):
-                # Clean up worker
-                WorkerManager.cleanup_worker(self.scan_worker)
-                self.scan_worker = None
-
-                # Transition back to idle state
-                self.state_manager.finish_scanning()
-
-            dialog.finished.connect(on_dialog_finished)
-            button_box.rejected.connect(dialog.reject)
-            if apply_btn:
-                _ = apply_btn.clicked.connect(on_apply)
-
-            # Start scanning
-            self.scan_worker.start()
-
-            # Show dialog
-            if dialog.exec() == QDialog.DialogCode.Accepted and selected_offset is not None:
-                # Add custom sprite to combo box
-                sprite_name = f"custom_0x{selected_offset:X}"
-                display_name = f"Custom Sprite (0x{selected_offset:06X})"
-
-                # Check if already exists
-                exists = False
-                for i in range(self.sprite_selector_widget.count()):
-                    if self.sprite_selector_widget.item_data(i) and self.sprite_selector_widget.item_data(i)[0] == sprite_name:
-                        exists = True
-                        self.sprite_selector_widget.set_current_index(i)
-                        break
-
-                if not exists:
-                    # Add separator before scanner results if we have known sprites
-                    if self.sprite_locations and self.sprite_selector_widget.count() > 2:
-                        # Find if we already have a scanner section
-                        has_scanner_section = False
-                        for i in range(self.sprite_selector_widget.count()):
-                            text = self.sprite_selector_widget.item_text(i)
-                            if "Scanner Results" in text:
-                                has_scanner_section = True
-                                break
-
-                        if not has_scanner_section:
-                            self.sprite_selector_widget.add_sprite("-- Scanner Results (now cached) --", None)
-
-                    # Add new sprite with cache indicator since it was just saved
-                    self.sprite_selector_widget.add_sprite(f"{display_name} 💾", (sprite_name, selected_offset))
-                    self.sprite_selector_widget.set_current_index(self.sprite_selector_widget.count() - 1)
-
-                logger.info(f"User selected custom sprite offset: 0x{selected_offset:X}")
-
-        except Exception as e:
-            logger.exception("Error in sprite scanning")
-            # Transition to error state
-            self.state_manager.finish_scanning(success=False, error=str(e))
-
-            UserErrorDialog.show_error(
-                self,
-                "Failed to scan for sprites",
-                f"Technical details: {e!s}"
+        # Save to cache
+        if dialog.rom_cache and dialog.rom_cache.save_sprite_locations(self.rom_path, sprite_locations):
+            self._update_cache_status(dialog, "saved",
+                                     f"✅ Saved {len(found_offsets)} sprites to cache")
+            # Update results text
+            current_text = dialog.results_text.toPlainText()
+            dialog.results_text.setPlainText(
+                current_text + "\n✅ Results saved to cache for faster future scans.\n"
             )
+        else:
+            dialog.cache_status_label.setText("⚠️ Could not save to cache")
+            current_text = dialog.results_text.toPlainText()
+            dialog.results_text.setPlainText(
+                current_text + "\n⚠️ Could not save results to cache.\n"
+            )
+
+    def _on_cache_status(self, dialog: ScanDialog, status: str) -> None:
+        """Handle cache status update."""
+        dialog.cache_status_label.setText(f"💾 {status}")
+
+        # Update style based on status
+        if "Saving" in status:
+            style_type = "saving"
+        elif "Resuming" in status:
+            style_type = "resuming"
+        else:
+            style_type = "checking"
+
+        dialog.cache_status_label.setStyleSheet(self._get_cache_status_style(style_type))
+
+    def _on_cache_progress(self, dialog: ScanDialog, progress: int) -> None:
+        """Handle cache progress update."""
+        if progress > 0:
+            dialog.cache_status_label.setText(f"💾 Saving progress ({progress}%)...")
+
+    def _connect_dialog_signals(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+        """Connect dialog button signals.
+
+        Args:
+            dialog: The scan dialog
+            context: Scan context for sharing data
+        """
+        # Connect dialog finished signal
+        dialog.finished.connect(lambda result: self._on_dialog_finished(dialog, result, context))
+
+        # Connect button box signals
+        dialog.button_box.rejected.connect(dialog.reject)
+
+        if dialog.apply_btn:
+            dialog.apply_btn.clicked.connect(lambda: self._on_apply_clicked(dialog, context))
+
+    def _on_apply_clicked(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+        """Handle Apply button click."""
+        if context.found_offsets:
+            # Use the best quality offset
+            context.selected_offset = context.found_offsets[0]["offset"]
+            dialog.accept()
+
+    def _on_dialog_finished(self, dialog: ScanDialog, result: int, context: 'ScanContext') -> None:
+        """Handle dialog close."""
+        # Clean up worker
+        WorkerManager.cleanup_worker(self.scan_worker)
+        self.scan_worker = None
+
+        # Transition back to idle state
+        self.state_manager.finish_scanning()
+
+        # Handle accepted dialog with selected offset
+        if result == QDialog.DialogCode.Accepted and context.selected_offset is not None:
+            self._add_selected_sprite(context.selected_offset)
+
+    def _add_selected_sprite(self, offset: int) -> None:
+        """Add the selected sprite to the combo box.
+
+        Args:
+            offset: The selected sprite offset
+        """
+        sprite_name = f"custom_0x{offset:X}"
+        display_name = f"Custom Sprite (0x{offset:06X})"
+
+        # Check if already exists
+        for i in range(self.sprite_selector_widget.count()):
+            data = self.sprite_selector_widget.item_data(i)
+            if data and data[0] == sprite_name:
+                self.sprite_selector_widget.set_current_index(i)
+                return
+
+        # Add separator if needed
+        self._add_scanner_section_separator()
+
+        # Add new sprite with cache indicator
+        self.sprite_selector_widget.add_sprite(f"{display_name} 💾", (sprite_name, offset))
+        self.sprite_selector_widget.set_current_index(self.sprite_selector_widget.count() - 1)
+
+        logger.info(f"User selected custom sprite offset: 0x{offset:X}")
+
+    def _add_scanner_section_separator(self) -> None:
+        """Add a separator for scanner results if needed."""
+        if not self.sprite_locations or self.sprite_selector_widget.count() <= 2:
+            return
+
+        # Check if scanner section already exists
+        for i in range(self.sprite_selector_widget.count()):
+            text = self.sprite_selector_widget.item_text(i)
+            if "Scanner Results" in text:
+                return
+
+        # Add separator
+        self.sprite_selector_widget.add_sprite("-- Scanner Results (now cached) --", None)
 
     def _on_mode_changed(self, index: int):
         """Handle extraction mode change"""
@@ -1085,7 +1419,7 @@ class ROMExtractionPanel(QWidget):
         else:
             self._open_manual_offset_dialog()
 
-    def _on_sprite_found(self, offset: int, quality: float):
+    def _on_search_sprite_found(self, offset: int, quality: float):
         """Handle sprite found during search"""
         self._manual_offset = offset
         self.manual_offset_status.setText(
@@ -1097,7 +1431,7 @@ class ROMExtractionPanel(QWidget):
             current_dialog.set_offset(offset)
             current_dialog.add_found_sprite(offset, quality)
         # Update navigator
-        if self.sprite_navigator:
+        if self.sprite_navigator is not None:
             self.sprite_navigator.add_found_sprite(offset, quality)
 
     def _on_search_complete(self, found: bool):
@@ -1137,15 +1471,46 @@ class ROMExtractionPanel(QWidget):
 
     def _cleanup_workers(self):
         """Clean up any running worker threads"""
-        # Use WorkerManager for consistent cleanup
-        WorkerManager.cleanup_worker(self.search_worker)
-        self.search_worker = None
+        logger.debug("Cleaning up ROM extraction panel workers")
 
-        WorkerManager.cleanup_worker(self.scan_worker)
-        self.scan_worker = None
+        # List of all worker attributes to clean up
+        worker_attrs = [
+            'search_worker',
+            'scan_worker',
+            'similarity_indexing_worker'
+        ]
+
+        # Clean up each worker
+        for attr_name in worker_attrs:
+            worker = getattr(self, attr_name, None)
+            if worker is not None:
+                logger.debug(f"Cleaning up {attr_name}")
+                try:
+                    # First try to cancel if it's a BaseWorker
+                    if hasattr(worker, 'cancel'):
+                        worker.cancel()
+
+                    # Use WorkerManager for thorough cleanup
+                    WorkerManager.cleanup_worker(worker)
+                except Exception as e:
+                    logger.warning(f"Error cleaning up {attr_name}: {e}")
+                finally:
+                    # Always clear the reference
+                    setattr(self, attr_name, None)
+
+        # Also check sprite navigator for any preview workers
+        if hasattr(self, 'sprite_navigator') and self.sprite_navigator is not None:
+            if hasattr(self.sprite_navigator, 'preview_workers'):
+                logger.debug("Cleaning up sprite navigator preview workers")
+                for worker in self.sprite_navigator.preview_workers:
+                    try:
+                        WorkerManager.cleanup_worker(worker)
+                    except Exception as e:
+                        logger.warning(f"Error cleaning up preview worker: {e}")
+                self.sprite_navigator.preview_workers.clear()
 
 
-    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle panel close event"""
         # Clean up workers before closing
         self._cleanup_workers()
@@ -1155,6 +1520,23 @@ class ROMExtractionPanel(QWidget):
         if current_dialog is not None:
             current_dialog.close()
 
-        if a0:
+        # Call parent implementation
+        if a0 is not None:
             super().closeEvent(a0)
 
+    def __del__(self):
+        """Destructor to ensure cleanup even if closeEvent isn't called"""
+        try:
+            # Ensure workers are cleaned up
+            self._cleanup_workers()
+        except Exception as e:
+            # Don't raise in destructor, just log
+            logger.debug(f"Error in ROMExtractionPanel destructor: {e}")
+
+
+class ScanContext:
+    """Context object for sharing data between scan event handlers."""
+
+    def __init__(self):
+        self.found_offsets: list[dict] = []
+        self.selected_offset: int | None = None

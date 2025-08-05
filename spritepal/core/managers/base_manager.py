@@ -28,11 +28,11 @@ class BaseManager(QObject):
     """Abstract base class for all manager classes"""
 
     # Common signals that all managers can emit
-    error_occurred: pyqtSignal = pyqtSignal(str)  # Error message
-    warning_occurred: pyqtSignal = pyqtSignal(str)  # Warning message
-    operation_started: pyqtSignal = pyqtSignal(str)  # Operation name
-    operation_finished: pyqtSignal = pyqtSignal(str)  # Operation name
-    progress_updated: pyqtSignal = pyqtSignal(str, int, int)  # Operation name, current, total
+    error_occurred = pyqtSignal(str)  # Error message
+    warning_occurred = pyqtSignal(str)  # Warning message
+    operation_started = pyqtSignal(str)  # Operation name
+    operation_finished = pyqtSignal(str)  # Operation name
+    progress_updated = pyqtSignal(str, int, int)  # Operation name, current, total
 
     def __init__(self, name: str | None = None, parent: QObject | None = None) -> None:
         """

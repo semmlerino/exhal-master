@@ -8,7 +8,7 @@ bugs and ensuring proper Qt lifecycle management.
 
 import time
 from contextlib import contextmanager, suppress
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtTest import QSignalSpy
@@ -29,7 +29,7 @@ class QtTestingFramework:
     - Worker thread testing with real QThread instances
     """
 
-    def __init__(self, qt_app: Optional[Any] = None):
+    def __init__(self, qt_app: Any | None = None):
         """
         Initialize the Qt testing framework.
 
@@ -100,7 +100,7 @@ class QtTestingFramework:
             "child_id": id(child),
         }
 
-    def validate_signal_behavior(self, signal: pyqtSignal, expected_connections: Optional[int] = None) -> dict[str, Any]:
+    def validate_signal_behavior(self, signal: pyqtSignal, expected_connections: int | None = None) -> dict[str, Any]:
         """
         Validate Qt signal behavior.
 
@@ -191,7 +191,7 @@ class WidgetTestContext:
         """Initialize widget test context."""
         self.framework = framework
         self.widget_class = widget_class
-        self.widget: Optional[QWidget] = None
+        self.widget: QWidget | None = None
         self.args = args
         self.kwargs = kwargs
 
@@ -245,7 +245,7 @@ class DialogTestContext:
         """Initialize dialog test context."""
         self.framework = framework
         self.dialog_class = dialog_class
-        self.dialog: Optional[QDialog] = None
+        self.dialog: QDialog | None = None
         self.args = args
         self.kwargs = kwargs
 
@@ -297,7 +297,7 @@ class WorkerTestContext:
         """Initialize worker test context."""
         self.framework = framework
         self.worker_class = worker_class
-        self.worker: Optional[QObject] = None
+        self.worker: QObject | None = None
         self.args = args
         self.kwargs = kwargs
         self._signal_spies: list[QSignalSpy] = []
@@ -401,7 +401,7 @@ class TimerTestContext:
         self.framework = framework
         self.interval_ms = interval_ms
         self.callback = callback
-        self.timer: Optional[QTimer] = None
+        self.timer: QTimer | None = None
         self.callback_count = 0
 
     def __enter__(self) -> QTimer:

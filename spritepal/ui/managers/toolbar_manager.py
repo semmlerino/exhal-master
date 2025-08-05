@@ -7,6 +7,7 @@ from typing import Protocol
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QGridLayout, QPushButton, QWidget
+
 from ui.styles import get_button_style
 
 

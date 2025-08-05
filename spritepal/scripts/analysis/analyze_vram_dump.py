@@ -6,10 +6,11 @@ Analyze VRAM dumps to identify sprite patterns and search for them in ROM
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path for imports
-parent_dir = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, parent_dir)
+parent_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(parent_dir))
 
 # Import after path setup
 from core.hal_compression import HALCompressor
@@ -28,7 +29,8 @@ class VRAMAnalyzer:
     def load_vram_dump(self, vram_path: str) -> bytes:
         """Load VRAM dump file"""
         logger.info(f"Loading VRAM dump: {vram_path}")
-        with open(vram_path, "rb") as f:
+        vram_path_obj = Path(vram_path)
+        with vram_path_obj.open("rb") as f:
             vram_data = f.read()
         logger.info(f"Loaded {len(vram_data)} bytes of VRAM data")
         return vram_data
@@ -79,7 +81,8 @@ class VRAMAnalyzer:
         """Search ROM for a specific tile pattern"""
         logger.info(f"\nSearching ROM for pattern ({len(pattern)} bytes)...")
 
-        with open(rom_path, "rb") as f:
+        rom_path_obj = Path(rom_path)
+        with rom_path_obj.open("rb") as f:
             rom_data = f.read()
 
         found_offsets = []
@@ -100,7 +103,8 @@ class VRAMAnalyzer:
         """Search for pattern in decompressed ROM data"""
         logger.info(f"\nSearching for pattern in compressed ROM data (0x{scan_range[0]:X}-0x{scan_range[1]:X})...")
 
-        with open(rom_path, "rb") as f:
+        rom_path_obj = Path(rom_path)
+        with rom_path_obj.open("rb") as f:
             rom_data = f.read()
 
         found_locations = []
@@ -176,11 +180,11 @@ def main():
     vram_path = sys.argv[1]
     rom_path = sys.argv[2] if len(sys.argv) > 2 else None
 
-    if not os.path.exists(vram_path):
+    if not Path(vram_path).exists():
         print(f"VRAM dump not found: {vram_path}")
         return
 
-    if rom_path and not os.path.exists(rom_path):
+    if rom_path and not Path(rom_path).exists():
         print(f"ROM not found: {rom_path}")
         return
 

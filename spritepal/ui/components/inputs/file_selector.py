@@ -5,7 +5,7 @@ Provides a standardized file selection widget with path input and browse button,
 exactly replicating the file selection patterns from InjectionDialog.
 """
 
-import os
+from pathlib import Path
 from typing import Callable
 
 from PyQt6.QtCore import pyqtSignal
@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QWidget,
 )
+
 from utils.settings_manager import get_settings_manager
 
 
@@ -64,25 +65,25 @@ class FileSelector(QWidget):
         self._settings_namespace = settings_namespace
 
         # Create UI components
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         # label
         if label_text:
             self.label = QLabel(label_text)
-            self.layout.addWidget(self.label)
+            self._layout.addWidget(self.label)
 
         # Path input field
         self.path_edit = QLineEdit(initial_path)
         self.path_edit.setPlaceholderText(placeholder)
         self.path_edit.setReadOnly(read_only)
         _ = self.path_edit.textChanged.connect(self._on_path_changed)
-        self.layout.addWidget(self.path_edit)
+        self._layout.addWidget(self.path_edit)
 
         # Browse button
         self.browse_button = QPushButton(browse_text)
         _ = self.browse_button.clicked.connect(self._browse_file)
-        self.layout.addWidget(self.browse_button)
+        self._layout.addWidget(self.browse_button)
 
     def _on_path_changed(self, text: str):
         """Handle path text changes"""
@@ -98,9 +99,10 @@ class FileSelector(QWidget):
 
         # Determine initial directory
         current_path = self.path_edit.text()
-        if current_path and os.path.exists(current_path):
-            if os.path.isfile(current_path):
-                default_dir = os.path.dirname(current_path)
+        current_path_obj = Path(current_path) if current_path else None
+        if current_path_obj and current_path_obj.exists():
+            if current_path_obj.is_file():
+                default_dir = str(current_path_obj.parent)
                 initial_path = current_path
             else:
                 default_dir = current_path
@@ -133,7 +135,7 @@ class FileSelector(QWidget):
             self.path_edit.setText(filename)
 
             # Update settings manager with last used directory
-            settings.set_last_used_directory(os.path.dirname(filename))
+            settings.set_last_used_directory(str(Path(filename).parent))
 
             # Save to specific settings key if provided
             if self._settings_key and self._settings_namespace:
@@ -177,12 +179,13 @@ class FileSelector(QWidget):
         if not path:
             return True  # Empty path is considered valid (optional field)
 
+        path_obj = Path(path)
         if self._mode == "open":
-            return os.path.exists(path) and os.path.isfile(path)
+            return path_obj.exists() and path_obj.is_file()
         # save mode
         # For save mode, check if directory exists
-        dir_path = os.path.dirname(path)
-        return os.path.exists(dir_path) if dir_path else True
+        dir_path = path_obj.parent
+        return dir_path.exists() if dir_path != Path() else True
 
     def set_placeholder(self, placeholder: str):
         """Set the placeholder text"""

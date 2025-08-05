@@ -18,7 +18,7 @@ class ErrorHandlerAdapter:
     """
     Adapter that wraps ui.common.error_handler.ErrorHandler to implement
     the IErrorDisplay protocol for the unified error handler.
-    
+
     This breaks the circular dependency by allowing the UI layer to
     inject its error handler into the utils layer without direct imports.
     """

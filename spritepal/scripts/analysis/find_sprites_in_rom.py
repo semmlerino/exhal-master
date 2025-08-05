@@ -7,10 +7,11 @@ Search for VRAM sprite patterns in ROM
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 # Add parent directory to path for imports
-parent_dir = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, parent_dir)
+parent_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(parent_dir))
 
 # Import after path setup
 from core.hal_compression import HALCompressor
@@ -19,7 +20,8 @@ from core.hal_compression import HALCompressor
 def extract_kirby_patterns(vram_path: str):
     """Extract known Kirby sprite patterns from VRAM"""
 
-    with open(vram_path, "rb") as f:
+    vram_path_obj = Path(vram_path)
+    with vram_path_obj.open("rb") as f:
         vram_data = f.read()
 
     # Common Kirby sprite locations in VRAM
@@ -49,7 +51,8 @@ def search_rom_compressed(rom_path: str, patterns: list[bytes]):
 
     print(f"\nSearching ROM: {rom_path}")
 
-    with open(rom_path, "rb") as f:
+    rom_path_obj = Path(rom_path)
+    with rom_path_obj.open("rb") as f:
         rom_data = f.read()
 
     compressor = HALCompressor()
@@ -77,7 +80,7 @@ def search_rom_compressed(rom_path: str, patterns: list[bytes]):
 
                 # Try to decompress
                 decompressed = compressor.decompress_from_rom(tmp_path, offset)
-                os.unlink(tmp_path)
+                Path(tmp_path).unlink()
 
                 if len(decompressed) > 256:
                     successful_decompressions += 1
@@ -117,11 +120,11 @@ def main():
     vram_path = sys.argv[1]
     rom_path = sys.argv[2]
 
-    if not os.path.exists(vram_path):
+    if not Path(vram_path).exists():
         print(f"VRAM dump not found: {vram_path}")
         return
 
-    if not os.path.exists(rom_path):
+    if not Path(rom_path).exists():
         print(f"ROM not found: {rom_path}")
         return
 

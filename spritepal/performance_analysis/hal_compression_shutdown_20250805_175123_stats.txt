@@ -1,0 +1,4 @@
+Profile: hal_compression_shutdown - HAL process pool shutdown after refactoring
+============================================================
+
+============================================================

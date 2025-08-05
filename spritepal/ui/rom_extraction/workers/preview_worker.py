@@ -1,29 +1,40 @@
 """Worker thread for loading sprite previews"""
 
-import os
+from __future__ import annotations
 
-from PyQt6.QtCore import QThread, pyqtSignal
+import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PyQt6.QtCore import QObject
+
+from PyQt6.QtCore import pyqtSignal
+
+from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-class SpritePreviewWorker(QThread):
+class SpritePreviewWorker(BaseWorker):
     """Worker thread for loading sprite previews"""
 
+    # Custom signals (BaseWorker provides progress, error, warning, operation_finished)
     preview_ready = pyqtSignal(
         bytes, int, int, str
     )  # tile_data, width, height, sprite_name
     preview_error = pyqtSignal(str)  # error message
 
-    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None):
-        super().__init__()
+    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None, parent: "QObject | None" = None):
+        super().__init__(parent)
         self.rom_path = rom_path
         self.offset = offset
         self.sprite_name = sprite_name
         self.extractor = extractor
         self.sprite_config = sprite_config
+        self._operation_name = f"SpritePreviewWorker-{sprite_name}"  # For logging
 
+    @handle_worker_errors("sprite preview loading", handle_interruption=True)
     def run(self):
         """Load sprite preview in background"""
 
@@ -91,6 +102,10 @@ class SpritePreviewWorker(QThread):
             _validate_rom_path(self.rom_path)
             _validate_offset(self.offset)
 
+            # Initialize variables to prevent unbound errors
+            rom_data: bytes = b""
+            tile_data: bytes = b""
+
             # Read ROM data with file size validation
             try:
                 with open(self.rom_path, "rb") as f:
@@ -107,6 +122,9 @@ class SpritePreviewWorker(QThread):
 
             # Find and decompress sprite with better error handling
             try:
+                # Variables already initialized above
+                compressed_size = 0
+                
                 # Check if we have offset variants and expected size from sprite config
                 offset_variants = []
                 expected_size = None
@@ -203,15 +221,12 @@ class SpritePreviewWorker(QThread):
             height = min(tile_rows * 8, 128)
 
             self.preview_ready.emit(tile_data, width, height, self.sprite_name)
+            self.operation_finished.emit(True, f"Preview loaded for {self.sprite_name}")
 
-        except FileNotFoundError as e:
-            self.preview_error.emit(f"ROM file not found: {e}")
-        except PermissionError as e:
-            self.preview_error.emit(f"Cannot access ROM file: {e}")
-        except ValueError as e:
-            self.preview_error.emit(f"Invalid sprite data: {e}")
-        except OSError as e:
-            self.preview_error.emit(f"File system error: {e}")
         except Exception as e:
-            logger.exception("Unexpected error in sprite preview worker")
-            self.preview_error.emit(f"Unexpected error loading sprite preview: {e}")
+            error_msg = f"Failed to load preview for {self.sprite_name}: {e}"
+            logger.error(error_msg, exc_info=True)
+            self.preview_error.emit(error_msg)
+            self.operation_finished.emit(False, error_msg)
+
+    # emit_error is inherited from BaseWorker

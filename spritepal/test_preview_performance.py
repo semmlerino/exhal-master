@@ -569,7 +569,7 @@ def main():
 
         # Save report
         report_path = project_root / "PERFORMANCE_ANALYSIS_REPORT.md"
-        with open(report_path, "w") as f:
+        with report_path.open("w") as f:
             f.write(report)
 
         # Also run standalone debounce analysis

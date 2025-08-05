@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
+
 from utils.logging_config import get_logger
 
 if TYPE_CHECKING:

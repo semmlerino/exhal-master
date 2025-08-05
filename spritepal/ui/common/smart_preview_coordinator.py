@@ -21,6 +21,8 @@ Key features:
 - Backward compatibility with optional ROM cache integration
 """
 
+from __future__ import annotations
+
 import time
 import weakref
 from enum import Enum, auto
@@ -31,6 +33,7 @@ if TYPE_CHECKING:
 
 from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QSlider
+
 from ui.common.preview_cache import PreviewCache
 from ui.common.preview_worker_pool import PreviewWorkerPool
 from ui.common.timing_constants import REFRESH_RATE_60FPS
@@ -50,7 +53,7 @@ class PreviewRequest:
     """Represents a preview request with priority and cancellation support."""
 
     def __init__(self, request_id: int, offset: int, rom_path: str,
-                 priority: int = 0, callback: Optional[Callable] = None):
+                 priority: int = 0, callback: Callable | None = None):
         self.request_id = request_id
         self.offset = offset
         self.rom_path = rom_path
@@ -94,7 +97,7 @@ class SmartPreviewCoordinator(QObject):
     preview_cached = pyqtSignal(bytes, int, int, str)  # Cached preview displayed
     preview_error = pyqtSignal(str)  # Error message
 
-    def __init__(self, parent: Optional[QObject] = None, rom_cache: Optional["ROMCache"] = None):
+    def __init__(self, parent: QObject | None = None, rom_cache: "ROMCache" | None = None):
         super().__init__(parent)
 
         # State management
@@ -104,7 +107,7 @@ class SmartPreviewCoordinator(QObject):
         self._mutex = QMutex()
 
         # Slider reference (weak to prevent circular references)
-        self._slider_ref: Optional[weakref.ReferenceType] = None
+        self._slider_ref: weakref.ReferenceType | None = None
 
         # Timing configuration optimized for 60 FPS real-time updates
         self._drag_debounce_ms = REFRESH_RATE_60FPS  # 16ms for 60 FPS drag updates
@@ -125,7 +128,7 @@ class SmartPreviewCoordinator(QObject):
         self._ui_timer.timeout.connect(self._handle_ui_update)
 
         # Worker pool and dual-tier caching
-        self._worker_pool = PreviewWorkerPool(max_workers=2)
+        self._worker_pool = PreviewWorkerPool(max_workers=4)
         self._worker_pool.preview_ready.connect(self._on_worker_preview_ready)
         self._worker_pool.preview_error.connect(self._on_worker_preview_error)
 
@@ -146,8 +149,8 @@ class SmartPreviewCoordinator(QObject):
         }
 
         # Callbacks for external integration
-        self._ui_update_callback: Optional[Callable[[int], None]] = None
-        self._rom_data_provider: Optional[Callable[[], tuple[str, Any, Any]]] = None
+        self._ui_update_callback: Callable[[int | None], None] | None = None
+        self._rom_data_provider: Callable[[], tuple[str, Any, Any] | None] | None = None
 
         cache_info = "with ROM cache" if rom_cache else "memory only"
         logger.debug(f"SmartPreviewCoordinator initialized ({cache_info})")
@@ -369,7 +372,7 @@ class SmartPreviewCoordinator(QObject):
         """
         return self._try_show_cached_preview_dual_tier()
 
-    def _check_rom_cache(self, rom_path: str, offset: int) -> Optional[tuple[bytes, int, int, str]]:
+    def _check_rom_cache(self, rom_path: str, offset: int) -> tuple[bytes, int, int, str | None]:
         """
         Check ROM cache for preview data.
 

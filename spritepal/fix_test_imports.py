@@ -99,7 +99,7 @@ def fix_test_file(file_path: Path) -> bool:
 
         # Extract and move imports
         mover = ImportMover()
-        new_tree = mover.visit(tree)
+        mover.visit(tree)
 
         if not mover.imports_to_add:
             return False  # No changes needed
@@ -125,7 +125,7 @@ def fix_test_file(file_path: Path) -> bool:
             new_imports.append(ast.unparse(imp) + "\n")
 
         # Add blank line before imports if needed
-        if insert_line > 0 and not lines[insert_line - 1].strip() == "":
+        if insert_line > 0 and lines[insert_line - 1].strip() != "":
             new_imports.insert(0, "\n")
 
         # Insert imports

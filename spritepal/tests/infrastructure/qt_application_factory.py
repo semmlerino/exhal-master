@@ -9,7 +9,7 @@ import atexit
 import os
 import sys
 from contextlib import contextmanager
-from typing import Any, Optional
+from typing import Any
 
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication
@@ -26,7 +26,7 @@ class TestApplicationFactory:
     - Provides cleanup mechanisms to prevent Qt lifecycle issues
     """
 
-    _application_instance: Optional[QApplication] = None
+    _application_instance: QApplication | None = None
     _cleanup_registered: bool = False
 
     @classmethod
@@ -148,7 +148,7 @@ class TestQtContext:
         """
         self.force_offscreen = force_offscreen
         self.process_events_on_exit = process_events_on_exit
-        self.application: Optional[QApplication] = None
+        self.application: QApplication | None = None
 
     def __enter__(self) -> "TestQtContext":
         """Enter the Qt test context."""

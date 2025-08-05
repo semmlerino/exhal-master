@@ -13,9 +13,9 @@ import queue
 import threading
 import time
 import weakref
-from typing import Optional
 
 from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
+
 from ui.common.timing_constants import WORKER_TIMEOUT_SHORT
 from ui.common.worker_manager import WorkerManager
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
@@ -177,7 +177,7 @@ class PreviewWorkerPool(QObject):
     preview_ready = pyqtSignal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
     preview_error = pyqtSignal(int, str)  # request_id, error_msg
 
-    def __init__(self, max_workers: int = 2, idle_timeout: int = 30000):
+    def __init__(self, max_workers: int = 4, idle_timeout: int = 30000):
         super().__init__()
 
         self._max_workers = max_workers
@@ -243,7 +243,7 @@ class PreviewWorkerPool(QObject):
 
         logger.debug(f"Submitted request {request.request_id} to worker pool")
 
-    def _get_available_worker(self) -> Optional[PooledPreviewWorker]:
+    def _get_available_worker(self) -> PooledPreviewWorker | None:
         """Get an available worker, creating one if needed."""
         # Try to get existing worker
         try:
@@ -281,6 +281,7 @@ class PreviewWorkerPool(QObject):
                     logger.debug("Worker returned to pool")
                 except queue.Full:
                     # Pool full, clean up worker
+                    logger.debug("Available worker pool full, cleaning up worker")
                     self._cleanup_worker(worker)
             else:
                 self._cleanup_worker(worker)
@@ -338,8 +339,9 @@ class PreviewWorkerPool(QObject):
             # Cancel any current operation
             worker.cancel_current_request()
 
-            # Use WorkerManager for safe cleanup
-            WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT)
+            # Use WorkerManager for safe cleanup with longer timeout for preview workers
+            # Preview workers may be doing file I/O and decompression, so need more time
+            WorkerManager.cleanup_worker(worker, timeout=2000)  # 2 seconds for preview workers
 
         except Exception as e:
             logger.warning(f"Error cleaning up worker: {e}")
@@ -370,9 +372,27 @@ class PreviewWorkerPool(QObject):
             except queue.Empty:
                 pass
 
-            # Clean up all workers
+            # Clean up all workers with proper termination
             for worker in workers_to_cleanup:
-                self._cleanup_worker(worker)
+                try:
+                    # First cancel the request
+                    worker.cancel_current_request()
+                    
+                    # Request interruption
+                    worker.requestInterruption()
+                    
+                    # Give worker a chance to finish gracefully
+                    if worker.isRunning():
+                        if not worker.wait(1000):  # Wait up to 1 second
+                            logger.warning(f"Worker still running after 1s, forcing quit")
+                            worker.quit()
+                            if not worker.wait(500):  # Additional 500ms after quit
+                                logger.error(f"Worker failed to stop after quit, may cause QThread warning")
+                    
+                    # Schedule for deletion
+                    worker.deleteLater()
+                except Exception as e:
+                    logger.warning(f"Error during worker cleanup: {e}")
 
             self._active_workers.clear()
             self._worker_count = 0

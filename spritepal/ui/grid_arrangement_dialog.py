@@ -438,7 +438,7 @@ class GridGraphicsView(QGraphicsView):
     def _update_hover(self, tile_pos: TilePosition):
         """Update hover display"""
         scene = self.scene()
-        if self.hover_rect:
+        if self.hover_rect is not None:
             if self.hover_rect.scene() and scene:
                 scene.removeItem(self.hover_rect)
             self.hover_rect = None
@@ -523,12 +523,72 @@ class GridArrangementDialog(SplitterDialog):
         # Create horizontal splitter for left and right panels
         self.main_splitter = self.add_horizontal_splitter(handle_width=8)
 
-        # Left panel - Grid view and controls
+        # Create left and right panels
+        left_widget = self._create_left_panel()
+        right_widget = self._create_right_panel()
+
+        # Add panels to main horizontal splitter
+        self.main_splitter.addWidget(left_widget)
+        self.main_splitter.setStretchFactor(0, 2)    # 67% for left panel
+        self.main_splitter.addWidget(right_widget)
+        self.main_splitter.setStretchFactor(1, 1)   # 33% for right panel
+
+        # Add custom buttons using SplitterDialog's button system
+        self.export_btn = self.add_button("Export Arrangement", callback=self._export_arrangement)
+        self.export_btn.setEnabled(False)
+
+    def _create_left_panel(self) -> QWidget:
+        """Create the left panel containing grid view and controls.
+
+        Returns:
+            QWidget: The configured left panel widget
+        """
         left_widget = QWidget(self)
         left_layout = QVBoxLayout(left_widget)
 
-        # Selection mode controls
-        mode_group = QGroupBox("Selection Mode", left_widget)
+        # Add selection mode controls
+        mode_group = self._create_selection_mode_group(left_widget)
+        left_layout.addWidget(mode_group)
+
+        # Add grid view
+        grid_group = self._create_grid_view_group(left_widget)
+        left_layout.addWidget(grid_group, 1)
+
+        # Add action buttons
+        actions_group = self._create_actions_group(left_widget)
+        left_layout.addWidget(actions_group)
+
+        return left_widget
+
+    def _create_right_panel(self) -> QWidget:
+        """Create the right panel containing arrangement list and preview.
+
+        Returns:
+            QWidget: The configured right panel widget
+        """
+        right_widget = QWidget(self)
+        right_layout = QVBoxLayout(right_widget)
+
+        # Add arrangement list
+        list_group = self._create_arrangement_list_group(right_widget)
+        right_layout.addWidget(list_group)
+
+        # Add preview
+        preview_group = self._create_preview_group(right_widget)
+        right_layout.addWidget(preview_group, 1)
+
+        return right_widget
+
+    def _create_selection_mode_group(self, parent: QWidget) -> QGroupBox:
+        """Create the selection mode controls group.
+
+        Args:
+            parent: Parent widget for the group
+
+        Returns:
+            QGroupBox: The configured selection mode group
+        """
+        mode_group = QGroupBox("Selection Mode", parent)
         mode_layout = QHBoxLayout()
 
         self.mode_buttons = QButtonGroup()
@@ -542,10 +602,18 @@ class GridArrangementDialog(SplitterDialog):
 
         self.mode_buttons.buttonClicked.connect(self._on_mode_changed)
         mode_group.setLayout(mode_layout)
-        left_layout.addWidget(mode_group)
+        return mode_group
 
-        # Grid view
-        grid_group = QGroupBox("Sprite Grid", left_widget)
+    def _create_grid_view_group(self, parent: QWidget) -> QGroupBox:
+        """Create the grid view group with graphics scene.
+
+        Args:
+            parent: Parent widget for the group
+
+        Returns:
+            QGroupBox: The configured grid view group
+        """
+        grid_group = QGroupBox("Sprite Grid", parent)
         grid_layout = QVBoxLayout()
 
         # Create graphics scene and view
@@ -553,7 +621,18 @@ class GridArrangementDialog(SplitterDialog):
         self.grid_view = GridGraphicsView(self)
         self.grid_view.setScene(self.scene)
 
-        # Set up grid view (only if we have valid data)
+        # Initialize grid view
+        self._initialize_grid_view()
+
+        # Connect grid view signals
+        self._connect_grid_view_signals()
+
+        grid_layout.addWidget(self.grid_view)
+        grid_group.setLayout(grid_layout)
+        return grid_group
+
+    def _initialize_grid_view(self):
+        """Initialize the grid view with image data if available."""
         if self.original_image is not None:
             pixmap = self._create_pixmap_from_image(self.original_image)
             self.pixmap_item = self.scene.addPixmap(pixmap)
@@ -567,86 +646,118 @@ class GridArrangementDialog(SplitterDialog):
             # Create placeholder for error state
             self.pixmap_item = None
 
-        # Connect grid view signals
+    def _connect_grid_view_signals(self):
+        """Connect all grid view signals."""
         self.grid_view.tile_clicked.connect(self._on_tile_clicked)
         self.grid_view.tiles_selected.connect(self._on_tiles_selected)
-
-        # Connect zoom level updates
         self.grid_view.zoom_changed.connect(self._on_zoom_changed)
         self._update_zoom_level_display()
 
-        grid_layout.addWidget(self.grid_view)
-        grid_group.setLayout(grid_layout)
-        left_layout.addWidget(grid_group, 1)
+    def _create_actions_group(self, parent: QWidget) -> QGroupBox:
+        """Create the actions group with buttons and zoom controls.
 
-        # Action buttons
-        actions_group = QGroupBox("Actions", left_widget)
+        Args:
+            parent: Parent widget for the group
+
+        Returns:
+            QGroupBox: The configured actions group
+        """
+        actions_group = QGroupBox("Actions", parent)
         actions_layout = QHBoxLayout()
 
+        # Add action buttons
+        self._add_action_buttons(actions_layout)
+
+        # Add separator
+        actions_layout.addWidget(QLabel("|", self))
+
+        # Add zoom controls
+        self._add_zoom_controls(actions_layout)
+
+        actions_group.setLayout(actions_layout)
+        return actions_group
+
+    def _add_action_buttons(self, layout: QHBoxLayout):
+        """Add action buttons to the given layout.
+
+        Args:
+            layout: Layout to add buttons to
+        """
         self.add_btn = QPushButton("Add Selection", self)
         _ = self.add_btn.clicked.connect(self._add_selection)
-        actions_layout.addWidget(self.add_btn)
+        layout.addWidget(self.add_btn)
 
         self.remove_btn = QPushButton("Remove Selection", self)
         _ = self.remove_btn.clicked.connect(self._remove_selection)
-        actions_layout.addWidget(self.remove_btn)
+        layout.addWidget(self.remove_btn)
 
         self.create_group_btn = QPushButton("Create Group", self)
         _ = self.create_group_btn.clicked.connect(self._create_group)
-        actions_layout.addWidget(self.create_group_btn)
+        layout.addWidget(self.create_group_btn)
 
         self.clear_btn = QPushButton("Clear All", self)
         _ = self.clear_btn.clicked.connect(self._clear_arrangement)
-        actions_layout.addWidget(self.clear_btn)
+        layout.addWidget(self.clear_btn)
 
-        # Separator
-        actions_layout.addWidget(QLabel("|", self))
+    def _add_zoom_controls(self, layout: QHBoxLayout):
+        """Add zoom control buttons to the given layout.
 
-        # Zoom controls
+        Args:
+            layout: Layout to add zoom controls to
+        """
         self.zoom_out_btn = QPushButton("-", self)
         _ = self.zoom_out_btn.clicked.connect(self.grid_view.zoom_out)
         self.zoom_out_btn.setMaximumWidth(30)
-        actions_layout.addWidget(self.zoom_out_btn)
+        layout.addWidget(self.zoom_out_btn)
 
         self.zoom_level_label = QLabel("100%", self)
         self.zoom_level_label.setMinimumWidth(50)
         self.zoom_level_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        actions_layout.addWidget(self.zoom_level_label)
+        layout.addWidget(self.zoom_level_label)
 
         self.zoom_in_btn = QPushButton("+", self)
         _ = self.zoom_in_btn.clicked.connect(self.grid_view.zoom_in)
         self.zoom_in_btn.setMaximumWidth(30)
-        actions_layout.addWidget(self.zoom_in_btn)
+        layout.addWidget(self.zoom_in_btn)
 
         self.zoom_fit_btn = QPushButton("Fit", self)
         _ = self.zoom_fit_btn.clicked.connect(self.grid_view.zoom_to_fit)
         self.zoom_fit_btn.setMaximumWidth(40)
-        actions_layout.addWidget(self.zoom_fit_btn)
+        layout.addWidget(self.zoom_fit_btn)
 
         self.zoom_reset_btn = QPushButton("1:1", self)
         _ = self.zoom_reset_btn.clicked.connect(self.grid_view.reset_zoom)
         self.zoom_reset_btn.setMaximumWidth(40)
-        actions_layout.addWidget(self.zoom_reset_btn)
+        layout.addWidget(self.zoom_reset_btn)
 
-        actions_group.setLayout(actions_layout)
-        left_layout.addWidget(actions_group)
+    def _create_arrangement_list_group(self, parent: QWidget) -> QGroupBox:
+        """Create the arrangement list group.
 
-        # Right panel - Arrangement list and preview
-        right_widget = QWidget(self)
-        right_layout = QVBoxLayout(right_widget)
+        Args:
+            parent: Parent widget for the group
 
-        # Arrangement list
-        list_group = QGroupBox("Current Arrangement", right_widget)
+        Returns:
+            QGroupBox: The configured arrangement list group
+        """
+        list_group = QGroupBox("Current Arrangement", parent)
         list_layout = QVBoxLayout()
 
         self.arrangement_list = QListWidget(self)
         list_layout.addWidget(self.arrangement_list)
 
         list_group.setLayout(list_layout)
-        right_layout.addWidget(list_group)
+        return list_group
 
-        # Preview
-        preview_group = QGroupBox("Arrangement Preview", right_widget)
+    def _create_preview_group(self, parent: QWidget) -> QGroupBox:
+        """Create the preview group with scrollable area.
+
+        Args:
+            parent: Parent widget for the group
+
+        Returns:
+            QGroupBox: The configured preview group
+        """
+        preview_group = QGroupBox("Arrangement Preview", parent)
         preview_layout = QVBoxLayout()
 
         scroll_area = QScrollArea(self)
@@ -657,18 +768,7 @@ class GridArrangementDialog(SplitterDialog):
         preview_layout.addWidget(scroll_area)
 
         preview_group.setLayout(preview_layout)
-        right_layout.addWidget(preview_group, 1)
-
-        # Add panels to main horizontal splitter directly
-        self.main_splitter.addWidget(left_widget)
-        self.main_splitter.setStretchFactor(0, 2)    # 67% for left panel
-
-        self.main_splitter.addWidget(right_widget)
-        self.main_splitter.setStretchFactor(1, 1)   # 33% for right panel
-
-        # Add custom buttons using SplitterDialog's button system
-        self.export_btn = self.add_button("Export Arrangement", callback=self._export_arrangement)
-        self.export_btn.setEnabled(False)
+        return preview_group
 
     def _on_mode_changed(self, button) -> None:
         """Handle selection mode change"""

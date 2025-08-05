@@ -6,8 +6,6 @@ Allows users to configure sprite injection parameters
 import os
 from typing import Any
 
-from core.managers import get_injection_manager
-from core.sprite_validator import SpriteValidator
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -22,6 +20,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from core.managers import get_injection_manager
+from core.sprite_validator import SpriteValidator
 from ui.components import (
     FileSelector,
     FormRow,
@@ -92,6 +93,9 @@ class InjectionDialog(TabbedDialog):
 
     def _setup_ui(self) -> None:
         """Initialize the user interface"""
+        # Call parent setup first to initialize tab widget
+        super()._setup_ui()
+
         # Create shared preview widget
         self.preview_widget = SpritePreviewWidget("Sprite to Inject")
 
@@ -361,7 +365,7 @@ class InjectionDialog(TabbedDialog):
                     self.extraction_info.setText(info_text)
 
                     # Set VRAM offset from extraction
-                    if self.extraction_vram_offset:
+                    if self.extraction_vram_offset is not None:
                         self.vram_offset_input.set_text(self.extraction_vram_offset)
             else:
                 self.extraction_group.hide()
@@ -514,65 +518,67 @@ class InjectionDialog(TabbedDialog):
                 finally:
                     self.rom_offset_input.hex_edit.blockSignals(False)
 
-    def get_parameters(self) -> dict[str, Any] | None:
-        """Get injection parameters if dialog accepted"""
-        if self.result() != QDialog.DialogCode.Accepted:
-            return None
+    def _validate_common_inputs(self) -> str | None:
+        """Validate common input requirements.
 
-        # Validate sprite input (common)
+        Returns:
+            Error message if validation fails, None if valid
+        """
         if not self.sprite_file_selector.get_path():
-            _ = QMessageBox.warning(self, "Invalid Input", "Please select a sprite file")
-            return None
+            return "Please select a sprite file"
+        return None
 
-        # Check which tab is active
-        current_tab = self.get_current_tab_index()
+    def _validate_vram_inputs(self) -> tuple[str | None, dict[str, Any] | None]:
+        """Validate VRAM injection inputs and build parameters.
 
-        if current_tab == 0:  # VRAM injection
-            if not self.input_vram_selector.get_path():
-                _ = QMessageBox.warning(
-                    self, "Invalid Input", "Please select an input VRAM file"
-                )
-                return None
+        Returns:
+            Tuple of (error_message, parameters_dict)
+            If error_message is not None, validation failed
+        """
+        # Check input VRAM file
+        if not self.input_vram_selector.get_path():
+            return "Please select an input VRAM file", None
 
-            if not self.output_vram_selector.get_path():
-                _ = QMessageBox.warning(
-                    self, "Invalid Input", "Please specify an output VRAM file"
-                )
-                return None
+        # Check output VRAM file
+        if not self.output_vram_selector.get_path():
+            return "Please specify an output VRAM file", None
 
-            # Parse offset
-            offset_text = self.vram_offset_input.get_text() or "0xC000"
-            offset = self.vram_offset_input.get_value()
-            if offset is None:
-                _ = QMessageBox.warning(
-                    self,
-                    "Invalid Input",
-                    f"Invalid VRAM offset value: '{offset_text}'\n"
-                    "Please enter a valid hexadecimal value (e.g., 0xC000, C000)"
-                )
-                return None
+        # Parse and validate offset
+        offset_text = self.vram_offset_input.get_text() or "0xC000"
+        offset = self.vram_offset_input.get_value()
+        if offset is None:
+            error_msg = (
+                f"Invalid VRAM offset value: '{offset_text}'" + "\n" +
+                "Please enter a valid hexadecimal value (e.g., 0xC000, C000)"
+            )
+            return error_msg, None
 
-            return {
-                "mode": "vram",
-                "sprite_path": self.sprite_file_selector.get_path(),
-                "input_vram": self.input_vram_selector.get_path(),
-                "output_vram": self.output_vram_selector.get_path(),
-                "offset": offset,
-                "metadata_path": self.metadata_path if self.metadata else None,
-            }
+        # Build parameters dictionary
+        params = {
+            "mode": "vram",
+            "sprite_path": self.sprite_file_selector.get_path(),
+            "input_vram": self.input_vram_selector.get_path(),
+            "output_vram": self.output_vram_selector.get_path(),
+            "offset": offset,
+            "metadata_path": self.metadata_path if self.metadata else None,
+        }
 
-        # ROM injection
+        return None, params
+
+    def _validate_rom_inputs(self) -> tuple[str | None, dict[str, Any] | None]:
+        """Validate ROM injection inputs and build parameters.
+
+        Returns:
+            Tuple of (error_message, parameters_dict)
+            If error_message is not None, validation failed
+        """
+        # Check input ROM file
         if not self.input_rom_selector.get_path():
-            _ = QMessageBox.warning(
-                self, "Invalid Input", "Please select an input ROM file"
-            )
-            return None
+            return "Please select an input ROM file", None
 
+        # Check output ROM file
         if not self.output_rom_selector.get_path():
-            _ = QMessageBox.warning(
-                self, "Invalid Input", "Please specify an output ROM file"
-            )
-            return None
+            return "Please specify an output ROM file", None
 
         # Get offset from combo box or manual entry
         offset = None
@@ -582,23 +588,18 @@ class InjectionDialog(TabbedDialog):
             offset_text = self.rom_offset_input.get_text()
             offset = self.rom_offset_input.get_value()
             if offset is None:
-                _ = QMessageBox.warning(
-                    self,
-                    "Invalid Input",
-                    f"Invalid ROM offset value: '{offset_text}'\n"
+                error_msg = (
+                    f"Invalid ROM offset value: '{offset_text}'" + "\n" +
                     "Please enter a valid hexadecimal value (e.g., 0x8000, 8000)"
                 )
-                return None
+                return error_msg, None
 
+        # Ensure an offset was provided
         if offset is None:
-            _ = QMessageBox.warning(
-                self,
-                "Invalid Input",
-                "Please select a sprite location or enter a custom offset",
-            )
-            return None
+            return "Please select a sprite location or enter a custom offset", None
 
-        return {
+        # Build parameters dictionary
+        params = {
             "mode": "rom",
             "sprite_path": self.sprite_file_selector.get_path(),
             "input_rom": self.input_rom_selector.get_path(),
@@ -607,6 +608,40 @@ class InjectionDialog(TabbedDialog):
             "fast_compression": self.fast_compression_check.isChecked(),
             "metadata_path": self.metadata_path if self.metadata else None,
         }
+
+        return None, params
+
+    def get_parameters(self) -> dict[str, Any] | None:
+        """Get injection parameters if dialog accepted.
+
+        Validates all inputs and returns parameters dictionary for injection,
+        or None if validation fails or dialog was not accepted.
+
+        Returns:
+            Parameters dictionary if valid, None otherwise
+        """
+        # Early return if dialog not accepted
+        if self.result() != QDialog.DialogCode.Accepted:
+            return None
+
+        # Validate common inputs (sprite file)
+        common_error = self._validate_common_inputs()
+        if common_error:
+            _ = QMessageBox.warning(self, "Invalid Input", common_error)
+            return None
+
+        # Validate tab-specific inputs
+        current_tab = self.get_current_tab_index()
+        if current_tab == 0:  # VRAM injection
+            error, params = self._validate_vram_inputs()
+        else:  # ROM injection
+            error, params = self._validate_rom_inputs()
+
+        if error:
+            _ = QMessageBox.warning(self, "Invalid Input", error)
+            return None
+
+        return params
 
     def _set_initial_paths(self) -> None:
         """Set initial paths based on suggestions"""

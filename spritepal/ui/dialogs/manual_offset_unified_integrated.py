@@ -16,7 +16,13 @@ import contextlib
 import os
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, override
+from functools import partial
+from typing import TYPE_CHECKING
+
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
@@ -29,6 +35,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -41,12 +48,14 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from ui.components import DialogBase
 from ui.components.panels import StatusPanel
 from ui.components.visualization.rom_map_widget import ROMMapWidget
+from ui.dialogs.advanced_search_dialog import AdvancedSearchDialog
 from ui.dialogs.services import ViewStateManager
 from ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
@@ -66,6 +75,7 @@ class SimpleBrowseTab(QWidget):
     offset_changed = pyqtSignal(int)
     find_next_clicked = pyqtSignal()
     find_prev_clicked = pyqtSignal()
+    advanced_search_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -74,6 +84,8 @@ class SimpleBrowseTab(QWidget):
         self._current_offset = 0x200000
         self._rom_size = 0x400000
         self._step_size = 0x1000
+        self._rom_path = ""
+        self._advanced_search_dialog = None
 
         self._setup_ui()
 
@@ -174,6 +186,13 @@ class SimpleBrowseTab(QWidget):
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
 
+        # Advanced Search button
+        self.advanced_search_button = QPushButton("🔍 Advanced")
+        self.advanced_search_button.setMinimumHeight(28)
+        self.advanced_search_button.setToolTip("Open advanced search dialog with filtering and batch operations")
+        self.advanced_search_button.clicked.connect(self._open_advanced_search)
+        nav_row.addWidget(self.advanced_search_button)
+
         # Separator
         nav_row.addSpacing(12)
 
@@ -208,7 +227,7 @@ class SimpleBrowseTab(QWidget):
 
         go_button = QPushButton("Go")
         go_button.setMinimumHeight(28)  # Consistent with other buttons
-        go_button.clicked.connect(lambda: self.set_offset(self.manual_spinbox.value()))
+        go_button.clicked.connect(self._on_go_button_clicked)
         manual_row.addWidget(go_button)
 
         manual_row.addStretch()
@@ -254,13 +273,17 @@ class SimpleBrowseTab(QWidget):
         self.offset_changed.emit(value)
 
         # Request immediate high-quality preview for manual changes
-        if self._smart_preview_coordinator:
+        if self._smart_preview_coordinator is not None:
             self._smart_preview_coordinator.request_manual_preview(value)
 
     def _update_displays(self):
         """Update position displays."""
         self.position_label.setText(self._format_position(self._current_offset))
         self.offset_label.setText(f"0x{self._current_offset:06X}")
+
+    def _on_go_button_clicked(self):
+        """Handle go button click without lambda."""
+        self.set_offset(self.manual_spinbox.value())
 
     def get_current_offset(self) -> int:
         """Get current offset."""
@@ -284,7 +307,7 @@ class SimpleBrowseTab(QWidget):
             self._update_displays()
 
             # Request immediate high-quality preview for programmatic changes
-            if self._smart_preview_coordinator:
+            if self._smart_preview_coordinator is not None:
                 self._smart_preview_coordinator.request_manual_preview(offset)
 
     def get_step_size(self) -> int:
@@ -314,6 +337,35 @@ class SimpleBrowseTab(QWidget):
             coordinator.set_ui_update_callback(self._on_smart_ui_update)
 
             logger.debug("Smart preview coordinator connected to browse tab")
+
+    def set_rom_path(self, rom_path: str):
+        """Set ROM path for advanced search."""
+        self._rom_path = rom_path
+
+    def _open_advanced_search(self):
+        """Open the advanced search dialog."""
+        if not self._rom_path:
+            logger.warning("No ROM path available for advanced search")
+            return
+
+        # Create or reuse advanced search dialog
+        if self._advanced_search_dialog is None:
+            self._advanced_search_dialog = AdvancedSearchDialog(self._rom_path, self)
+            # Connect sprite selection signal
+            self._advanced_search_dialog.sprite_selected.connect(self._on_advanced_search_sprite_selected)
+
+        # Show the dialog
+        self._advanced_search_dialog.show()
+        self._advanced_search_dialog.raise_()
+        self._advanced_search_dialog.activateWindow()
+
+    def _on_advanced_search_sprite_selected(self, offset: int):
+        """Handle sprite selection from advanced search dialog."""
+        # Update the manual offset dialog's position
+        self.set_offset(offset)
+
+        # Log the action
+        logger.debug(f"Advanced search selected sprite at offset 0x{offset:06X}")
 
     def _on_smart_ui_update(self, offset: int):
         """Handle immediate UI updates from smart coordinator."""
@@ -710,6 +762,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # Preview widget
         self.preview_widget = SpritePreviewWidget()
+        self.preview_widget.similarity_search_requested.connect(self._on_similarity_search_requested)
         layout.addWidget(self.preview_widget)
 
         return panel
@@ -792,8 +845,12 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._cache_stats["total_requests"] += 1
 
         # Update mini ROM map
-        if self.mini_rom_map:
+        if self.mini_rom_map is not None:
             self.mini_rom_map.set_current_offset(offset)
+
+        # Update preview widget with current offset for similarity search
+        if self.preview_widget is not None:
+            self.preview_widget.set_current_offset(offset)
 
         # Emit signal immediately for external listeners
         self.offset_changed.emit(offset)
@@ -806,15 +863,15 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_offset_requested(self, offset: int):
         """Handle offset request from smart tab."""
-        if self.browse_tab:
+        if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
 
     def _on_sprite_selected(self, offset: int):
         """Handle sprite selection from history."""
-        if self.browse_tab:
+        if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
         # Switch to browse tab
-        if self.tab_widget:
+        if self.tab_widget is not None:
             self.tab_widget.setCurrentIndex(0)
 
     def _on_smart_mode_changed(self, enabled: bool):
@@ -833,19 +890,20 @@ class UnifiedManualOffsetDialog(DialogBase):
         current_offset = self.browse_tab.get_current_offset()
 
         # Clean up existing search worker
-        if self.search_worker:
+        if self.search_worker is not None:
             WorkerManager.cleanup_worker(self.search_worker)
             self.search_worker = None
 
         # Create search worker for forward search
         with QMutexLocker(self._manager_mutex):
-            if self.rom_extractor:
+            if self.rom_extractor is not None:
                 self.search_worker = SpriteSearchWorker(
                     self.rom_path,
                     current_offset,
                     self.rom_size,
                     1,  # Forward direction
-                    self.rom_extractor
+                    self.rom_extractor,
+                    parent=self
                 )
                 self.search_worker.sprite_found.connect(self._on_search_sprite_found)
                 self.search_worker.search_complete.connect(self._on_search_complete)
@@ -861,19 +919,20 @@ class UnifiedManualOffsetDialog(DialogBase):
         current_offset = self.browse_tab.get_current_offset()
 
         # Clean up existing search worker
-        if self.search_worker:
+        if self.search_worker is not None:
             WorkerManager.cleanup_worker(self.search_worker)
             self.search_worker = None
 
         # Create search worker for backward search
         with QMutexLocker(self._manager_mutex):
-            if self.rom_extractor:
+            if self.rom_extractor is not None:
                 self.search_worker = SpriteSearchWorker(
                     self.rom_path,
                     current_offset,
                     0,  # Search back to start
                     -1,  # Backward direction
-                    self.rom_extractor
+                    self.rom_extractor,
+                    parent=self
                 )
                 self.search_worker.sprite_found.connect(self._on_search_sprite_found)
                 self.search_worker.search_complete.connect(self._on_search_complete)
@@ -883,7 +942,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _request_preview_update(self, delay_ms: int = 100):
         """Request preview update with debouncing."""
-        if self._preview_timer:
+        if self._preview_timer is not None:
             self._preview_timer.stop()
             self._preview_timer.start(delay_ms)
 
@@ -896,16 +955,16 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._update_status(f"Loading preview for 0x{current_offset:06X}...")
 
         # Clean up existing preview worker
-        if self.preview_worker:
+        if self.preview_worker is not None:
             WorkerManager.cleanup_worker(self.preview_worker, timeout=1000)
             self.preview_worker = None
 
         # Create new preview worker
         with QMutexLocker(self._manager_mutex):
-            if self.rom_extractor:
+            if self.rom_extractor is not None:
                 sprite_name = f"manual_0x{current_offset:X}"
                 self.preview_worker = SpritePreviewWorker(
-                    self.rom_path, current_offset, sprite_name, self.rom_extractor, None
+                    self.rom_path, current_offset, sprite_name, self.rom_extractor, None, parent=self
                 )
                 self.preview_worker.preview_ready.connect(self._on_preview_ready)
                 self.preview_worker.preview_error.connect(self._on_preview_error)
@@ -913,7 +972,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle preview ready."""
-        if self.preview_widget:
+        if self.preview_widget is not None:
             self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
 
         current_offset = self.get_current_offset()
@@ -921,7 +980,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_preview_error(self, error_msg: str):
         """Handle preview error."""
-        if self.preview_widget:
+        if self.preview_widget is not None:
             self.preview_widget.clear()
             self.preview_widget.info_label.setText("No sprite found")
 
@@ -937,7 +996,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _update_status(self, message: str):
         """Update status message."""
-        if self.status_panel:
+        if self.status_panel is not None:
             self.status_panel.update_status(message)
 
             # Add cache performance tooltip if available
@@ -957,17 +1016,72 @@ class UnifiedManualOffsetDialog(DialogBase):
         WorkerManager.cleanup_worker(self.search_worker, timeout=2000)
         self.search_worker = None
 
-        if self._preview_timer:
+        if self._preview_timer is not None:
             self._preview_timer.stop()
 
         # Signal coordinator cleanup handled by SmartPreviewCoordinator
 
-        if self._smart_preview_coordinator:
+        if self._smart_preview_coordinator is not None:
             self._smart_preview_coordinator.cleanup()
 
         # Reset cache stats
         self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
         self._adjacent_offsets_cache.clear()
+
+    def cleanup(self):
+        """Clean up resources to prevent memory leaks."""
+        logger.debug(f"Cleaning up UnifiedManualOffsetDialog {self._debug_id}")
+
+        # Disconnect signals
+        try:
+            # Disconnect tab signals
+            if self.browse_tab is not None:
+                self.browse_tab.offset_changed.disconnect()
+                self.browse_tab.find_next_clicked.disconnect()
+                self.browse_tab.find_prev_clicked.disconnect()
+
+            if self.smart_tab is not None:
+                self.smart_tab.smart_mode_changed.disconnect()
+                self.smart_tab.region_changed.disconnect()
+                self.smart_tab.offset_requested.disconnect()
+
+            if self.history_tab is not None:
+                self.history_tab.sprite_selected.disconnect()
+
+            # Disconnect preview widget signals
+            if self.preview_widget is not None:
+                self.preview_widget.similarity_search_requested.disconnect()
+
+            # Disconnect smart preview coordinator
+            if self._smart_preview_coordinator is not None:
+                self._smart_preview_coordinator.preview_ready.disconnect()
+                self._smart_preview_coordinator.preview_cached.disconnect()
+                self._smart_preview_coordinator.preview_error.disconnect()
+        except TypeError:
+            pass  # Already disconnected
+
+        # Clean up workers
+        self._cleanup_workers()
+
+        # Clear references
+        self.extraction_manager = None
+        self.rom_extractor = None
+        self._manual_offset_dialog = None
+
+        # Clear cache references
+        self._adjacent_offsets_cache.clear()
+
+        # Clear bookmarks to prevent reference leaks
+        self.bookmarks.clear()
+
+        # Clear preview pixmaps
+        if self.preview_widget is not None:
+            self.preview_widget.clear()
+
+        # Clear advanced search dialog reference
+        if hasattr(self, "_advanced_search_dialog") and self._advanced_search_dialog is not None:
+            self._advanced_search_dialog.close()
+            self._advanced_search_dialog = None
 
     # Public interface methods required by ROM extraction panel
 
@@ -980,11 +1094,12 @@ class UnifiedManualOffsetDialog(DialogBase):
             self.rom_extractor = extraction_manager.get_rom_extractor()
 
         # Update tabs with new ROM data
-        if self.browse_tab:
+        if self.browse_tab is not None:
             self.browse_tab.set_rom_size(rom_size)
+            self.browse_tab.set_rom_path(rom_path)
 
         # Update mini ROM map
-        if self.mini_rom_map:
+        if self.mini_rom_map is not None:
             self.mini_rom_map.set_rom_size(rom_size)
 
         # Update window title
@@ -1008,7 +1123,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_smart_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle preview ready from smart coordinator."""
-        if self.preview_widget:
+        if self.preview_widget is not None:
             self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
 
         current_offset = self.get_current_offset()
@@ -1017,7 +1132,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_smart_preview_cached(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle cached preview from smart coordinator."""
-        if self.preview_widget:
+        if self.preview_widget is not None:
             self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
 
         current_offset = self.get_current_offset()
@@ -1026,7 +1141,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_smart_preview_error(self, error_msg: str):
         """Handle preview error from smart coordinator."""
-        if self.preview_widget:
+        if self.preview_widget is not None:
             self.preview_widget.clear()
             self.preview_widget.info_label.setText("No sprite found")
 
@@ -1035,7 +1150,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def set_offset(self, offset: int) -> bool:
         """Set current offset."""
-        if self.browse_tab:
+        if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
             # Manually trigger the offset changed signal since set_offset doesn't emit it
             self._on_offset_changed(offset)
@@ -1044,18 +1159,18 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def get_current_offset(self) -> int:
         """Get current offset."""
-        if self.browse_tab:
+        if self.browse_tab is not None:
             return self.browse_tab.get_current_offset()
         return 0x200000
 
     def add_found_sprite(self, offset: int, quality: float = 1.0) -> None:
         """Add found sprite to history."""
-        if self.history_tab:
+        if self.history_tab is not None:
             self.history_tab.add_sprite(offset, quality)
 
             # Update tab title with count
             count = self.history_tab.get_sprite_count()
-            if self.tab_widget:
+            if self.tab_widget is not None:
                 self.tab_widget.setTabText(2, f"History ({count})")
 
     # ROM Cache Integration Methods
@@ -1188,7 +1303,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _setup_cache_context_menu(self) -> None:
         """Set up context menu for cache management."""
-        if not self.status_collapsible:
+        if self.status_collapsible is None:
             return
 
         try:
@@ -1319,7 +1434,7 @@ Cache Misses: {session_stats['misses']}"""
                 event.accept()
             elif event.key() == Qt.Key.Key_B and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
                 # Ctrl+B - Show bookmarks menu
-                if self.bookmarks_menu:
+                if self.bookmarks_menu is not None:
                     self.bookmarks_menu.exec(self.mapToGlobal(self.rect().center()))
                 event.accept()
 
@@ -1329,7 +1444,7 @@ Cache Misses: {session_stats['misses']}"""
     def closeEvent(self, event: QCloseEvent | None):
         """Handle close event."""
         logger.debug(f"Dialog {self._debug_id} closing")
-        self._cleanup_workers()
+        self.cleanup()
         if event:
             super().closeEvent(event)
 
@@ -1337,12 +1452,13 @@ Cache Misses: {session_stats['misses']}"""
     def hideEvent(self, event: QHideEvent | None):
         """Handle hide event."""
         logger.debug(f"Dialog {self._debug_id} hiding")
+        # Only cleanup workers on hide, not full cleanup (dialog may be shown again)
         self._cleanup_workers()
         self.view_state_manager.handle_hide_event()
         if event:
             super().hideEvent(event)
 
-    def showEvent(self, event):  # noqa: N802
+    def showEvent(self, event):
         """Handle show event."""
         logger.debug(f"Dialog {self._debug_id} showing")
         super().showEvent(event)
@@ -1350,7 +1466,7 @@ Cache Misses: {session_stats['misses']}"""
 
     def _on_search_sprite_found(self, offset: int, quality: float):
         """Handle sprite found during navigation search"""
-        if self.browse_tab:
+        if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
 
         # Add to history
@@ -1374,7 +1490,6 @@ Cache Misses: {session_stats['misses']}"""
                 return
 
         # Add bookmark with descriptive name
-        from PyQt6.QtWidgets import QInputDialog
         name, ok = QInputDialog.getText(
             self, "Add Bookmark",
             f"Name for bookmark at 0x{offset:06X}:",
@@ -1388,7 +1503,7 @@ Cache Misses: {session_stats['misses']}"""
 
     def _update_bookmarks_menu(self):
         """Update bookmarks menu"""
-        if not self.bookmarks_menu:
+        if self.bookmarks_menu is None:
             return
 
         self.bookmarks_menu.clear()
@@ -1399,11 +1514,16 @@ Cache Misses: {session_stats['misses']}"""
         else:
             for offset, name in self.bookmarks:
                 action = self.bookmarks_menu.addAction(f"{name} (0x{offset:06X})")
-                action.triggered.connect(lambda checked, o=offset: self.set_offset(o))
+                # Use functools.partial to avoid lambda closure
+                action.triggered.connect(partial(self._go_to_bookmark, offset))
 
             self.bookmarks_menu.addSeparator()
             clear_action = self.bookmarks_menu.addAction("Clear All Bookmarks")
             clear_action.triggered.connect(self._clear_bookmarks)
+
+    def _go_to_bookmark(self, offset: int):
+        """Go to a bookmarked offset."""
+        self.set_offset(offset)
 
     def _clear_bookmarks(self):
         """Clear all bookmarks"""
@@ -1411,9 +1531,16 @@ Cache Misses: {session_stats['misses']}"""
         self._update_bookmarks_menu()
         self._update_status("Bookmarks cleared")
 
+    def _on_similarity_search_requested(self, target_offset: int):
+        """Handle similarity search request from preview widget."""
+        logger.info(f"Similarity search requested for offset 0x{target_offset:06X}")
+
+        # Navigate to the selected similar sprite
+        self.set_offset(target_offset)
+        self._update_status(f"Navigated to similar sprite at 0x{target_offset:06X}")
+
     def _show_goto_dialog(self):
         """Show go to offset dialog"""
-        from PyQt6.QtWidgets import QInputDialog
 
         current = self.get_current_offset()
         text, ok = QInputDialog.getText(

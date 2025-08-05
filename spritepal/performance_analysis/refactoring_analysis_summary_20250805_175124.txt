@@ -1,0 +1,98 @@
+REFACTORING PERFORMANCE ANALYSIS REPORT
+============================================================
+Generated: 2025-08-05 17:51:24
+
+REFACTORING IMPACT SUMMARY
+------------------------------
+
+HAL_COMPRESSION_SHUTDOWN:
+  statements_reduction: 78% (104 → 23 statements)
+  expected_performance_improvement: Significant reduction in shutdown time
+  memory_impact: Lower memory usage due to simplified cleanup logic
+
+ROM_EXTRACTION_WORKFLOW:
+  statements_reduction: 58% (77 → 32 statements)
+  expected_performance_improvement: Faster extraction workflow
+  memory_impact: Reduced memory allocation for temporary objects
+
+INJECTION_DIALOG_VALIDATION:
+  returns_reduction: 64% (11 → 4 returns)
+  expected_performance_improvement: Simplified validation logic
+  memory_impact: Fewer temporary variables and intermediate results
+
+PERFORMANCE METRICS
+--------------------
+
+HAL_COMPRESSION_SHUTDOWN:
+  Execution Time: 0.1338 seconds
+  Memory Peak: 1,393,569 bytes
+  CPU Usage: 2.4%
+  Function Calls: 7,585
+  Measurements: 1
+
+ROM_EXTRACTION_WORKFLOW:
+  Execution Time: 0.0095 seconds
+  Memory Peak: 214,916 bytes
+  CPU Usage: 1.4%
+  Function Calls: 1,008
+  Measurements: 1
+
+INJECTION_DIALOG_VALIDATION:
+  Execution Time: 0.0017 seconds
+  Memory Peak: 251,660 bytes
+  CPU Usage: 13.3%
+  Function Calls: 304
+  Measurements: 1
+
+QT_SIGNAL_PERFORMANCE:
+  Execution Time: 0.0069 seconds
+  Memory Peak: 241,074 bytes
+  CPU Usage: 3.0%
+  Function Calls: 4,205
+  Measurements: 1
+
+COMPLEXITY ANALYSIS
+--------------------
+
+HAL SHUTDOWN PROCESS:
+  Cyclomatic Complexity: 180
+  Lines of Code: 998
+  Statements: 1318
+  Return Statements: 48
+  Branches: 179
+
+ROM EXTRACTION WORKFLOW:
+  Cyclomatic Complexity: 138
+  Lines of Code: 679
+  Statements: 930
+  Return Statements: 44
+  Branches: 137
+
+INJECTION DIALOG VALIDATION:
+  Cyclomatic Complexity: 102
+  Lines of Code: 596
+  Statements: 837
+  Return Statements: 18
+  Branches: 101
+
+CONTROLLER SIGNAL HANDLING:
+  Cyclomatic Complexity: 95
+  Lines of Code: 553
+  Statements: 768
+  Return Statements: 4
+  Branches: 94
+
+RECOMMENDATIONS
+---------------
+1. HAL compression shutdown is performing well (0.134s average). The refactoring successfully reduced shutdown complexity.
+
+2. HAL shutdown process still has high cyclomatic complexity (180). Consider further refactoring to reduce complexity.
+
+3. ROM extraction workflow still has high cyclomatic complexity (138). Consider further refactoring to reduce complexity.
+
+4. Injection dialog validation still has high cyclomatic complexity (102). Consider further refactoring to reduce complexity.
+
+5. Controller signal handling still has high cyclomatic complexity (95). Consider further refactoring to reduce complexity.
+
+
+Analysis complete.

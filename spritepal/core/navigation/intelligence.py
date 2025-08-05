@@ -746,10 +746,10 @@ class RegionClassifier:
         sprites: list[SpriteLocation]
     ) -> RegionType:
         """Classify region based on sprite characteristics."""
-        region_size = end_offset - start_offset
-
         if not sprites:
             return RegionType.UNKNOWN
+
+        region_size = end_offset - start_offset
 
         # Calculate sprite density
         total_sprite_size = sum(s.compressed_size for s in sprites)
@@ -760,7 +760,12 @@ class RegionClassifier:
         avg_tile_count = statistics.mean([s.tile_count for s in sprites])
         avg_compression = statistics.mean([s.density_ratio for s in sprites])
 
-        # Classification logic
+        # Use helper method to determine classification
+        return self._determine_region_type(density, avg_compression, avg_tile_count)
+
+    def _determine_region_type(self, density: float, avg_compression: float, avg_tile_count: float) -> RegionType:
+        """Determine region type based on metrics."""
+        # Classification logic ordered by priority
         if density > 0.3:  # High density region
             return RegionType.HIGH_DENSITY
         if density < 0.05:  # Very sparse

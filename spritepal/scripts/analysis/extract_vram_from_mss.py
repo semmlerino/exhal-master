@@ -9,7 +9,8 @@ def extract_vram_from_mss(mss_path: str) -> bytes:
     """Extract VRAM data from MSS savestate file."""
     print(f"Reading MSS file: {mss_path}")
 
-    with open(mss_path, "rb") as f:
+    mss_path_obj = Path(mss_path)
+    with mss_path_obj.open("rb") as f:
         data = f.read()
 
     # Verify MSS signature
@@ -60,7 +61,8 @@ def analyze_sprite_area(vram_data: bytes):
 
 def save_vram_dump(vram_data: bytes, output_path: str):
     """Save VRAM data to file."""
-    with open(output_path, "wb") as f:
+    output_path_obj = Path(output_path)
+    with output_path_obj.open("wb") as f:
         f.write(vram_data)
     print(f"\nSaved VRAM dump to: {output_path}")
 
@@ -92,7 +94,8 @@ def main():
                 if offset + 0x2000 <= len(vram_data):
                     region_data = vram_data[offset:offset + 0x2000]
                     region_name = f"vram_{mss_file.stem}_VRAM.dmp_{offset:04X}.bin"
-                    with open(region_name, "wb") as f:
+                    region_path = Path(region_name)
+                    with region_path.open("wb") as f:
                         f.write(region_data)
                     print(f"Saved sprite region 0x{offset:04X} to {region_name}")
 

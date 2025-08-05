@@ -1,0 +1,271 @@
+{
+  "cpu_stats": {
+    "report": "         64580 function calls (63384 primitive calls) in 0.152 seconds\n\n   Ordered by: cumulative time\n   List reduced from 56 to 20 due to restriction <20>\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.035    0.035    0.152    0.152 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py:237(test_widget_patterns)\n       99    0.000    0.000    0.112    0.001 /usr/lib/python3.12/enum.py:726(__call__)\n       99    0.002    0.000    0.111    0.001 /usr/lib/python3.12/enum.py:863(_create_)\n       99    0.010    0.000    0.078    0.001 /usr/lib/python3.12/enum.py:528(__new__)\n  1295/99    0.004    0.000    0.060    0.001 {built-in method __new__ of type object at 0xa44b40}\n     1196    0.031    0.000    0.056    0.000 /usr/lib/python3.12/enum.py:254(__set_name__)\n     1493    0.020    0.000    0.030    0.000 /usr/lib/python3.12/enum.py:390(__setitem__)\n     6728    0.007    0.000    0.007    0.000 {method 'get' of 'mappingproxy' objects}\n     2431    0.005    0.000    0.005    0.000 {method 'append' of 'list' objects}\n     2838    0.005    0.000    0.005    0.000 {built-in method builtins.issubclass}\n    10470    0.005    0.000    0.005    0.000 {built-in method builtins.isinstance}\n     2370    0.004    0.000    0.004    0.000 /usr/lib/python3.12/enum.py:850(__setattr__)\n     1486    0.002    0.000    0.004    0.000 {built-in method builtins.setattr}\n      900    0.004    0.000    0.004    0.000 {built-in method addWidget}\n     1295    0.003    0.000    0.003    0.000 {method 'setdefault' of 'dict' objects}\n       99    0.000    0.000    0.003    0.000 /usr/lib/python3.12/enum.py:513(__prepare__)\n     1561    0.001    0.000    0.003    0.000 {built-in method builtins.delattr}\n     2351    0.002    0.000    0.002    0.000 {built-in method builtins.getattr}\n      297    0.000    0.000    0.002    0.000 /usr/lib/python3.12/enum.py:967(_get_mixins_)\n      297    0.001    0.000    0.002    0.000 /usr/lib/python3.12/enum.py:1008(_find_data_type_)\n\n\n",
+    "top_functions": [
+      {
+        "function": "test_widget_patterns",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py",
+        "line": 237,
+        "call_count": 1,
+        "total_time": 0.035200698,
+        "cumulative_time": 0.15200970900000002,
+        "time_per_call": 0.035200698
+      },
+      {
+        "function": "__set_name__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 254,
+        "call_count": 1196,
+        "total_time": 0.031498828,
+        "cumulative_time": 0.056488305,
+        "time_per_call": 2.63368127090301e-05
+      },
+      {
+        "function": "__setitem__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 390,
+        "call_count": 1493,
+        "total_time": 0.019691381,
+        "cumulative_time": 0.029598265000000002,
+        "time_per_call": 1.318913663764233e-05
+      },
+      {
+        "function": "__new__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 528,
+        "call_count": 99,
+        "total_time": 0.010278538,
+        "cumulative_time": 0.07764965600000001,
+        "time_per_call": 0.00010382361616161617
+      },
+      {
+        "function": "<method 'get' of 'mappingproxy' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 6728,
+        "total_time": 0.006649507000000001,
+        "cumulative_time": 0.006649507000000001,
+        "time_per_call": 9.883333828775269e-07
+      },
+      {
+        "function": "<method 'append' of 'list' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 2431,
+        "total_time": 0.005347399,
+        "cumulative_time": 0.005347399,
+        "time_per_call": 2.1996705059646235e-06
+      },
+      {
+        "function": "<built-in method builtins.issubclass>",
+        "file": "~",
+        "line": 0,
+        "call_count": 2838,
+        "total_time": 0.005147124,
+        "cumulative_time": 0.005147124,
+        "time_per_call": 1.8136448202959832e-06
+      },
+      {
+        "function": "<built-in method builtins.isinstance>",
+        "file": "~",
+        "line": 0,
+        "call_count": 10470,
+        "total_time": 0.004880062,
+        "cumulative_time": 0.004880062,
+        "time_per_call": 4.660995224450812e-07
+      },
+      {
+        "function": "<built-in method __new__ of type object at 0xa44b40>",
+        "file": "~",
+        "line": 0,
+        "call_count": 99,
+        "total_time": 0.00391358,
+        "cumulative_time": 0.059750969,
+        "time_per_call": 3.953111111111111e-05
+      },
+      {
+        "function": "<built-in method addWidget>",
+        "file": "~",
+        "line": 0,
+        "call_count": 900,
+        "total_time": 0.003899539,
+        "cumulative_time": 0.003899539,
+        "time_per_call": 4.3328211111111115e-06
+      },
+      {
+        "function": "__setattr__",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 850,
+        "call_count": 2370,
+        "total_time": 0.003655011,
+        "cumulative_time": 0.004372499,
+        "time_per_call": 1.5421987341772153e-06
+      },
+      {
+        "function": "<method 'setdefault' of 'dict' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1295,
+        "total_time": 0.00260076,
+        "cumulative_time": 0.00260076,
+        "time_per_call": 2.0083088803088802e-06
+      },
+      {
+        "function": "<built-in method builtins.getattr>",
+        "file": "~",
+        "line": 0,
+        "call_count": 2351,
+        "total_time": 0.0021443910000000003,
+        "cumulative_time": 0.0021443910000000003,
+        "time_per_call": 9.121186729051468e-07
+      },
+      {
+        "function": "<built-in method builtins.setattr>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1486,
+        "total_time": 0.0017282220000000002,
+        "cumulative_time": 0.004326329,
+        "time_per_call": 1.1630026917900406e-06
+      },
+      {
+        "function": "_create_",
+        "file": "/usr/lib/python3.12/enum.py",
+        "line": 863,
+        "call_count": 99,
+        "total_time": 0.0016718070000000002,
+        "cumulative_time": 0.111468834,
+        "time_per_call": 1.6886939393939397e-05
+      }
+    ],
+    "total_functions": 56,
+    "total_calls": 63384
+  },
+  "memory_stats": {
+    "baseline_memory_mb": 73.33984375,
+    "peak_memory_mb": 76.84375,
+    "current_memory_mb": 76.84375,
+    "total_growth_mb": 3.50390625,
+    "growth_rate_mb_per_sec": 21.941350181992995,
+    "snapshot_count": 4,
+    "top_memory_consumers": [
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 596",
+        "size_mb": 0.20894718170166016,
+        "count": 526
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 277",
+        "size_mb": 0.1797027587890625,
+        "count": 1108
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 269",
+        "size_mb": 0.142730712890625,
+        "count": 1225
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py\", line 266",
+        "size_mb": 0.10174083709716797,
+        "count": 2045
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 861",
+        "size_mb": 0.0904998779296875,
+        "count": 66
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/run_performance_analysis.py\", line 268",
+        "size_mb": 0.06952857971191406,
+        "count": 107
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 370",
+        "size_mb": 0.0462646484375,
+        "count": 100
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 271",
+        "size_mb": 0.0345001220703125,
+        "count": 565
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 365",
+        "size_mb": 0.0260162353515625,
+        "count": 36
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/enum.py\", line 557",
+        "size_mb": 0.01050567626953125,
+        "count": 196
+      }
+    ],
+    "potential_leaks": []
+  },
+  "io_stats": {
+    "cache_efficiency": {
+      "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+    },
+    "file_operations": {
+      "read_count": 1834,
+      "write_count": 3537,
+      "read_bytes": 45404160,
+      "write_bytes": 4096,
+      "read_mb": 43.30078125,
+      "write_mb": 0.00390625
+    }
+  },
+  "thread_stats": {
+    "total_threads": 4,
+    "active_threads": 4,
+    "daemon_threads": 3,
+    "qt_threads": 0,
+    "thread_details": [
+      {
+        "name": "MainThread",
+        "daemon": false,
+        "alive": true,
+        "ident": 140377928142976
+      },
+      {
+        "name": "Dummy-2",
+        "daemon": true,
+        "alive": true,
+        "ident": 140377717733056
+      },
+      {
+        "name": "Dummy-3",
+        "daemon": true,
+        "alive": true,
+        "ident": 140377709340352
+      },
+      {
+        "name": "Dummy-4",
+        "daemon": true,
+        "alive": true,
+        "ident": 140377700947648
+      }
+    ]
+  },
+  "qt_stats": {
+    "error": "No QApplication instance found"
+  },
+  "manager_stats": {
+    "managers_initialized": false,
+    "available_managers": {},
+    "manager_memory": {}
+  },
+  "worker_stats": {
+    "total_worker_threads": 0,
+    "active_workers": 0,
+    "worker_details": []
+  },
+  "cache_stats": {
+    "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+  },
+  "timing_stats": {
+    "total_profiling_time": 0.1584024429321289,
+    "profiling_start": 1754402661.8189363,
+    "profiling_end": 1754402661.9773388
+  }
+}

@@ -4,11 +4,15 @@ ROM Map Visualization Widget
 Visual representation of ROM with sprite locations for manual offset exploration.
 """
 
-from typing import override
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QSizePolicy, QWidget
+
 from utils.logging_config import get_logger
 from utils.sprite_regions import SpriteRegion
 

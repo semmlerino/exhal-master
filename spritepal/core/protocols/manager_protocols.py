@@ -46,10 +46,10 @@ class ExtractionManagerProtocol(BaseManagerProtocol, Protocol):
         self,
         vram_path: str,
         output_base: str,
-        cgram_path: Optional[str] = None,
-        oam_path: Optional[str] = None,
-        vram_offset: Optional[int] = None,
-        sprite_size: Optional[tuple[int, int]] = None,
+        cgram_path: str | None = None,
+        oam_path: str | None = None,
+        vram_offset: int | None = None,
+        sprite_size: Optional[tuple[int, int | None]] = None,
         create_grayscale: bool = True,
         create_metadata: bool = True,
         grayscale_mode: bool = False,
@@ -63,7 +63,7 @@ class ExtractionManagerProtocol(BaseManagerProtocol, Protocol):
         offset: int,
         output_base: str,
         sprite_name: str,
-        cgram_path: Optional[str] = None,
+        cgram_path: str | None = None,
     ) -> list[str]:
         """Extract sprites from ROM file."""
         ...
@@ -72,7 +72,7 @@ class ExtractionManagerProtocol(BaseManagerProtocol, Protocol):
         self,
         rom_path: str,
         offset: int,
-        sprite_name: Optional[str] = None
+        sprite_name: str | None = None
     ) -> tuple[bytes, int, int]:
         """Get preview of sprite at offset."""
         ...
@@ -140,18 +140,18 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
         """Check if injection is currently active."""
         ...
 
-    def load_metadata(self, metadata_path: str) -> Optional[dict[str, Any]]:
+    def load_metadata(self, metadata_path: str) -> dict[str, Any | None]:
         """Load metadata from file."""
         ...
 
-    def load_rom_info(self, rom_path: str) -> Optional[dict[str, Any]]:
+    def load_rom_info(self, rom_path: str) -> dict[str, Any | None]:
         """Load ROM information."""
         ...
 
     def find_suggested_input_vram(
         self,
         sprite_path: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any | None]] = None,
         suggested_vram: str = ""
     ) -> str:
         """Find suggested input VRAM file."""
@@ -165,7 +165,7 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
         """Suggest output ROM path."""
         ...
 
-    def convert_vram_to_rom_offset(self, vram_offset_str: str) -> Optional[int]:
+    def convert_vram_to_rom_offset(self, vram_offset_str: str) -> int | None:
         """Convert VRAM offset to ROM offset."""
         ...
 
@@ -182,14 +182,14 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
     def load_rom_injection_defaults(
         self,
         sprite_path: str,
-        metadata: Optional[dict[str, Any]] = None
+        metadata: Optional[dict[str, Any | None]] = None
     ) -> dict[str, Any]:
         """Load ROM injection defaults."""
         ...
 
     def restore_saved_sprite_location(
         self,
-        extraction_vram_offset: Optional[str],
+        extraction_vram_offset: str | None,
         sprite_locations: dict[str, int]
     ) -> dict[str, Any]:
         """Restore saved sprite location."""
@@ -199,7 +199,7 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
         """Get cache statistics."""
         ...
 
-    def clear_rom_cache(self, older_than_days: Optional[int] = None) -> int:
+    def clear_rom_cache(self, older_than_days: int | None = None) -> int:
         """Clear ROM cache."""
         ...
 
@@ -207,7 +207,7 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
         self,
         rom_path: str,
         scan_params: dict[str, Any]
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any | None]:
         """Get scan progress."""
         ...
 
@@ -224,8 +224,8 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
 
     def clear_scan_progress(
         self,
-        rom_path: Optional[str] = None,
-        scan_params: Optional[dict[str, Any]] = None
+        rom_path: str | None = None,
+        scan_params: Optional[dict[str, Any | None]] = None
     ) -> int:
         """Clear scan progress."""
         ...
@@ -267,11 +267,11 @@ class SessionManagerProtocol(BaseManagerProtocol, Protocol):
 
     def update_file_paths(
         self,
-        vram: Optional[str] = None,
-        cgram: Optional[str] = None,
-        oam: Optional[str] = None,
-        output_dir: Optional[str] = None,
-        rom: Optional[str] = None,
+        vram: str | None = None,
+        cgram: str | None = None,
+        oam: str | None = None,
+        output_dir: str | None = None,
+        rom: str | None = None,
     ) -> None:
         """Update file paths in session."""
         ...
@@ -292,7 +292,7 @@ class SessionManagerProtocol(BaseManagerProtocol, Protocol):
         """Clear current session data."""
         ...
 
-    def clear_recent_files(self, file_type: Optional[str] = None) -> None:
+    def clear_recent_files(self, file_type: str | None = None) -> None:
         """Clear recent files."""
         ...
 

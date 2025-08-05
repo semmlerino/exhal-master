@@ -5,7 +5,10 @@ Implements a group box that can be collapsed/expanded to hide advanced options,
 following the principle of progressive disclosure to reduce UI complexity.
 """
 
-from typing import override
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtSignal
 from PyQt6.QtGui import QFont

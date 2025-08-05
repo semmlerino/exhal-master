@@ -1,11 +1,15 @@
 """Worker thread for searching next/previous valid sprite"""
 
+import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PyQt6.QtCore import QThread, pyqtSignal
+
+from core.parallel_sprite_finder import ParallelSpriteFinder
+from core.workers.base import handle_worker_errors
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -28,13 +32,24 @@ class SpriteSearchWorker(QThread):
         self.direction = direction  # 1 for forward, -1 for backward
         self.extractor = extractor
         self._cancelled = False
+        self._cancellation_token = threading.Event()
 
         # Default step size
         self.step = 0x100  # 256-byte alignment
 
+        # Create parallel finder for more efficient searching
+        self._parallel_finder = ParallelSpriteFinder(
+            num_workers=2,  # Use fewer workers for single direction search
+            chunk_size=0x20000,  # 128KB chunks for smaller search areas
+            step_size=self.step
+        )
+
+    @handle_worker_errors("sprite searching")
     def run(self):
         """Search for valid sprite in the specified direction"""
         try:
+            self._cancellation_token.clear()
+
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()
 
@@ -47,80 +62,78 @@ class SpriteSearchWorker(QThread):
             if self.direction > 0:
                 search_start = self.start_offset + self.step
                 search_end = min(self.end_offset, self.start_offset + max_search_distance, rom_size)
-                step = self.step
             else:
                 # For backward search
-                search_start = self.start_offset - self.step
-                search_end = max(self.end_offset, self.start_offset - max_search_distance, -1)
-                step = -self.step
+                search_end = self.start_offset - self.step
+                search_start = max(self.end_offset, self.start_offset - max_search_distance, 0)
+                # Swap for proper range handling
+                search_start, search_end = search_end, search_start
 
-            # Calculate total steps for progress
-            total_steps = abs((search_end - search_start) // step)
-            current_step = 0
+            # Validate range
+            search_start = max(0, search_start)
+            search_end = min(rom_size, search_end)
 
-            # Search for valid sprite
-            for offset in range(search_start, search_end, step):
-                if self._cancelled:
-                    logger.debug("Search cancelled")
-                    break
+            if search_start >= search_end:
+                logger.debug("Invalid search range, no sprites found")
+                self.search_complete.emit(False)
+                return
 
-                if offset < 0 or offset >= rom_size:
-                    continue
+            logger.debug(f"Searching range 0x{search_start:X} to 0x{search_end:X} (direction: {self.direction})")
 
-                # Update progress periodically
-                current_step += 1
-                if current_step % 10 == 0:
-                    self.progress.emit(current_step, total_steps)
+            # Progress callback
+            def progress_callback(current_progress, total_progress):
+                # Simple progress mapping
+                search_range = search_end - search_start
+                current_step = int((current_progress / 100) * (search_range // self.step))
+                total_steps = int(search_range // self.step)
+                self.progress.emit(current_step, total_steps)
 
-                try:
-                    # Quick pre-check to avoid expensive operations
-                    if not self._quick_check(rom_data, offset):
-                        continue
+            # Use parallel finder for the search
+            search_results = self._parallel_finder.search_parallel(
+                self.rom_path,
+                start_offset=search_start,
+                end_offset=search_end,
+                progress_callback=progress_callback,
+                cancellation_token=self._cancellation_token
+            )
 
-                    # Try to decompress with a reasonable size limit
-                    _, sprite_data = self.extractor.rom_injector.find_compressed_sprite(
-                        rom_data, offset, expected_size=32768  # 32KB limit for search
-                    )
+            # Filter results by quality threshold and find the best match
+            valid_results = [r for r in search_results if r.confidence >= quality_threshold]
 
-                    if len(sprite_data) >= 512:  # At least 16 tiles
-                        # Assess quality
-                        quality = self.extractor._assess_sprite_quality(sprite_data)
+            if valid_results:
+                # For forward search, take the first (closest to start)
+                # For backward search, take the last (closest to original position)
+                if self.direction > 0:
+                    best_result = min(valid_results, key=lambda r: r.offset)
+                else:
+                    best_result = max(valid_results, key=lambda r: r.offset)
 
-                        if quality >= quality_threshold:
-                            self.sprite_found.emit(offset, quality)
-                            self.search_complete.emit(True)
-                            return
+                logger.info(
+                    f"Found sprite at 0x{best_result.offset:X}: "
+                    f"quality={best_result.confidence:.2f}, tiles={best_result.tile_count}"
+                )
 
-                except Exception as e:
-                    # Not a valid sprite, continue searching
-                    logger.debug(f"Search check failed at 0x{offset:06X}: {e}")
-
-            # No valid sprite found
-            self.search_complete.emit(False)
+                self.sprite_found.emit(best_result.offset, best_result.confidence)
+                self.search_complete.emit(True)
+            else:
+                logger.debug("No valid sprites found in search range")
+                self.search_complete.emit(False)
 
         except Exception as e:
             logger.exception("Error in sprite search")
             self.error.emit("Search failed", e)
             self.search_complete.emit(False)
-
-    def _quick_check(self, rom_data: bytes, offset: int) -> bool:
-        """Quick validation to skip obviously empty areas"""
-        if offset + 0x20 > len(rom_data):
-            return False
-
-        # Check for empty or uniform data
-        chunk = rom_data[offset:offset+0x20]
-        if all(b == 0 for b in chunk) or all(b == 0xFF for b in chunk):
-            return False
-
-        # Look for compression headers
-        if chunk[0] == 0x10:  # LZ compression
-            return True
-
-        # Check for reasonable data variety
-        unique_bytes = len(set(chunk))
-        return unique_bytes > 4
+        finally:
+            # Cleanup parallel finder resources
+            if hasattr(self, "_parallel_finder"):
+                try:
+                    self._parallel_finder.shutdown()
+                except Exception as cleanup_error:
+                    logger.warning(f"Error during parallel finder cleanup: {cleanup_error}")
 
     def cancel(self):
         """Cancel the search"""
         self._cancelled = True
+        if hasattr(self, "_cancellation_token"):
+            self._cancellation_token.set()
+            logger.debug("Sprite search cancellation requested")

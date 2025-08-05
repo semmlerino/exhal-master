@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from utils.logging_config import get_logger
 from utils.sprite_regions import SpriteRegion
 
@@ -194,9 +195,9 @@ class RegionJumpWidget(QWidget):
 
     def _connect_signals(self):
         """Connect internal signals"""
-        if self.region_combo:
+        if self.region_combo is not None:
             self.region_combo.currentIndexChanged.connect(self._on_region_changed)
-        if self.go_button:
+        if self.go_button is not None:
             self.go_button.clicked.connect(self._on_go_clicked)
 
     def _on_region_changed(self, index: int):
@@ -207,7 +208,7 @@ class RegionJumpWidget(QWidget):
 
             # Update offset spinbox to show region start
             region = self.regions[index]
-            if self.offset_spinbox:
+            if self.offset_spinbox is not None:
                 self.offset_spinbox.setValue(region.center_offset)
 
     def _on_go_clicked(self):
@@ -217,13 +218,13 @@ class RegionJumpWidget(QWidget):
 
     def _on_offset_jump(self):
         """Handle direct offset jump"""
-        if self.offset_spinbox:
+        if self.offset_spinbox is not None:
             offset = self.offset_spinbox.value()
             self.offset_requested.emit(offset)
 
     def _update_stats_display(self):
         """Update region statistics display"""
-        if not self.stats_label:
+        if self.stats_label is None:
             return
 
         if not self.regions:
@@ -284,20 +285,20 @@ class RegionJumpWidget(QWidget):
         self.current_region_index = -1
 
         # Update combo box
-        if self.region_combo:
+        if self.region_combo is not None:
             self.region_combo.clear()
 
             if not regions:
                 self.region_combo.addItem("No regions detected")
                 self.region_combo.setEnabled(False)
-                if self.go_button:
+                if self.go_button is not None:
                     self.go_button.setEnabled(False)
             else:
                 for i, region in enumerate(regions):
                     self.region_combo.addItem(self._format_region_name(region, i))
 
                 self.region_combo.setEnabled(True)
-                if self.go_button:
+                if self.go_button is not None:
                     self.go_button.setEnabled(True)
 
                 # Select first region by default
@@ -311,7 +312,7 @@ class RegionJumpWidget(QWidget):
         self.smart_mode = enabled
 
         # In smart mode, emphasize region navigation
-        if self.region_combo:
+        if self.region_combo is not None:
             if enabled:
                 self.region_combo.setStyleSheet("""
                     QComboBox {
@@ -369,13 +370,13 @@ class RegionJumpWidget(QWidget):
 
     def set_rom_size(self, size: int):
         """Update ROM size for offset limits"""
-        if self.offset_spinbox:
+        if self.offset_spinbox is not None:
             self.offset_spinbox.setMaximum(size)
 
     def highlight_region_for_offset(self, offset: int):
         """Highlight the region containing the given offset"""
         for i, region in enumerate(self.regions):
             if region.start_offset <= offset <= region.end_offset:
-                if self.region_combo:
+                if self.region_combo is not None:
                     self.region_combo.setCurrentIndex(i)
                 break

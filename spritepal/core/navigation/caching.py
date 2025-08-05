@@ -560,7 +560,7 @@ class NavigationCache:
 
     def _dict_to_hint(self, hint_dict: dict[str, Any]) -> NavigationHint:
         """Convert dictionary back to NavigationHint object."""
-        from .data_structures import NavigationStrategy, RegionType
+        from .data_structures import NavigationStrategy, RegionType  # noqa: PLC0415
 
         return NavigationHint(
             target_offset=hint_dict["target_offset_int"],

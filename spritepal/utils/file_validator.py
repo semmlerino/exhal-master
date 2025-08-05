@@ -7,7 +7,6 @@ file type support.
 """
 
 import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -59,13 +58,13 @@ class BasicFileValidator:
                 error_message=f"{file_type} path is empty or None"
             )
 
-        if not os.path.exists(path):
+        if not Path(path).exists():
             return ValidationResult(
                 is_valid=False,
                 error_message=f"{file_type} does not exist: {path}"
             )
 
-        if not os.path.isfile(path):
+        if not Path(path).is_file():
             return ValidationResult(
                 is_valid=False,
                 error_message=f"Path is not a file: {path}"
@@ -73,7 +72,7 @@ class BasicFileValidator:
 
         # Try to access the file
         try:
-            with open(path, "rb") as f:
+            with Path(path).open("rb") as f:
                 f.read(1)  # Try to read one byte
         except PermissionError:
             return ValidationResult(
@@ -167,15 +166,16 @@ class BasicFileValidator:
         """
         try:
             resolved_path = str(Path(path).resolve())
-            exists = os.path.exists(path)
-            size = os.path.getsize(path) if exists else 0
+            path_obj = Path(path)
+            exists = path_obj.exists()
+            size = path_obj.stat().st_size if exists else 0
             extension = Path(path).suffix
 
             # Test readability
             is_readable = False
             if exists:
                 try:
-                    with open(path, "rb") as f:
+                    with Path(path).open("rb") as f:
                         f.read(1)
                     is_readable = True
                 except (PermissionError, OSError):
@@ -418,7 +418,7 @@ class ContentValidator:
             ValidationResult with JSON parsing validation
         """
         try:
-            with open(path, encoding="utf-8") as f:
+            with Path(path).open(encoding="utf-8") as f:
                 json.load(f)
             return ValidationResult(is_valid=True)
         except json.JSONDecodeError as e:
@@ -444,7 +444,7 @@ class ContentValidator:
             ValidationResult with header validation
         """
         try:
-            with open(path, "rb") as f:
+            with Path(path).open("rb") as f:
                 header = f.read(16)
                 if len(header) < 16:
                     return ValidationResult(

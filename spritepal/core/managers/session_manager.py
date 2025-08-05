@@ -3,7 +3,6 @@ Manager for session state and application settings
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -65,7 +64,7 @@ class SessionManager(BaseManager):
         """Load settings from file"""
         if self._settings_file.exists():
             try:
-                with open(self._settings_file) as f:
+                with self._settings_file.open() as f:
                     data = json.load(f)
                     if isinstance(data, dict):
                         self._logger.info("Settings loaded successfully")
@@ -174,7 +173,7 @@ class SessionManager(BaseManager):
             return
 
         try:
-            with open(self._settings_file, "w") as f:
+            with self._settings_file.open("w") as f:
                 json.dump(self._settings, f, indent=2)
 
             self._session_dirty = False
@@ -353,7 +352,7 @@ class SessionManager(BaseManager):
         files = recent.get(file_type, [])
 
         # Filter out non-existent files
-        existing_files = [f for f in files if os.path.exists(f)]
+        existing_files = [f for f in files if Path(f).exists()]
 
         # Update if we removed any
         if len(existing_files) != len(files):
@@ -366,7 +365,7 @@ class SessionManager(BaseManager):
 
     def _add_recent_file(self, file_type: str, file_path: str) -> None:
         """Add a file to recent files list"""
-        if not file_path or not os.path.exists(file_path):
+        if not file_path or not Path(file_path).exists():
             return
 
         if "recent_files" not in self._settings:
@@ -428,7 +427,7 @@ class SessionManager(BaseManager):
             SessionError: If export fails
         """
         try:
-            with open(file_path, "w") as f:
+            with Path(file_path).open("w") as f:
                 json.dump(self._settings, f, indent=2)
             self._logger.info(f"Settings exported to {file_path}")
         except OSError as e:
@@ -448,7 +447,7 @@ class SessionManager(BaseManager):
         try:
             self._validate_file_exists(file_path, "Settings file")
 
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 data = json.load(f)
 
             if not isinstance(data, dict):

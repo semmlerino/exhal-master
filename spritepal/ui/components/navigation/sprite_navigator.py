@@ -11,7 +11,7 @@ Features:
 """
 
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.managers import ExtractionManager
@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.components.navigation.region_jump_widget import RegionJumpWidget
@@ -158,7 +159,7 @@ class SpriteNavigator(QWidget):
         self.current_offset = 0x200000
         self.rom_path = ""
         self.rom_size = 0x400000
-        self.extraction_manager: Optional[ExtractionManager] = None
+        self.extraction_manager: ExtractionManager | None = None
         self.found_sprites: list[tuple[int, float]] = []
         self.sprite_regions: list[SpriteRegion] = []
         self.navigation_mode = "manual"  # "manual" or "smart"
@@ -252,7 +253,7 @@ class SpriteNavigator(QWidget):
 
         # ROM Map with density visualization
         map_section = CollapsibleGroupBox("ROM Map", collapsed=False)
-        
+
         # Create a container widget for the map layout
         map_container = QWidget()
         map_layout = QVBoxLayout(map_container)
@@ -287,7 +288,7 @@ class SpriteNavigator(QWidget):
 
         # Navigation Controls
         nav_controls = CollapsibleGroupBox("Navigation", collapsed=False)
-        
+
         # Create a container widget for the controls layout
         controls_container = QWidget()
         controls_layout = QVBoxLayout(controls_container)
@@ -341,7 +342,7 @@ class SpriteNavigator(QWidget):
 
         # Nearby Sprites Preview
         preview_section = CollapsibleGroupBox("Nearby Sprites", collapsed=False)
-        
+
         # Create a container widget for the preview layout
         preview_container = QWidget()
         preview_layout = QVBoxLayout(preview_container)
@@ -379,17 +380,17 @@ class SpriteNavigator(QWidget):
     def _connect_signals(self):
         """Connect internal signals"""
         # ROM map interaction
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.offset_clicked.connect(self._on_map_clicked)
 
         # Navigation buttons
-        if self.prev_button:
+        if self.prev_button is not None:
             self.prev_button.clicked.connect(self._navigate_prev_sprite)
-        if self.next_button:
+        if self.next_button is not None:
             self.next_button.clicked.connect(self._navigate_next_sprite)
 
         # Region jump
-        if self.region_jump:
+        if self.region_jump is not None:
             self.region_jump.region_selected.connect(self._on_region_selected)
             self.region_jump.offset_requested.connect(self._navigate_to_offset)
 
@@ -406,7 +407,7 @@ class SpriteNavigator(QWidget):
             self.region_jump.set_smart_mode(True)
             if self.sprite_regions:
                 self._update_navigation_for_smart_mode()
-        elif self.region_jump:
+        elif self.region_jump is not None:
             self.region_jump.set_smart_mode(False)
 
         self.navigation_mode_changed.emit(mode)
@@ -515,10 +516,10 @@ class SpriteNavigator(QWidget):
 
     def _update_position_display(self):
         """Update position and context labels"""
-        if self.position_label:
+        if self.position_label is not None:
             self.position_label.setText(f"0x{self.current_offset:06X}")
 
-        if self.context_label:
+        if self.context_label is not None:
             # Determine context based on offset
             mb_position = self.current_offset / (1024 * 1024)
 
@@ -543,7 +544,7 @@ class SpriteNavigator(QWidget):
 
     def _update_rom_map(self):
         """Update ROM map visualization"""
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.set_current_offset(self.current_offset)
 
             # Update region highlighting in smart mode
@@ -601,7 +602,7 @@ class SpriteNavigator(QWidget):
             sprite_name = f"thumb_0x{offset:X}"
 
             worker = SpritePreviewWorker(
-                self.rom_path, offset, sprite_name, rom_extractor, None
+                self.rom_path, offset, sprite_name, rom_extractor, None, parent=self
             )
 
             # Connect completion signal
@@ -649,11 +650,11 @@ class SpriteNavigator(QWidget):
 
     def _update_navigation_for_smart_mode(self):
         """Update navigation UI for smart mode"""
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.set_sprite_regions(self.sprite_regions)
             self.rom_map.toggle_region_highlight(True)
 
-        if self.region_jump:
+        if self.region_jump is not None:
             self.region_jump.set_regions(self.sprite_regions)
 
     def _add_to_history(self, offset: int):
@@ -690,7 +691,7 @@ class SpriteNavigator(QWidget):
         self.extraction_manager = extraction_manager
 
         # Update ROM map
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.set_rom_size(rom_size)
 
         # Clear caches
@@ -704,7 +705,7 @@ class SpriteNavigator(QWidget):
         self.found_sprites = sprites
 
         # Update ROM map
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.clear_sprites()
             self.rom_map.add_found_sprites_batch(sprites)
 
@@ -713,7 +714,7 @@ class SpriteNavigator(QWidget):
         self.sprite_regions = detector.detect_regions(sprites)
 
         # Update region jump widget
-        if self.region_jump:
+        if self.region_jump is not None:
             self.region_jump.set_regions(self.sprite_regions)
 
         # Update thumbnails
@@ -723,14 +724,14 @@ class SpriteNavigator(QWidget):
         """Add a single found sprite"""
         self.found_sprites.append((offset, quality))
 
-        if self.rom_map:
+        if self.rom_map is not None:
             self.rom_map.add_found_sprite(offset, quality)
 
         # Re-detect regions if significant changes
         if len(self.found_sprites) % 10 == 0:  # Every 10 sprites
             detector = SpriteRegionDetector()
             self.sprite_regions = detector.detect_regions(self.found_sprites)
-            if self.region_jump:
+            if self.region_jump is not None:
                 self.region_jump.set_regions(self.sprite_regions)
 
     def get_current_offset(self) -> int:

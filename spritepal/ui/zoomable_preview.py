@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common.spacing_constants import (
     BORDER_THIN,
     MAX_ZOOM,
@@ -81,7 +82,7 @@ class ZoomablePreviewWidget(QWidget):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(30, 30, 30))
 
-        if self._pixmap:
+        if self._pixmap is not None:
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
             # Apply transformations
@@ -131,7 +132,7 @@ class ZoomablePreviewWidget(QWidget):
 
     def _draw_checkerboard(self, painter: Any, transform: Any) -> None:
         """Draw a checkerboard background for transparency visibility"""
-        if not self._pixmap:
+        if self._pixmap is None:
             return
 
         # Create inverse transform to get visible area in image coordinates
@@ -159,7 +160,7 @@ class ZoomablePreviewWidget(QWidget):
 
     def _draw_pixel_grid(self, painter: Any, transform: Any) -> None:
         """Draw a pixel grid when zoomed in"""
-        if not self._pixmap:
+        if self._pixmap is None:
             return
 
         # Create inverse transform to get visible area in image coordinates
@@ -191,7 +192,7 @@ class ZoomablePreviewWidget(QWidget):
 
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         """Handle mouse wheel for zooming"""
-        if not self._pixmap or not a0:
+        if self._pixmap is None or not a0:
             return
 
         # Get mouse position in widget coordinates
@@ -336,7 +337,7 @@ class ZoomablePreviewWidget(QWidget):
 
     def zoom_to_fit(self) -> None:
         """Zoom to fit the image in the widget"""
-        if not self._pixmap:
+        if self._pixmap is None:
             return
 
         # Calculate scale to fit

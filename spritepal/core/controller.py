@@ -4,10 +4,10 @@ Main controller for SpritePal extraction workflow
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from PIL import Image
 from PyQt6.QtCore import QObject
@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 from core.managers import (
     ExtractionManager,
     InjectionManager,
-    SessionManager,
     get_extraction_manager,
     get_injection_manager,
     get_session_manager,
@@ -105,8 +104,8 @@ class ErrorHandlerProtocol(Protocol):
 class MockErrorHandler:
     """
     Mock error handler for testing that implements all ErrorHandler methods.
-    
-    This replaces the dangerous Mock() usage that would crash when unmocked 
+
+    This replaces the dangerous Mock() usage that would crash when unmocked
     methods are called. Each method logs the call for debugging but never
     raises exceptions.
     """
@@ -179,9 +178,10 @@ class ExtractionController(QObject):
         self.main_window: MainWindow = main_window
 
         # Use injected managers or fall back to global registry for backward compatibility
-        self.session_manager: SessionManager = session_manager or get_session_manager()
-        self.extraction_manager: ExtractionManager = extraction_manager or get_extraction_manager()
-        self.injection_manager: InjectionManager = injection_manager or get_injection_manager()
+        # Keep union types for maximum flexibility while ensuring we have the required interface
+        self.session_manager = session_manager or get_session_manager()
+        self.extraction_manager = extraction_manager or get_extraction_manager()
+        self.injection_manager = injection_manager or get_injection_manager()
 
         # Workers still managed locally (thin wrappers)
         self.worker: VRAMExtractionWorker | None = None
@@ -189,7 +189,7 @@ class ExtractionController(QObject):
 
         # Initialize error handler (skip for test mocks)
         try:
-            self.error_handler: ErrorHandlerProtocol = get_error_handler(self.main_window)
+            self.error_handler = get_error_handler(self.main_window)
         except (TypeError, AttributeError):
             # Handle test scenarios with mock objects - use proper MockErrorHandler
             # instead of dangerous Mock() that crashes when unmocked methods are called
@@ -205,22 +205,26 @@ class ExtractionController(QObject):
             self.update_preview_with_offset
         )
 
-        # Connect injection manager signals
-        _ = self.injection_manager.injection_progress.connect(self._on_injection_progress)
-        _ = self.injection_manager.injection_finished.connect(self._on_injection_finished)
-        _ = self.injection_manager.cache_saved.connect(self._on_cache_saved)
+        # Connect injection manager signals (cast to concrete type for signal access)
+        injection_mgr = cast(InjectionManager, self.injection_manager)
+        _ = injection_mgr.injection_progress.connect(self._on_injection_progress)
+        _ = injection_mgr.injection_finished.connect(self._on_injection_finished)
+        _ = injection_mgr.cache_saved.connect(self._on_cache_saved)
 
-        # Connect extraction manager cache signals
-        _ = self.extraction_manager.cache_operation_started.connect(self._on_cache_operation_started)
-        _ = self.extraction_manager.cache_hit.connect(self._on_cache_hit)
-        _ = self.extraction_manager.cache_miss.connect(self._on_cache_miss)
-        _ = self.extraction_manager.cache_saved.connect(self._on_cache_saved)
+        # Connect extraction manager cache signals (cast to concrete type for signal access)
+        extraction_mgr = cast(ExtractionManager, self.extraction_manager)
+        _ = extraction_mgr.cache_operation_started.connect(self._on_cache_operation_started)
+        _ = extraction_mgr.cache_hit.connect(self._on_cache_hit)
+        _ = extraction_mgr.cache_miss.connect(self._on_cache_miss)
+        _ = extraction_mgr.cache_saved.connect(self._on_cache_saved)
 
         # Initialize preview generator with managers
         self.preview_generator = get_preview_generator()
+        # Cast to concrete type for preview generator compatibility
+        extraction_mgr = cast(ExtractionManager, self.extraction_manager)
         self.preview_generator.set_managers(
-            extraction_manager=self.extraction_manager,
-            rom_extractor=self.extraction_manager.get_rom_extractor()
+            extraction_manager=extraction_mgr,
+            rom_extractor=extraction_mgr.get_rom_extractor()
         )
 
     def start_extraction(self) -> None:
@@ -231,7 +235,8 @@ class ExtractionController(QObject):
         # PARAMETER VALIDATION: Check requirements first for better UX
         # Users should get helpful parameter guidance before file system errors
         try:
-            self.extraction_manager.validate_extraction_params(params)
+            # Cast TypedDict to dict for manager compatibility
+            self.extraction_manager.validate_extraction_params(cast(dict[str, Any], params))
         except Exception as e:
             self.main_window.extraction_failed(str(e))
             return
@@ -278,11 +283,14 @@ class ExtractionController(QObject):
                 logger.warning(f"OAM file warning: {warning}")
 
         # Create and start worker thread
-        # Convert validated params dict to ExtractionParams TypedDict
-        extraction_params: ExtractionParams = {
+        # Import VRAMExtractionParams from the worker module
+        from core.workers.extraction import VRAMExtractionParams
+        
+        # Convert validated params dict to VRAMExtractionParams TypedDict
+        extraction_params: VRAMExtractionParams = {
             "vram_path": params["vram_path"],
-            "cgram_path": params.get("cgram_path", ""),
-            "oam_path": params.get("oam_path", ""),
+            "cgram_path": params.get("cgram_path") or None,
+            "oam_path": params.get("oam_path") or None,
             "vram_offset": params.get("vram_offset", VRAM_SPRITE_OFFSET),
             "output_base": params["output_base"],
             "create_grayscale": params.get("create_grayscale", True),
@@ -310,7 +318,7 @@ class ExtractionController(QObject):
         pixmap = pil_to_qpixmap(pil_image)
         if pixmap is not None:
             self.main_window.sprite_preview.set_preview(pixmap, tile_count)
-            self.main_window.preview_info.setText(f"Tiles: {tile_count}")
+            self.main_window.preview_coordinator.update_preview_info(f"Tiles: {tile_count}")
         else:
             logger.error("Failed to convert PIL image to QPixmap for preview")
 
@@ -398,7 +406,7 @@ class ExtractionController(QObject):
 
             info_text = f"Tiles: {num_tiles} (Offset: 0x{offset:04X})"
             logger.debug(f"Setting preview info text: {info_text}")
-            self.main_window.preview_info.setText(info_text)
+            self.main_window.preview_coordinator.update_preview_info(info_text)
 
             # Also update the grayscale image for palette application
             logger.debug("Setting grayscale image in sprite preview")
@@ -420,27 +428,28 @@ class ExtractionController(QObject):
             try:
                 logger.debug("Attempting to clear preview due to error")
                 self.main_window.sprite_preview.clear_preview()
-                self.main_window.preview_info.setText("Preview update failed")
+                self.main_window.preview_coordinator.update_preview_info("Preview update failed")
             except Exception:
                 logger.exception("Failed to clear preview on error")
 
     def open_in_editor(self, sprite_file: str) -> None:
         """Open the extracted sprites in the pixel editor"""
         # Get the directory where this spritepal package is located
-        spritepal_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        exhal_dir = os.path.dirname(spritepal_dir)
+        current_file = Path(__file__).resolve()
+        spritepal_dir = current_file.parent.parent
+        exhal_dir = spritepal_dir.parent
 
         # Look for pixel editor launcher using absolute paths
         launcher_paths = [
-            os.path.join(spritepal_dir, "launch_pixel_editor.py"),
-            os.path.join(spritepal_dir, "pixel_editor", "launch_pixel_editor.py"),
-            os.path.join(exhal_dir, "launch_pixel_editor.py"),
-            os.path.join(exhal_dir, "pixel_editor", "launch_pixel_editor.py"),
+            spritepal_dir / "launch_pixel_editor.py",
+            spritepal_dir / "pixel_editor" / "launch_pixel_editor.py",
+            exhal_dir / "launch_pixel_editor.py",
+            exhal_dir / "pixel_editor" / "launch_pixel_editor.py",
         ]
 
         launcher_path = None
         for path in launcher_paths:
-            if os.path.exists(path):
+            if path.exists():
                 launcher_path = path
                 break
 
@@ -454,8 +463,8 @@ class ExtractionController(QObject):
                 return
 
             # Ensure launcher path is absolute and exists
-            launcher_path = os.path.abspath(launcher_path)
-            if not os.path.exists(launcher_path):
+            launcher_path = launcher_path.resolve()
+            if not launcher_path.exists():
                 self.main_window.status_bar.showMessage(
                     "Pixel editor launcher not found"
                 )
@@ -464,10 +473,10 @@ class ExtractionController(QObject):
             # Launch pixel editor with the sprite file
             try:
                 # Use absolute paths for safety
-                sprite_file_abs = os.path.abspath(sprite_file)
-                _ = subprocess.Popen([sys.executable, launcher_path, sprite_file_abs])
+                sprite_file_abs = Path(sprite_file).resolve()
+                _ = subprocess.Popen([sys.executable, str(launcher_path), str(sprite_file_abs)])
                 self.main_window.status_bar.showMessage(
-                    f"Opened {os.path.basename(sprite_file)} in pixel editor"
+                    f"Opened {sprite_file_abs.name} in pixel editor"
                 )
             except Exception as e:
                 self.main_window.status_bar.showMessage(
@@ -511,7 +520,7 @@ class ExtractionController(QObject):
                 # Get the arranged sprite path
                 arranged_path = dialog.get_arranged_path()
 
-                if arranged_path and os.path.exists(arranged_path):
+                if arranged_path and Path(arranged_path).exists():
                     # Open the arranged sprite in the pixel editor
                     self.open_in_editor(arranged_path)
                     self.main_window.status_bar.showMessage(
@@ -554,7 +563,7 @@ class ExtractionController(QObject):
             # Get the arranged sprite path
             arranged_path = dialog.get_arranged_path()
 
-            if arranged_path and os.path.exists(arranged_path):
+            if arranged_path and Path(arranged_path).exists():
                 # Open the arranged sprite in the pixel editor
                 self.open_in_editor(arranged_path)
                 self.main_window.status_bar.showMessage(
@@ -617,7 +626,7 @@ class ExtractionController(QObject):
 
         # Get smart input VRAM suggestion using injection manager
         suggested_input_vram = self.injection_manager.get_smart_vram_suggestion(
-            sprite_path, metadata_path if os.path.exists(metadata_path) else ""
+            sprite_path, metadata_path if Path(metadata_path).exists() else ""
         )
 
         # Show injection dialog
@@ -626,7 +635,7 @@ class ExtractionController(QObject):
         dialog = InjectionDialog(
             parent,
             sprite_path=sprite_path,
-            metadata_path=metadata_path if os.path.exists(metadata_path) else "",
+            metadata_path=metadata_path if Path(metadata_path).exists() else "",
             input_vram=suggested_input_vram,
         )
 
@@ -698,9 +707,9 @@ class ExtractionController(QObject):
             message = f"Loaded {cache_type.replace('_', ' ')} from cache (saved {time_saved:.1f}s)"
             self.main_window.status_bar.showMessage(message, 5000)
 
-            # Update cache status indicator if present
-            if hasattr(self.main_window, "_update_cache_status"):
-                self.main_window._update_cache_status()
+            # Update cache status indicator through status bar manager
+            if hasattr(self.main_window.status_bar_manager, "update_cache_status"):
+                self.main_window.status_bar_manager.update_cache_status()
 
     def _on_cache_miss(self, cache_type: str) -> None:
         """Handle cache miss notification"""

@@ -5,7 +5,7 @@ This module provides realistic Qt mock implementations that behave consistently
 across all test environments, including headless setups.
 """
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from unittest.mock import Mock
 
 
@@ -17,7 +17,8 @@ class MockSignal:
     functions when emit() is called, providing realistic signal behavior for tests.
     """
 
-    def __init__(self):
+    def __init__(self, *args):
+        """Initialize MockSignal, accepting any type arguments like real pyqtSignal."""
         self._callbacks: list[Callable] = []
         self.emit = Mock(side_effect=self._emit)
         self.connect = Mock(side_effect=self._connect)
@@ -27,7 +28,7 @@ class MockSignal:
         """Internal connect implementation that maintains callback list."""
         self._callbacks.append(callback)
 
-    def _disconnect(self, callback: Optional[Callable] = None) -> None:
+    def _disconnect(self, callback: Callable | None = None) -> None:
         """Internal disconnect implementation."""
         if callback is None:
             self._callbacks.clear()
@@ -197,3 +198,13 @@ def create_qt_mock_context():
     mock_modules["PyQt6.QtGui"].QPixmap = MockQPixmap
 
     return mock_modules
+
+
+def create_mock_main_window(**kwargs):
+    """
+    Create a mock main window for testing.
+
+    This is a compatibility function that delegates to MockFactory.
+    """
+    from .mock_factory import MockFactory
+    return MockFactory.create_main_window(**kwargs)

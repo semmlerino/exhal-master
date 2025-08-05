@@ -5,7 +5,10 @@ Provides a foundation for creating organized, tab-based interfaces that follow
 UI/UX principles like progressive disclosure and clear visual hierarchy.
 """
 
-from typing import override
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (

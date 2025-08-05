@@ -4,8 +4,8 @@ Loads sprite locations from external configuration files
 """
 
 import json
-import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from utils.logging_config import get_logger
@@ -29,8 +29,8 @@ class SpriteConfig:
 class SpriteConfigLoader:
     """Loads and manages sprite location configurations"""
 
-    DEFAULT_CONFIG_PATH: str = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "config", "sprite_locations.json"
+    DEFAULT_CONFIG_PATH: str = str(
+        Path(__file__).parent.parent / "config" / "sprite_locations.json"
     )
 
     def __init__(self, config_path: str | None = None) -> None:
@@ -46,12 +46,13 @@ class SpriteConfigLoader:
 
     def load_config(self) -> None:
         """Load sprite configuration from JSON file"""
-        if not os.path.exists(self.config_path):
+        config_path_obj = Path(self.config_path)
+        if not config_path_obj.exists():
             logger.warning(f"Sprite config not found: {self.config_path}")
             return
 
         try:
-            with open(self.config_path) as f:
+            with config_path_obj.open() as f:
                 self.config_data = json.load(f)
             logger.info(f"Loaded sprite config: {self.config_path}")
         except (OSError, json.JSONDecodeError):
@@ -314,7 +315,7 @@ class SpriteConfigLoader:
         save_path = output_path or self.config_path
 
         try:
-            with open(save_path, "w") as f:
+            with Path(save_path).open("w") as f:
                 json.dump(self.config_data, f, indent=2)
             logger.info(f"Saved sprite config: {save_path}")
         except OSError:

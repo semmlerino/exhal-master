@@ -12,7 +12,6 @@ import hashlib
 import os
 import threading
 from collections import OrderedDict
-from typing import Optional
 
 from utils.logging_config import get_logger
 
@@ -48,7 +47,7 @@ class PreviewCache:
 
         logger.debug(f"PreviewCache initialized: max_size={max_size}, max_memory={max_memory_mb}MB")
 
-    def make_key(self, rom_path: str, offset: int, sprite_config_hash: Optional[str] = None) -> str:
+    def make_key(self, rom_path: str, offset: int, sprite_config_hash: str | None = None) -> str:
         """
         Generate cache key for preview data.
 
@@ -82,7 +81,7 @@ class PreviewCache:
         key_string = "|".join(key_parts)
         return hashlib.md5(key_string.encode()).hexdigest()[:16]
 
-    def get(self, key: str) -> Optional[tuple[bytes, int, int, str]]:
+    def get(self, key: str) -> tuple[bytes, int, int, str | None]:
         """
         Get cached preview data.
 

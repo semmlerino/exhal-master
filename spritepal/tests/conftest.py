@@ -8,9 +8,10 @@ that works consistently across all environments (headless, GUI, CI/CD).
 import os
 import sys
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Optional
-from unittest.mock import patch
+from typing import Any, Callable, ContextManager, Optional
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -105,14 +106,14 @@ def setup_managers(request):
 
 
 @pytest.fixture
-def test_data_factory():
+def test_data_factory() -> Callable[..., bytearray]:
     """
     Factory for creating consistent test data structures.
 
     Provides a unified way to create VRAM, CGRAM, and OAM test data
     with realistic patterns used across the test suite.
     """
-    def _create_test_data(data_type: str, size: Optional[int] = None, **kwargs) -> bytearray:
+    def _create_test_data(data_type: str, size: int | None = None, **kwargs: Any) -> bytearray:
         """
         Create test data of specified type.
 
@@ -170,14 +171,14 @@ def test_data_factory():
 
 
 @pytest.fixture
-def temp_files():
+def temp_files() -> Generator[Callable[[bytes, str], str], None, None]:
     """
     Factory for creating temporary test files with automatic cleanup.
 
     Creates temporary files with test data and ensures they are
     properly cleaned up after test completion.
     """
-    created_files = []
+    created_files: list[str] = []
 
     def _create_temp_file(data: bytes, suffix: str = ".dmp") -> str:
         """Create a temporary file with the given data."""
@@ -190,16 +191,18 @@ def temp_files():
     yield _create_temp_file
 
     # Cleanup
-    import os
     for file_path in created_files:
         try:
-            os.unlink(file_path)
+            Path(file_path).unlink(missing_ok=True)
         except OSError:
             pass  # File might already be deleted
 
 
 @pytest.fixture
-def standard_test_params(test_data_factory, temp_files):
+def standard_test_params(
+    test_data_factory: Callable[..., bytearray],
+    temp_files: Callable[[bytes, str], str]
+) -> dict[str, Any]:
     """
     Create standard test parameters used across integration tests.
 
@@ -230,7 +233,9 @@ def standard_test_params(test_data_factory, temp_files):
 
 
 @pytest.fixture
-def minimal_sprite_data(test_data_factory):
+def minimal_sprite_data(
+    test_data_factory: Callable[..., bytearray]
+) -> dict[str, Any]:
     """
     Create minimal but valid sprite data for quick tests.
 
@@ -248,54 +253,147 @@ def minimal_sprite_data(test_data_factory):
 
 # Consolidated mock fixtures using MockFactory
 @pytest.fixture
-def mock_main_window():
+def mock_main_window() -> Any:  # MockMainWindowProtocol but avoid import issues
     """Provide a fully configured mock main window."""
     return MockFactory.create_main_window()
 
 
 @pytest.fixture
-def mock_extraction_worker():
+def mock_extraction_worker() -> Any:  # MockExtractionWorkerProtocol
     """Provide a fully configured mock extraction worker."""
     return MockFactory.create_extraction_worker()
 
 
 @pytest.fixture
-def mock_extraction_manager():
+def mock_extraction_manager() -> Any:  # MockExtractionManagerProtocol
     """Provide a fully configured mock extraction manager."""
     return MockFactory.create_extraction_manager()
 
 
 @pytest.fixture
-def mock_injection_manager():
+def mock_injection_manager() -> Any:  # MockInjectionManagerProtocol
     """Provide a fully configured mock injection manager."""
     return MockFactory.create_injection_manager()
 
 
 @pytest.fixture
-def mock_session_manager():
+def mock_session_manager() -> Any:  # MockSessionManagerProtocol
     """Provide a fully configured mock session manager."""
     return MockFactory.create_session_manager()
 
 
 @pytest.fixture
-def mock_file_dialogs():
+def mock_file_dialogs() -> dict[str, Mock]:
     """Provide mock file dialog functions."""
     return MockFactory.create_file_dialogs()
 
 
 @pytest.fixture
-def mock_rom_cache():
+def mock_rom_cache() -> Mock:
     """Provide a mock ROM cache for testing."""
     return MockFactory.create_rom_cache()
 
 
+# Dependency Injection fixtures
+@pytest.fixture
+def manager_context_factory() -> Callable[..., ContextManager[Any]]:
+    """
+    Factory for creating manager contexts for dependency injection tests.
+
+    This fixture provides a clean way to create test contexts with specific
+    manager instances, enabling proper isolation between tests.
+
+    Usage:
+        def test_my_dialog(manager_context_factory):
+            mock_injection = Mock()
+            with manager_context_factory({"injection": mock_injection}):
+                dialog = InjectionDialog()
+                # dialog will use mock_injection
+    """
+    from core.managers.context import manager_context
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+
+    def _create_context(
+        managers: Optional[dict[str, Any | None, list[str]]] = None,
+        name: str = "test_context"
+    ) -> ContextManager[Any]:
+        """
+        Create a manager context for testing.
+
+        Args:
+            managers: Dict of manager instances, or list of manager names
+            name: Context name for debugging
+
+        Returns:
+            Context manager for use in with statements
+        """
+        if managers is None:
+            # Create complete test context
+            context_managers = {
+                "extraction": TestManagerFactory.create_test_extraction_manager(),
+                "injection": TestManagerFactory.create_test_injection_manager(),
+                "session": TestManagerFactory.create_test_session_manager(),
+            }
+        elif isinstance(managers, list):
+            # Create context with specific managers
+            context_managers = {}
+            for manager_name in managers:
+                if manager_name == "extraction":
+                    context_managers[manager_name] = TestManagerFactory.create_test_extraction_manager()
+                elif manager_name == "injection":
+                    context_managers[manager_name] = TestManagerFactory.create_test_injection_manager()
+                elif manager_name == "session":
+                    context_managers[manager_name] = TestManagerFactory.create_test_session_manager()
+        else:
+            # Use provided manager dict
+            context_managers = managers
+
+        return manager_context(context_managers, name=name)
+
+    return _create_context
+
+
+@pytest.fixture
+def test_injection_manager() -> Mock:
+    """Provide a test injection manager instance."""
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+    return TestManagerFactory.create_test_injection_manager()
+
+
+@pytest.fixture
+def test_extraction_manager() -> Mock:
+    """Provide a test extraction manager instance."""
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+    return TestManagerFactory.create_test_extraction_manager()
+
+
+@pytest.fixture
+def test_session_manager() -> Mock:
+    """Provide a test session manager instance."""
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+    return TestManagerFactory.create_test_session_manager()
+
+
+@pytest.fixture
+def complete_test_context() -> Any:  # ManagerContext type
+    """Provide a complete test context with all managers configured."""
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+    return TestManagerFactory.create_complete_test_context()
+
+
+@pytest.fixture
+def minimal_injection_context() -> Any:  # ManagerContext type
+    """Provide a minimal context with just injection manager for dialog tests."""
+    from tests.infrastructure.test_manager_factory import TestManagerFactory
+    return TestManagerFactory.create_minimal_test_context(["injection"], name="dialog_test")
+
+
 # Safe Qt fixtures for both headless and GUI environments
 @pytest.fixture
-def safe_qtbot(qtbot):
+def safe_qtbot(qtbot: Any) -> Any:  # QtBot | Mock but avoid circular import
     """Provide a qtbot that works in both headless and GUI environments."""
     if IS_HEADLESS:
         # Create a mock qtbot for headless environments
-        from unittest.mock import Mock
         mock_qtbot = Mock()
         mock_qtbot.wait = Mock()
         mock_qtbot.waitSignal = Mock(return_value=Mock())
@@ -306,12 +404,68 @@ def safe_qtbot(qtbot):
 
 
 @pytest.fixture
-def safe_qapp(qapp):
+def safe_qapp(qapp: Any) -> Any:  # QApplication | Mock but avoid circular import
     """Provide a QApplication that works in both headless and GUI environments."""
     if IS_HEADLESS:
-        from unittest.mock import Mock
         mock_app = Mock()
         mock_app.processEvents = Mock()
         mock_app.quit = Mock()
         return mock_app
     return qapp
+
+
+@pytest.fixture(autouse=True)
+def cleanup_workers(request):
+    """
+    Automatically clean up any worker threads after each test.
+
+    This fixture runs after each test to ensure no worker threads
+    are left running, preventing "QThread: Destroyed while thread
+    is still running" errors.
+    """
+    yield
+
+    # Import here to avoid circular imports
+    from ui.common.worker_manager import WorkerManager
+
+    # Clean up any remaining workers
+    try:
+        WorkerManager.cleanup_all()  # type: ignore[attr-defined]  # WorkerManager may have different interface
+    except Exception as e:
+        # Log but don't fail tests due to cleanup errors
+        import logging
+        logging.debug(f"Error during worker cleanup: {e}")
+
+    # Clean up any SearchWorker threads specifically for advanced search tests
+    try:
+        import gc
+        import threading
+
+        # Force garbage collection to clean up any remaining thread objects
+        gc.collect()
+
+        # Wait a bit for any threads to finish their cleanup
+        import time
+        time.sleep(0.1)
+
+        # Check for any remaining threads (for debugging)
+        active_threads = threading.active_count()
+        if active_threads > 1:  # Main thread + potentially others
+            import logging
+            logging.debug(f"Active thread count after cleanup: {active_threads}")
+
+    except Exception as e:
+        import logging
+        logging.debug(f"Error during thread cleanup: {e}")
+
+    # Also check for any QThread instances that might be running
+    if not IS_HEADLESS:
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QApplication
+
+        # Process any pending events to allow threads to finish
+        app = QApplication.instance()
+        if app:
+            for _ in range(5):  # Process events multiple times
+                app.processEvents()
+                QThread.msleep(10)  # Small delay between processing

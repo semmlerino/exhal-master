@@ -5,9 +5,10 @@ Search VRAM for actual tile graphics data (not tilemap indices)
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
 
@@ -81,7 +82,8 @@ def search_for_graphics(vram_path):
 
     print(f"Searching for graphics data in: {vram_path}")
 
-    with open(vram_path, "rb") as f:
+    vram_path_obj = Path(vram_path)
+    with vram_path_obj.open("rb") as f:
         vram_data = f.read()
 
     print(f"VRAM size: {len(vram_data)} bytes (0x{len(vram_data):04X})")
@@ -137,7 +139,7 @@ def search_for_graphics(vram_path):
 def main():
     vram_file = "../Kirby Super Star (USA)_2_VRAM.dmp"
 
-    if not os.path.exists(vram_file):
+    if not Path(vram_file).exists():
         print(f"VRAM file not found: {vram_file}")
         return
 

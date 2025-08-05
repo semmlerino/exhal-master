@@ -2,8 +2,10 @@
 """Quick check of sprite configuration."""
 
 import json
+from pathlib import Path
 
-with open("config/sprite_locations.json") as f:
+config_path = Path("config/sprite_locations.json")
+with config_path.open() as f:
     config = json.load(f)
 
 print("Checking sprite configuration...")

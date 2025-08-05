@@ -1,0 +1,750 @@
+
+{
+    "version": "1.31.0",
+    "time": "1754429787925",
+    "generalDiagnostics": [
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/hal_compression.py",
+            "severity": "error",
+            "message": "\"request\" is possibly unbound",
+            "range": {
+                "start": {
+                    "line": 154,
+                    "character": 39
+                },
+                "end": {
+                    "line": 154,
+                    "character": 46
+                }
+            },
+            "rule": "reportPossiblyUnboundVariable"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/hal_compression.py",
+            "severity": "error",
+            "message": "Argument of type \"int | None\" cannot be assigned to parameter \"object\" of type \"int\" in function \"append\"\n  Type \"int | None\" is not assignable to type \"int\"\n    \"None\" is not assignable to \"int\"",
+            "range": {
+                "start": {
+                    "line": 370,
+                    "character": 46
+                },
+                "end": {
+                    "line": 370,
+                    "character": 51
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/hal_compression.py",
+            "severity": "error",
+            "message": "\"timeout\" is possibly unbound",
+            "range": {
+                "start": {
+                    "line": 446,
+                    "character": 59
+                },
+                "end": {
+                    "line": 446,
+                    "character": 66
+                }
+            },
+            "rule": "reportPossiblyUnboundVariable"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/hal_compression.py",
+            "severity": "error",
+            "message": "Type \"Path\" is not assignable to return type \"str\"\n  \"Path\" is not assignable to \"str\"",
+            "range": {
+                "start": {
+                    "line": 919,
+                    "character": 23
+                },
+                "end": {
+                    "line": 919,
+                    "character": 32
+                }
+            },
+            "rule": "reportReturnType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/base_manager.py",
+            "severity": "error",
+            "message": "Type \"(module_name: str) -> Logger\" is not assignable to declared type \"(name: str) -> Logger\"\n  Type \"(module_name: str) -> Logger\" is not assignable to type \"(name: str) -> Logger\"\n    Parameter name mismatch: \"name\" versus \"module_name\"",
+            "range": {
+                "start": {
+                    "line": 12,
+                    "character": 37
+                },
+                "end": {
+                    "line": 12,
+                    "character": 47
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/base_manager.py",
+            "severity": "error",
+            "message": "Type \"(module_name: str) -> Logger\" is not assignable to declared type \"(name: str) -> Logger\"\n  Type \"(module_name: str) -> Logger\" is not assignable to type \"(name: str) -> Logger\"\n    Parameter name mismatch: \"name\" versus \"module_name\"",
+            "range": {
+                "start": {
+                    "line": 16,
+                    "character": 41
+                },
+                "end": {
+                    "line": 16,
+                    "character": 51
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/context.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"is_initialized\" for class \"object\"\n  Attribute \"is_initialized\" is unknown",
+            "range": {
+                "start": {
+                    "line": 441,
+                    "character": 35
+                },
+                "end": {
+                    "line": 441,
+                    "character": 49
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/injection_manager.py",
+            "severity": "error",
+            "message": "\"parsed_info\" is possibly unbound",
+            "range": {
+                "start": {
+                    "line": 422,
+                    "character": 23
+                },
+                "end": {
+                    "line": 422,
+                    "character": 34
+                }
+            },
+            "rule": "reportPossiblyUnboundVariable"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/injection_manager.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"get_scan_progress\" for class \"ROMCache\"\n  Attribute \"get_scan_progress\" is unknown",
+            "range": {
+                "start": {
+                    "line": 921,
+                    "character": 25
+                },
+                "end": {
+                    "line": 921,
+                    "character": 42
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"set_current_context\" for class \"None\"\n  Attribute \"set_current_context\" is unknown",
+            "range": {
+                "start": {
+                    "line": 192,
+                    "character": 29
+                },
+                "end": {
+                    "line": 192,
+                    "character": 48
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py",
+            "severity": "error",
+            "message": "Type \"ManagerRegistry | None\" is not assignable to return type \"ManagerRegistry\"\n  Type \"ManagerRegistry | None\" is not assignable to type \"ManagerRegistry\"\n    \"None\" is not assignable to \"ManagerRegistry\"",
+            "range": {
+                "start": {
+                    "line": 353,
+                    "character": 11
+                },
+                "end": {
+                    "line": 353,
+                    "character": 20
+                }
+            },
+            "rule": "reportReturnType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/session_manager.py",
+            "severity": "warning",
+            "message": "TypeVar \"T\" appears only once in generic function signature\n  Use \"object\" instead",
+            "range": {
+                "start": {
+                    "line": 217,
+                    "character": 52
+                },
+                "end": {
+                    "line": 217,
+                    "character": 53
+                }
+            },
+            "rule": "reportInvalidTypeVarUse"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/caching.py",
+            "severity": "error",
+            "message": "Argument of type \"float\" cannot be assigned to parameter \"value\" of type \"int\" in function \"__setitem__\"\n  \"float\" is not assignable to \"int\"",
+            "range": {
+                "start": {
+                    "line": 58,
+                    "character": 12
+                },
+                "end": {
+                    "line": 58,
+                    "character": 29
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/caching.py",
+            "severity": "error",
+            "message": "Argument of type \"float\" cannot be assigned to parameter \"value\" of type \"int\" in function \"__setitem__\"\n  \"float\" is not assignable to \"int\"",
+            "range": {
+                "start": {
+                    "line": 60,
+                    "character": 12
+                },
+                "end": {
+                    "line": 60,
+                    "character": 29
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/caching.py",
+            "severity": "error",
+            "message": "Argument of type \"DiskCache\" cannot be assigned to parameter \"object\" of type \"MemoryCache\" in function \"append\"\n  \"DiskCache\" is not assignable to \"MemoryCache\"",
+            "range": {
+                "start": {
+                    "line": 324,
+                    "character": 38
+                },
+                "end": {
+                    "line": 324,
+                    "character": 53
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/caching.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"_index\" for class \"MemoryCache\"\n  Attribute \"_index\" is unknown",
+            "range": {
+                "start": {
+                    "line": 496,
+                    "character": 47
+                },
+                "end": {
+                    "line": 496,
+                    "character": 53
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/caching.py",
+            "severity": "error",
+            "message": "Argument of type \"CacheLevel\" cannot be assigned to parameter \"value\" of type \"MemoryCache\" in function \"index\"\n  \"CacheLevel\" is not assignable to \"MemoryCache\"",
+            "range": {
+                "start": {
+                    "line": 553,
+                    "character": 48
+                },
+                "end": {
+                    "line": 553,
+                    "character": 60
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/manager.py",
+            "severity": "error",
+            "message": "Type \"type[core.managers.exceptions.NavigationError]\" is not assignable to declared type \"type[core.navigation.manager.NavigationError]\"\n  \"core.managers.exceptions.NavigationError\" is not assignable to \"core.navigation.manager.NavigationError\"\n  Type \"type[core.managers.exceptions.NavigationError]\" is not assignable to type \"type[core.navigation.manager.NavigationError]\"",
+            "range": {
+                "start": {
+                    "line": 17,
+                    "character": 37
+                },
+                "end": {
+                    "line": 17,
+                    "character": 52
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/manager.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"_calculate_similarity\" for class \"AbstractNavigationStrategy\"\n  Attribute \"_calculate_similarity\" is unknown",
+            "range": {
+                "start": {
+                    "line": 359,
+                    "character": 46
+                },
+                "end": {
+                    "line": 359,
+                    "character": 67
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/plugins.py",
+            "severity": "error",
+            "message": "Argument missing for parameter \"name\"",
+            "range": {
+                "start": {
+                    "line": 114,
+                    "character": 27
+                },
+                "end": {
+                    "line": 114,
+                    "character": 43
+                }
+            },
+            "rule": "reportCallIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/plugins.py",
+            "severity": "error",
+            "message": "Argument missing for parameter \"name\"",
+            "range": {
+                "start": {
+                    "line": 278,
+                    "character": 25
+                },
+                "end": {
+                    "line": 278,
+                    "character": 39
+                }
+            },
+            "rule": "reportCallIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/plugins.py",
+            "severity": "error",
+            "message": "Argument missing for parameter \"name\"",
+            "range": {
+                "start": {
+                    "line": 441,
+                    "character": 27
+                },
+                "end": {
+                    "line": 441,
+                    "character": 32
+                }
+            },
+            "rule": "reportCallIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/region_map.py",
+            "severity": "error",
+            "message": "No overloads for \"bisect_left\" match the provided arguments",
+            "range": {
+                "start": {
+                    "line": 88,
+                    "character": 25
+                },
+                "end": {
+                    "line": 88,
+                    "character": 90
+                }
+            },
+            "rule": "reportCallIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/region_map.py",
+            "severity": "error",
+            "message": "Argument of type \"SpriteLocation\" cannot be assigned to parameter \"x\" of type \"SupportsRichComparisonT@bisect_left\" in function \"bisect_left\"\n  \"SpriteLocation\" is not assignable to \"int\"",
+            "range": {
+                "start": {
+                    "line": 88,
+                    "character": 59
+                },
+                "end": {
+                    "line": 88,
+                    "character": 65
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/rom_extractor.py",
+            "severity": "error",
+            "message": "Type \"tuple[str, dict[str, Any]]\" is not assignable to return type \"bool\"\n  \"tuple[str, dict[str, Any]]\" is not assignable to \"bool\"",
+            "range": {
+                "start": {
+                    "line": 179,
+                    "character": 19
+                },
+                "end": {
+                    "line": 179,
+                    "character": 47
+                }
+            },
+            "rule": "reportReturnType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/sprite_finder.py",
+            "severity": "error",
+            "message": "\"os\" is not defined",
+            "range": {
+                "start": {
+                    "line": 69,
+                    "character": 8
+                },
+                "end": {
+                    "line": 69,
+                    "character": 10
+                }
+            },
+            "rule": "reportUndefinedVariable"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/sprite_finder.py",
+            "severity": "error",
+            "message": "Argument of type \"Path | None\" cannot be assigned to parameter \"preview_path\" of type \"str | None\" in function \"__init__\"\n  Type \"Path | None\" is not assignable to type \"str | None\"\n    Type \"Path\" is not assignable to type \"str | None\"\n      \"Path\" is not assignable to \"str\"\n      \"Path\" is not assignable to \"None\"",
+            "range": {
+                "start": {
+                    "line": 215,
+                    "character": 41
+                },
+                "end": {
+                    "line": 215,
+                    "character": 53
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/base.py",
+            "severity": "error",
+            "message": "Function with declared return type \"R@handle_worker_errors\" must return value on all code paths\n  Type \"None\" is not assignable to type \"R@handle_worker_errors\"",
+            "range": {
+                "start": {
+                    "line": 61,
+                    "character": 58
+                },
+                "end": {
+                    "line": 61,
+                    "character": 59
+                }
+            },
+            "rule": "reportReturnType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/base.py",
+            "severity": "error",
+            "message": "Cannot create consistent method ordering",
+            "range": {
+                "start": {
+                    "line": 105,
+                    "character": 6
+                },
+                "end": {
+                    "line": 105,
+                    "character": 16
+                }
+            },
+            "rule": "reportGeneralTypeIssues"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "\"NotRequired\" is unknown import symbol",
+            "range": {
+                "start": {
+                    "line": 12,
+                    "character": 23
+                },
+                "end": {
+                    "line": 12,
+                    "character": 34
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "\"override\" is unknown import symbol",
+            "range": {
+                "start": {
+                    "line": 17,
+                    "character": 23
+                },
+                "end": {
+                    "line": 17,
+                    "character": 31
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "Type \"BaseManager | None\" is not assignable to declared type \"ExtractionManager\"\n  Type \"BaseManager | None\" is not assignable to type \"ExtractionManager\"\n    \"BaseManager\" is not assignable to \"ExtractionManager\"",
+            "range": {
+                "start": {
+                    "line": 100,
+                    "character": 48
+                },
+                "end": {
+                    "line": 100,
+                    "character": 60
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "Type \"BaseManager | None\" is not assignable to declared type \"ExtractionManager\"\n  Type \"BaseManager | None\" is not assignable to type \"ExtractionManager\"\n    \"BaseManager\" is not assignable to \"ExtractionManager\"",
+            "range": {
+                "start": {
+                    "line": 163,
+                    "character": 48
+                },
+                "end": {
+                    "line": 163,
+                    "character": 60
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "Type \"BaseManager | None\" is not assignable to declared type \"ExtractionManager\"\n  Type \"BaseManager | None\" is not assignable to type \"ExtractionManager\"\n    \"BaseManager\" is not assignable to \"ExtractionManager\"",
+            "range": {
+                "start": {
+                    "line": 246,
+                    "character": 48
+                },
+                "end": {
+                    "line": 246,
+                    "character": 60
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py",
+            "severity": "error",
+            "message": "Type \"BaseManager | None\" is not assignable to declared type \"ExtractionManager\"\n  Type \"BaseManager | None\" is not assignable to type \"ExtractionManager\"\n    \"BaseManager\" is not assignable to \"ExtractionManager\"",
+            "range": {
+                "start": {
+                    "line": 326,
+                    "character": 48
+                },
+                "end": {
+                    "line": 326,
+                    "character": 60
+                }
+            },
+            "rule": "reportAssignmentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/injection.py",
+            "severity": "error",
+            "message": "\"override\" is unknown import symbol",
+            "range": {
+                "start": {
+                    "line": 12,
+                    "character": 23
+                },
+                "end": {
+                    "line": 12,
+                    "character": 31
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"palettes_ready\" for class \"ManagedWorker\"\n  Attribute \"palettes_ready\" is unknown",
+            "range": {
+                "start": {
+                    "line": 89,
+                    "character": 80
+                },
+                "end": {
+                    "line": 89,
+                    "character": 94
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"active_palettes_ready\" for class \"ManagedWorker\"\n  Attribute \"active_palettes_ready\" is unknown",
+            "range": {
+                "start": {
+                    "line": 90,
+                    "character": 83
+                },
+                "end": {
+                    "line": 90,
+                    "character": 104
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"preview_ready\" for class \"ManagedWorker\"\n  Attribute \"preview_ready\" is unknown",
+            "range": {
+                "start": {
+                    "line": 109,
+                    "character": 28
+                },
+                "end": {
+                    "line": 109,
+                    "character": 41
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"preview_image_ready\" for class \"ManagedWorker\"\n  Attribute \"preview_image_ready\" is unknown",
+            "range": {
+                "start": {
+                    "line": 111,
+                    "character": 32
+                },
+                "end": {
+                    "line": 111,
+                    "character": 51
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"injection_finished\" for class \"ManagedWorker\"\n  Attribute \"injection_finished\" is unknown",
+            "range": {
+                "start": {
+                    "line": 134,
+                    "character": 79
+                },
+                "end": {
+                    "line": 134,
+                    "character": 97
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"progress_percent\" for class \"ManagedWorker\"\n  Attribute \"progress_percent\" is unknown",
+            "range": {
+                "start": {
+                    "line": 135,
+                    "character": 77
+                },
+                "end": {
+                    "line": 135,
+                    "character": 93
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"compression_info\" for class \"ManagedWorker\"\n  Attribute \"compression_info\" is unknown",
+            "range": {
+                "start": {
+                    "line": 136,
+                    "character": 77
+                },
+                "end": {
+                    "line": 136,
+                    "character": 93
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Union syntax cannot be used with string operand; use quotes around entire expression",
+            "range": {
+                "start": {
+                    "line": 169,
+                    "character": 25
+                },
+                "end": {
+                    "line": 169,
+                    "character": 41
+                }
+            },
+            "rule": "reportGeneralTypeIssues"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Argument of type \"Self@WorkerOwnedManagerMixin\" cannot be assigned to parameter \"a0\" of type \"QObject | None\" in function \"setParent\"\n  Type \"Self@WorkerOwnedManagerMixin\" is not assignable to type \"QObject | None\"\n    \"WorkerOwnedManagerMixin*\" is not assignable to \"QObject\"\n    \"WorkerOwnedManagerMixin*\" is not assignable to \"None\"",
+            "range": {
+                "start": {
+                    "line": 201,
+                    "character": 26
+                },
+                "end": {
+                    "line": 201,
+                    "character": 30
+                }
+            },
+            "rule": "reportArgumentType"
+        },
+        {
+            "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py",
+            "severity": "error",
+            "message": "Cannot access attribute \"_operation_name\" for class \"WorkerOwnedManagerMixin*\"\n  Attribute \"_operation_name\" is unknown",
+            "range": {
+                "start": {
+                    "line": 202,
+                    "character": 28
+                },
+                "end": {
+                    "line": 202,
+                    "character": 43
+                }
+            },
+            "rule": "reportAttributeAccessIssue"
+        }
+    ],
+    "summary": {
+        "filesAnalyzed": 44,
+        "errorCount": 45,
+        "warningCount": 1,
+        "informationCount": 0,
+        "timeInSec": 6.701
+    }
+}

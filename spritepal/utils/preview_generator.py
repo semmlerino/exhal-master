@@ -25,9 +25,10 @@ from PIL import Image
 from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QPixmap
+
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
-    from PyQt6.QtGui import QPixmap
 
 from .image_utils import pil_to_qpixmap
 from .logging_config import get_logger

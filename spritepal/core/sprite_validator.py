@@ -4,9 +4,10 @@ Provides comprehensive validation for sprites before injection
 """
 
 import json
-import os
+from pathlib import Path
 
 from PIL import Image
+
 from utils.constants import BYTES_PER_TILE
 from utils.logging_config import get_logger
 
@@ -34,7 +35,7 @@ class SpriteValidator:
         warnings: list[str] = []
 
         # Check file exists
-        if not os.path.exists(sprite_path):
+        if not Path(sprite_path).exists():
             errors.append(f"Sprite file not found: {sprite_path}")
             return False, errors, warnings
 
@@ -58,7 +59,7 @@ class SpriteValidator:
             warnings.extend(color_warnings)
 
             # Validate against metadata if provided
-            if metadata_path and os.path.exists(metadata_path):
+            if metadata_path and Path(metadata_path).exists():
                 meta_errors, meta_warnings = SpriteValidator._validate_against_metadata(
                     img, metadata_path
                 )
@@ -182,7 +183,7 @@ class SpriteValidator:
         warnings: list[str] = []
 
         try:
-            with open(metadata_path) as f:
+            with Path(metadata_path).open() as f:
                 metadata = json.load(f)
 
             if "extraction" in metadata:

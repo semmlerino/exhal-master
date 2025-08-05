@@ -168,7 +168,7 @@ class TestManagerTypeHintsValidation:
             "input_rom_path": "/path/to/rom.smc",
             "sprite_png_path": "/path/to/sprite.png",
             "sprite_location": "compressed",
-            "custom_offset": None,  # Optional[int] should accept None
+            "custom_offset": None,  # int | None should accept None
             "fast_compression": True,
         }
 
@@ -249,7 +249,7 @@ class TestManagerTypeHintsValidation:
         """Test generic type parameters work correctly"""
         manager = session_manager
 
-        # Test generic Dict[str, Any] usage
+        # Test generic dict[str, Any] usage
         settings_dict: dict[str, Any] = {
             "string_setting": "value",
             "int_setting": 42,
@@ -258,7 +258,7 @@ class TestManagerTypeHintsValidation:
             "nested_dict": {"key": "value"},
         }
 
-        # Should handle various value types in Dict[str, Any]
+        # Should handle various value types in dict[str, Any]
         for key, value in settings_dict.items():
             manager.set_setting("test_namespace", key, value)
             retrieved = manager.get_setting("test_namespace", key, None)

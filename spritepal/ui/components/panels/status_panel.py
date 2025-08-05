@@ -5,6 +5,7 @@ Displays detection status, progress information, scanning progress, and cache st
 """
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
+
 from ui.styles import get_muted_text_style, get_panel_style
 
 

@@ -1,6 +1,5 @@
 """Input validation utilities for SpritePal security"""
 
-import os
 from pathlib import Path
 
 # Security constants
@@ -144,8 +143,8 @@ def sanitize_filename(filename: str) -> str:
     Sanitize a filename for safe file operations.
     Removes directory traversal attempts and invalid characters.
     """
-    # Remove directory separators
-    filename = os.path.basename(filename)
+    # Remove directory separators - use Path.name to get just the filename
+    filename = Path(filename).name
 
     # Remove potentially dangerous characters
     invalid_chars = '<>:"|?*\x00'

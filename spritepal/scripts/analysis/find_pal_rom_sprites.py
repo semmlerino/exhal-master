@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 def find_all_compressed(rom_data: bytes) -> list[tuple[int, bytes]]:
     """
@@ -42,7 +42,8 @@ def search_for_vram_patterns(rom_path: str, vram_samples: list[bytes]):
     """Search ROM for patterns matching VRAM sprite data."""
     print(f"Searching ROM: {rom_path}")
 
-    with open(rom_path, "rb") as f:
+    rom_path_obj = Path(rom_path)
+    with rom_path_obj.open("rb") as f:
         rom_data = f.read()
 
     # Find all compressed blocks
@@ -84,10 +85,10 @@ def extract_vram_samples():
     samples = []
 
     # Check for VRAM region files
-    vram_files = list(Path(".").glob("vram_*_VRAM.dmp_*.bin"))
+    vram_files = list(Path().glob("vram_*_VRAM.dmp_*.bin"))
 
     for vram_file in vram_files:
-        with open(vram_file, "rb") as f:
+        with vram_file.open("rb") as f:
             data = f.read()
 
         # Take first 256 bytes as sample (8 tiles)
@@ -100,7 +101,7 @@ def extract_vram_samples():
 
 def main():
     # Find PAL ROM
-    rom_files = list(Path(".").glob("*.sfc")) + list(Path(".").glob("*.smc"))
+    rom_files = list(Path().glob("*.sfc")) + list(Path().glob("*.smc"))
     pal_rom = None
 
     for rom_file in rom_files:
@@ -148,7 +149,8 @@ def main():
 
         # Save results
         output_file = "pal_sprite_locations.txt"
-        with open(output_file, "w") as f:
+        output_path = Path(output_file)
+        with output_path.open("w") as f:
             f.write("PAL ROM Sprite Locations\n")
             f.write("========================\n\n")
 

@@ -78,7 +78,7 @@ def demonstrate_thread_safety():
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(worker_thread, i) for i in range(num_threads)]
-        results = [future.result() for future in as_completed(futures)]
+        [future.result() for future in as_completed(futures)]
 
     end_time = time.time()
 
@@ -106,16 +106,16 @@ def demonstrate_thread_safety():
               f"{attempt['creation_thread']}")
 
     # Verify singleton behavior
-    unique_instances = set(id(instance) for instance in instances)
-    unique_creation_ids = set(instance.creation_id for instance in instances)
-    unique_creator_threads = set(instance.creation_thread for instance in instances)
+    unique_instances = {id(instance) for instance in instances}
+    unique_creation_ids = {instance.creation_id for instance in instances}
+    unique_creator_threads = {instance.creation_thread for instance in instances}
 
     print("\nVerification:")
     print(f"✓ Unique instance objects: {len(unique_instances)} (should be 1)")
     print(f"✓ Unique creation IDs: {len(unique_creation_ids)} (should be 1)")
     print(f"✓ Unique creator threads: {len(unique_creator_threads)} (should be 1)")
-    print(f"✓ Winner creation ID: {list(unique_creation_ids)[0]}")
-    print(f"✓ Creator thread: {list(unique_creator_threads)[0]}")
+    print(f"✓ Winner creation ID: {next(iter(unique_creation_ids))}")
+    print(f"✓ Creator thread: {next(iter(unique_creator_threads))}")
 
     if len(unique_instances) == 1:
         print("\n🎉 THREAD SAFETY TEST PASSED!")
@@ -141,7 +141,7 @@ def demonstrate_performance():
 
     # First access (slow path - instance creation)
     start_time = time.perf_counter()
-    first_instance = ThreadSafeDemoSingleton.get("performance_test")
+    ThreadSafeDemoSingleton.get("performance_test")
     first_access_time = time.perf_counter() - start_time
 
     print(f"First access (slow path): {first_access_time*1000:.3f}ms")
@@ -151,7 +151,7 @@ def demonstrate_performance():
     start_time = time.perf_counter()
 
     for _ in range(num_fast_accesses):
-        instance = ThreadSafeDemoSingleton.get("ignored_value")
+        ThreadSafeDemoSingleton.get("ignored_value")
 
     fast_path_total = time.perf_counter() - start_time
     fast_path_avg = (fast_path_total / num_fast_accesses) * 1000000  # microseconds

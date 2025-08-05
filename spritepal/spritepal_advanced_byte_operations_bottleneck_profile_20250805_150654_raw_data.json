@@ -1,0 +1,221 @@
+{
+  "cpu_stats": {
+    "report": "         500015 function calls in 1.142 seconds\n\n   Ordered by: cumulative time\n\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.766    0.766    1.142    1.142 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py:67(test_byte_conversion_patterns)\n   200000    0.150    0.000    0.150    0.000 {method 'to_bytes' of 'int' objects}\n   200000    0.127    0.000    0.127    0.000 {method 'append' of 'list' objects}\n   100001    0.099    0.000    0.099    0.000 {built-in method _struct.pack}\n        1    0.000    0.000    0.000    0.000 /usr/lib/python3.12/contextlib.py:141(__exit__)\n        1    0.000    0.000    0.000    0.000 {built-in method builtins.next}\n        1    0.000    0.000    0.000    0.000 /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py:181(profile_context)\n        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}\n        9    0.000    0.000    0.000    0.000 {built-in method time.time}\n\n\n",
+    "top_functions": [
+      {
+        "function": "test_byte_conversion_patterns",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py",
+        "line": 67,
+        "call_count": 1,
+        "total_time": 0.7663441740000001,
+        "cumulative_time": 1.142435126,
+        "time_per_call": 0.7663441740000001
+      },
+      {
+        "function": "<method 'to_bytes' of 'int' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 200000,
+        "total_time": 0.150170771,
+        "cumulative_time": 0.150170771,
+        "time_per_call": 7.508538550000001e-07
+      },
+      {
+        "function": "<method 'append' of 'list' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 200000,
+        "total_time": 0.126691671,
+        "cumulative_time": 0.126691671,
+        "time_per_call": 6.334583550000001e-07
+      },
+      {
+        "function": "<built-in method _struct.pack>",
+        "file": "~",
+        "line": 0,
+        "call_count": 100001,
+        "total_time": 0.09921679100000001,
+        "cumulative_time": 0.09921679100000001,
+        "time_per_call": 9.92157988420116e-07
+      },
+      {
+        "function": "<method 'disable' of '_lsprof.Profiler' objects>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1,
+        "total_time": 2.1671e-05,
+        "cumulative_time": 2.1671e-05,
+        "time_per_call": 2.1671e-05
+      },
+      {
+        "function": "<built-in method time.time>",
+        "file": "~",
+        "line": 0,
+        "call_count": 9,
+        "total_time": 1.2145000000000001e-05,
+        "cumulative_time": 1.2145000000000001e-05,
+        "time_per_call": 1.3494444444444446e-06
+      },
+      {
+        "function": "profile_context",
+        "file": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py",
+        "line": 181,
+        "call_count": 1,
+        "total_time": 1.161e-05,
+        "cumulative_time": 3.3281e-05,
+        "time_per_call": 1.161e-05
+      },
+      {
+        "function": "__exit__",
+        "file": "/usr/lib/python3.12/contextlib.py",
+        "line": 141,
+        "call_count": 1,
+        "total_time": 9.498000000000001e-06,
+        "cumulative_time": 4.839e-05,
+        "time_per_call": 9.498000000000001e-06
+      },
+      {
+        "function": "<built-in method builtins.next>",
+        "file": "~",
+        "line": 0,
+        "call_count": 1,
+        "total_time": 5.611e-06,
+        "cumulative_time": 3.8892e-05,
+        "time_per_call": 5.611e-06
+      }
+    ],
+    "total_functions": 9,
+    "total_calls": 500015
+  },
+  "memory_stats": {
+    "baseline_memory_mb": 18.2109375,
+    "peak_memory_mb": 47.9609375,
+    "current_memory_mb": 47.9609375,
+    "total_growth_mb": 29.75,
+    "growth_rate_mb_per_sec": 25.561816491212472,
+    "snapshot_count": 4,
+    "top_memory_consumers": [
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 185",
+        "size_mb": 0.0015001296997070312,
+        "count": 26
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 189",
+        "size_mb": 0.0009136199951171875,
+        "count": 16
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 560",
+        "size_mb": 0.0008697509765625,
+        "count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 423",
+        "size_mb": 0.0008697509765625,
+        "count": 6
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/performance_profiler.py\", line 184",
+        "size_mb": 0.00045299530029296875,
+        "count": 4
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py\", line 94",
+        "size_mb": 0.00041103363037109375,
+        "count": 7
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 558",
+        "size_mb": 0.00035858154296875,
+        "count": 7
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py\", line 67",
+        "size_mb": 0.00029754638671875,
+        "count": 3
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py\", line 76",
+        "size_mb": 0.0002574920654296875,
+        "count": 4
+      },
+      {
+        "file": "  File \"/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/advanced_performance_analyzer.py\", line 77",
+        "size_mb": 0.00025463104248046875,
+        "count": 4
+      }
+    ],
+    "potential_leaks": [
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 560",
+        "size_increase_mb": 0.00028228759765625,
+        "count_increase": 2,
+        "current_size_mb": 0.0008697509765625,
+        "current_count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 423",
+        "size_increase_mb": 0.00028228759765625,
+        "count_increase": 2,
+        "current_size_mb": 0.0008697509765625,
+        "current_count": 6
+      },
+      {
+        "file": "  File \"/usr/lib/python3.12/tracemalloc.py\", line 558",
+        "size_increase_mb": 0.00026702880859375,
+        "count_increase": 5,
+        "current_size_mb": 0.00035858154296875,
+        "current_count": 7
+      }
+    ]
+  },
+  "io_stats": {
+    "cache_efficiency": {
+      "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+    },
+    "file_operations": {
+      "read_count": 473,
+      "write_count": 13,
+      "read_bytes": 0,
+      "write_bytes": 0,
+      "read_mb": 0.0,
+      "write_mb": 0.0
+    }
+  },
+  "thread_stats": {
+    "total_threads": 1,
+    "active_threads": 1,
+    "daemon_threads": 0,
+    "qt_threads": 0,
+    "thread_details": [
+      {
+        "name": "MainThread",
+        "daemon": false,
+        "alive": true,
+        "ident": 139658111336576
+      }
+    ]
+  },
+  "qt_stats": {
+    "error": "No QApplication instance found"
+  },
+  "manager_stats": {
+    "managers_initialized": false,
+    "available_managers": {},
+    "manager_memory": {}
+  },
+  "worker_stats": {
+    "total_worker_threads": 0,
+    "active_workers": 0,
+    "worker_details": []
+  },
+  "cache_stats": {
+    "error": "Cannot analyze cache: Session manager not initialized. Call initialize_managers() first."
+  },
+  "timing_stats": {
+    "total_profiling_time": 1.1641297340393066,
+    "profiling_start": 1754402806.313107,
+    "profiling_end": 1754402807.4772367
+  }
+}

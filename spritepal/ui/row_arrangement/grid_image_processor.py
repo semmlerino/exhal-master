@@ -5,6 +5,7 @@ Grid-based image processing for flexible sprite extraction
 import os
 
 from PIL import Image
+
 from utils.exceptions import TileError
 
 from .grid_arrangement_manager import TileGroup, TilePosition

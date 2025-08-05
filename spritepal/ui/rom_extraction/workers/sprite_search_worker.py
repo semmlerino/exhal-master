@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PyQt6.QtCore import pyqtSignal
-from ui.common.worker_manager import handle_worker_errors
-from ui.rom_extraction.workers.base import BaseWorker
+
+from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -37,7 +37,9 @@ class SpriteSearchWorker(BaseWorker):
     # Signals
     sprite_found = pyqtSignal(int, float)  # offset, quality
     search_complete = pyqtSignal(bool)  # True if sprite found
-    progress = pyqtSignal(int, int)  # current, total
+
+    # Note: progress signal is already defined in BaseWorker as pyqtSignal(int, str)
+    # We'll override emit_progress to convert our (current, total) to (percent, message)
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
                  direction: int, rom_extractor: "ROMExtractor", parent=None):
@@ -47,85 +49,80 @@ class SpriteSearchWorker(BaseWorker):
         self.end_offset = end_offset
         self.direction = direction  # 1 for forward, -1 for backward
         self.rom_extractor = rom_extractor
-        self._cancelled = False
 
-    @handle_worker_errors
+    @handle_worker_errors("sprite search", handle_interruption=True)
     def run(self):
         """Search for sprites in the specified direction"""
-        try:
-            logger.debug(f"Starting sprite search from 0x{self.start_offset:06X} "
-                        f"direction={self.direction}")
+        logger.debug(f"Starting sprite search from 0x{self.start_offset:06X} "
+                    f"direction={self.direction}")
 
-            # Calculate search parameters
-            if self.direction > 0:
-                # Forward search
-                current = self.start_offset + SEARCH_STEP
-                end = min(self.end_offset, self.start_offset + MAX_SEARCH_DISTANCE)
-                step = SEARCH_STEP
-            else:
-                # Backward search
-                current = self.start_offset - SEARCH_STEP
-                end = max(self.end_offset, self.start_offset - MAX_SEARCH_DISTANCE)
-                step = -SEARCH_STEP
+        # Calculate search parameters
+        if self.direction > 0:
+            # Forward search
+            current = self.start_offset + SEARCH_STEP
+            end = min(self.end_offset, self.start_offset + MAX_SEARCH_DISTANCE)
+            step = SEARCH_STEP
+        else:
+            # Backward search
+            current = self.start_offset - SEARCH_STEP
+            end = max(self.end_offset, self.start_offset - MAX_SEARCH_DISTANCE)
+            step = -SEARCH_STEP
 
-            # Calculate total steps for progress
-            total_distance = abs(end - current)
-            total_steps = total_distance // abs(step)
-            current_step = 0
+        # Calculate total steps for progress
+        total_distance = abs(end - current)
+        total_steps = total_distance // abs(step)
+        current_step = 0
 
-            # Open ROM file
-            with open(self.rom_path, "rb") as rom_file:
-                rom_data = rom_file.read()
+        # Open ROM file
+        with open(self.rom_path, "rb") as rom_file:
+            rom_data = rom_file.read()
 
-            # Search loop
-            batch_count = 0
-            while (self.direction > 0 and current < end) or \
-                  (self.direction < 0 and current > end):
+        # Search loop
+        batch_count = 0
+        while (self.direction > 0 and current < end) or \
+              (self.direction < 0 and current > end):
 
-                if self._cancelled:
-                    logger.debug("Search cancelled by user")
-                    break
+            # Check cancellation using BaseWorker method
+            self.check_cancellation()
 
-                # Check if this offset contains a valid sprite
-                try:
-                    # Quick validation check
-                    is_valid = self._quick_sprite_check(rom_data, current)
+            # Check if this offset contains a valid sprite
+            try:
+                # Quick validation check
+                is_valid = self._quick_sprite_check(rom_data, current)
 
-                    if is_valid:
-                        # Do full validation
-                        quality = self._full_sprite_validation(rom_data, current)
-                        if quality > 0:
-                            logger.info(f"Found sprite at 0x{current:06X} "
-                                      f"with quality {quality:.2f}")
-                            self.sprite_found.emit(current, quality)
-                            self.search_complete.emit(True)
-                            return
+                if is_valid:
+                    # Do full validation
+                    quality = self._full_sprite_validation(rom_data, current)
+                    if quality > 0:
+                        logger.info(f"Found sprite at 0x{current:06X} "
+                                  f"with quality {quality:.2f}")
+                        self.sprite_found.emit(current, quality)
+                        self.search_complete.emit(True)
+                        self.operation_finished.emit(True, f"Found sprite at 0x{current:06X}")
+                        return
 
-                except Exception as e:
-                    logger.debug(f"Error checking offset 0x{current:06X}: {e}")
+            except Exception as e:
+                logger.debug(f"Error checking offset 0x{current:06X}: {e}")
 
-                # Update progress
-                current_step += 1
-                if current_step % 10 == 0:  # Update every 10 steps
-                    self.progress.emit(current_step, total_steps)
+            # Update progress
+            current_step += 1
+            if current_step % 10 == 0:  # Update every 10 steps
+                percent = int((current_step / total_steps) * 100) if total_steps > 0 else 0
+                self.emit_progress(percent, f"Searching... (step {current_step}/{total_steps})")
 
-                # Move to next offset
-                current += step
+            # Move to next offset
+            current += step
 
-                # Yield periodically to stay responsive
-                batch_count += 1
-                if batch_count >= SEARCH_BATCH_SIZE:
-                    self.msleep(1)  # Brief pause
-                    batch_count = 0
+            # Yield periodically to stay responsive
+            batch_count += 1
+            if batch_count >= SEARCH_BATCH_SIZE:
+                self.msleep(1)  # Brief pause
+                batch_count = 0
 
-            # No sprite found
-            logger.debug("Search complete, no sprites found")
-            self.search_complete.emit(False)
-
-        except Exception as e:
-            logger.exception(f"Error in sprite search: {e}")
-            self.error.emit("Search failed", e)
-            self.search_complete.emit(False)
+        # No sprite found
+        logger.debug("Search complete, no sprites found")
+        self.search_complete.emit(False)
+        self.operation_finished.emit(True, "Search complete - no sprites found")
 
     def _quick_sprite_check(self, rom_data: bytes, offset: int) -> bool:
         """
@@ -190,6 +187,4 @@ class SpriteSearchWorker(BaseWorker):
 
         return 0.0
 
-    def cancel(self):
-        """Cancel the search operation"""
-        self._cancelled = True
+    # cancel() method is inherited from BaseWorker

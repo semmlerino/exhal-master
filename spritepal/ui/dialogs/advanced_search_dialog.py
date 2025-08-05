@@ -1,0 +1,1963 @@
+"""
+Advanced search dialog for sophisticated sprite searching.
+
+Provides multiple search modes, filters, history, and visual search capabilities.
+"""
+
+import json
+import logging
+import mmap
+import re
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+
+from PyQt6.QtCore import QMutex, Qt, QThread, QWaitCondition, pyqtSignal
+from PyQt6.QtGui import QKeySequence, QPixmap, QShortcut
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QProgressBar,
+    QPushButton,
+    QRadioButton,
+    QSlider,
+    QSpinBox,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+from core.parallel_sprite_finder import ParallelSpriteFinder, SearchResult
+from core.visual_similarity_search import SimilarityMatch, VisualSimilarityEngine
+from core.workers.base import handle_worker_errors
+from ui.dialogs.similarity_results_dialog import show_similarity_results
+from utils.constants import MAX_SPRITE_SIZE, MIN_SPRITE_SIZE
+from utils.preview_generator import PreviewGenerator, PreviewRequest
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SearchFilter:
+    """Container for search filter settings."""
+    min_size: int
+    max_size: int
+    min_tiles: int
+    max_tiles: int
+    alignment: int
+    include_compressed: bool
+    include_uncompressed: bool
+    confidence_threshold: float
+
+
+@dataclass
+class SearchHistoryEntry:
+    """Entry in search history."""
+    timestamp: datetime
+    search_type: str
+    query: str
+    filters: SearchFilter
+    results_count: int
+
+    def to_display_string(self) -> str:
+        """Format for display in history list."""
+        time_str = self.timestamp.strftime("%H:%M:%S")
+        return f"[{time_str}] {self.search_type}: {self.query} ({self.results_count} results)"
+
+
+class SearchWorker(QThread):
+    """Worker thread for background searching."""
+
+    progress = pyqtSignal(int, int)  # current, total
+    result_found = pyqtSignal(SearchResult)
+    search_complete = pyqtSignal(list)  # all results
+    error = pyqtSignal(str)
+    operation_finished = pyqtSignal(bool, str)  # success, message - for decorator compatibility
+
+    # Thread-safe user interaction signals
+    input_requested = pyqtSignal(str, str)  # title, prompt
+    question_requested = pyqtSignal(str, str)  # title, question
+    info_requested = pyqtSignal(str, str)  # title, message
+
+    def __init__(self, search_type: str, params: dict):
+        super().__init__()
+        self.search_type = search_type
+        self.params = params
+        self.finder = None
+        self._cancelled = False
+        self._operation_name = f"SearchWorker-{search_type}"  # For decorator compatibility
+
+        # Thread-safe user interaction support
+        self._user_response_mutex = QMutex()
+        self._user_response_condition = QWaitCondition()
+        self._user_response = None
+
+    def __del__(self):
+        """Ensure proper cleanup of resources."""
+        self._cleanup_finder()
+
+    @handle_worker_errors("search operation")
+    def run(self):
+        """Execute search based on type."""
+        try:
+            if self.search_type == "parallel":
+                self._run_parallel_search()
+            elif self.search_type == "visual":
+                self._run_visual_search()
+            elif self.search_type == "pattern":
+                self._run_pattern_search()
+            else:
+                self.error.emit(f"Unknown search type: {self.search_type}")
+        except Exception as e:
+            logger.exception("Search worker error")
+            self.error.emit(str(e))
+        finally:
+            # Always cleanup finder resources
+            self._cleanup_finder()
+
+    def _run_parallel_search(self):
+        """Run parallel sprite search."""
+        rom_path = self.params["rom_path"]
+        start = self.params.get("start_offset", 0)
+        end = self.params.get("end_offset", None)
+        filters = self.params.get("filters", SearchFilter(
+            min_size=MIN_SPRITE_SIZE,
+            max_size=MAX_SPRITE_SIZE,
+            min_tiles=1,
+            max_tiles=1024,
+            alignment=1,
+            include_compressed=True,
+            include_uncompressed=False,
+            confidence_threshold=0.5
+        ))
+
+        # Create parallel finder
+        self.finder = ParallelSpriteFinder(
+            num_workers=self.params.get("num_workers", 4),
+            step_size=self.params.get("step_size", 0x100)
+        )
+
+        # Search with progress callback
+        results = self.finder.search_parallel(
+            rom_path,
+            start,
+            end,
+            progress_callback=self._emit_progress,
+            cancellation_token=self
+        )
+
+        # Apply filters
+        filtered_results = []
+        for result in results:
+            if self._apply_filters(result, filters):
+                filtered_results.append(result)
+                self.result_found.emit(result)
+
+        self.search_complete.emit(filtered_results)
+
+    def _run_visual_search(self):
+        """Run visual similarity search."""
+        try:
+            rom_path = self.params["rom_path"]
+            ref_offset = self.params["reference_offset"]
+            similarity_threshold = self.params["similarity_threshold"]
+            self.params["search_scope"]
+
+            # Initialize similarity engine
+            similarity_engine = VisualSimilarityEngine()
+
+            # Check if similarity index exists
+            index_path = Path(rom_path).with_suffix(".similarity_index")
+            if not index_path.exists():
+                self.error.emit("No similarity index found for ROM. Please build index first.")
+                return
+
+            # Load similarity index
+            try:
+                similarity_engine.import_index(index_path)
+                logger.info(f"Loaded similarity index with {len(similarity_engine.sprite_database)} sprites")
+            except Exception as e:
+                self.error.emit(f"Failed to load similarity index: {e}")
+                return
+
+            # Search for similar sprites
+            max_results = self.params.get("max_results", 50)
+
+            if ref_offset not in similarity_engine.sprite_database:
+                self.error.emit(f"Reference sprite at 0x{ref_offset:X} not found in index")
+                return
+
+            # Perform similarity search
+            self.progress.emit(0, 1)  # Indeterminate progress
+
+            matches = similarity_engine.find_similar(
+                ref_offset,
+                max_results=max_results,
+                similarity_threshold=similarity_threshold / 100.0  # Convert percentage to decimal
+            )
+
+            self.progress.emit(1, 1)
+
+            # Convert matches to SearchResult format for compatibility
+            results = []
+            for match in matches:
+                # Create a simplified SearchResult from SimilarityMatch
+                result = SearchResult(
+                    offset=match.offset,
+                    size=0,  # Not available from similarity search
+                    tile_count=0,  # Not available from similarity search
+                    compressed_size=0,  # Not available from similarity search
+                    confidence=match.similarity_score,
+                    metadata={"similarity_score": match.similarity_score,
+                             "hash_distance": match.hash_distance}
+                )
+                results.append(result)
+                self.result_found.emit(result)
+
+            self.search_complete.emit(results)
+
+        except Exception as e:
+            logger.exception("Visual search error")
+            self.error.emit(str(e))
+
+    def _run_pattern_search(self):
+        """Run pattern-based search with hex patterns and regex support."""
+        try:
+            rom_path = self.params["rom_path"]
+            patterns = self.params.get("patterns", [])
+            pattern_type = self.params.get("pattern_type", "hex")
+            case_sensitive = self.params.get("case_sensitive", False)
+            alignment = self.params.get("alignment", 1)
+            context_bytes = self.params.get("context_bytes", 16)
+            max_results = self.params.get("max_results", 1000)
+            operation = self.params.get("operation", "Single Pattern")
+
+            if not patterns:
+                self.error.emit("No patterns specified")
+                return
+
+            # Use memory-mapped file for large ROMs
+            with open(rom_path, "rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as rom_data:
+                    rom_size = len(rom_data)
+
+                    if operation == "Single Pattern" or len(patterns) == 1:
+                        # Single pattern search
+                        pattern = patterns[0]
+                        if pattern_type == "hex":
+                            self._search_hex_pattern(rom_data, pattern, alignment, context_bytes, max_results, rom_size)
+                        elif pattern_type == "regex":
+                            self._search_regex_pattern(rom_data, pattern, case_sensitive, alignment, context_bytes, max_results, rom_size)
+                        else:
+                            self.error.emit(f"Unknown pattern type: {pattern_type}")
+                            return
+                    # Multiple pattern search
+                    elif pattern_type == "hex":
+                        self._search_multiple_hex_patterns(rom_data, patterns, operation, alignment, context_bytes, max_results, rom_size)
+                    elif pattern_type == "regex":
+                        self._search_multiple_regex_patterns(rom_data, patterns, operation, case_sensitive, alignment, context_bytes, max_results, rom_size)
+                    else:
+                        self.error.emit(f"Unknown pattern type: {pattern_type}")
+                        return
+
+            self.search_complete.emit([])  # Results are emitted individually via result_found
+
+        except Exception as e:
+            logger.exception("Pattern search error")
+            self.error.emit(str(e))
+
+    def _search_hex_pattern(self, rom_data: mmap.mmap, pattern_str: str, alignment: int, context_bytes: int, max_results: int, rom_size: int):
+        """Search for hex pattern with wildcard support."""
+        try:
+            # Parse hex pattern (e.g., "00 01 02 ?? FF")
+            pattern_bytes, mask = self._parse_hex_pattern(pattern_str)
+            if not pattern_bytes:
+                self.error.emit("Invalid hex pattern format")
+                return
+
+            pattern_len = len(pattern_bytes)
+            results_count = 0
+            chunk_size = 0x10000  # 64KB chunks for progress updates
+
+            # Search through ROM data
+            for start_offset in range(0, rom_size - pattern_len + 1, chunk_size):
+                # Check cancellation
+                if self._cancelled:
+                    break
+
+                # Update progress
+                progress = int((start_offset / rom_size) * 100)
+                self.progress.emit(progress, 100)
+
+                # Search within this chunk (with overlap for pattern boundary)
+                chunk_end = min(start_offset + chunk_size + pattern_len - 1, rom_size)
+
+                offset = start_offset
+                while offset <= chunk_end - pattern_len:
+                    # Check alignment
+                    if alignment > 1 and offset % alignment != 0:
+                        offset += 1
+                        continue
+
+                    # Check pattern match
+                    if self._match_hex_pattern_at_offset(rom_data, offset, pattern_bytes, mask):
+                        # Create search result
+                        context_start = max(0, offset - context_bytes)
+                        context_end = min(rom_size, offset + pattern_len + context_bytes)
+                        context_data = bytes(rom_data[context_start:context_end])
+
+                        result = SearchResult(
+                            offset=offset,
+                            size=pattern_len,
+                            tile_count=1,  # Pattern matches are single entities
+                            compressed_size=pattern_len,
+                            confidence=1.0,  # Exact match
+                            metadata={
+                                "pattern": pattern_str,
+                                "pattern_type": "hex",
+                                "context_start": context_start,
+                                "context_data": context_data.hex(),
+                                "match_data": bytes(rom_data[offset:offset + pattern_len]).hex()
+                            }
+                        )
+
+                        self.result_found.emit(result)
+                        results_count += 1
+
+                        # Check if we've reached the maximum results
+                        if results_count >= max_results:
+                            logger.info(f"Reached maximum results limit: {max_results}")
+                            return
+
+                        # Skip past this match
+                        offset += pattern_len
+                    else:
+                        offset += 1
+
+                # Early termination check
+                if self._cancelled:
+                    break
+
+            self.progress.emit(100, 100)
+
+        except Exception as e:
+            logger.exception("Hex pattern search error")
+            self.error.emit(f"Hex pattern search failed: {e}")
+
+    def _search_regex_pattern(self, rom_data: mmap.mmap, pattern_str: str, case_sensitive: bool, alignment: int, context_bytes: int, max_results: int, rom_size: int):
+        """Search for regex pattern in ROM data."""
+        try:
+            # Compile regex pattern
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                pattern = re.compile(pattern_str.encode(), flags)
+            except re.error as e:
+                self.error.emit(f"Invalid regex pattern: {e}")
+                return
+
+            results_count = 0
+            chunk_size = 0x10000  # 64KB chunks
+            overlap_size = 1024   # Overlap to catch patterns spanning chunks
+
+            # Search through ROM data in chunks
+            for start_offset in range(0, rom_size, chunk_size - overlap_size):
+                # Check cancellation
+                if self._cancelled:
+                    break
+
+                # Update progress
+                progress = int((start_offset / rom_size) * 100)
+                self.progress.emit(progress, 100)
+
+                # Get chunk data
+                chunk_end = min(start_offset + chunk_size, rom_size)
+                chunk_data = bytes(rom_data[start_offset:chunk_end])
+
+                # Find all matches in this chunk
+                for match in pattern.finditer(chunk_data):
+                    match_offset = start_offset + match.start()
+                    match_len = match.end() - match.start()
+
+                    # Check alignment
+                    if alignment > 1 and match_offset % alignment != 0:
+                        continue
+
+                    # Avoid duplicate matches in overlap region
+                    if start_offset > 0 and match.start() < overlap_size:
+                        continue
+
+                    # Create context data
+                    context_start = max(0, match_offset - context_bytes)
+                    context_end = min(rom_size, match_offset + match_len + context_bytes)
+                    context_data = bytes(rom_data[context_start:context_end])
+
+                    result = SearchResult(
+                        offset=match_offset,
+                        size=match_len,
+                        tile_count=1,
+                        compressed_size=match_len,
+                        confidence=1.0,  # Exact match
+                        metadata={
+                            "pattern": pattern_str,
+                            "pattern_type": "regex",
+                            "context_start": context_start,
+                            "context_data": context_data.hex(),
+                            "match_data": match.group().hex(),
+                            "match_text": self._safe_decode(match.group())
+                        }
+                    )
+
+                    self.result_found.emit(result)
+                    results_count += 1
+
+                    # Check if we've reached the maximum results
+                    if results_count >= max_results:
+                        logger.info(f"Reached maximum results limit: {max_results}")
+                        return
+
+                # Early termination check
+                if self._cancelled:
+                    break
+
+            self.progress.emit(100, 100)
+
+        except Exception as e:
+            logger.exception("Regex pattern search error")
+            self.error.emit(f"Regex pattern search failed: {e}")
+
+    def _parse_hex_pattern(self, pattern_str: str) -> tuple[bytes, bytes]:
+        """
+        Parse hex pattern string with wildcards into bytes and mask.
+
+        Args:
+            pattern_str: Pattern like "00 01 02 ?? ?? FF"
+
+        Returns:
+            Tuple of (pattern_bytes, mask_bytes) where mask has 0xFF for exact match, 0x00 for wildcard
+        """
+        try:
+            # Clean and split pattern
+            pattern_str = pattern_str.strip().upper()
+            hex_tokens = re.split(r"[\s,]+", pattern_str)
+
+            pattern_bytes = bytearray()
+            mask_bytes = bytearray()
+
+            for token in hex_tokens:
+                if not token:
+                    continue
+
+                if token in {"??", "?"}:
+                    # Wildcard - any byte matches
+                    pattern_bytes.append(0x00)
+                    mask_bytes.append(0x00)
+                else:
+                    # Hex byte
+                    if len(token) != 2 or not all(c in "0123456789ABCDEF" for c in token):
+                        raise ValueError(f"Invalid hex token: {token}")
+
+                    byte_value = int(token, 16)
+                    pattern_bytes.append(byte_value)
+                    mask_bytes.append(0xFF)
+
+            return bytes(pattern_bytes), bytes(mask_bytes)
+
+        except (ValueError, IndexError) as e:
+            logger.exception(f"Failed to parse hex pattern '{pattern_str}': {e}")
+            return b"", b""
+
+    def _match_hex_pattern_at_offset(self, rom_data: mmap.mmap, offset: int, pattern_bytes: bytes, mask_bytes: bytes) -> bool:
+        """Check if hex pattern matches at specific offset."""
+        if offset + len(pattern_bytes) > len(rom_data):
+            return False
+
+        for i, (pattern_byte, mask_byte) in enumerate(zip(pattern_bytes, mask_bytes)):
+            rom_byte = rom_data[offset + i]
+            if mask_byte == 0xFF and rom_byte != pattern_byte:
+                return False
+
+        return True
+
+    def _safe_decode(self, data: bytes) -> str:
+        """Safely decode bytes to string for display."""
+        try:
+            # Try common encodings
+            for encoding in ["ascii", "utf-8", "latin-1"]:
+                try:
+                    return data.decode(encoding)
+                except UnicodeDecodeError:
+                    continue
+
+            # Fallback: replace non-printable chars
+            return "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in data)
+        except Exception:
+            return "<decode error>"
+
+    def _search_multiple_hex_patterns(self, rom_data: mmap.mmap, patterns: list[str], operation: str, alignment: int, context_bytes: int, max_results: int, rom_size: int):
+        """Search for multiple hex patterns with OR/AND operations."""
+        try:
+            # Parse all patterns
+            parsed_patterns = []
+            for pattern_str in patterns:
+                pattern_bytes, mask = self._parse_hex_pattern(pattern_str)
+                if pattern_bytes:
+                    parsed_patterns.append((pattern_str, pattern_bytes, mask))
+                else:
+                    logger.warning(f"Skipping invalid hex pattern: {pattern_str}")
+
+            if not parsed_patterns:
+                self.error.emit("No valid hex patterns found")
+                return
+
+            results_count = 0
+            chunk_size = 0x10000  # 64KB chunks
+            and_window_size = 256  # For AND operations, look within this window
+
+            if operation.startswith("OR"):
+                # OR operation - find matches for any pattern
+                for start_offset in range(0, rom_size, chunk_size):
+                    if self._cancelled or results_count >= max_results:
+                        break
+
+                    progress = int((start_offset / rom_size) * 100)
+                    self.progress.emit(progress, 100)
+
+                    chunk_end = min(start_offset + chunk_size, rom_size)
+
+                    # Check each pattern in this chunk
+                    for pattern_str, pattern_bytes, mask in parsed_patterns:
+                        pattern_len = len(pattern_bytes)
+
+                        offset = start_offset
+                        while offset <= chunk_end - pattern_len and results_count < max_results:
+                            if alignment > 1 and offset % alignment != 0:
+                                offset += 1
+                                continue
+
+                            if self._match_hex_pattern_at_offset(rom_data, offset, pattern_bytes, mask):
+                                result = self._create_pattern_result(rom_data, offset, pattern_len, pattern_str, "hex", context_bytes, rom_size)
+                                self.result_found.emit(result)
+                                results_count += 1
+                                offset += pattern_len
+                            else:
+                                offset += 1
+
+            elif operation.startswith("AND"):
+                # AND operation - find locations where all patterns exist nearby
+                for start_offset in range(0, rom_size - and_window_size, chunk_size):
+                    if self._cancelled or results_count >= max_results:
+                        break
+
+                    progress = int((start_offset / rom_size) * 100)
+                    self.progress.emit(progress, 100)
+
+                    chunk_end = min(start_offset + chunk_size, rom_size)
+
+                    offset = start_offset
+                    while offset <= chunk_end - and_window_size and results_count < max_results:
+                        if alignment > 1 and offset % alignment != 0:
+                            offset += 1
+                            continue
+
+                        # Check if all patterns exist within the window
+                        window_end = min(offset + and_window_size, rom_size)
+                        pattern_matches = []
+
+                        for pattern_str, pattern_bytes, mask in parsed_patterns:
+                            pattern_len = len(pattern_bytes)
+                            found = False
+
+                            for window_offset in range(offset, window_end - pattern_len + 1):
+                                if self._match_hex_pattern_at_offset(rom_data, window_offset, pattern_bytes, mask):
+                                    pattern_matches.append((pattern_str, window_offset, pattern_len))
+                                    found = True
+                                    break
+
+                            if not found:
+                                break
+
+                        # If all patterns found, create result
+                        if len(pattern_matches) == len(parsed_patterns):
+                            # Use the first match as the main result
+                            main_pattern, main_offset, main_len = pattern_matches[0]
+                            result = self._create_pattern_result(rom_data, main_offset, main_len, f"AND: {main_pattern} (+{len(pattern_matches)-1} more)", "hex", context_bytes, rom_size)
+                            result.metadata["and_matches"] = pattern_matches
+                            self.result_found.emit(result)
+                            results_count += 1
+                            offset += and_window_size // 2  # Skip ahead to avoid overlaps
+                        else:
+                            offset += 1
+
+            self.progress.emit(100, 100)
+
+        except Exception as e:
+            logger.exception("Multiple hex pattern search error")
+            self.error.emit(f"Multiple hex pattern search failed: {e}")
+
+    def _search_multiple_regex_patterns(self, rom_data: mmap.mmap, patterns: list[str], operation: str, case_sensitive: bool, alignment: int, context_bytes: int, max_results: int, rom_size: int):
+        """Search for multiple regex patterns with OR/AND operations."""
+        try:
+            # Compile all patterns
+            flags = 0 if case_sensitive else re.IGNORECASE
+            compiled_patterns = []
+
+            for pattern_str in patterns:
+                try:
+                    compiled_pattern = re.compile(pattern_str.encode(), flags)
+                    compiled_patterns.append((pattern_str, compiled_pattern))
+                except re.error as e:
+                    logger.warning(f"Skipping invalid regex pattern '{pattern_str}': {e}")
+
+            if not compiled_patterns:
+                self.error.emit("No valid regex patterns found")
+                return
+
+            results_count = 0
+            chunk_size = 0x10000  # 64KB chunks
+            overlap_size = 1024   # Overlap to catch patterns spanning chunks
+            and_window_size = 256  # For AND operations
+
+            if operation.startswith("OR"):
+                # OR operation - find matches for any pattern
+                for start_offset in range(0, rom_size, chunk_size - overlap_size):
+                    if self._cancelled or results_count >= max_results:
+                        break
+
+                    progress = int((start_offset / rom_size) * 100)
+                    self.progress.emit(progress, 100)
+
+                    chunk_end = min(start_offset + chunk_size, rom_size)
+                    chunk_data = bytes(rom_data[start_offset:chunk_end])
+
+                    # Check each pattern in this chunk
+                    for pattern_str, pattern in compiled_patterns:
+                        for match in pattern.finditer(chunk_data):
+                            if results_count >= max_results:
+                                break
+
+                            match_offset = start_offset + match.start()
+                            match_len = match.end() - match.start()
+
+                            if alignment > 1 and match_offset % alignment != 0:
+                                continue
+
+                            # Avoid duplicates in overlap region
+                            if start_offset > 0 and match.start() < overlap_size:
+                                continue
+
+                            result = self._create_pattern_result(rom_data, match_offset, match_len, pattern_str, "regex", context_bytes, rom_size)
+                            result.metadata["match_text"] = self._safe_decode(match.group())
+                            self.result_found.emit(result)
+                            results_count += 1
+
+            elif operation.startswith("AND"):
+                # AND operation - find locations where all patterns exist nearby
+                for start_offset in range(0, rom_size - and_window_size, chunk_size):
+                    if self._cancelled or results_count >= max_results:
+                        break
+
+                    progress = int((start_offset / rom_size) * 100)
+                    self.progress.emit(progress, 100)
+
+                    chunk_end = min(start_offset + chunk_size, rom_size)
+
+                    offset = start_offset
+                    while offset <= chunk_end - and_window_size and results_count < max_results:
+                        if alignment > 1 and offset % alignment != 0:
+                            offset += 1
+                            continue
+
+                        # Check if all patterns exist within the window
+                        window_end = min(offset + and_window_size, rom_size)
+                        window_data = bytes(rom_data[offset:window_end])
+                        pattern_matches = []
+
+                        for pattern_str, pattern in compiled_patterns:
+                            match = pattern.search(window_data)
+                            if match:
+                                match_offset = offset + match.start()
+                                match_len = match.end() - match.start()
+                                pattern_matches.append((pattern_str, match_offset, match_len, self._safe_decode(match.group())))
+                            else:
+                                break
+
+                        # If all patterns found, create result
+                        if len(pattern_matches) == len(compiled_patterns):
+                            # Use the first match as the main result
+                            main_pattern, main_offset, main_len, main_text = pattern_matches[0]
+                            result = self._create_pattern_result(rom_data, main_offset, main_len, f"AND: {main_pattern} (+{len(pattern_matches)-1} more)", "regex", context_bytes, rom_size)
+                            result.metadata["match_text"] = main_text
+                            result.metadata["and_matches"] = pattern_matches
+                            self.result_found.emit(result)
+                            results_count += 1
+                            offset += and_window_size // 2
+                        else:
+                            offset += 1
+
+            self.progress.emit(100, 100)
+
+        except Exception as e:
+            logger.exception("Multiple regex pattern search error")
+            self.error.emit(f"Multiple regex pattern search failed: {e}")
+
+    def _create_pattern_result(self, rom_data: mmap.mmap, offset: int, size: int, pattern: str, pattern_type: str, context_bytes: int, rom_size: int) -> SearchResult:
+        """Create a SearchResult for a pattern match."""
+        context_start = max(0, offset - context_bytes)
+        context_end = min(rom_size, offset + size + context_bytes)
+        context_data = bytes(rom_data[context_start:context_end])
+
+        return SearchResult(
+            offset=offset,
+            size=size,
+            tile_count=1,
+            compressed_size=size,
+            confidence=1.0,
+            metadata={
+                "pattern": pattern,
+                "pattern_type": pattern_type,
+                "context_start": context_start,
+                "context_data": context_data.hex(),
+                "match_data": bytes(rom_data[offset:offset + size]).hex()
+            }
+        )
+
+    def _apply_filters(self, result: SearchResult, filters: SearchFilter) -> bool:
+        """Apply filters to search result."""
+        # Size filter
+        if not (filters.min_size <= result.size <= filters.max_size):
+            return False
+
+        # Tile count filter
+        if not (filters.min_tiles <= result.tile_count <= filters.max_tiles):
+            return False
+
+        # Alignment filter
+        if filters.alignment > 1 and result.offset % filters.alignment != 0:
+            return False
+
+        # Compression filter
+        is_compressed = result.compressed_size < result.size
+        if not filters.include_compressed and is_compressed:
+            return False
+        if not filters.include_uncompressed and not is_compressed:
+            return False
+
+        # Confidence filter
+        return not result.confidence < filters.confidence_threshold
+
+    def cancel(self):
+        """Cancel the search."""
+        self._cancelled = True
+        # Wake up any waiting user interaction to allow clean shutdown
+        self._user_response_mutex.lock()
+        try:
+            self._user_response = None
+            self._user_response_condition.wakeAll()
+        finally:
+            self._user_response_mutex.unlock()
+        self._cleanup_finder()
+
+    def is_set(self):
+        """Check if cancelled (for cancellation token interface)."""
+        return self._cancelled
+
+    def _cleanup_finder(self):
+        """Cleanup finder resources."""
+        if self.finder and hasattr(self.finder, "shutdown"):
+            try:
+                self.finder.shutdown()
+                logger.debug("Successfully shut down finder")
+            except Exception as e:
+                logger.warning(f"Error shutting down finder: {e}")
+            finally:
+                self.finder = None
+
+    def _request_user_input(self, title: str, prompt: str) -> tuple[str, bool]:
+        """Thread-safe method to request user input from main thread."""
+        if self._cancelled:
+            return ("", False)
+
+        self._user_response_mutex.lock()
+        try:
+            self._user_response = None
+            self.input_requested.emit(title, prompt)
+
+            # Wait for response from main thread (with timeout)
+            if self._user_response_condition.wait(self._user_response_mutex, 30000):  # 30 second timeout
+                if self._cancelled:
+                    return ("", False)
+                response = self._user_response
+                return response if isinstance(response, tuple) else ("", False)
+            logger.warning("User input request timed out")
+            return ("", False)
+        finally:
+            self._user_response_mutex.unlock()
+
+    def _request_user_question(self, title: str, question: str) -> bool:
+        """Thread-safe method to ask user a yes/no question from main thread."""
+        if self._cancelled:
+            return False
+
+        self._user_response_mutex.lock()
+        try:
+            self._user_response = None
+            self.question_requested.emit(title, question)
+
+            # Wait for response from main thread (with timeout)
+            if self._user_response_condition.wait(self._user_response_mutex, 30000):  # 30 second timeout
+                if self._cancelled:
+                    return False
+                response = self._user_response
+                return response if isinstance(response, bool) else False
+            logger.warning("User question request timed out")
+            return False
+        finally:
+            self._user_response_mutex.unlock()
+
+    def _show_user_info(self, title: str, message: str) -> None:
+        """Thread-safe method to show info message to user from main thread."""
+        self.info_requested.emit(title, message)
+
+    def _set_user_response(self, response):
+        """Called from main thread to provide user response."""
+        self._user_response_mutex.lock()
+        try:
+            self._user_response = response
+            self._user_response_condition.wakeAll()
+        finally:
+            self._user_response_mutex.unlock()
+
+    def _emit_progress(self, current: int, total: int) -> None:
+        """Emit progress signal - avoids lambda closure."""
+        self.progress.emit(current, total)
+
+    def emit_error(self, message: str, exception: Exception | None = None) -> None:
+        """Emit error signal - compatibility method for decorator."""
+        self.error.emit(message)
+
+
+class AdvancedSearchDialog(QDialog):
+    """
+    Advanced search dialog with multiple search modes and filters.
+
+    Features:
+    - Parallel search with progress
+    - Visual similarity search
+    - Pattern-based search
+    - Search history
+    - Advanced filters
+    - Keyboard shortcuts
+    """
+
+    # Signals
+    sprite_selected = pyqtSignal(int)  # Offset of selected sprite
+    search_started = pyqtSignal()
+    search_completed = pyqtSignal(int)  # Number of results
+
+    def __init__(self, rom_path: str, parent=None):
+        super().__init__(parent)
+        self.rom_path = rom_path
+        self.search_history = []
+        self.current_results = []
+        self.search_worker = None
+
+        self._setup_ui()
+        self._setup_shortcuts()
+        self._load_history()
+
+    def _setup_ui(self):
+        """Setup the user interface."""
+        self.setWindowTitle("Advanced Sprite Search")
+        self.setMinimumSize(800, 600)
+
+        layout = QVBoxLayout(self)
+
+        # Create tab widget
+        self.tabs = QTabWidget()
+
+        # Add search tabs
+        self.tabs.addTab(self._create_parallel_search_tab(), "Parallel Search")
+        self.tabs.addTab(self._create_visual_search_tab(), "Visual Search")
+        self.tabs.addTab(self._create_pattern_search_tab(), "Pattern Search")
+        self.tabs.addTab(self._create_history_tab(), "History")
+
+        layout.addWidget(self.tabs)
+
+        # Results section
+        results_group = QGroupBox("Search Results")
+        results_layout = QVBoxLayout()
+
+        # Results info
+        self.results_label = QLabel("No search performed")
+        results_layout.addWidget(self.results_label)
+
+        # Results list
+        self.results_list = QListWidget()
+        self.results_list.itemDoubleClicked.connect(self._on_result_selected)
+        results_layout.addWidget(self.results_list)
+
+        # Progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        results_layout.addWidget(self.progress_bar)
+
+        results_group.setLayout(results_layout)
+        layout.addWidget(results_group)
+
+        # Dialog buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Close
+        )
+        buttons.rejected.connect(self.reject)
+
+        self.search_button = QPushButton("Search")
+        self.search_button.clicked.connect(self._start_search)
+        buttons.addButton(self.search_button, QDialogButtonBox.ButtonRole.ActionRole)
+
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.clicked.connect(self._stop_search)
+        self.stop_button.setEnabled(False)
+        buttons.addButton(self.stop_button, QDialogButtonBox.ButtonRole.ActionRole)
+
+        layout.addWidget(buttons)
+
+    def _create_parallel_search_tab(self) -> QWidget:
+        """Create parallel search tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Search range
+        range_group = QGroupBox("Search Range")
+        range_layout = QGridLayout()
+
+        # Start offset
+        self.start_offset_edit = QLineEdit("0x0")
+        range_layout.addWidget(QLabel("Start Offset:"), 0, 0)
+        range_layout.addWidget(self.start_offset_edit, 0, 1)
+
+        # End offset
+        self.end_offset_edit = QLineEdit("")
+        self.end_offset_edit.setPlaceholderText("End of ROM")
+        range_layout.addWidget(QLabel("End Offset:"), 1, 0)
+        range_layout.addWidget(self.end_offset_edit, 1, 1)
+
+        # Step size
+        self.step_size_spin = QSpinBox()
+        self.step_size_spin.setRange(0x10, 0x1000)
+        self.step_size_spin.setValue(0x100)
+        self.step_size_spin.setSingleStep(0x10)
+        self.step_size_spin.setPrefix("0x")
+        self.step_size_spin.setDisplayIntegerBase(16)
+        range_layout.addWidget(QLabel("Step Size:"), 2, 0)
+        range_layout.addWidget(self.step_size_spin, 2, 1)
+
+        range_group.setLayout(range_layout)
+        layout.addWidget(range_group)
+
+        # Performance settings
+        perf_group = QGroupBox("Performance")
+        perf_layout = QGridLayout()
+
+        # Worker threads
+        self.workers_spin = QSpinBox()
+        self.workers_spin.setRange(1, 16)
+        self.workers_spin.setValue(4)
+        perf_layout.addWidget(QLabel("Worker Threads:"), 0, 0)
+        perf_layout.addWidget(self.workers_spin, 0, 1)
+
+        # Adaptive stepping
+        self.adaptive_check = QCheckBox("Adaptive Step Sizing")
+        self.adaptive_check.setChecked(True)
+        perf_layout.addWidget(self.adaptive_check, 1, 0, 1, 2)
+
+        perf_group.setLayout(perf_layout)
+        layout.addWidget(perf_group)
+
+        # Filters
+        layout.addWidget(self._create_filters_group())
+
+        layout.addStretch()
+        return widget
+
+    def _create_visual_search_tab(self) -> QWidget:
+        """Create visual search tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Reference sprite
+        ref_group = QGroupBox("Reference Sprite")
+        ref_layout = QVBoxLayout()
+
+        # Reference selection
+        ref_select_layout = QHBoxLayout()
+        self.ref_offset_edit = QLineEdit()
+        self.ref_offset_edit.setPlaceholderText("Sprite offset (e.g. 0x12345)")
+        self.ref_offset_edit.textChanged.connect(self._on_reference_offset_changed)
+        ref_select_layout.addWidget(self.ref_offset_edit)
+
+        self.ref_browse_button = QPushButton("Browse...")
+        self.ref_browse_button.clicked.connect(self._browse_reference_sprite)
+        ref_select_layout.addWidget(self.ref_browse_button)
+
+        ref_layout.addLayout(ref_select_layout)
+
+        # Reference preview
+        self.ref_preview_label = QLabel("No reference sprite selected")
+        self.ref_preview_label.setMinimumHeight(128)
+        self.ref_preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ref_preview_label.setStyleSheet(
+            "border: 1px solid #666; background-color: #333;"
+        )
+        ref_layout.addWidget(self.ref_preview_label)
+
+        ref_group.setLayout(ref_layout)
+        layout.addWidget(ref_group)
+
+        # Similarity settings
+        sim_group = QGroupBox("Similarity Settings")
+        sim_layout = QGridLayout()
+
+        # Similarity threshold
+        self.similarity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.similarity_slider.setRange(0, 100)
+        self.similarity_slider.setValue(80)
+        self.similarity_label = QLabel("80%")
+        self.similarity_slider.valueChanged.connect(self._update_similarity_label)
+
+        sim_layout.addWidget(QLabel("Similarity Threshold:"), 0, 0)
+        sim_layout.addWidget(self.similarity_slider, 0, 1)
+        sim_layout.addWidget(self.similarity_label, 0, 2)
+
+        # Search scope
+        self.visual_scope_combo = QComboBox()
+        self.visual_scope_combo.addItems([
+            "Current ROM",
+            "All Indexed Sprites",
+            "Selected Region"
+        ])
+        sim_layout.addWidget(QLabel("Search Scope:"), 1, 0)
+        sim_layout.addWidget(self.visual_scope_combo, 1, 1, 1, 2)
+
+        sim_group.setLayout(sim_layout)
+        layout.addWidget(sim_group)
+
+        layout.addStretch()
+        return widget
+
+    def _create_pattern_search_tab(self) -> QWidget:
+        """Create pattern search tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # Pattern input
+        pattern_group = QGroupBox("Search Pattern")
+        pattern_layout = QVBoxLayout()
+
+        # Pattern type
+        type_layout = QHBoxLayout()
+        self.hex_radio = QRadioButton("Hex Pattern")
+        self.hex_radio.setChecked(True)
+        self.regex_radio = QRadioButton("Regular Expression")
+        type_layout.addWidget(self.hex_radio)
+        type_layout.addWidget(self.regex_radio)
+        type_layout.addStretch()
+        pattern_layout.addLayout(type_layout)
+
+        # Pattern input
+        self.pattern_edit = QTextEdit()
+        self.pattern_edit.setMaximumHeight(100)
+        self.pattern_edit.setPlaceholderText(
+            "Enter hex pattern (e.g. '00 01 02 ?? ?? FF') or regex"
+        )
+        pattern_layout.addWidget(self.pattern_edit)
+
+        pattern_group.setLayout(pattern_layout)
+        layout.addWidget(pattern_group)
+
+        # Pattern options
+        options_group = QGroupBox("Search Options")
+        options_layout = QGridLayout()
+
+        # Pattern-specific options
+        self.case_sensitive_check = QCheckBox("Case Sensitive (Regex)")
+        self.whole_word_check = QCheckBox("Whole Word Only")
+        self.pattern_aligned_check = QCheckBox("Alignment Required (16-byte)")
+
+        options_layout.addWidget(self.case_sensitive_check, 0, 0)
+        options_layout.addWidget(self.whole_word_check, 0, 1)
+        options_layout.addWidget(self.pattern_aligned_check, 1, 0, 1, 2)
+
+        # Context size
+        options_layout.addWidget(QLabel("Context Size:"), 2, 0)
+        self.context_size_spin = QSpinBox()
+        self.context_size_spin.setRange(0, 256)
+        self.context_size_spin.setValue(32)
+        self.context_size_spin.setSuffix(" bytes")
+        self.context_size_spin.setToolTip("Number of bytes to show around each match")
+        options_layout.addWidget(self.context_size_spin, 2, 1)
+
+        # Maximum results
+        options_layout.addWidget(QLabel("Max Results:"), 3, 0)
+        self.max_results_spin = QSpinBox()
+        self.max_results_spin.setRange(1, 10000)
+        self.max_results_spin.setValue(1000)
+        self.max_results_spin.setToolTip("Maximum number of matches to find")
+        options_layout.addWidget(self.max_results_spin, 3, 1)
+
+        # Multiple pattern operation
+        options_layout.addWidget(QLabel("Multiple Patterns:"), 4, 0)
+        self.pattern_operation_combo = QComboBox()
+        self.pattern_operation_combo.addItems(["Single Pattern", "OR (any match)", "AND (all match)"])
+        self.pattern_operation_combo.setToolTip("How to handle multiple patterns (one per line)")
+        options_layout.addWidget(self.pattern_operation_combo, 4, 1)
+
+        options_group.setLayout(options_layout)
+        layout.addWidget(options_group)
+
+        # Pattern examples
+        examples_group = QGroupBox("Pattern Examples")
+        examples_layout = QVBoxLayout()
+
+        examples_text = (
+            "Hex Pattern Examples:\n"
+            "• 00 01 02 FF - Exact bytes\n"
+            "• 00 ?? ?? FF - Wildcards (any byte)\n"
+            "• 10 20 ?? ?? 30 - Mixed exact and wildcards\n\n"
+            "Regex Pattern Examples:\n"
+            "• SNES - Find ASCII text 'SNES'\n"
+            "• [A-Z]{4} - Four uppercase letters\n"
+            "• \\x00\\x01.{2}\\xFF - Bytes with any 2-byte gap\n\n"
+            "Multiple Patterns (one per line):\n"
+            "• OR: Find any matching pattern\n"
+            "• AND: Find locations with all patterns nearby"
+        )
+
+        examples_label = QLabel(examples_text)
+        examples_label.setWordWrap(True)
+        examples_label.setStyleSheet("QLabel { font-size: 9pt; color: #666; }")
+        examples_layout.addWidget(examples_label)
+
+        examples_group.setLayout(examples_layout)
+        layout.addWidget(examples_group)
+
+        layout.addStretch()
+        return widget
+
+    def _create_history_tab(self) -> QWidget:
+        """Create search history tab."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+
+        # History list
+        self.history_list = QListWidget()
+        self.history_list.itemDoubleClicked.connect(self._replay_search)
+        layout.addWidget(self.history_list)
+
+        # History actions
+        actions_layout = QHBoxLayout()
+
+        self.clear_history_button = QPushButton("Clear History")
+        self.clear_history_button.clicked.connect(self._clear_history)
+        actions_layout.addWidget(self.clear_history_button)
+
+        self.export_history_button = QPushButton("Export...")
+        self.export_history_button.clicked.connect(self._export_history)
+        actions_layout.addWidget(self.export_history_button)
+
+        actions_layout.addStretch()
+        layout.addLayout(actions_layout)
+
+        return widget
+
+    def _create_filters_group(self) -> QGroupBox:
+        """Create filters group box."""
+        group = QGroupBox("Filters")
+        layout = QGridLayout()
+
+        # Size filter
+        self.min_size_spin = QSpinBox()
+        self.min_size_spin.setRange(0, MAX_SPRITE_SIZE)
+        self.min_size_spin.setValue(MIN_SPRITE_SIZE)
+        self.min_size_spin.setSingleStep(0x100)
+
+        self.max_size_spin = QSpinBox()
+        self.max_size_spin.setRange(0, MAX_SPRITE_SIZE)
+        self.max_size_spin.setValue(MAX_SPRITE_SIZE)
+        self.max_size_spin.setSingleStep(0x100)
+
+        layout.addWidget(QLabel("Size Range:"), 0, 0)
+        layout.addWidget(self.min_size_spin, 0, 1)
+        layout.addWidget(QLabel("-"), 0, 2)
+        layout.addWidget(self.max_size_spin, 0, 3)
+
+        # Tile count filter
+        self.min_tiles_spin = QSpinBox()
+        self.min_tiles_spin.setRange(1, 1024)
+        self.min_tiles_spin.setValue(1)
+
+        self.max_tiles_spin = QSpinBox()
+        self.max_tiles_spin.setRange(1, 1024)
+        self.max_tiles_spin.setValue(1024)
+
+        layout.addWidget(QLabel("Tile Count:"), 1, 0)
+        layout.addWidget(self.min_tiles_spin, 1, 1)
+        layout.addWidget(QLabel("-"), 1, 2)
+        layout.addWidget(self.max_tiles_spin, 1, 3)
+
+        # Compression filter
+        self.compressed_check = QCheckBox("Include Compressed")
+        self.compressed_check.setChecked(True)
+        self.uncompressed_check = QCheckBox("Include Uncompressed")
+
+        layout.addWidget(self.compressed_check, 2, 0, 1, 2)
+        layout.addWidget(self.uncompressed_check, 2, 2, 1, 2)
+
+        # Alignment filter
+        self.alignment_combo = QComboBox()
+        self.alignment_combo.addItems([
+            "Any", "0x10", "0x100", "0x1000", "0x8000"
+        ])
+        layout.addWidget(QLabel("Alignment:"), 3, 0)
+        layout.addWidget(self.alignment_combo, 3, 1, 1, 3)
+
+        group.setLayout(layout)
+        return group
+
+    def _update_similarity_label(self, value: int):
+        """Update similarity label text."""
+        self.similarity_label.setText(f"{value}%")
+
+    def _focus_search(self):
+        """Focus the search input field."""
+        self.start_offset_edit.setFocus()
+
+    def _show_history_tab(self):
+        """Show the history tab."""
+        self.tabs.setCurrentIndex(3)
+
+    def _setup_shortcuts(self):
+        """Setup keyboard shortcuts."""
+        # Ctrl+F - Focus search
+        QShortcut(QKeySequence("Ctrl+F"), self).activated.connect(self._focus_search)
+
+        # Ctrl+Enter - Start search
+        QShortcut(QKeySequence("Ctrl+Return"), self).activated.connect(
+            self._start_search
+        )
+
+        # Escape - Stop search
+        QShortcut(QKeySequence("Escape"), self).activated.connect(
+            self._stop_search
+        )
+
+        # Ctrl+H - Show history
+        QShortcut(QKeySequence("Ctrl+H"), self).activated.connect(self._show_history_tab)
+
+    def _start_search(self):
+        """Start the search based on current tab."""
+        if self.search_worker is not None and self.search_worker.isRunning():
+            return
+
+        current_tab = self.tabs.currentIndex()
+
+        if current_tab == 0:  # Parallel search
+            self._start_parallel_search()
+        elif current_tab == 1:  # Visual search
+            self._start_visual_search()
+        elif current_tab == 2:  # Pattern search
+            self._start_pattern_search()
+
+    def _start_parallel_search(self):
+        """Start parallel search."""
+        # Get parameters
+        try:
+            start = int(self.start_offset_edit.text(), 16) if self.start_offset_edit.text() else 0
+            end = int(self.end_offset_edit.text(), 16) if self.end_offset_edit.text() else None
+        except ValueError:
+            self.results_label.setText("Invalid offset format")
+            return
+
+        # Create filters
+        filters = SearchFilter(
+            min_size=self.min_size_spin.value(),
+            max_size=self.max_size_spin.value(),
+            min_tiles=self.min_tiles_spin.value(),
+            max_tiles=self.max_tiles_spin.value(),
+            alignment=self._get_alignment_value(),
+            include_compressed=self.compressed_check.isChecked(),
+            include_uncompressed=self.uncompressed_check.isChecked(),
+            confidence_threshold=0.5
+        )
+
+        # Create worker
+        params = {
+            "rom_path": self.rom_path,
+            "start_offset": start,
+            "end_offset": end,
+            "num_workers": self.workers_spin.value(),
+            "step_size": self.step_size_spin.value(),
+            "filters": filters
+        }
+
+        self.search_worker = SearchWorker("parallel", params)
+        self._connect_worker_signals()
+
+        # Update UI
+        self.search_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.results_list.clear()
+        self.current_results = []
+        self.results_label.setText("Searching...")
+
+        # Add to history
+        entry = SearchHistoryEntry(
+            timestamp=datetime.now(),
+            search_type="Parallel",
+            query=f"0x{start:X} - {f'0x{end:X}' if end else 'EOF'}",
+            filters=filters,
+            results_count=0
+        )
+        self.search_history.append(entry)
+
+        # Start search
+        self.search_started.emit()
+        self.search_worker.start()
+
+    def _start_visual_search(self):
+        """Start visual similarity search."""
+        # Check if similarity index exists first
+        if not self._check_similarity_index_exists():
+            self._offer_to_build_similarity_index()
+            return
+
+        # Get reference sprite offset
+        ref_text = self.ref_offset_edit.text().strip()
+        if not ref_text:
+            self.results_label.setText("Please specify a reference sprite offset")
+            return
+
+        try:
+            ref_offset = int(ref_text, 16) if ref_text.startswith("0x") else int(ref_text, 16)
+        except ValueError:
+            self.results_label.setText("Invalid offset format. Use hex format like 0x12345")
+            return
+
+        # Get similarity threshold
+        similarity_threshold = self.similarity_slider.value()  # Already a percentage
+
+        # Get search scope
+        search_scope = self.visual_scope_combo.currentText()
+
+        # Create worker parameters
+        params = {
+            "rom_path": self.rom_path,
+            "reference_offset": ref_offset,
+            "similarity_threshold": similarity_threshold,
+            "search_scope": search_scope,
+            "max_results": 50
+        }
+
+        self.search_worker = SearchWorker("visual", params)
+        self._connect_worker_signals()
+
+        # Update UI
+        self.search_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.results_list.clear()
+        self.current_results = []
+        self.results_label.setText("Searching for similar sprites...")
+
+        # Add to history
+        entry = SearchHistoryEntry(
+            timestamp=datetime.now(),
+            search_type="Visual",
+            query=f"Similar to 0x{ref_offset:X} (threshold: {similarity_threshold}%)",
+            filters=SearchFilter(
+                min_size=0, max_size=MAX_SPRITE_SIZE,
+                min_tiles=0, max_tiles=1024,
+                alignment=1,
+                include_compressed=True,
+                include_uncompressed=True,
+                confidence_threshold=similarity_threshold / 100.0
+            ),
+            results_count=0
+        )
+        self.search_history.append(entry)
+
+        # Start search
+        self.search_started.emit()
+        self.search_worker.start()
+
+    def _start_pattern_search(self):
+        """Start pattern search with comprehensive options."""
+        # Get pattern input
+        pattern_text = self.pattern_edit.toPlainText().strip()
+        if not pattern_text:
+            self.results_label.setText("Please enter a search pattern")
+            return
+
+        # Determine pattern type
+        pattern_type = "hex" if self.hex_radio.isChecked() else "regex"
+
+        # Parse multiple patterns (one per line)
+        patterns = [p.strip() for p in pattern_text.split("\n") if p.strip()]
+
+        # Validate patterns based on type
+        if pattern_type == "hex":
+            for i, pattern in enumerate(patterns):
+                if not self._validate_hex_pattern(pattern):
+                    self.results_label.setText(f"Invalid hex pattern on line {i+1}: Use format like: 00 01 02 ?? FF")
+                    return
+        else:  # regex
+            for i, pattern in enumerate(patterns):
+                if not self._validate_regex_pattern(pattern):
+                    self.results_label.setText(f"Invalid regex pattern on line {i+1}")
+                    return
+
+        # Get search options
+        case_sensitive = self.case_sensitive_check.isChecked()
+        alignment = self._get_pattern_alignment()
+
+        # Create search parameters
+        params = {
+            "rom_path": self.rom_path,
+            "patterns": patterns,
+            "pattern_type": pattern_type,
+            "case_sensitive": case_sensitive,
+            "alignment": alignment,
+            "context_bytes": self.context_size_spin.value(),
+            "max_results": self.max_results_spin.value(),
+            "whole_word": self.whole_word_check.isChecked(),
+            "operation": self.pattern_operation_combo.currentText()
+        }
+
+        # Create worker
+        self.search_worker = SearchWorker("pattern", params)
+        self._connect_worker_signals()
+
+        # Update UI
+        self.search_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.results_list.clear()
+        self.current_results = []
+        self.results_label.setText("Searching for pattern...")
+
+        # Add to history
+        entry = SearchHistoryEntry(
+            timestamp=datetime.now(),
+            search_type=f"Pattern ({'Hex' if pattern_type == 'hex' else 'Regex'})",
+            query=pattern_text[:50] + ("..." if len(pattern_text) > 50 else ""),
+            filters=SearchFilter(
+                min_size=0,
+                max_size=0,
+                min_tiles=0,
+                max_tiles=0,
+                alignment=alignment,
+                include_compressed=True,
+                include_uncompressed=True,
+                confidence_threshold=0.0
+            ),
+            results_count=0
+        )
+        self.search_history.append(entry)
+
+        # Start search
+        self.search_started.emit()
+        self.search_worker.start()
+
+    def _validate_hex_pattern(self, pattern: str) -> bool:
+        """Validate hex pattern format."""
+        try:
+            # Clean pattern
+            pattern = pattern.strip().upper()
+            if not pattern:
+                return False
+
+            # Split into tokens
+            tokens = re.split(r"[\s,]+", pattern)
+
+            for token in tokens:
+                if not token:
+                    continue
+
+                # Check for wildcard
+                if token in ["??", "?"]:
+                    continue
+
+                # Check for valid hex byte
+                if len(token) != 2 or not all(c in "0123456789ABCDEF" for c in token):
+                    return False
+
+            return len(tokens) > 0
+
+        except Exception:
+            return False
+
+    def _validate_regex_pattern(self, pattern: str) -> bool:
+        """Validate regex pattern."""
+        try:
+            re.compile(pattern.encode())
+            return True
+        except re.error:
+            return False
+
+    def _get_pattern_alignment(self) -> int:
+        """Get alignment requirement for pattern search."""
+        if not self.pattern_aligned_check.isChecked():
+            return 1
+
+        # Default to 16-byte alignment for pattern searches
+        return 16
+
+    def _connect_worker_signals(self):
+        """Connect search worker signals."""
+        self.search_worker.progress.connect(self._update_progress)
+        self.search_worker.result_found.connect(self._add_result)
+        self.search_worker.search_complete.connect(self._search_complete)
+        self.search_worker.error.connect(self._search_error)
+
+        # Connect thread-safe user interaction signals
+        self.search_worker.input_requested.connect(self._handle_worker_input_request)
+        self.search_worker.question_requested.connect(self._handle_worker_question_request)
+        self.search_worker.info_requested.connect(self._handle_worker_info_request)
+
+    def _update_progress(self, current: int, total: int):
+        """Update progress bar."""
+        self.progress_bar.setMaximum(total)
+        self.progress_bar.setValue(current)
+
+    def _add_result(self, result: SearchResult):
+        """Add result to list with enhanced pattern search support."""
+        self.current_results.append(result)
+
+        # Create display text based on result type
+        if result.metadata.get("pattern_type") in ["hex", "regex"]:
+            # Pattern search result
+            pattern_type = result.metadata["pattern_type"].upper()
+            pattern = result.metadata.get("pattern", "")[:30] + ("..." if len(result.metadata.get("pattern", "")) > 30 else "")
+            match_data = result.metadata.get("match_data", "")[:20] + ("..." if len(result.metadata.get("match_data", "")) > 20 else "")
+
+            display_text = (
+                f"0x{result.offset:08X} - {pattern_type} Pattern: {pattern} "
+                f"(Match: {match_data}, Size: {result.size} bytes)"
+            )
+
+            # Add context information for tooltip
+            context_data = result.metadata.get("context_data", "")
+            if context_data:
+                context_preview = context_data[:32] + ("..." if len(context_data) > 32 else "")
+                tooltip_text = (
+                    f"Pattern: {result.metadata.get('pattern', '')}\n"
+                    f"Match at: 0x{result.offset:08X}\n"
+                    f"Size: {result.size} bytes\n"
+                    f"Context: {context_preview}"
+                )
+                if result.metadata.get("match_text"):
+                    tooltip_text += f"\nText: {result.metadata['match_text'][:50]}"
+            else:
+                tooltip_text = f"Pattern match at 0x{result.offset:08X}"
+        else:
+            # Regular sprite search result
+            display_text = (
+                f"0x{result.offset:08X} - "
+                f"Size: {result.size:,} bytes, "
+                f"Tiles: {result.tile_count}, "
+                f"Confidence: {result.confidence:.0%}"
+            )
+            tooltip_text = f"Sprite at 0x{result.offset:08X}"
+
+        # Create list item
+        item = QListWidgetItem(display_text)
+        item.setData(Qt.ItemDataRole.UserRole, result)
+        item.setToolTip(tooltip_text)
+        self.results_list.addItem(item)
+
+        # Update count with appropriate label
+        result_type = "patterns" if result.metadata.get("pattern_type") else "sprites"
+        self.results_label.setText(f"Found {len(self.current_results)} {result_type}")
+
+    def _search_complete(self, results: list):
+        """Handle search completion."""
+        self.search_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        self.progress_bar.setVisible(False)
+
+        # Update history
+        if self.search_history:
+            self.search_history[-1].results_count = len(results)
+            self._update_history_display()
+
+        # For visual search, show similarity results dialog
+        if (self.search_worker is not None and
+            self.search_worker.search_type == "visual" and
+            results):
+            self._show_visual_search_results(results)
+
+        # Update results
+        self.results_label.setText(
+            f"Search complete: {len(results)} sprites found"
+        )
+        self.search_completed.emit(len(results))
+
+    def _search_error(self, error_msg: str):
+        """Handle search error."""
+        self.search_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+        self.progress_bar.setVisible(False)
+
+        self.results_label.setText(f"Search error: {error_msg}")
+        logger.error(f"Search error: {error_msg}")
+
+    def _handle_worker_input_request(self, title: str, prompt: str):
+        """Handle input request from worker thread (runs in main thread)."""
+        from PyQt6.QtWidgets import QInputDialog
+
+        try:
+            text, ok = QInputDialog.getText(self, title, prompt, text="0x")
+            if self.search_worker is not None:
+                self.search_worker._set_user_response((text, ok))
+        except Exception as e:
+            logger.exception(f"Error handling worker input request: {e}")
+            if self.search_worker is not None:
+                self.search_worker._set_user_response(("", False))
+
+    def _handle_worker_question_request(self, title: str, question: str):
+        """Handle question request from worker thread (runs in main thread)."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        try:
+            reply = QMessageBox.question(
+                self, title, question,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+            result = reply == QMessageBox.StandardButton.Yes
+            if self.search_worker is not None:
+                self.search_worker._set_user_response(result)
+        except Exception as e:
+            logger.exception(f"Error handling worker question request: {e}")
+            if self.search_worker is not None:
+                self.search_worker._set_user_response(False)
+
+    def _handle_worker_info_request(self, title: str, message: str):
+        """Handle info request from worker thread (runs in main thread)."""
+        from PyQt6.QtWidgets import QMessageBox
+
+        try:
+            QMessageBox.information(self, title, message)
+        except Exception as e:
+            logger.exception(f"Error handling worker info request: {e}")
+
+    def _stop_search(self):
+        """Stop current search."""
+        if self.search_worker is not None and self.search_worker.isRunning():
+            self.search_worker.cancel()
+            # Wake up any waiting threads to allow clean shutdown
+            if hasattr(self.search_worker, "_user_response_condition"):
+                self.search_worker._user_response_condition.wakeAll()
+            self.results_label.setText("Search cancelled")
+
+    def _on_result_selected(self, item: QListWidgetItem):
+        """Handle result selection."""
+        result = item.data(Qt.ItemDataRole.UserRole)
+        if result:
+            self.sprite_selected.emit(result.offset)
+
+    def _get_alignment_value(self) -> int:
+        """Get alignment value from combo box."""
+        text = self.alignment_combo.currentText()
+        if text == "Any":
+            return 1
+        return int(text, 16)
+
+    def _browse_reference_sprite(self):
+        """Browse for reference sprite (thread-safe)."""
+        # For now, use a simple dialog to input an offset
+        # In a full implementation, this could open a sprite browser
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QInputDialog
+
+        # Check if we're in the main thread
+        if QThread.currentThread() != self.thread():
+            logger.warning("_browse_reference_sprite called from worker thread - operation skipped")
+            return
+
+        try:
+            offset_text, ok = QInputDialog.getText(
+                self,
+                "Reference Sprite Offset",
+                "Enter sprite offset (hex format):",
+                text="0x"
+            )
+
+            if ok and offset_text.strip():
+                try:
+                    # Validate the offset format
+                    if offset_text.startswith("0x"):
+                        offset = int(offset_text, 16)
+                    else:
+                        offset = int(offset_text, 16)
+
+                    # Set the offset in the edit field
+                    self.ref_offset_edit.setText(f"0x{offset:X}")
+
+                    # Try to generate and show a preview
+                    self._update_reference_preview(offset)
+
+                except ValueError:
+                    self.results_label.setText("Invalid offset format")
+        except Exception as e:
+            logger.exception(f"Error in _browse_reference_sprite: {e}")
+            self.results_label.setText(f"Error: {e}")
+
+    def _on_reference_offset_changed(self):
+        """Handle changes to reference offset text."""
+        offset_text = self.ref_offset_edit.text().strip()
+        if not offset_text:
+            self.ref_preview_label.setText("No reference sprite selected")
+            self.ref_preview_label.setPixmap(QPixmap())
+            return
+
+        try:
+            # Parse offset
+            if offset_text.startswith("0x"):
+                offset = int(offset_text, 16)
+            else:
+                offset = int(offset_text, 16)
+
+            # Update preview
+            self._update_reference_preview(offset)
+
+        except ValueError:
+            self.ref_preview_label.setText("Invalid offset format")
+            self.ref_preview_label.setPixmap(QPixmap())
+
+    def _update_reference_preview(self, offset: int):
+        """Update the reference sprite preview."""
+        try:
+            # Create a preview request
+            request = PreviewRequest(
+                source_type="rom",
+                data_path=self.rom_path,
+                offset=offset,
+                size=(128, 128)
+            )
+
+            # Generate preview using the preview service
+            preview_generator = PreviewGenerator()
+            result = preview_generator.generate_preview(request)
+
+            if result and result.pixmap and not result.pixmap.isNull():
+                # Scale preview to fit the label
+                scaled_pixmap = result.pixmap.scaled(
+                    128, 128,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self.ref_preview_label.setPixmap(scaled_pixmap)
+                self.ref_preview_label.setText("")
+            else:
+                self.ref_preview_label.setText(f"Could not load sprite at 0x{offset:X}")
+                self.ref_preview_label.setPixmap(QPixmap())
+
+        except Exception as e:
+            logger.exception(f"Failed to generate reference preview: {e}")
+            self.ref_preview_label.setText(f"Preview error: {str(e)[:50]}...")
+            self.ref_preview_label.setPixmap(QPixmap())
+
+    def _show_visual_search_results(self, results: list):
+        """Show visual search results in similarity dialog."""
+        try:
+            # Convert SearchResult objects back to SimilarityMatch for the dialog
+            ref_offset_text = self.ref_offset_edit.text().strip()
+            ref_offset = int(ref_offset_text, 16) if ref_offset_text.startswith("0x") else int(ref_offset_text, 16)
+
+            matches = []
+            for result in results:
+                match = SimilarityMatch(
+                    offset=result.offset,
+                    similarity_score=result.confidence,
+                    hash_distance=result.metadata.get("hash_distance", 0) if result.metadata else 0,
+                    metadata=result.metadata or {}
+                )
+                matches.append(match)
+
+            # Show similarity results dialog
+            dialog = show_similarity_results(matches, ref_offset, self)
+            dialog.sprite_selected.connect(self.sprite_selected.emit)
+            dialog.exec()
+
+        except Exception as e:
+            logger.exception(f"Failed to show visual search results: {e}")
+            self.results_label.setText(f"Error displaying results: {e}")
+
+    def _check_similarity_index_exists(self) -> bool:
+        """Check if similarity index exists for the current ROM."""
+        index_path = Path(self.rom_path).with_suffix(".similarity_index")
+        return index_path.exists()
+
+    def _offer_to_build_similarity_index(self):
+        """Offer to build similarity index if it doesn't exist (thread-safe)."""
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QMessageBox
+
+        # Check if we're in the main thread
+        if QThread.currentThread() != self.thread():
+            logger.warning("_offer_to_build_similarity_index called from worker thread - operation skipped")
+            return
+
+        try:
+            reply = QMessageBox.question(
+                self,
+                "Build Similarity Index",
+                "No similarity index found for this ROM. Visual search requires an index to be built first.\n\n"
+                "Building an index will scan the ROM for sprites and create a searchable database. "
+                "This may take several minutes but only needs to be done once per ROM.\n\n"
+                "Would you like to build the similarity index now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self._build_similarity_index()
+        except Exception as e:
+            logger.exception(f"Error in _offer_to_build_similarity_index: {e}")
+            self.results_label.setText(f"Error: {e}")
+
+    def _build_similarity_index(self):
+        """Build similarity index for the current ROM (thread-safe)."""
+        # This would be implemented to scan the ROM and build the index
+        # For now, show a placeholder message
+        from PyQt6.QtCore import QThread
+        from PyQt6.QtWidgets import QMessageBox
+
+        # Check if we're in the main thread
+        if QThread.currentThread() != self.thread():
+            logger.warning("_build_similarity_index called from worker thread - operation skipped")
+            return
+
+        try:
+            QMessageBox.information(
+                self,
+                "Build Index",
+                "Index building is not yet implemented. This feature would:\n\n"
+                "1. Scan the entire ROM for sprite data\n"
+                "2. Extract visual features from each sprite\n"
+                "3. Build a searchable similarity index\n"
+                "4. Save the index for future searches\n\n"
+                "This functionality will be added in a future update."
+            )
+        except Exception as e:
+            logger.exception(f"Error in _build_similarity_index: {e}")
+            self.results_label.setText(f"Error: {e}")
+
+    def _replay_search(self, item: QListWidgetItem):
+        """Replay a search from history."""
+        # TODO: Implement search replay
+
+    def _clear_history(self):
+        """Clear search history."""
+        self.search_history.clear()
+        self.history_list.clear()
+        self._save_history()
+
+    def _export_history(self):
+        """Export search history."""
+        # TODO: Implement history export
+
+    def _update_history_display(self):
+        """Update history list display."""
+        self.history_list.clear()
+        for entry in reversed(self.search_history[-20:]):  # Show last 20
+            item = QListWidgetItem(entry.to_display_string())
+            item.setData(Qt.ItemDataRole.UserRole, entry)
+            self.history_list.addItem(item)
+
+    def _save_history(self):
+        """Save search history to file."""
+        history_file = Path.home() / ".spritepal" / "search_history.json"
+        history_file.parent.mkdir(exist_ok=True)
+
+        # Convert to serializable format
+        data = []
+        for entry in self.search_history[-100:]:  # Keep last 100
+            data.append({
+                "timestamp": entry.timestamp.isoformat(),
+                "search_type": entry.search_type,
+                "query": entry.query,
+                "results_count": entry.results_count,
+                "filters": {
+                    "min_size": entry.filters.min_size,
+                    "max_size": entry.filters.max_size,
+                    "min_tiles": entry.filters.min_tiles,
+                    "max_tiles": entry.filters.max_tiles,
+                    "alignment": entry.filters.alignment,
+                    "include_compressed": entry.filters.include_compressed,
+                    "include_uncompressed": entry.filters.include_uncompressed,
+                    "confidence_threshold": entry.filters.confidence_threshold
+                }
+            })
+
+        with open(history_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def _load_history(self):
+        """Load search history from file."""
+        history_file = Path.home() / ".spritepal" / "search_history.json"
+        if not history_file.exists():
+            return
+
+        try:
+            with open(history_file) as f:
+                data = json.load(f)
+
+            for item in data:
+                filters = SearchFilter(**item["filters"])
+                entry = SearchHistoryEntry(
+                    timestamp=datetime.fromisoformat(item["timestamp"]),
+                    search_type=item["search_type"],
+                    query=item["query"],
+                    filters=filters,
+                    results_count=item["results_count"]
+                )
+                self.search_history.append(entry)
+
+            self._update_history_display()
+
+        except Exception as e:
+            logger.exception(f"Failed to load search history: {e}")
+
+    def closeEvent(self, event):
+        """Handle dialog close event with proper thread cleanup."""
+        # Stop any running search worker
+        if self.search_worker and self.search_worker.isRunning():
+            logger.debug("Stopping search worker on dialog close")
+            self.search_worker.cancel()
+            # Wait for worker to finish, but don't hang forever
+            if not self.search_worker.wait(1000):  # 1 second timeout
+                logger.warning("Search worker did not finish within timeout, terminating")
+                self.search_worker.terminate()
+                self.search_worker.wait()  # Wait for termination to complete
+            self.search_worker = None
+            logger.debug("Search worker cleanup completed")
+
+        # Save history before closing
+        try:
+            self._save_history()
+        except Exception as e:
+            logger.exception(f"Failed to save search history on close: {e}")
+
+        # Accept the close event
+        event.accept()

@@ -25,7 +25,7 @@ from .layouts.styled_splitter import StyledSplitter
 class TabbedDialog(DialogBase):
     """
     Dialog with a QTabWidget as main content area.
-    
+
     Provides proper tab management functionality while maintaining
     DialogBase's initialization safety patterns.
     """
@@ -44,10 +44,10 @@ class TabbedDialog(DialogBase):
     ):
         """
         Initialize tabbed dialog.
-        
+
         Args:
             parent: Parent widget (optional)
-            title: Window title (optional)  
+            title: Window title (optional)
             modal: Whether dialog should be modal (default: True)
             min_size: Minimum size as (width, height) tuple, None for no limit
             size: Fixed size as (width, height) tuple (optional)
@@ -101,11 +101,11 @@ class TabbedDialog(DialogBase):
     def add_tab(self, widget: QWidget, label: str) -> int:
         """
         Add a tab to the dialog.
-        
+
         Args:
             widget: The widget to add as a tab
             label: The tab label
-            
+
         Returns:
             The index of the added tab
         """
@@ -117,7 +117,7 @@ class TabbedDialog(DialogBase):
     def remove_tab(self, index: int) -> None:
         """
         Remove a tab from the dialog.
-        
+
         Args:
             index: Index of tab to remove
         """
@@ -127,7 +127,7 @@ class TabbedDialog(DialogBase):
     def set_current_tab(self, index: int) -> None:
         """
         Set the current tab.
-        
+
         Args:
             index: Tab index to switch to
         """
@@ -137,7 +137,7 @@ class TabbedDialog(DialogBase):
     def get_current_tab_index(self) -> int:
         """
         Get the current tab index.
-        
+
         Returns:
             Current tab index, or -1 if no tabs exist
         """
@@ -149,7 +149,7 @@ class TabbedDialog(DialogBase):
 class SplitterDialog(DialogBase):
     """
     Dialog with a QSplitter as main content area.
-    
+
     Provides proper splitter management functionality while maintaining
     DialogBase's initialization safety patterns.
     """
@@ -169,11 +169,11 @@ class SplitterDialog(DialogBase):
     ):
         """
         Initialize splitter dialog.
-        
+
         Args:
             parent: Parent widget (optional)
             title: Window title (optional)
-            modal: Whether dialog should be modal (default: True)  
+            modal: Whether dialog should be modal (default: True)
             min_size: Minimum size as (width, height) tuple, None for no limit
             size: Fixed size as (width, height) tuple (optional)
             with_status_bar: Whether to add a status bar
@@ -228,10 +228,10 @@ class SplitterDialog(DialogBase):
     def add_pane(self, widget: QWidget) -> int:
         """
         Add a pane (widget) to the splitter.
-        
+
         Args:
             widget: The widget to add as a pane
-            
+
         Returns:
             The index of the added pane
         """
@@ -244,7 +244,7 @@ class SplitterDialog(DialogBase):
     def set_orientation(self, orientation: Any) -> None:
         """
         Set the splitter orientation.
-        
+
         Args:
             orientation: Qt.Orientation value (Horizontal or Vertical)
         """
@@ -255,7 +255,7 @@ class SplitterDialog(DialogBase):
     def set_sizes(self, sizes: list[int]) -> None:
         """
         Set the sizes of the splitter panes.
-        
+
         Args:
             sizes: List of sizes for each pane
         """
@@ -265,7 +265,7 @@ class SplitterDialog(DialogBase):
     def add_panel(self, widget: QWidget, stretch_factor: int = 1) -> None:
         """
         Add a panel to the splitter (alias for add_pane for compatibility).
-        
+
         Args:
             widget: The widget to add
             stretch_factor: Stretch factor for the widget (applied after adding)

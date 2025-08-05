@@ -4,7 +4,7 @@ Intuitive drag-and-drop interface for arranging sprite rows
 """
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QImage, QPixmap
@@ -40,7 +40,7 @@ class RowArrangementDialog(SplitterDialog):
         self.sprite_path: str | None = sprite_path
         self.tiles_per_row: int = tiles_per_row
         self.original_image: Image.Image | None = None
-        self.tile_rows: list[Image.Image] = []
+        self.tile_rows: list[dict[str, Any]] = []
         self.output_path: str | None = None
         self.tile_width: int | None = None  # Will be calculated based on image width
         self.tile_height: int | None = None  # Will be calculated based on tile width

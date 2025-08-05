@@ -129,15 +129,16 @@ class ROMCache:
 
         """
         try:
-            if os.path.exists(rom_path):
+            rom_path_obj = Path(rom_path)
+            if rom_path_obj.exists():
                 sha256_hash = hashlib.sha256()
-                with open(rom_path, "rb") as f:
+                with rom_path_obj.open("rb") as f:
                     # Read in chunks to handle large files efficiently
                     for chunk in iter(lambda: f.read(8192), b""):
                         sha256_hash.update(chunk)
                 return sha256_hash.hexdigest()
             # For non-existent files (like test scenarios), use path-based hash
-            path_data = f"nonexistent_{os.path.abspath(rom_path)}"
+            path_data = f"nonexistent_{Path(rom_path).resolve()}"
             return hashlib.sha256(path_data.encode()).hexdigest()
         except (OSError, PermissionError) as e:
             # Ultimate fallback: just use the path itself
@@ -164,7 +165,7 @@ class ROMCache:
             max_age = expiration_days * 24 * 3600  # Convert days to seconds
 
             # For non-existent ROM files (test scenarios), only check cache age
-            if not os.path.exists(rom_path):
+            if not Path(rom_path).exists():
                 # Check cache age
                 cache_age = time.time() - cache_file.stat().st_mtime
                 return cache_age <= max_age
@@ -175,7 +176,7 @@ class ROMCache:
                 return False
 
             # Check if ROM file has been modified since cache creation
-            rom_mtime = os.path.getmtime(rom_path)
+            rom_mtime = Path(rom_path).stat().st_mtime
             cache_mtime = cache_file.stat().st_mtime
 
         except OSError as e:
@@ -198,7 +199,7 @@ class ROMCache:
             temp_file = cache_file.with_suffix(temp_suffix)
 
             # Write to temp file then move to avoid corruption
-            with open(temp_file, "w") as f:
+            with temp_file.open("w") as f:
                 json.dump(cache_data, f, indent=2)
             temp_file.replace(cache_file)
         except Exception as e:
@@ -223,7 +224,7 @@ class ROMCache:
         """Safely load cache data with error handling and retry logic."""
         for attempt in range(max_retries):
             try:
-                with open(cache_file) as f:
+                with cache_file.open() as f:
                     return json.load(f)
             except (FileNotFoundError, json.JSONDecodeError) as e:
                 if attempt == max_retries - 1:
@@ -264,7 +265,7 @@ class ROMCache:
 
             cache_data = {
                 "version": self.CACHE_VERSION,
-                "rom_path": os.path.abspath(rom_path),
+                "rom_path": str(Path(rom_path).resolve()),
                 "rom_hash": rom_hash,
                 "scan_params": scan_params,
                 "cached_at": time.time(),
@@ -458,7 +459,7 @@ class ROMCache:
 
             cache_data = {
                 "version": self.CACHE_VERSION,
-                "rom_path": os.path.abspath(rom_path),
+                "rom_path": str(Path(rom_path).resolve()),
                 "rom_hash": rom_hash,
                 "cached_at": time.time(),
                 "sprite_locations": sprite_locations,
@@ -547,7 +548,7 @@ class ROMCache:
 
             cache_data = {
                 "version": self.CACHE_VERSION,
-                "rom_path": os.path.abspath(rom_path),
+                "rom_path": str(Path(rom_path).resolve()),
                 "rom_hash": rom_hash,
                 "cached_at": time.time(),
                 "rom_info": rom_info,
@@ -692,7 +693,7 @@ class ROMCache:
 
             cache_data = {
                 "version": self.CACHE_VERSION,
-                "rom_path": os.path.abspath(rom_path),
+                "rom_path": str(Path(rom_path).resolve()),
                 "rom_hash": rom_hash,
                 "cached_at": time.time(),
                 "preview_data": {
@@ -823,7 +824,7 @@ class ROMCache:
 
             cache_data = {
                 "version": self.CACHE_VERSION,
-                "rom_path": os.path.abspath(rom_path),
+                "rom_path": str(Path(rom_path).resolve()),
                 "rom_hash": rom_hash,
                 "cached_at": time.time(),
                 "batch_preview_data": batch_data,
@@ -865,108 +866,233 @@ class ROMCache:
 
         try:
             rom_hash = self._get_rom_hash(rom_path)
-            suggestions = []
-
-            # Collect offsets from different cache sources
-            offset_sources = {}
-
-            # 1. Check scan progress caches for found sprites
-            for cache_file in self.cache_dir.glob(f"{rom_hash}_scan_progress_*.json"):
-                try:
-                    cache_data = self._load_cache_data(cache_file)
-                    if not cache_data or not self._is_cache_valid(cache_file, rom_path):
-                        continue
-
-                    scan_progress = cache_data.get("scan_progress", {})
-                    found_sprites = scan_progress.get("found_sprites", [])
-
-                    for sprite in found_sprites:
-                        offset = sprite.get("offset")
-                        if offset is not None and offset != current_offset:
-                            if offset not in offset_sources:
-                                offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
-
-                            # High confidence for found sprites
-                            offset_sources[offset]["confidence"] += 0.8
-                            offset_sources[offset]["sources"].append("scan_result")
-                            offset_sources[offset]["metadata"]["sprite_info"] = sprite
-
-                except Exception as e:
-                    logger.debug(f"Error processing scan cache {cache_file}: {e}")
-                    continue
-
-            # 2. Check preview data caches
-            for cache_file in self.cache_dir.glob(f"{rom_hash}_preview_*.json"):
-                try:
-                    cache_data = self._load_cache_data(cache_file)
-                    if not cache_data or not self._is_cache_valid(cache_file, rom_path):
-                        continue
-
-                    preview_data = cache_data.get("preview_data")
-                    if preview_data:
-                        offset = preview_data.get("offset")
-                        if offset is not None and offset != current_offset:
-                            if offset not in offset_sources:
-                                offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
-
-                            # Medium confidence for cached previews
-                            offset_sources[offset]["confidence"] += 0.6
-                            offset_sources[offset]["sources"].append("preview_cache")
-                            offset_sources[offset]["metadata"]["preview_size"] = (
-                                preview_data.get("width"), preview_data.get("height")
-                            )
-
-                except Exception as e:
-                    logger.debug(f"Error processing preview cache {cache_file}: {e}")
-                    continue
-
-            # 3. Check batch preview caches
-            batch_cache = self._get_cache_file_path(rom_hash, "preview_batch")
-            if batch_cache.exists() and self._is_cache_valid(batch_cache, rom_path):
-                try:
-                    cache_data = self._load_cache_data(batch_cache)
-                    if cache_data and cache_data.get("batch_preview_data"):
-                        for offset_str, data in cache_data["batch_preview_data"].items():
-                            offset = int(offset_str)
-                            if offset != current_offset:
-                                if offset not in offset_sources:
-                                    offset_sources[offset] = {"confidence": 0.0, "sources": [], "metadata": {}}
-
-                                # Medium confidence for batch previews
-                                offset_sources[offset]["confidence"] += 0.5
-                                offset_sources[offset]["sources"].append("batch_preview")
-                                offset_sources[offset]["metadata"]["batch_size"] = (
-                                    data.get("width"), data.get("height")
-                                )
-
-                except Exception as e:
-                    logger.debug(f"Error processing batch preview cache: {e}")
-
-            # 4. Build suggestion list with confidence scoring
-            for offset, data in offset_sources.items():
-                # Normalize confidence score (cap at 1.0)
-                confidence = min(data["confidence"], 1.0)
-
-                # Boost confidence for multiple sources
-                source_count = len(set(data["sources"]))
-                if source_count > 1:
-                    confidence = min(confidence * 1.2, 1.0)
-
-                suggestions.append({
-                    "offset": offset,
-                    "confidence": confidence,
-                    "sources": data["sources"],
-                    "metadata": data["metadata"],
-                    "hex_offset": f"0x{offset:08X}",
-                })
-
-            # Sort by confidence (descending) and limit results
-            suggestions.sort(key=lambda x: x["confidence"], reverse=True)
+            offset_sources = self._collect_offset_sources(rom_hash, rom_path, current_offset)
+            suggestions = self._build_suggestions(offset_sources)
             return suggestions[:limit]
-
         except Exception as e:
             logger.warning(f"Failed to generate offset suggestions: {e}")
             return []
+
+    def _collect_offset_sources(self, rom_hash: str, rom_path: str,
+                               current_offset: int | None) -> dict[int, dict[str, Any]]:
+        """Collect offset data from all cache sources.
+
+        Args:
+            rom_hash: Hash of the ROM file
+            rom_path: Path to ROM file
+            current_offset: Current offset to exclude
+
+        Returns:
+            Dictionary mapping offsets to their source data
+        """
+        offset_sources: dict[int, dict[str, Any]] = {}
+
+        # Collect from scan progress caches
+        self._collect_scan_cache_offsets(rom_hash, rom_path, current_offset, offset_sources)
+
+        # Collect from preview caches
+        self._collect_preview_cache_offsets(rom_hash, rom_path, current_offset, offset_sources)
+
+        # Collect from batch preview cache
+        self._collect_batch_preview_offsets(rom_hash, rom_path, current_offset, offset_sources)
+
+        return offset_sources
+
+    def _collect_scan_cache_offsets(self, rom_hash: str, rom_path: str,
+                                   current_offset: int | None,
+                                   offset_sources: dict[int, dict[str, Any]]) -> None:
+        """Collect offsets from scan progress caches.
+
+        Args:
+            rom_hash: Hash of the ROM file
+            rom_path: Path to ROM file
+            current_offset: Current offset to exclude
+            offset_sources: Dictionary to update with found offsets
+        """
+        for cache_file in self.cache_dir.glob(f"{rom_hash}_scan_progress_*.json"):
+            try:
+                cache_data = self._load_cache_data(cache_file)
+                if not cache_data or not self._is_cache_valid(cache_file, rom_path):
+                    continue
+
+                self._process_scan_cache_data(cache_data, current_offset, offset_sources)
+            except Exception as e:
+                logger.debug(f"Error processing scan cache {cache_file}: {e}")
+
+    def _process_scan_cache_data(self, cache_data: dict[str, Any],
+                                current_offset: int | None,
+                                offset_sources: dict[int, dict[str, Any]]) -> None:
+        """Process data from a scan cache file.
+
+        Args:
+            cache_data: Loaded cache data
+            current_offset: Current offset to exclude
+            offset_sources: Dictionary to update with found offsets
+        """
+        scan_progress = cache_data.get("scan_progress", {})
+        found_sprites = scan_progress.get("found_sprites", [])
+
+        for sprite in found_sprites:
+            offset = sprite.get("offset")
+            if offset is None or offset == current_offset:
+                continue
+
+            self._add_offset_source(offset_sources, offset,
+                                  confidence=0.8,
+                                  source="scan_result",
+                                  metadata={"sprite_info": sprite})
+
+    def _collect_preview_cache_offsets(self, rom_hash: str, rom_path: str,
+                                      current_offset: int | None,
+                                      offset_sources: dict[int, dict[str, Any]]) -> None:
+        """Collect offsets from preview data caches.
+
+        Args:
+            rom_hash: Hash of the ROM file
+            rom_path: Path to ROM file
+            current_offset: Current offset to exclude
+            offset_sources: Dictionary to update with found offsets
+        """
+        for cache_file in self.cache_dir.glob(f"{rom_hash}_preview_*.json"):
+            try:
+                cache_data = self._load_cache_data(cache_file)
+                if not cache_data or not self._is_cache_valid(cache_file, rom_path):
+                    continue
+
+                self._process_preview_cache_data(cache_data, current_offset, offset_sources)
+            except Exception as e:
+                logger.debug(f"Error processing preview cache {cache_file}: {e}")
+
+    def _process_preview_cache_data(self, cache_data: dict[str, Any],
+                                   current_offset: int | None,
+                                   offset_sources: dict[int, dict[str, Any]]) -> None:
+        """Process data from a preview cache file.
+
+        Args:
+            cache_data: Loaded cache data
+            current_offset: Current offset to exclude
+            offset_sources: Dictionary to update with found offsets
+        """
+        preview_data = cache_data.get("preview_data")
+        if not preview_data:
+            return
+
+        offset = preview_data.get("offset")
+        if offset is None or offset == current_offset:
+            return
+
+        metadata = {
+            "preview_size": (preview_data.get("width"), preview_data.get("height"))
+        }
+        self._add_offset_source(offset_sources, offset,
+                              confidence=0.6,
+                              source="preview_cache",
+                              metadata=metadata)
+
+    def _collect_batch_preview_offsets(self, rom_hash: str, rom_path: str,
+                                      current_offset: int | None,
+                                      offset_sources: dict[int, dict[str, Any]]) -> None:
+        """Collect offsets from batch preview cache.
+
+        Args:
+            rom_hash: Hash of the ROM file
+            rom_path: Path to ROM file
+            current_offset: Current offset to exclude
+            offset_sources: Dictionary to update with found offsets
+        """
+        batch_cache = self._get_cache_file_path(rom_hash, "preview_batch")
+        if not batch_cache.exists() or not self._is_cache_valid(batch_cache, rom_path):
+            return
+
+        try:
+            cache_data = self._load_cache_data(batch_cache)
+            if not cache_data or not cache_data.get("batch_preview_data"):
+                return
+
+            for offset_str, data in cache_data["batch_preview_data"].items():
+                offset = int(offset_str)
+                if offset == current_offset:
+                    continue
+
+                metadata = {
+                    "batch_size": (data.get("width"), data.get("height"))
+                }
+                self._add_offset_source(offset_sources, offset,
+                                      confidence=0.5,
+                                      source="batch_preview",
+                                      metadata=metadata)
+        except Exception as e:
+            logger.debug(f"Error processing batch preview cache: {e}")
+
+    def _add_offset_source(self, offset_sources: dict[int, dict[str, Any]],
+                          offset: int, confidence: float, source: str,
+                          metadata: dict[str, Any] | None = None) -> None:
+        """Add or update an offset source entry.
+
+        Args:
+            offset_sources: Dictionary to update
+            offset: The offset value
+            confidence: Confidence score for this source
+            source: Source type identifier
+            metadata: Optional metadata for this source
+        """
+        if offset not in offset_sources:
+            offset_sources[offset] = {
+                "confidence": 0.0,
+                "sources": [],
+                "metadata": {}
+            }
+
+        offset_sources[offset]["confidence"] += confidence
+        offset_sources[offset]["sources"].append(source)
+
+        if metadata:
+            offset_sources[offset]["metadata"].update(metadata)
+
+    def _build_suggestions(self, offset_sources: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+        """Build and score suggestion list from collected offset sources.
+
+        Args:
+            offset_sources: Dictionary of offset source data
+
+        Returns:
+            Sorted list of suggestions with confidence scores
+        """
+        suggestions = []
+
+        for offset, data in offset_sources.items():
+            confidence = self._calculate_confidence(data)
+
+            suggestions.append({
+                "offset": offset,
+                "confidence": confidence,
+                "sources": data["sources"],
+                "metadata": data["metadata"],
+                "hex_offset": f"0x{offset:08X}",
+            })
+
+        # Sort by confidence (descending)
+        suggestions.sort(key=lambda x: x["confidence"], reverse=True)
+        return suggestions
+
+    def _calculate_confidence(self, source_data: dict[str, Any]) -> float:
+        """Calculate final confidence score for an offset.
+
+        Args:
+            source_data: Data about sources for this offset
+
+        Returns:
+            Normalized confidence score (0.0 to 1.0)
+        """
+        # Cap confidence at 1.0
+        confidence = min(source_data["confidence"], 1.0)
+
+        # Boost confidence for multiple unique sources
+        source_count = len(set(source_data["sources"]))
+        if source_count > 1:
+            confidence = min(confidence * 1.2, 1.0)
+
+        return confidence
 
     def refresh_settings(self) -> None:
         """Refresh cache settings from settings manager."""

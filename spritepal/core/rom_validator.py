@@ -2,8 +2,8 @@
 ROM validation utilities for SpritePal
 """
 
-import os
 import struct
+from pathlib import Path
 from typing import Any, ClassVar
 
 from utils.constants import (
@@ -69,11 +69,12 @@ class ROMValidator:
             Tuple of (is_valid, error_message)
         """
         # Check file exists
-        if not os.path.exists(rom_path):
+        rom_path_obj = Path(rom_path)
+        if not rom_path_obj.exists():
             return False, "ROM file does not exist"
 
         # Check file size
-        file_size = os.path.getsize(rom_path)
+        file_size = rom_path_obj.stat().st_size
         if file_size == 0:
             return False, "ROM file is empty"
 
@@ -98,9 +99,10 @@ class ROMValidator:
         Raises:
             ROMHeaderError: If header is invalid
         """
-        with open(rom_path, "rb") as f:
+        rom_path_obj = Path(rom_path)
+        with rom_path_obj.open("rb") as f:
             # Check for SMC header
-            file_size = os.path.getsize(rom_path)
+            file_size = rom_path_obj.stat().st_size
             header_offset = 512 if file_size % 1024 == 512 else 0
 
             # Try both possible header locations
@@ -157,7 +159,7 @@ class ROMValidator:
         Raises:
             ROMChecksumError: If checksum validation fails
         """
-        with open(rom_path, "rb") as f:
+        with Path(rom_path).open("rb") as f:
             # Read ROM data (skip SMC header if present)
             f.seek(header_offset)
             rom_data = f.read()
@@ -253,7 +255,7 @@ class ROMValidator:
         cls.verify_rom_checksum(rom_path, header_info, header_offset)
 
         # Validate sprite offset
-        file_size = os.path.getsize(rom_path)
+        file_size = Path(rom_path).stat().st_size
         actual_rom_size = file_size - header_offset
 
         if sprite_offset >= actual_rom_size:

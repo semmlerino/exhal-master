@@ -3,8 +3,8 @@ Tests for sprite finder
 """
 
 import json
-import os
 import tempfile
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -130,17 +130,17 @@ class TestSpriteFinder:
             finder = SpriteFinder(temp_output_dir)
 
             assert finder.output_dir == temp_output_dir
-            assert os.path.exists(temp_output_dir)
+            assert Path(temp_output_dir).exists()
             mock_ext_class.assert_called_once()
             mock_val_class.assert_called_once()
 
     def test_find_sprites_in_rom_basic(self, temp_output_dir, mock_rom_data,
                                      mock_extractor, mock_validator):
         """Test basic sprite finding functionality"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
+        rom_path = str(Path(temp_output_dir) / "test.rom")
 
         # Write mock ROM data
-        with open(rom_path, "wb") as f:
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         # Configure mocks
@@ -182,8 +182,8 @@ class TestSpriteFinder:
     def test_find_sprites_filters_by_confidence(self, temp_output_dir, mock_rom_data,
                                               mock_extractor, mock_validator):
         """Test that low confidence sprites are filtered out"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         # Configure validator to return low confidence
@@ -209,8 +209,8 @@ class TestSpriteFinder:
     def test_find_sprites_size_validation(self, temp_output_dir, mock_rom_data,
                                         mock_extractor, mock_validator):
         """Test that sprites with invalid sizes are rejected"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         # Return sprite data that's too small (< 16 tiles)
@@ -228,8 +228,8 @@ class TestSpriteFinder:
     def test_find_sprites_saves_previews(self, temp_output_dir, mock_rom_data,
                                        mock_extractor, mock_validator):
         """Test that preview images are saved when requested"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         sprite_data = b"\x01" * 512
@@ -258,8 +258,8 @@ class TestSpriteFinder:
     def test_find_sprites_max_candidates(self, temp_output_dir, mock_rom_data,
                                         mock_extractor, mock_validator):
         """Test max_candidates limit is respected"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         # Always return valid sprite data
@@ -343,8 +343,8 @@ class TestSpriteFinder:
 
     def test_quick_scan_known_areas(self, temp_output_dir, mock_rom_data):
         """Test quick scan of known sprite areas"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         with patch("spritepal.core.sprite_finder.ROMExtractor"), \
@@ -370,8 +370,8 @@ class TestSpriteFinder:
     def test_exception_handling(self, temp_output_dir, mock_rom_data,
                                mock_extractor, mock_validator):
         """Test that exceptions during scanning are handled gracefully"""
-        rom_path = os.path.join(temp_output_dir, "test.rom")
-        with open(rom_path, "wb") as f:
+        rom_path = str(Path(temp_output_dir) / "test.rom")
+        with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
         # Make decompression always fail

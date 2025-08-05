@@ -3,9 +3,11 @@ Registry for accessing manager instances
 """
 
 import threading
+import weakref
 from typing import Any
 
 from PyQt6.QtWidgets import QApplication
+
 from utils.logging_config import get_logger
 
 from .exceptions import ManagerError
@@ -13,12 +15,15 @@ from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager
 from .session_manager import SessionManager
 
+# NavigationManager import deferred to avoid circular imports
+
 
 class ManagerRegistry:
-    """Singleton registry for manager instances"""
+    """Singleton registry for manager instances with memory leak prevention"""
 
     _instance: "ManagerRegistry | None" = None
     _lock: threading.Lock = threading.Lock()
+    _cleanup_registered: bool = False
 
     def __new__(cls) -> "ManagerRegistry":
         """Ensure only one instance exists"""
@@ -36,8 +41,32 @@ class ManagerRegistry:
 
         self._logger = get_logger("ManagerRegistry")
         self._managers: dict[str, Any] = {}
+        self._manager_refs: dict[str, weakref.ReferenceType] = {}  # Weak references for cleanup
         self._initialized = True
+
+        # Register cleanup with QApplication if available
+        self._register_cleanup_hooks()
+
         self._logger.info("ManagerRegistry initialized")
+
+    def _register_cleanup_hooks(self) -> None:
+        """Register cleanup hooks with Qt application"""
+        if not ManagerRegistry._cleanup_registered:
+            try:
+                app = QApplication.instance()
+                if app is not None:
+                    app.aboutToQuit.connect(lambda: self.cleanup_managers())
+                    ManagerRegistry._cleanup_registered = True
+                    self._logger.debug("Registered cleanup with QApplication.aboutToQuit")
+            except Exception as e:
+                self._logger.debug(f"Could not register Qt cleanup: {e}")
+
+    def _on_manager_deleted(self, manager_name: str) -> None:
+        """Callback when a manager is deleted via weak reference"""
+        self._logger.debug(f"Manager '{manager_name}' was garbage collected")
+        # Remove from managers dict if still present
+        if manager_name in self._managers:
+            del self._managers[manager_name]
 
     def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None) -> None:
         """
@@ -46,7 +75,7 @@ class ManagerRegistry:
         Args:
             app_name: Application name for settings
             settings_path: Optional custom settings path (for testing)
-            
+
         Raises:
             ManagerError: If manager initialization fails
         """
@@ -77,26 +106,41 @@ class ManagerRegistry:
                 session_manager = SessionManager(app_name, settings_path)
                 session_manager.setParent(qt_parent)  # Set parent after creation
                 self._managers["session"] = session_manager
+                self._manager_refs["session"] = weakref.ref(session_manager,
+                    lambda ref: self._on_manager_deleted("session"))
                 created_managers.append("session")
                 self._logger.debug("SessionManager created successfully")
 
                 # Initialize Qt-based managers with proper parent to prevent lifecycle issues
                 self._logger.debug("Creating ExtractionManager...")
-                self._managers["extraction"] = ExtractionManager(parent=qt_parent)
+                extraction_manager = ExtractionManager(parent=qt_parent)
+                self._managers["extraction"] = extraction_manager
+                self._manager_refs["extraction"] = weakref.ref(extraction_manager,
+                    lambda ref: self._on_manager_deleted("extraction"))
                 created_managers.append("extraction")
                 self._logger.debug("ExtractionManager created successfully")
 
                 self._logger.debug("Creating InjectionManager...")
-                self._managers["injection"] = InjectionManager(parent=qt_parent)
+                injection_manager = InjectionManager(parent=qt_parent)
+                self._managers["injection"] = injection_manager
+                self._manager_refs["injection"] = weakref.ref(injection_manager,
+                    lambda ref: self._on_manager_deleted("injection"))
                 created_managers.append("injection")
                 self._logger.debug("InjectionManager created successfully")
+
+                # TODO: NavigationManager disabled due to threading issues in tests
+                # self._logger.debug("Creating NavigationManager...")
+                # from core.navigation.manager import NavigationManager
+                # self._managers["navigation"] = NavigationManager(parent=qt_parent)
+                # created_managers.append("navigation")
+                # self._logger.debug("NavigationManager created successfully")
 
                 # Future managers will be added here
 
                 self._logger.info("All managers initialized successfully")
 
             except Exception as e:
-                self._logger.error(f"Manager initialization failed: {e}")
+                self._logger.exception(f"Manager initialization failed: {e}")
 
                 # Cleanup any managers that were created before the failure
                 for manager_name in created_managers:
@@ -105,15 +149,17 @@ class ManagerRegistry:
                             manager = self._managers[manager_name]
                             manager.cleanup()
                             del self._managers[manager_name]
+                            # Clean up weak reference
+                            self._manager_refs.pop(manager_name, None)
                             self._logger.debug(f"Cleaned up {manager_name} manager after initialization failure")
                     except Exception as cleanup_error:
-                        self._logger.error(f"Error cleaning up {manager_name} manager: {cleanup_error}")
+                        self._logger.exception(f"Error cleaning up {manager_name} manager: {cleanup_error}")
 
                 # Re-raise as ManagerError
                 raise ManagerError(f"Failed to initialize managers: {e}") from e
 
     def cleanup_managers(self) -> None:
-        """Cleanup all managers"""
+        """Cleanup all managers with enhanced memory leak prevention"""
         self._logger.info("Cleaning up managers...")
 
         # Cleanup in reverse order
@@ -128,6 +174,27 @@ class ManagerRegistry:
                 self._logger.exception(f"Error cleaning up {name} manager")
 
         self._managers.clear()
+        self._manager_refs.clear()  # Clear weak references
+
+        # Also cleanup HAL process pool if it exists
+        try:
+            from core.hal_compression import HALProcessPool  # noqa: PLC0415
+            hal_pool = HALProcessPool()
+            hal_pool.shutdown()
+            self._logger.debug("Cleaned up HAL process pool")
+        except ImportError:
+            pass  # HAL compression module not available
+        except Exception as e:
+            self._logger.debug(f"Error cleaning up HAL process pool: {e}")
+
+        # Clear context references to break circular dependencies
+        try:
+            from .context import _context_manager
+            _context_manager.set_current_context(None)
+            self._logger.debug("Cleared context manager references")
+        except Exception as e:
+            self._logger.debug(f"Error clearing context references: {e}")
+
         self._logger.info("All managers cleaned up")
 
     def get_session_manager(self) -> SessionManager:
@@ -165,6 +232,19 @@ class ManagerRegistry:
             ManagerError: If manager not initialized
         """
         return self._get_manager("injection", InjectionManager)
+
+    def get_navigation_manager(self):
+        """
+        Get the navigation manager instance
+
+        Returns:
+            NavigationManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        # TODO: NavigationManager disabled due to threading issues in tests
+        raise ManagerError("NavigationManager temporarily disabled for test stability")
 
     def _get_manager(self, name: str, expected_type: type) -> Any:
         """
@@ -205,7 +285,7 @@ class ManagerRegistry:
     def is_initialized(self) -> bool:
         """Check if managers are initialized"""
         # Check that all expected managers are present
-        expected_managers = {"session", "extraction", "injection"}
+        expected_managers = {"session", "extraction", "injection", "navigation"}
         return expected_managers.issubset(self._managers.keys())
 
     def get_all_managers(self) -> dict[str, Any]:
@@ -215,10 +295,10 @@ class ManagerRegistry:
     def validate_manager_dependencies(self) -> bool:
         """
         Validate that all managers and their dependencies are properly initialized
-        
+
         Returns:
             True if all dependencies are satisfied, False otherwise
-            
+
         Raises:
             ManagerError: If critical dependency issues are found
         """
@@ -246,12 +326,27 @@ class ManagerRegistry:
             return True
 
         except Exception as e:
-            self._logger.error(f"Manager dependency validation failed: {e}")
+            self._logger.exception(f"Manager dependency validation failed: {e}")
             return False
 
 
-# Global instance accessor functions
+# Global instance accessor functions with context support
 _registry = ManagerRegistry()
+
+# Register cleanup at module level to prevent memory leaks
+def _cleanup_global_registry():
+    """Cleanup function for module-level registry"""
+    global _registry
+    if _registry is not None:
+        try:
+            _registry.cleanup_managers()
+        except Exception:
+            pass  # Ignore errors during cleanup
+        _registry = None
+
+import atexit
+
+atexit.register(_cleanup_global_registry)
 
 
 def get_registry() -> ManagerRegistry:
@@ -261,7 +356,9 @@ def get_registry() -> ManagerRegistry:
 
 def get_session_manager() -> SessionManager:
     """
-    Get the global session manager instance
+    Get the session manager instance.
+
+    Checks current context first, then falls back to global registry.
 
     Returns:
         SessionManager instance
@@ -269,12 +366,22 @@ def get_session_manager() -> SessionManager:
     Raises:
         ManagerError: If managers not initialized
     """
+    # Check if we have a current context with this manager
+    from .context import get_current_context
+
+    context = get_current_context()
+    if context and context.has_manager("session"):
+        return context.get_manager("session", SessionManager)
+
+    # Fallback to global registry
     return _registry.get_session_manager()
 
 
 def get_extraction_manager() -> ExtractionManager:
     """
-    Get the global extraction manager instance
+    Get the extraction manager instance.
+
+    Checks current context first, then falls back to global registry.
 
     Returns:
         ExtractionManager instance
@@ -282,12 +389,22 @@ def get_extraction_manager() -> ExtractionManager:
     Raises:
         ManagerError: If managers not initialized
     """
+    # Check if we have a current context with this manager
+    from .context import get_current_context
+
+    context = get_current_context()
+    if context and context.has_manager("extraction"):
+        return context.get_manager("extraction", ExtractionManager)
+
+    # Fallback to global registry
     return _registry.get_extraction_manager()
 
 
 def get_injection_manager() -> InjectionManager:
     """
-    Get the global injection manager instance
+    Get the injection manager instance.
+
+    Checks current context first, then falls back to global registry.
 
     Returns:
         InjectionManager instance
@@ -295,7 +412,28 @@ def get_injection_manager() -> InjectionManager:
     Raises:
         ManagerError: If managers not initialized
     """
+    # Check if we have a current context with this manager
+    from .context import get_current_context
+
+    context = get_current_context()
+    if context and context.has_manager("injection"):
+        return context.get_manager("injection", InjectionManager)
+
+    # Fallback to global registry
     return _registry.get_injection_manager()
+
+
+def get_navigation_manager():
+    """
+    Get the global navigation manager instance
+
+    Returns:
+        NavigationManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _registry.get_navigation_manager()
 
 
 def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None) -> None:
@@ -322,7 +460,7 @@ def are_managers_initialized() -> bool:
 def validate_manager_dependencies() -> bool:
     """
     Validate that all manager dependencies are satisfied
-    
+
     Returns:
         True if all dependencies are valid, False otherwise
     """

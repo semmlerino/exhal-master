@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -338,7 +339,7 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             widget: The widget to add
             stretch_factor: Stretch factor for the widget
         """
-        if self.main_splitter:
+        if self.main_splitter is not None:
             # Add to splitter if it exists
             self.main_splitter.addWidget(widget)
             # Set stretch factor

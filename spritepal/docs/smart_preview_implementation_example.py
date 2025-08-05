@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 

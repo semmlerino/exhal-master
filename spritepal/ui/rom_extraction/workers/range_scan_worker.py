@@ -1,17 +1,23 @@
 """Worker thread for comprehensive range scanning of ROM data"""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QThread, pyqtSignal
+if TYPE_CHECKING:
+    from PyQt6.QtCore import QObject
+
+from PyQt6.QtCore import pyqtSignal
+
+from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 
 
-class RangeScanWorker(QThread):
+class RangeScanWorker(BaseWorker):
     """Worker thread for comprehensive scanning of ROM ranges to find all sprites"""
 
+    # Custom signals (BaseWorker provides progress, error, warning, operation_finished)
     sprite_found = pyqtSignal(int, float)  # offset, quality
     progress_update = pyqtSignal(int, int)  # current_offset, progress_percentage
     scan_complete = pyqtSignal(bool)  # success
@@ -22,7 +28,7 @@ class RangeScanWorker(QThread):
     cache_progress_saved = pyqtSignal(int, int, int)  # current_offset, total_sprites_found, progress_percentage
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 step_size: int, extractor):
+                 step_size: int, extractor, parent: "QObject | None" = None):
         """
         Initialize range scan worker
 
@@ -33,20 +39,20 @@ class RangeScanWorker(QThread):
             step_size: Step size between offsets to check
             extractor: ROM extractor instance
         """
-        super().__init__()
+        super().__init__(parent)
         self.rom_path = rom_path
         self.start_offset = start_offset
         self.end_offset = end_offset
         self.step_size = step_size
         self.extractor = extractor
+        self._operation_name = f"RangeScanWorker-{start_offset:X}-{end_offset:X}"  # For logging
 
         # Scan parameters
         self.quality_threshold = 0.5
         self.min_sprite_size = 512  # At least 16 tiles (32 bytes per tile)
         self.max_sprite_size = 32768  # 32KB limit for decompression
 
-        # Control flags
-        self._is_paused = False
+        # Control flag for stopping (pause is handled by BaseWorker)
         self._should_stop = False
 
         # Cache integration
@@ -55,6 +61,7 @@ class RangeScanWorker(QThread):
         self.current_offset = start_offset
         self.scan_params: dict[str, Any] = {}
 
+    @handle_worker_errors("range scanning")
     def run(self):
         """Scan the entire specified range for valid sprites"""
         try:
@@ -102,11 +109,21 @@ class RangeScanWorker(QThread):
                     # Save progress to cache before stopping
                     self._save_progress(self.scan_params, completed=False)
                     self.scan_stopped.emit()
+                    self.operation_finished.emit(False, "Scan stopped by user")
                     return
 
-                # Handle pause state
-                while self._is_paused and not self._should_stop:
-                    self.msleep(100)  # Sleep 100ms while paused
+                # Check cancellation using BaseWorker method
+                try:
+                    self.check_cancellation()
+                except InterruptedError:
+                    logger.info("Range scan cancelled")
+                    self._save_progress(self.scan_params, completed=False)
+                    self.scan_stopped.emit()
+                    self.operation_finished.emit(False, "Scan cancelled")
+                    return
+
+                # Handle pause state using BaseWorker method
+                self.wait_if_paused()
 
                 # Check stop again after potential pause
                 if self._should_stop:
@@ -114,6 +131,7 @@ class RangeScanWorker(QThread):
                     # Save progress to cache before stopping
                     self._save_progress(self.scan_params, completed=False)
                     self.scan_stopped.emit()
+                    self.operation_finished.emit(False, "Scan stopped by user")
                     return
 
                 # Emit progress update periodically (every 1024 steps to avoid too many signals)
@@ -122,6 +140,8 @@ class RangeScanWorker(QThread):
                     scan_range = self.end_offset - self.start_offset
                     progress_pct = int(((offset - self.start_offset) / scan_range) * 100) if scan_range > 0 else 0
                     self.progress_update.emit(offset, progress_pct)
+                    # Also emit BaseWorker progress
+                    self.emit_progress(progress_pct, f"Scanning offset 0x{offset:06X}")
                     # Also save progress to cache periodically
                     if self._save_progress(self.scan_params, completed=False):
                         self.cache_progress_saved.emit(offset, len(self.found_sprites), progress_pct)
@@ -178,21 +198,27 @@ class RangeScanWorker(QThread):
 
             # Emit completion signal
             self.scan_complete.emit(True)
+            self.operation_finished.emit(True, f"Scan complete. Found {sprites_found} sprites.")
 
-        except OSError:
+        except OSError as e:
             logger.exception("File I/O error during range scan")
             self.scan_complete.emit(False)
-        except MemoryError:
+            self.operation_finished.emit(False, f"File I/O error: {e}")
+        except MemoryError as e:
             logger.exception("Memory error during range scan")
             self.scan_complete.emit(False)
-        except Exception:
+            self.operation_finished.emit(False, f"Memory error: {e}")
+        except Exception as e:
             logger.exception("Unexpected error during range scan")
             self.scan_complete.emit(False)
+            self.operation_finished.emit(False, f"Unexpected error: {e}")
+
+    # emit_error is inherited from BaseWorker
 
     def pause_scan(self):
         """Pause the scanning process"""
-        if not self._is_paused:
-            self._is_paused = True
+        if not self.is_paused:
+            self.pause()  # Use BaseWorker's pause method
             logger.info("Range scan paused")
             # Save progress when pausing
             if self.scan_params:  # Only save if scan has started
@@ -201,24 +227,20 @@ class RangeScanWorker(QThread):
 
     def resume_scan(self):
         """Resume the scanning process"""
-        if self._is_paused:
-            self._is_paused = False
+        if self.is_paused:
+            self.resume()  # Use BaseWorker's resume method
             logger.info("Range scan resumed")
             self.scan_resumed.emit()
 
     def stop_scan(self):
         """Stop the scanning process"""
         self._should_stop = True
-        self._is_paused = False  # Ensure we don't stay paused if stopping
+        self.resume()  # Ensure we don't stay paused if stopping
         logger.info("Range scan stop requested")
-
-    def is_paused(self) -> bool:
-        """Check if scan is currently paused"""
-        return self._is_paused
 
     def is_stopping(self) -> bool:
         """Check if scan is currently stopping"""
-        return self._should_stop
+        return self._should_stop or self.is_cancelled
 
     def _save_progress(self, scan_params: dict[str, Any], completed: bool = False) -> bool:
         """Save current scan progress to cache"""

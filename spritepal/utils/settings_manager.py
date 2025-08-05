@@ -5,7 +5,6 @@ This manager now delegates to SessionManager for actual storage to avoid
 conflicts when both managers save to the same file.
 """
 
-import os
 import threading
 from pathlib import Path
 from typing import Any
@@ -106,7 +105,7 @@ class SettingsManager:
 
         for key in ["vram_path", "cgram_path", "oam_path"]:
             path = session.get(key, "")
-            if path and os.path.exists(path):
+            if path and Path(path).exists():
                 validated_paths[key] = path
             else:
                 validated_paths[key] = ""
@@ -126,7 +125,7 @@ class SettingsManager:
         """Get the default directory for file operations"""
         # Try last used directory first
         last_used = str(self.get("paths", "last_used_dir", ""))
-        if last_used and os.path.exists(last_used):
+        if last_used and Path(last_used).exists():
             return last_used
 
         # Fall back to default dumps directory
@@ -137,7 +136,7 @@ class SettingsManager:
                 r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger"
             )
         )
-        if default_dir and os.path.exists(default_dir):
+        if default_dir and Path(default_dir).exists():
             return default_dir
 
         # Final fallback to current directory
@@ -145,7 +144,7 @@ class SettingsManager:
 
     def set_last_used_directory(self, directory: str) -> None:
         """Set the last used directory"""
-        if directory and os.path.exists(directory):
+        if directory and Path(directory).exists():
             self.set("paths", "last_used_dir", directory)
             self.save_settings()
 

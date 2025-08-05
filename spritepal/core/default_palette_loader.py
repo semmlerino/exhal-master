@@ -4,7 +4,7 @@ Provides default palettes for sprites when CGRAM data is not available
 """
 
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 from utils.logging_config import get_logger
@@ -15,8 +15,8 @@ logger = get_logger(__name__)
 class DefaultPaletteLoader:
     """Loads and manages default sprite palettes"""
 
-    DEFAULT_PALETTE_PATH: str = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "config", "default_palettes.json"
+    DEFAULT_PALETTE_PATH: str = str(
+        Path(__file__).parent.parent / "config" / "default_palettes.json"
     )
 
     def __init__(self, palette_path: str | None = None) -> None:
@@ -32,12 +32,13 @@ class DefaultPaletteLoader:
 
     def load_palettes(self) -> None:
         """Load default palettes from JSON file"""
-        if not os.path.exists(self.palette_path):
+        palette_path_obj = Path(self.palette_path)
+        if not palette_path_obj.exists():
             logger.warning(f"Default palettes not found: {self.palette_path}")
             return
 
         try:
-            with open(self.palette_path) as f:
+            with palette_path_obj.open() as f:
                 self.palette_data = json.load(f)
             logger.info(f"Loaded default palettes: {self.palette_path}")
         except Exception:
@@ -93,11 +94,11 @@ class DefaultPaletteLoader:
             palette_json = {"name": palette_name, "colors": colors}
 
             try:
-                with open(palette_path, "w") as f:
+                with Path(palette_path).open("w") as f:
                     json.dump(palette_json, f, indent=2)
                 created_files.append(palette_path)
                 logger.info(
-                    f"Created default palette: {palette_name} -> {os.path.basename(palette_path)}"
+                    f"Created default palette: {palette_name} -> {Path(palette_path).name}"
                 )
             except Exception:
                 logger.exception("Failed to create palette file")

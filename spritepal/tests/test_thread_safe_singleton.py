@@ -48,7 +48,6 @@ class TestThreadSafeSingleton:
     def setup_method(self):
         """Reset singleton state before each test."""
         # Each test defines its own singleton class, so no global reset needed
-        pass
 
     def test_basic_singleton_creation(self):
         """Test basic singleton instance creation."""
@@ -94,7 +93,7 @@ class TestThreadSafeSingleton:
         # Use ThreadPoolExecutor to create concurrent access
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             futures = [executor.submit(create_instance, i) for i in range(num_threads)]
-            results = [future.result() for future in as_completed(futures)]
+            [future.result() for future in as_completed(futures)]
 
         # All instances should be the same object
         assert len(instances) == num_threads
@@ -175,7 +174,7 @@ class TestQtThreadSafeSingleton:
             try:
                 TestQtSingleton.get()
                 # Should not reach here
-                assert False, "Expected RuntimeError was not raised"
+                raise AssertionError("Expected RuntimeError was not raised")
             except RuntimeError as e:
                 assert "Qt object method called from wrong thread" in str(e)
                 exception_caught.set()
@@ -303,7 +302,7 @@ class TestRealWorldScenarios:
 
         def worker(worker_id: int):
             instances = []
-            for i in range(num_calls_per_thread):
+            for _i in range(num_calls_per_thread):
                 instance = StressSingleton.get()
                 instances.append(instance)
                 time.sleep(0.001)  # Small delay
@@ -415,7 +414,7 @@ class TestSettingsManagerSingletonIntegration:
 
         # All instances collected should be the same
         first_instance = instances[0][1]
-        for thread_id, instance in instances:
+        for _thread_id, instance in instances:
             assert instance is first_instance
 
 
