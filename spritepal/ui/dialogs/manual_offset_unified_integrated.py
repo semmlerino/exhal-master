@@ -60,7 +60,8 @@ from PyQt6.QtWidgets import (
 
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
-from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
+# Use SimplePreviewCoordinator to avoid worker pool crashes
+from ui.common.simple_preview_coordinator import SimplePreviewCoordinator
 from ui.components import DialogBase
 from ui.components.panels import StatusPanel
 from ui.components.visualization.rom_map_widget import ROMMapWidget
@@ -75,7 +76,7 @@ from utils.sprite_regions import SpriteRegion
 logger = get_logger(__name__)
 
 
-# MinimalSignalCoordinator removed - SmartPreviewCoordinator handles all timing and debouncing
+# Using SimplePreviewCoordinator instead of SmartPreviewCoordinator to avoid worker pool crashes
 
 
 class SimpleBrowseTab(QWidget):
@@ -665,8 +666,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.preview_worker: SpritePreviewWorker | None = None
         self.search_worker: SpriteSearchWorker | None = None
 
-        # Smart preview coordinator handles all timing and signal coordination
-        self._smart_preview_coordinator: SmartPreviewCoordinator | None = None
+        # Simple preview coordinator handles preview generation without complex pooling
+        self._smart_preview_coordinator: SimplePreviewCoordinator | None = None
 
         # Preview update timer (legacy - kept for compatibility)
         self._preview_timer: QTimer | None = None
@@ -807,8 +808,8 @@ class UnifiedManualOffsetDialog(DialogBase):
     # _setup_signal_coordinator removed - SmartPreviewCoordinator handles all coordination
 
     def _setup_smart_preview_coordinator(self):
-        """Set up smart preview coordination for real-time updates."""
-        self._smart_preview_coordinator = SmartPreviewCoordinator(self, rom_cache=self.rom_cache)
+        """Set up simple preview coordination without worker pool complexity."""
+        self._smart_preview_coordinator = SimplePreviewCoordinator(self, rom_cache=self.rom_cache)
 
         # Use AutoConnection (default) to let Qt choose the best connection type
         # This will use DirectConnection when called from main thread (avoiding queue delays)
