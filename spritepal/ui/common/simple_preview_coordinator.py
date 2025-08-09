@@ -141,15 +141,20 @@ class SimplePreviewCoordinator(QObject):
         # Cancel any pending request
         self._debounce_timer.stop()
         
-        # Cancel current worker if running
-        if self._current_worker and self._current_worker.isRunning():
-            logger.debug("[SIMPLE] Terminating previous worker")
-            self._current_worker.requestInterruption()
-            self._current_worker.wait(100)  # Wait briefly for cleanup
-            if self._current_worker.isRunning():
-                # Force quit if still running
-                self._current_worker.quit()
-                self._current_worker.wait(50)
+        # Cancel current worker if running (with safety check)
+        try:
+            if self._current_worker and self._current_worker.isRunning():
+                logger.debug("[SIMPLE] Terminating previous worker")
+                self._current_worker.requestInterruption()
+                self._current_worker.wait(100)  # Wait briefly for cleanup
+                if self._current_worker.isRunning():
+                    # Force quit if still running
+                    self._current_worker.quit()
+                    self._current_worker.wait(50)
+        except RuntimeError:
+            # Worker was already deleted by Qt
+            logger.debug("[SIMPLE] Previous worker already deleted")
+            self._current_worker = None
         
         # Start debounce timer (50ms for smooth updates)
         self._debounce_timer.start(50)
@@ -186,23 +191,33 @@ class SimplePreviewCoordinator(QObject):
         
         logger.debug(f"[SIMPLE] Starting preview generation for 0x{self._current_offset:X}")
         
-        # Create a new worker
+        # Clear any stale reference first
+        self._current_worker = None
+        
+        # Create a new worker (with parent for proper cleanup)
         self._current_worker = SimplePreviewWorker(
             self._current_rom_path,
             self._current_offset,
             self._extractor,
-            parent=None  # No parent for easier cleanup
+            parent=self  # Set parent for proper Qt object management
         )
         
         # Connect signals
         self._current_worker.preview_ready.connect(self._on_preview_ready)
         self._current_worker.preview_error.connect(self._on_preview_error)
         
-        # Clean up worker when done
-        self._current_worker.finished.connect(self._current_worker.deleteLater)
+        # Clean up worker when done and clear our reference
+        self._current_worker.finished.connect(lambda: self._cleanup_finished_worker())
         
         # Start the worker
         self._current_worker.start()
+    
+    def _cleanup_finished_worker(self):
+        """Clean up a finished worker and clear the reference."""
+        if self._current_worker:
+            self._current_worker.deleteLater()
+            self._current_worker = None
+            logger.debug("[SIMPLE] Worker cleaned up after finishing")
     
     def _on_preview_ready(self, tile_data: bytes, width: int, height: int, name: str):
         """Handle preview ready from worker."""
