@@ -268,14 +268,14 @@ class SimpleBrowseTab(QWidget):
         self.manual_spinbox.blockSignals(True)
         self.manual_spinbox.setValue(value)
         self.manual_spinbox.blockSignals(False)
-
-        # Emit offset changed signal for external listeners
+        
+        # CRITICAL: Emit offset_changed signal so dialog can request preview
         logger.debug(f"[DEBUG] Emitting offset_changed signal with value: 0x{value:06X}")
         self.offset_changed.emit(value)
-
+        
         # Note: SmartPreviewCoordinator handles preview updates automatically via
         # sliderMoved signal - no need to manually request here
-        logger.debug("[DEBUG] _on_slider_changed complete, coordinator should handle preview")
+        logger.debug("[DEBUG] _on_slider_changed complete, offset_changed signal emitted")
 
     def _on_manual_changed(self, value: int):
         """Handle manual spinbox changes."""
@@ -1173,11 +1173,8 @@ class UnifiedManualOffsetDialog(DialogBase):
                 logger.debug("[SPRITE_DISPLAY] Forcing widget updates after load_sprite_from_4bpp")
                 self.preview_widget.update()
             
-            # Limited processEvents to keep UI responsive without full re-entrancy
-            QApplication.processEvents(
-                QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents,
-                5  # 5ms max
-            )
+            # Let Qt's event loop handle updates naturally
+            # processEvents causes crashes and re-entrancy issues
             
             logger.debug("[SIGNAL_RECEIVED] load_sprite_from_4bpp completed")
             
@@ -1215,12 +1212,8 @@ class UnifiedManualOffsetDialog(DialogBase):
                 logger.debug("[SPRITE_DISPLAY] Forcing widget updates after cached load_sprite_from_4bpp")
                 self.preview_widget.update()
             
-            # Process paint events to keep UI responsive but with timeout to prevent blocking
-            # ExcludeUserInputEvents prevents re-entrancy from new slider movements
-            QApplication.processEvents(
-                QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents,
-                5  # 5ms max to prevent blocking
-            )
+            # Let Qt's event loop handle updates naturally
+            # processEvents causes crashes and re-entrancy issues
         else:
             logger.error("[DEBUG] preview_widget is None!")
 

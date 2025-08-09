@@ -461,7 +461,8 @@ class SmartPreviewCoordinator(QObject):
             height = preview_data["height"]
 
             # Generate sprite name from offset
-            sprite_name = f"ROM_0x{offset:06X}"
+            # Use "manual_" prefix so SpritePreviewWorker knows to extract raw tiles
+            sprite_name = f"manual_0x{offset:06X}"
 
             logger.debug(f"ROM cache hit: {len(tile_data)} bytes, {width}x{height}")
             return (tile_data, width, height, sprite_name)
