@@ -46,7 +46,7 @@ class SpritePreviewWidget(QWidget):
         self.title = title
         self.sprite_pixmap: QPixmap | None = None
         self.palettes: list[list[list[int]]] = []
-        self.current_palette_index = 0  # Default to first palette
+        self.current_palette_index = 8  # Default sprite palette (was 8 in working version)
         self.sprite_data: bytes | None = None
         self.default_palette_loader = DefaultPaletteLoader()
 
@@ -266,8 +266,11 @@ class SpritePreviewWidget(QWidget):
                 for idx, _colors in default_palettes.items():
                     self.palette_combo.addItem(f"Palette {idx}", idx)
 
-                # Select first palette by default (index 0)
-                if self.palette_combo.count() > 0:
+                # Select palette 8 by default (sprite palette) or first if not available
+                if self.palette_combo.count() > 8:
+                    self.palette_combo.setCurrentIndex(8)
+                    self.current_palette_index = 8
+                elif self.palette_combo.count() > 0:
                     self.palette_combo.setCurrentIndex(0)
                     self.current_palette_index = 0
 
