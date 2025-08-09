@@ -307,9 +307,9 @@ class PreviewWorkerPool(QObject):
             # Setup worker for this request with ROM cache
             worker.setup_request(request, extractor, rom_cache)
 
-            # Connect signals for this request
-            worker.preview_ready.connect(self._on_worker_ready, Qt.ConnectionType.QueuedConnection)
-            worker.preview_error.connect(self._on_worker_error, Qt.ConnectionType.QueuedConnection)
+            # Connect signals for this request - use AutoConnection for optimal performance
+            worker.preview_ready.connect(self._on_worker_ready)
+            worker.preview_error.connect(self._on_worker_error)
 
             # Move to active set
             self._active_workers.add(worker)
@@ -406,10 +406,10 @@ class PreviewWorkerPool(QObject):
                 with QMutexLocker(self._mutex):
                     worker = self._get_available_worker()
                     if worker:
-                        # Setup and start worker
+                        # Setup and start worker - use AutoConnection for optimal performance
                         worker.setup_request(request, extractor, rom_cache)
-                        worker.preview_ready.connect(self._on_worker_ready, Qt.ConnectionType.QueuedConnection)
-                        worker.preview_error.connect(self._on_worker_error, Qt.ConnectionType.QueuedConnection)
+                        worker.preview_ready.connect(self._on_worker_ready)
+                        worker.preview_error.connect(self._on_worker_error)
                         self._active_workers.add(worker)
                         self._last_activity = time.time()
                         worker.start()

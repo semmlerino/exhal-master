@@ -646,6 +646,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.extraction_manager: ExtractionManager | None = None
         self.rom_extractor: ROMExtractor | None = None
         self._manager_mutex = QMutex()
+        self._preview_update_mutex = QMutex()  # Mutex for serializing preview widget updates
 
         # ROM cache integration
         self.rom_cache = get_rom_cache()
@@ -801,15 +802,17 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Set up smart preview coordination for real-time updates."""
         self._smart_preview_coordinator = SmartPreviewCoordinator(self, rom_cache=self.rom_cache)
 
-        # Connect preview signals with QueuedConnection for thread safety
+        # Use AutoConnection (default) to let Qt choose the best connection type
+        # This will use DirectConnection when called from main thread (avoiding queue delays)
+        # and QueuedConnection when called from worker threads (for thread safety)
         self._smart_preview_coordinator.preview_ready.connect(
-            self._on_smart_preview_ready, Qt.ConnectionType.QueuedConnection
+            self._on_smart_preview_ready
         )
         self._smart_preview_coordinator.preview_cached.connect(
-            self._on_smart_preview_cached, Qt.ConnectionType.QueuedConnection
+            self._on_smart_preview_cached
         )
         self._smart_preview_coordinator.preview_error.connect(
-            self._on_smart_preview_error, Qt.ConnectionType.QueuedConnection
+            self._on_smart_preview_error
         )
 
         # Setup ROM data provider with cache support
@@ -1157,16 +1160,17 @@ class UnifiedManualOffsetDialog(DialogBase):
             logger.debug(f"[SIGNAL_RECEIVED] Preview widget type: {type(self.preview_widget)}")
             logger.debug(f"[SIGNAL_RECEIVED] Preview widget visible: {self.preview_widget.isVisible()}")
 
-            self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+            # Use mutex to prevent concurrent preview updates
+            with QMutexLocker(self._preview_update_mutex):
+                self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+                
+                # CRITICAL: Force immediate widget update without processEvents
+                # processEvents() is dangerous - it allows re-entrancy and can cause race conditions
+                logger.debug("[SPRITE_DISPLAY] Forcing widget updates after load_sprite_from_4bpp")
+                self.preview_widget.update()
+                self.preview_widget.repaint()
             
-            # CRITICAL: Add explicit widget updates after loading sprite
-            logger.debug("[SPRITE_DISPLAY] Forcing widget updates after load_sprite_from_4bpp")
-            self.preview_widget.update()
-            self.preview_widget.repaint()
-
-            # Ensure UI responsiveness during rapid updates
-            QApplication.processEvents()
-            logger.debug("[SIGNAL_RECEIVED] load_sprite_from_4bpp completed, processEvents called")
+            logger.debug("[SIGNAL_RECEIVED] load_sprite_from_4bpp completed")
             
             # Log pixmap state after loading for debugging
             if hasattr(self.preview_widget, 'preview_label') and self.preview_widget.preview_label:
@@ -1193,10 +1197,15 @@ class UnifiedManualOffsetDialog(DialogBase):
             
         if self.preview_widget is not None:
             logger.debug("[DEBUG] Calling preview_widget.load_sprite_from_4bpp (from cache)")
-            self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
             
-            # CRITICAL: Add explicit widget updates after loading sprite
-            logger.debug("[SPRITE_DISPLAY] Forcing widget updates after cached load_sprite_from_4bpp")
+            # Use mutex to prevent concurrent preview updates
+            with QMutexLocker(self._preview_update_mutex):
+                self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+                
+                # Force immediate widget update without processEvents
+                logger.debug("[SPRITE_DISPLAY] Forcing widget updates after cached load_sprite_from_4bpp")
+                self.preview_widget.update()
+                self.preview_widget.repaint()
             self.preview_widget.update()
             self.preview_widget.repaint()
             

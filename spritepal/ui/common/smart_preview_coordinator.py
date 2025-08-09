@@ -129,12 +129,13 @@ class SmartPreviewCoordinator(QObject):
 
         # Worker pool and dual-tier caching
         self._worker_pool = PreviewWorkerPool(max_workers=8)
-        # Use QueuedConnection for thread-safe signal delivery
+        # Use AutoConnection to let Qt choose the best connection type
+        # This avoids unnecessary queuing when already on main thread
         self._worker_pool.preview_ready.connect(
-            self._on_worker_preview_ready, Qt.ConnectionType.QueuedConnection
+            self._on_worker_preview_ready
         )
         self._worker_pool.preview_error.connect(
-            self._on_worker_preview_error, Qt.ConnectionType.QueuedConnection
+            self._on_worker_preview_error
         )
 
         # Tier 1: Fast LRU memory cache

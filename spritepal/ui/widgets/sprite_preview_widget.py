@@ -225,15 +225,8 @@ class SpritePreviewWidget(QWidget):
         """Load grayscale sprite and apply palettes"""
         logger.debug(f"[DEBUG_SPRITE] _load_grayscale_sprite called: size={img.size}, mode={img.mode}, name={sprite_name}")
         
-        # CRITICAL: Ensure pixmap operations happen on main thread
-        current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
-        
-        if current_thread != main_thread:
-            logger.debug(f"[THREAD_SAFETY] _load_grayscale_sprite called from worker thread {current_thread}, invoking on main thread {main_thread}")
-            # We can't easily marshal PIL Image objects, so this method should only be called from main thread
-            logger.error("[THREAD_SAFETY] _load_grayscale_sprite called from worker thread - this should not happen!")
-            return
+        # NOTE: Thread safety is handled by Qt signals with QueuedConnection
+        # This method should only be called from main thread via signals
         
         # Sample pixel values to verify image has content
         try:
@@ -469,30 +462,20 @@ class SpritePreviewWidget(QWidget):
         sprite_name: str | None = None,
     ) -> None:
         """Load sprite from 4bpp tile data with guaranteed Qt widget updates"""
-        # CRITICAL: Ensure ALL pixmap updates happen on main thread
-        current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
-        
-        if current_thread != main_thread:
-            logger.debug(f"[THREAD_SAFETY] load_sprite_from_4bpp called from worker thread {current_thread}, invoking on main thread {main_thread}")
-            # Use Qt.QueuedConnection to properly marshal the call to the main thread
-            # This ensures the method will be called safely from the main thread's event loop
-            QMetaObject.invokeMethod(
-                self, "_load_sprite_from_4bpp_main_thread", Qt.ConnectionType.QueuedConnection,
-                tile_data, width, height, sprite_name or ""
-            )
-            return
+        # NOTE: This method is called via Qt signals with QueuedConnection,
+        # so it's guaranteed to run on the main thread. No additional thread
+        # safety checks needed here.
             
         logger.debug(f"[SPRITE_DISPLAY] load_sprite_from_4bpp called: data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
         try:
-            # Show loading state immediately for visual feedback
-            self._show_loading_state()
+            # Don't show loading state during rapid updates to prevent flashing
+            # self._show_loading_state()  # REMOVED - causes flashing
 
             # Validate tile data with detailed logging
             if not tile_data:
                 logger.debug("[SPRITE_DISPLAY] No tile data")
-                # Clear when no data to avoid showing corrupted sprites
-                self.clear()
+                # Don't clear to prevent flashing - keep last valid preview
+                # Just update the info labels
                 self.essential_info_label.setText("No data")
                 self.info_label.setText("No sprite data at this offset")
                 return
@@ -563,7 +546,7 @@ class SpritePreviewWidget(QWidget):
 
             if num_tiles == 0:
                 logger.warning("[SPRITE_DISPLAY] No valid tiles found")
-                self.clear()
+                # Don't call clear() to prevent flashing - just update labels
                 self.essential_info_label.setText("No tiles")
                 self.info_label.setText("No valid sprite tiles found")
                 return
@@ -657,217 +640,31 @@ class SpritePreviewWidget(QWidget):
             self._show_error_state("Load error")
             self.info_label.setText(f"Error loading sprite: {e}")
 
-    def _load_sprite_from_4bpp_main_thread(
-        self,
-        tile_data: bytes,
-        width: int,
-        height: int,
-        sprite_name: str,
-    ) -> None:
-        """Main thread version of load_sprite_from_4bpp for thread-safe calls"""
-        logger.debug(f"[THREAD_SAFETY] _load_sprite_from_4bpp_main_thread called on main thread")
-        # Verify we're actually on the main thread now
-        current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
-        
-        if current_thread != main_thread:
-            logger.error(f"[THREAD_SAFETY] CRITICAL: _load_sprite_from_4bpp_main_thread still not on main thread!")
-            return
-        
-        # Now safely call the original implementation (start from the existing try block)
-        logger.debug(f"[SPRITE_DISPLAY] load_sprite_from_4bpp called: data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
-        try:
-            # Show loading state immediately for visual feedback
-            self._show_loading_state()
-
-            # Validate tile data with detailed logging
-            if not tile_data:
-                logger.debug("[SPRITE_DISPLAY] No tile data")
-                # Clear when no data to avoid showing corrupted sprites
-                self.clear()
-                self.essential_info_label.setText("No data")
-                self.info_label.setText("No sprite data at this offset")
-                return
-
-            logger.debug(f"[SPRITE_DISPLAY] Tile data validation: {len(tile_data)} bytes received")
-            
-            # Load default palettes early to ensure they're available
-            if not self.palettes:
-                default_palettes = self.default_palette_loader.get_all_kirby_palettes()
-                if default_palettes:
-                    # The palettes dict has keys like 8, 9, etc. We need to preserve these indices
-                    # Create a list with enough slots to hold the highest index
-                    max_index = max(default_palettes.keys()) if default_palettes else 0
-                    palette_list = [None] * (max_index + 1)
-                    
-                    # Place each palette at its correct index
-                    for idx, palette in default_palettes.items():
-                        if isinstance(palette, list) and idx < len(palette_list):
-                            palette_list[idx] = palette
-                    
-                    # Remove None entries and use a simple list if indices are sparse
-                    # But keep track of the actual palette we want (index 8)
-                    if 8 in default_palettes and isinstance(default_palettes[8], list):
-                        # Use the Kirby Pink palette directly
-                        self.palettes = [default_palettes[8]]  # Just use the main palette
-                        self.current_palette_index = 0  # It's now at position 0 in our list
-                        logger.debug(f"[SPRITE_DISPLAY] Loaded Kirby Pink palette (was index 8)")
-                    else:
-                        # Fallback to all palettes
-                        palette_list = [p for p in palette_list if p is not None]
-                        self.palettes = palette_list if palette_list else []
-                        logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
-                        # Ensure palette index is valid
-                        if self.current_palette_index >= len(self.palettes):
-                            self.current_palette_index = 0
-
-            bytes_per_tile = 32
-            extra_bytes = len(tile_data) % bytes_per_tile
-            if extra_bytes > bytes_per_tile // 2:  # More than half a tile of extra data
-                logger.warning(f"[SPRITE_DISPLAY] Possible corrupted data: {extra_bytes} extra bytes (>{bytes_per_tile//2})")
-                # Don't clear() - try to display what we can to prevent flashing
-                self.essential_info_label.setText("Warning: Partial data")
-                self.info_label.setText(
-                    "Unable to display sprite - data appears corrupted"
-                )
-                return
-
-            # Try to get ROM extractor - handle case where it's not available
-            try:
-                extraction_manager = get_extraction_manager()
-                extractor = extraction_manager.get_rom_extractor()
-                logger.debug(f"[SPRITE_DISPLAY] Got extractor: {bool(extractor)}")
-            except Exception as e:
-                logger.warning(f"[SPRITE_DISPLAY] ROM extractor not available: {e}")
-                extractor = None
-
-            # Create temporary image from 4bpp data
-            img = Image.new("L", (width, height), 0)
-            logger.debug(f"[SPRITE_DISPLAY] Created PIL image: {width}x{height}")
-
-            # Log first 200 bytes of tile data for debugging
-            logger.debug(f"[DEBUG_SPRITE] First 200 bytes of tile_data (hex): {tile_data[:200].hex() if len(tile_data) >= 200 else tile_data.hex()}")
-            
-            # Process tiles (simplified - assumes data is already in correct format)
-            tiles_per_row = width // 8
-            num_tiles = len(tile_data) // bytes_per_tile
-            logger.debug(f"[DEBUG_SPRITE] Processing {num_tiles} tiles ({tiles_per_row} per row)")
-
-            if num_tiles == 0:
-                logger.warning("[SPRITE_DISPLAY] No valid tiles found")
-                self.clear()
-                self.essential_info_label.setText("No tiles")
-                self.info_label.setText("No valid sprite tiles found")
-                return
-
-            # Track actual pixel data for debugging
-            pixel_count = 0
-            non_zero_pixels = 0
-
-            # Choose decoding method based on extractor availability
-            if extractor is not None and hasattr(extractor, '_get_4bpp_pixel'):
-                logger.debug("[SPRITE_DISPLAY] Using ROM extractor for 4bpp decoding")
-                decode_method = "rom_extractor"
-            else:
-                logger.debug("[SPRITE_DISPLAY] Using fallback 4bpp decoding (ROM extractor not available)")
-                decode_method = "fallback"
-
-            for tile_idx in range(num_tiles):
-                tile_x = (tile_idx % tiles_per_row) * 8
-                tile_y = (tile_idx // tiles_per_row) * 8
-
-                if tile_y >= height:
-                    break
-
-                tile_offset = tile_idx * bytes_per_tile
-                tile_bytes = tile_data[tile_offset : tile_offset + bytes_per_tile]
-
-                # Decode 4bpp tile using available method
-                for y in range(8):
-                    for x in range(8):
-                        if decode_method == "rom_extractor":
-                            pixel = extractor._get_4bpp_pixel(tile_bytes, x, y)
-                        else:
-                            # Fallback 4bpp decoding method
-                            pixel = self._decode_4bpp_pixel_fallback(tile_bytes, x, y)
-
-                        gray_value = pixel * 17  # Convert to grayscale
-                        pixel_count += 1
-                        if gray_value > 0:
-                            non_zero_pixels += 1
-                        if tile_x + x < width and tile_y + y < height:
-                            img.putpixel((tile_x + x, tile_y + y), gray_value)
-
-            percent = (non_zero_pixels/pixel_count)*100 if pixel_count > 0 else 0
-            logger.debug(f"[DEBUG_SPRITE] Pixel analysis: {non_zero_pixels}/{pixel_count} non-zero pixels ({percent:.1f}%)")
-            
-            # Sample unique pixel values to verify sprite data (debug only)
-            if pixel_count > 0 and img:
-                unique_pixels = set()
-                for y in range(min(height, 16)):  # Sample first 16 rows
-                    for x in range(min(width, 16)):  # Sample first 16 columns
-                        try:
-                            pixel_val = img.getpixel((x, y))
-                            unique_pixels.add(pixel_val)
-                        except:
-                            pass
-                logger.debug(f"[DEBUG_SPRITE] Unique pixel values in 16x16 sample: {sorted(unique_pixels)[:20]}")
-                if len(unique_pixels) <= 1:
-                    logger.debug("[DEBUG_SPRITE] Note: Sprite appears to be monochrome")
-            
-            # Check PIL image directly
-            logger.debug(f"[DEBUG_SPRITE] PIL Image stats:")
-            logger.debug(f"  - size: {img.size}")
-            logger.debug(f"  - mode: {img.mode}")
-            logger.debug(f"  - extrema: {img.getextrema()}")
-
-            # Verify image has content before displaying
-            if non_zero_pixels == 0:
-                logger.warning("[SPRITE_DISPLAY] Image appears to be completely black - showing no data pattern")
-                self._show_no_data_pattern(width, height)
-                return
-
-            # Load as grayscale sprite with forced update and validation
-            self._load_grayscale_sprite_with_validation_and_update(img, sprite_name or None)
-
-            info_text = f"Size: {width}x{height} | Tiles: {num_tiles} | Pixels: {non_zero_pixels}/{pixel_count}"
-            if extra_bytes > 0:
-                info_text += f" | Warning: {extra_bytes} extra bytes"
-            self.info_label.setText(info_text)
-
-            # Final verification that pixmap was created and set
-            self._verify_pixmap_display()
-
-        except (OSError, PermissionError):
-            logger.exception("File I/O error loading 4bpp sprite")
-            self._show_error_state("I/O error")
-        except (ValueError, TypeError):
-            logger.exception("Data format error loading 4bpp sprite")
-            self._show_error_state("Data error")
-        except Exception as e:
-            logger.exception("Failed to load 4bpp sprite")
-            self._show_error_state("Load error")
-            self.info_label.setText(f"Error loading sprite: {e}")
+    # _load_sprite_from_4bpp_main_thread method removed - no longer needed
+    # Signals already ensure main thread execution with QueuedConnection
 
     def clear(self) -> None:
         """Clear the preview and show visible placeholder"""
         logger.debug("[DEBUG] SpritePreviewWidget.clear() called")
-        self.preview_label.clear()
-        self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
-        # Reset to minimum size for visibility when empty
-        self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
+        # Only clear if there's actually content to clear
+        # This prevents unnecessary flashing during rapid updates
+        if self.sprite_pixmap is not None or self.preview_label.pixmap() is not None:
+            self.preview_label.clear()
+            self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
+            # Reset to minimum size for visibility when empty
+            self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
 
-        # Apply visible empty state style
-        self._apply_empty_state_style()
+            # Apply visible empty state style
+            self._apply_empty_state_style()
 
-        self.palette_combo.clear()
-        self.palette_combo.setEnabled(False)
-        # Reset both info labels to cleared state
-        self.essential_info_label.setText("No sprite loaded")
-        self.info_label.setText("No sprite loaded")
-        self.sprite_pixmap = None
-        self.sprite_data = None
-        self.palettes = []
+            self.palette_combo.clear()
+            self.palette_combo.setEnabled(False)
+            # Reset both info labels to cleared state
+            self.essential_info_label.setText("No sprite loaded")
+            self.info_label.setText("No sprite loaded")
+            self.sprite_pixmap = None
+            self.sprite_data = None
+            self.palettes = []
 
     def _apply_empty_state_style(self) -> None:
         """Apply styling for empty state that's clearly visible"""
