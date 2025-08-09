@@ -311,9 +311,13 @@ class PreviewWorkerPool(QObject):
             # Setup worker for this request with ROM cache
             worker.setup_request(request, extractor, rom_cache)
 
-            # Connect signals for this request - use AutoConnection for optimal performance
-            worker.preview_ready.connect(self._on_worker_ready)
-            worker.preview_error.connect(self._on_worker_error)
+            # Connect signals only if not already connected
+            # We keep signals connected to avoid race conditions from disconnect/reconnect
+            if not hasattr(worker, '_signals_connected') or not worker._signals_connected:
+                worker.preview_ready.connect(self._on_worker_ready)
+                worker.preview_error.connect(self._on_worker_error)
+                worker._signals_connected = True
+                logger.debug("Connected worker signals (first time)")
 
             # Move to active set
             self._active_workers.add(worker)
@@ -364,21 +368,16 @@ class PreviewWorkerPool(QObject):
             # Remove from active set
             self._active_workers.discard(worker)
 
-            # Disconnect signals
-            try:
-                worker.preview_ready.disconnect()
-            except TypeError:
-                pass  # Already disconnected
-            try:
-                worker.preview_error.disconnect()
-            except TypeError:
-                pass  # Already disconnected
+            # CRITICAL FIX: Do NOT disconnect signals here!
+            # Disconnecting signals while they might still be processing causes crashes.
+            # Instead, leave signals connected and just return worker to pool.
+            # We'll only disconnect when actually cleaning up the worker for good.
 
             # Return to available pool if not shutting down
             if not self._shutdown_requested.is_set():
                 try:
                     self._available_workers.put_nowait(worker)
-                    logger.debug("Worker returned to pool")
+                    logger.debug("Worker returned to pool (signals remain connected)")
                     # Process any queued requests now that a worker is available
                     QTimer.singleShot(0, self._process_queued_requests)
                 except queue.Full:
@@ -410,10 +409,14 @@ class PreviewWorkerPool(QObject):
                 with QMutexLocker(self._mutex):
                     worker = self._get_available_worker()
                     if worker:
-                        # Setup and start worker - use AutoConnection for optimal performance
+                        # Setup and start worker
                         worker.setup_request(request, extractor, rom_cache)
-                        worker.preview_ready.connect(self._on_worker_ready)
-                        worker.preview_error.connect(self._on_worker_error)
+                        
+                        # Connect signals only if not already connected
+                        if not hasattr(worker, '_signals_connected') or not worker._signals_connected:
+                            worker.preview_ready.connect(self._on_worker_ready)
+                            worker.preview_error.connect(self._on_worker_error)
+                            worker._signals_connected = True
                         self._active_workers.add(worker)
                         self._last_activity = time.time()
                         worker.start()
@@ -499,6 +502,19 @@ class PreviewWorkerPool(QObject):
             # First, cancel any current operation
             worker.cancel_current_request()
 
+            # Disconnect signals before cleanup to prevent crashes
+            if hasattr(worker, '_signals_connected') and worker._signals_connected:
+                try:
+                    worker.preview_ready.disconnect()
+                except TypeError:
+                    pass  # Already disconnected
+                try:
+                    worker.preview_error.disconnect()
+                except TypeError:
+                    pass  # Already disconnected
+                worker._signals_connected = False
+                logger.debug("Disconnected worker signals during cleanup")
+
             # Request interruption via Qt mechanism
             worker.requestInterruption()
 
@@ -564,6 +580,18 @@ class PreviewWorkerPool(QObject):
                 try:
                     # First cancel the request
                     worker.cancel_current_request()
+
+                    # Disconnect signals before cleanup
+                    if hasattr(worker, '_signals_connected') and worker._signals_connected:
+                        try:
+                            worker.preview_ready.disconnect()
+                        except TypeError:
+                            pass
+                        try:
+                            worker.preview_error.disconnect()
+                        except TypeError:
+                            pass
+                        worker._signals_connected = False
 
                     # Request interruption
                     worker.requestInterruption()
