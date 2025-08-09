@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 from utils.sprite_history_manager import SpriteHistoryManager
 
-from PyQt6.QtCore import QMutex, QMutexLocker, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QEventLoop, QMutex, QMutexLocker, Qt, QThread, QTimer, pyqtSignal
 
 if TYPE_CHECKING:
     from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent
@@ -1175,7 +1175,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             
             # Limited processEvents to keep UI responsive without full re-entrancy
             QApplication.processEvents(
-                QApplication.ProcessEventsFlag.ExcludeUserInputEvents,
+                QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents,
                 5  # 5ms max
             )
             
@@ -1218,7 +1218,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             # Process paint events to keep UI responsive but with timeout to prevent blocking
             # ExcludeUserInputEvents prevents re-entrancy from new slider movements
             QApplication.processEvents(
-                QApplication.ProcessEventsFlag.ExcludeUserInputEvents,
+                QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents,
                 5  # 5ms max to prevent blocking
             )
         else:
