@@ -44,12 +44,38 @@ class SimplePreviewWorker(QThread):
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()
             
-            # Extract raw tile data for manual browsing
-            expected_size = 4096  # 4KB for manual browsing
-            if self.offset + expected_size <= len(rom_data):
-                tile_data = rom_data[self.offset:self.offset + expected_size]
-            else:
-                tile_data = rom_data[self.offset:]
+            # For manual browsing, try decompression first (most sprites are compressed)
+            expected_size = 8192  # Typical sprite size
+            tile_data = None
+            
+            # Try decompression first - most sprites in Kirby are HAL-compressed
+            if self.extractor and hasattr(self.extractor, 'rom_injector'):
+                try:
+                    compressed_size, decompressed_data = (
+                        self.extractor.rom_injector.find_compressed_sprite(
+                            rom_data, self.offset, expected_size
+                        )
+                    )
+                    if decompressed_data and len(decompressed_data) > 0:
+                        logger.debug(f"[SIMPLE] Found compressed sprite: {compressed_size} bytes -> {len(decompressed_data)} bytes")
+                        tile_data = decompressed_data
+                except Exception as decomp_error:
+                    # Not a compressed sprite, will use raw data
+                    logger.debug(f"[SIMPLE] Not a compressed sprite: {decomp_error}")
+            
+            # Fall back to raw data if decompression failed or no extractor
+            if not tile_data:
+                try:
+                    # Extract raw tile data for browsing
+                    expected_size = 4096  # 4KB for raw browsing
+                    if self.offset + expected_size <= len(rom_data):
+                        tile_data = rom_data[self.offset:self.offset + expected_size]
+                    else:
+                        tile_data = rom_data[self.offset:]
+                    logger.debug(f"[SIMPLE] Using raw data: {len(tile_data)} bytes")
+                except Exception as e:
+                    logger.error(f"[SIMPLE] Failed to extract raw data: {e}")
+                    raise ValueError(f"Failed to extract at 0x{self.offset:X}: {e}")
             
             if not tile_data:
                 raise ValueError(f"No data at offset 0x{self.offset:X}")
