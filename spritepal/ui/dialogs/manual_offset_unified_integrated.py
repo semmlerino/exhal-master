@@ -322,10 +322,13 @@ class SimpleBrowseTab(QWidget):
             self.manual_spinbox.blockSignals(False)
 
             self._update_displays()
+            
+            # Emit the offset_changed signal for programmatic changes
+            # This ensures the dialog gets notified
+            self.offset_changed.emit(offset)
 
-            # Request immediate high-quality preview for programmatic changes
-            if self._smart_preview_coordinator is not None:
-                self._smart_preview_coordinator.request_manual_preview(offset)
+            # Note: Preview will be requested by the dialog's _on_offset_changed handler
+            # No need to request it here to avoid duplicates
 
     def get_step_size(self) -> int:
         """Get step size."""
@@ -859,7 +862,15 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_offset_changed(self, offset: int):
         """Handle offset changes from browse tab."""
+        # CRITICAL: Prevent re-entrant calls for the same offset
+        # This prevents crashes from duplicate signals
+        if hasattr(self, '_last_offset_processed') and self._last_offset_processed == offset:
+            logger.debug(f"[OFFSET_CHANGED] Skipping duplicate offset: 0x{offset:06X}")
+            return
+        
         logger.info(f"[OFFSET_CHANGED] ========== START: 0x{offset:06X} ===========")
+        self._last_offset_processed = offset
+        
         # Update cache stats
         self._cache_stats["total_requests"] += 1
         logger.debug(f"[OFFSET_CHANGED] Cache stats updated: total_requests={self._cache_stats['total_requests']}")
@@ -1294,8 +1305,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Set current offset."""
         if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
-            # Manually trigger the offset changed signal since set_offset doesn't emit it
-            self._on_offset_changed(offset)
+            # The browse_tab.set_offset now emits offset_changed signal
+            # No need to manually call _on_offset_changed to avoid duplicates
             return True
         return False
 
