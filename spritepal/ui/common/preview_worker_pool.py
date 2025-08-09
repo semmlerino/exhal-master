@@ -132,30 +132,60 @@ class PooledPreviewWorker(SpritePreviewWorker):
         # Use conservative size for manual offsets during dragging
         expected_size = 4096  # 4KB for fast preview during dragging
 
+        # For manual offset browsing, try raw extraction first
+        tile_data = None
+        
+        # First, try to extract raw uncompressed tile data
+        # This is what manual offset browsing needs - just raw 4bpp tiles
         try:
-            # Check interruption right before expensive operation
+            # Check interruption right before extraction
             if self.isInterruptionRequested():
                 logger.debug(f"Request {self._current_request_id} interrupted before extraction")
                 return
-
-            # Extract sprite data with size limit
-            compressed_size, tile_data = (
-                self.extractor.rom_injector.find_compressed_sprite(
-                    rom_data, self.offset, expected_size
-                )
-            )
-
-            # Check interruption immediately after expensive operation
+            
+            # Read raw bytes from ROM at the offset
+            # Manual offset browsing shows raw tiles, not compressed sprites
+            if self.offset + expected_size <= len(rom_data):
+                tile_data = rom_data[self.offset:self.offset + expected_size]
+                logger.debug(f"Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
+            else:
+                # Read what's available up to end of ROM
+                tile_data = rom_data[self.offset:]
+                logger.debug(f"Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
+            
+            # Check interruption after extraction
             if self.isInterruptionRequested():
                 logger.debug(f"Request {self._current_request_id} interrupted after extraction")
                 return
-
+                
         except Exception as e:
-            # Don't raise if we were interrupted
-            if self.isInterruptionRequested() or self._cancel_requested.is_set():
-                logger.debug(f"Request {self._current_request_id} cancelled during extraction")
-                return
-            raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {e}") from e
+            # If raw extraction fails, try compressed extraction as fallback
+            logger.debug(f"Raw extraction failed, trying compressed: {e}")
+            try:
+                # Check interruption
+                if self.isInterruptionRequested() or self._cancel_requested.is_set():
+                    logger.debug(f"Request {self._current_request_id} cancelled")
+                    return
+                    
+                # Try to extract as compressed sprite (fallback for actual compressed sprites)
+                compressed_size, tile_data = (
+                    self.extractor.rom_injector.find_compressed_sprite(
+                        rom_data, self.offset, expected_size
+                    )
+                )
+                logger.debug(f"Found compressed sprite: {compressed_size} bytes compressed")
+                
+            except Exception as decomp_error:
+                # Both raw and compressed failed
+                if self.isInterruptionRequested() or self._cancel_requested.is_set():
+                    logger.debug(f"Request {self._current_request_id} cancelled during extraction")
+                    return
+                # Use raw data anyway for manual browsing (user wants to see something)
+                if self.offset < len(rom_data):
+                    tile_data = rom_data[self.offset:min(self.offset + expected_size, len(rom_data))]
+                    logger.debug(f"Using raw data after compression failed: {len(tile_data)} bytes")
+                else:
+                    raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {decomp_error}") from decomp_error
 
         # Check cancellation after decompression
         if self._cancel_requested.is_set() or self.isInterruptionRequested():

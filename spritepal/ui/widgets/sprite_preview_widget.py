@@ -503,15 +503,31 @@ class SpritePreviewWidget(QWidget):
             if not self.palettes:
                 default_palettes = self.default_palette_loader.get_all_kirby_palettes()
                 if default_palettes:
-                    palette_list = []
-                    for palette in default_palettes.values():
-                        if isinstance(palette, list):
-                            palette_list.append(palette)
-                    self.palettes = palette_list
-                    logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
-                    # Ensure palette index is valid
-                    if self.current_palette_index >= len(self.palettes):
-                        self.current_palette_index = 0
+                    # The palettes dict has keys like 8, 9, etc. We need to preserve these indices
+                    # Create a list with enough slots to hold the highest index
+                    max_index = max(default_palettes.keys()) if default_palettes else 0
+                    palette_list = [None] * (max_index + 1)
+                    
+                    # Place each palette at its correct index
+                    for idx, palette in default_palettes.items():
+                        if isinstance(palette, list) and idx < len(palette_list):
+                            palette_list[idx] = palette
+                    
+                    # Remove None entries and use a simple list if indices are sparse
+                    # But keep track of the actual palette we want (index 8)
+                    if 8 in default_palettes and isinstance(default_palettes[8], list):
+                        # Use the Kirby Pink palette directly
+                        self.palettes = [default_palettes[8]]  # Just use the main palette
+                        self.current_palette_index = 0  # It's now at position 0 in our list
+                        logger.debug(f"[SPRITE_DISPLAY] Loaded Kirby Pink palette (was index 8)")
+                    else:
+                        # Fallback to all palettes
+                        palette_list = [p for p in palette_list if p is not None]
+                        self.palettes = palette_list if palette_list else []
+                        logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
+                        # Ensure palette index is valid
+                        if self.current_palette_index >= len(self.palettes):
+                            self.current_palette_index = 0
 
             bytes_per_tile = 32
             extra_bytes = len(tile_data) % bytes_per_tile
@@ -677,15 +693,31 @@ class SpritePreviewWidget(QWidget):
             if not self.palettes:
                 default_palettes = self.default_palette_loader.get_all_kirby_palettes()
                 if default_palettes:
-                    palette_list = []
-                    for palette in default_palettes.values():
-                        if isinstance(palette, list):
-                            palette_list.append(palette)
-                    self.palettes = palette_list
-                    logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
-                    # Ensure palette index is valid
-                    if self.current_palette_index >= len(self.palettes):
-                        self.current_palette_index = 0
+                    # The palettes dict has keys like 8, 9, etc. We need to preserve these indices
+                    # Create a list with enough slots to hold the highest index
+                    max_index = max(default_palettes.keys()) if default_palettes else 0
+                    palette_list = [None] * (max_index + 1)
+                    
+                    # Place each palette at its correct index
+                    for idx, palette in default_palettes.items():
+                        if isinstance(palette, list) and idx < len(palette_list):
+                            palette_list[idx] = palette
+                    
+                    # Remove None entries and use a simple list if indices are sparse
+                    # But keep track of the actual palette we want (index 8)
+                    if 8 in default_palettes and isinstance(default_palettes[8], list):
+                        # Use the Kirby Pink palette directly
+                        self.palettes = [default_palettes[8]]  # Just use the main palette
+                        self.current_palette_index = 0  # It's now at position 0 in our list
+                        logger.debug(f"[SPRITE_DISPLAY] Loaded Kirby Pink palette (was index 8)")
+                    else:
+                        # Fallback to all palettes
+                        palette_list = [p for p in palette_list if p is not None]
+                        self.palettes = palette_list if palette_list else []
+                        logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
+                        # Ensure palette index is valid
+                        if self.current_palette_index >= len(self.palettes):
+                            self.current_palette_index = 0
 
             bytes_per_tile = 32
             extra_bytes = len(tile_data) % bytes_per_tile
