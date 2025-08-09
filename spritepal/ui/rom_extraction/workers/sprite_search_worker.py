@@ -159,7 +159,7 @@ class SpriteSearchWorker(BaseWorker):
             sprite_finder = self.rom_extractor.sprite_finder
 
             # Try to decompress and validate
-            result = sprite_finder.test_offset(rom_data, offset)
+            result = sprite_finder.find_sprite_at_offset(rom_data, offset)
 
             if result and result.get("valid", False):
                 # Calculate quality based on various factors
