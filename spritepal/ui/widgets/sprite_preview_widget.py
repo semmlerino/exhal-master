@@ -362,7 +362,8 @@ class SpritePreviewWidget(QWidget):
 
                 # Create indexed image
                 indexed = Image.new("P", grayscale_img.size)
-                indexed.putdata(list(grayscale_img.getdata()))
+                # Scale grayscale values (0-255) back to palette indices (0-15)
+                indexed.putdata([p // 17 for p in grayscale_img.getdata()])
 
                 # Create palette (16 colors -> 256 color palette)
                 full_palette = []
