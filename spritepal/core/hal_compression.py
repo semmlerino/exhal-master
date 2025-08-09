@@ -37,7 +37,11 @@ from utils.constants import (
     HAL_POOL_TIMEOUT_SECONDS,
 )
 from utils.logging_config import get_logger
-from utils.safe_logging import safe_debug, safe_info, safe_warning, suppress_logging_errors
+from utils.safe_logging import (
+    safe_debug,
+    safe_info,
+    suppress_logging_errors,
+)
 
 logger = get_logger(__name__)
 
@@ -332,7 +336,7 @@ class HALProcessPool:
                     self.shutdown()
                 except Exception:
                     pass  # Ignore errors during shutdown
-            
+
             atexit.register(cleanup_at_exit)
 
             # Register with Qt if available
@@ -582,12 +586,12 @@ class HALProcessPool:
                             pass  # Expected during shutdown
                         except Exception as e:
                             safe_debug(logger, f"Manager shutdown error: {e}")
-                    
+
                     shutdown_thread = threading.Thread(target=shutdown_manager)
                     shutdown_thread.daemon = True
                     shutdown_thread.start()
                     shutdown_thread.join(timeout=1.0)  # Give manager 1 second to shutdown
-                    
+
                     if shutdown_thread.is_alive():
                         safe_debug(logger, "Manager shutdown timed out")
                 except Exception as e:
@@ -676,7 +680,7 @@ class HALProcessPool:
     @property
     def _pool(self) -> bool | None:
         """Backward compatibility property for tests.
-        
+
         Returns None when not initialized, True when initialized.
         This maintains the interface that tests expect.
         """
@@ -685,7 +689,7 @@ class HALProcessPool:
     @_pool.setter
     def _pool(self, value: bool | None) -> None:
         """Setter for backward compatibility with tests.
-        
+
         Tests may set _pool directly to simulate different states.
         """
         self._pool_initialized = bool(value) if value is not None else False
@@ -726,7 +730,7 @@ class HALProcessPool:
                             pass  # Expected during force shutdown
                         except Exception:
                             pass  # Ignore all errors during force shutdown
-                    
+
                     shutdown_thread = threading.Thread(target=force_shutdown_manager)
                     shutdown_thread.daemon = True
                     shutdown_thread.start()
@@ -756,7 +760,7 @@ class HALProcessPool:
         with cls._lock:
             # Reset flag first to ensure it happens even if force_reset fails
             cls._cleanup_registered = False  # Allow re-registration
-            
+
             if cls._instance is not None:
                 try:
                     cls._instance.force_reset()

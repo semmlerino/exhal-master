@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextlib
 import os
 import time
-from datetime import datetime, timezone
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -30,9 +29,16 @@ if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
 
-from utils.sprite_history_manager import SpriteHistoryManager
+from PyQt6.QtCore import (
+    QMutex,
+    QMutexLocker,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
+)
 
-from PyQt6.QtCore import QEventLoop, QMutex, QMutexLocker, Qt, QThread, QTimer, pyqtSignal
+from utils.sprite_history_manager import SpriteHistoryManager
 
 if TYPE_CHECKING:
     from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent
@@ -60,6 +66,7 @@ from PyQt6.QtWidgets import (
 
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
+
 # Use SimplePreviewCoordinator to avoid worker pool crashes
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator
 from ui.components import DialogBase
@@ -131,7 +138,7 @@ class SimpleBrowseTab(QWidget):
 
         # Connect to valueChanged for compatibility (used by smart coordinator)
         self.position_slider.valueChanged.connect(self._on_slider_changed)
-        
+
         # Debug: Add direct connections to track what signals are firing
         self.position_slider.sliderPressed.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider pressed"))
         self.position_slider.sliderMoved.connect(lambda v: logger.debug(f"[TRACE_SIGNAL] Slider moved to 0x{v:06X}"))
@@ -269,11 +276,11 @@ class SimpleBrowseTab(QWidget):
         self.manual_spinbox.blockSignals(True)
         self.manual_spinbox.setValue(value)
         self.manual_spinbox.blockSignals(False)
-        
+
         # CRITICAL: Emit offset_changed signal so dialog can request preview
         logger.debug(f"[DEBUG] Emitting offset_changed signal with value: 0x{value:06X}")
         self.offset_changed.emit(value)
-        
+
         # Note: SmartPreviewCoordinator handles preview updates automatically via
         # sliderMoved signal - no need to manually request here
         logger.debug("[DEBUG] _on_slider_changed complete, offset_changed signal emitted")
@@ -323,7 +330,7 @@ class SimpleBrowseTab(QWidget):
             self.manual_spinbox.blockSignals(False)
 
             self._update_displays()
-            
+
             # Emit the offset_changed signal for programmatic changes
             # This ensures the dialog gets notified
             self.offset_changed.emit(offset)
@@ -868,10 +875,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         if hasattr(self, '_last_offset_processed') and self._last_offset_processed == offset:
             logger.debug(f"[OFFSET_CHANGED] Skipping duplicate offset: 0x{offset:06X}")
             return
-        
+
         logger.info(f"[OFFSET_CHANGED] ========== START: 0x{offset:06X} ===========")
         self._last_offset_processed = offset
-        
+
         # Update cache stats
         self._cache_stats["total_requests"] += 1
         logger.debug(f"[OFFSET_CHANGED] Cache stats updated: total_requests={self._cache_stats['total_requests']}")
@@ -884,11 +891,11 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Update preview widget with current offset for similarity search
         if self.preview_widget is not None:
             self.preview_widget.set_current_offset(offset)
-            logger.debug(f"[OFFSET_CHANGED] Updated preview widget offset")
+            logger.debug("[OFFSET_CHANGED] Updated preview widget offset")
 
         # Emit signal immediately for external listeners
         self.offset_changed.emit(offset)
-        logger.debug(f"[OFFSET_CHANGED] Emitted offset_changed signal")
+        logger.debug("[OFFSET_CHANGED] Emitted offset_changed signal")
 
         # CRITICAL FIX: Request preview when offset changes!
         # Use request_manual_preview for immediate response without debounce
@@ -896,7 +903,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             logger.info(f"[OFFSET_CHANGED] Requesting manual preview for offset 0x{offset:06X}")
             try:
                 self._smart_preview_coordinator.request_manual_preview(offset)
-                logger.info(f"[OFFSET_CHANGED] request_manual_preview() returned successfully")
+                logger.info("[OFFSET_CHANGED] request_manual_preview() returned successfully")
             except Exception as e:
                 logger.exception(f"[OFFSET_CHANGED] EXCEPTION calling request_manual_preview: {e}")
         else:
@@ -904,7 +911,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # Schedule predictive preloading for adjacent offsets
         self._schedule_adjacent_preloading(offset)
-        
+
         logger.info(f"[OFFSET_CHANGED] ========== END: 0x{offset:06X} ===========")
 
     def _on_offset_requested(self, offset: int):
@@ -1172,16 +1179,15 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_smart_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle preview ready from smart coordinator with guaranteed UI updates."""
-        logger.info(f"[PREVIEW_READY] ========== START ===========")
+        logger.info("[PREVIEW_READY] ========== START ===========")
         logger.info(f"[PREVIEW_READY] data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
         logger.debug(f"[PREVIEW_READY] tile_data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
-        
+
         # CRITICAL: Verify we're on main thread before calling widget methods
-        from PyQt6.QtCore import QThread
         current_thread = QThread.currentThread()
         main_thread = QApplication.instance().thread()
         logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
-        
+
         if current_thread != main_thread:
             logger.error("[THREAD_SAFETY] _on_smart_preview_ready called from worker thread!")
             return
@@ -1198,7 +1204,7 @@ class UnifiedManualOffsetDialog(DialogBase):
                     logger.info("[PREVIEW_READY] Calling load_sprite_from_4bpp...")
                     self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
                     logger.info("[PREVIEW_READY] load_sprite_from_4bpp returned successfully")
-                    
+
                     # Force immediate widget update
                     logger.debug("[PREVIEW_READY] Calling widget.update()...")
                     self.preview_widget.update()
@@ -1206,9 +1212,9 @@ class UnifiedManualOffsetDialog(DialogBase):
             except Exception as e:
                 logger.exception(f"[PREVIEW_READY] EXCEPTION in preview update: {e}")
                 raise
-            
+
             logger.info("[PREVIEW_READY] Mutex released, updates completed")
-            
+
             # Log pixmap state after loading for debugging
             try:
                 if hasattr(self.preview_widget, 'preview_label') and self.preview_widget.preview_label:
@@ -1227,31 +1233,30 @@ class UnifiedManualOffsetDialog(DialogBase):
             self._update_status(f"High-quality preview at 0x{current_offset:06X} {cache_status}")
         except Exception as e:
             logger.error(f"[PREVIEW_READY] Error updating status: {e}")
-        
+
         logger.info("[PREVIEW_READY] ========== END ===========")
 
     def _on_smart_preview_cached(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle cached preview from smart coordinator."""
         logger.debug(f"[SIGNAL_RECEIVED] _on_smart_preview_cached called: data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
         logger.debug(f"[SIGNAL_RECEIVED] cached tile_data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
-        
+
         # CRITICAL: Verify we're on main thread before calling widget methods
-        from PyQt6.QtCore import QThread
         if QThread.currentThread() != QApplication.instance().thread():
             logger.warning("[THREAD_SAFETY] _on_smart_preview_cached called from worker thread!")
             return
-            
+
         if self.preview_widget is not None:
             logger.debug("[DEBUG] Calling preview_widget.load_sprite_from_4bpp (from cache)")
-            
+
             # Use mutex to prevent concurrent preview updates
             with QMutexLocker(self._preview_update_mutex):
                 self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
-                
+
                 # Force immediate widget update
                 logger.debug("[SPRITE_DISPLAY] Forcing widget updates after cached load_sprite_from_4bpp")
                 self.preview_widget.update()
-            
+
             # Let Qt's event loop handle updates naturally
             # processEvents causes crashes and re-entrancy issues
         else:
@@ -1263,30 +1268,29 @@ class UnifiedManualOffsetDialog(DialogBase):
             self._update_status(f"Cached preview at 0x{current_offset:06X} {cache_status}")
         except Exception as e:
             logger.error(f"[PREVIEW_CACHED] Error updating status: {e}")
-        
+
         logger.info("[PREVIEW_CACHED] ========== END ===========")
 
     def _on_smart_preview_error(self, error_msg: str):
         """Handle preview error from smart coordinator."""
-        logger.warning(f"[PREVIEW_ERROR] ========== START ===========")
+        logger.warning("[PREVIEW_ERROR] ========== START ===========")
         logger.warning(f"[PREVIEW_ERROR] Error message: {error_msg}")
-        
+
         # CRITICAL: Verify we're on main thread before calling widget methods
-        from PyQt6.QtCore import QThread
         current_thread = QThread.currentThread()
         main_thread = QApplication.instance().thread()
         logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
-        
+
         if current_thread != main_thread:
             logger.error("[THREAD_SAFETY] _on_smart_preview_error called from worker thread!")
             return
-            
+
         if self.preview_widget is not None:
             logger.info("[PREVIEW_ERROR] Updating info label only (not clearing preview)")
             try:
                 # Don't clear - keep last valid preview visible to prevent black flashing
                 self.preview_widget.info_label.setText("No sprite found")
-                
+
                 # Force widget updates
                 logger.debug("[PREVIEW_ERROR] Calling widget.update()...")
                 self.preview_widget.update()
@@ -1296,7 +1300,7 @@ class UnifiedManualOffsetDialog(DialogBase):
                 logger.exception(f"[PREVIEW_ERROR] EXCEPTION updating widget: {e}")
         else:
             logger.error("[PREVIEW_ERROR] preview_widget is None!")
-        
+
         logger.warning("[PREVIEW_ERROR] ========== END ===========")
 
         current_offset = self.get_current_offset()
@@ -1635,7 +1639,7 @@ Cache Misses: {session_stats['misses']}"""
             return
 
         from PyQt6.QtGui import QGuiApplication  # noqa: PLC0415
-        
+
         # Defensive check for test environments with mock objects
         try:
             new_pos = event.pos()
@@ -1648,7 +1652,7 @@ Cache Misses: {session_stats['misses']}"""
         screen = QGuiApplication.primaryScreen()
         if screen:
             available = screen.availableGeometry()
-            
+
             # Defensive check for mock geometry objects in tests
             try:
                 available_x = available.x()
@@ -1657,14 +1661,14 @@ Cache Misses: {session_stats['misses']}"""
                 available_height = available.height()
                 dialog_width = self.width()
                 dialog_height = self.height()
-                
+
                 # Verify all values are numeric before arithmetic
-                if not all(isinstance(v, (int, float)) for v in 
-                          [available_x, available_y, available_width, available_height, 
+                if not all(isinstance(v, (int, float)) for v in
+                          [available_x, available_y, available_width, available_height,
                            dialog_width, dialog_height]):
                     # Skip validation if any values are not numeric (likely mocks)
                     return
-                    
+
                 # Ensure dialog stays within screen bounds with small margin
                 margin = 50  # Allow some overlap with screen edge
                 min_x = available_x - dialog_width + margin
@@ -1675,12 +1679,12 @@ Cache Misses: {session_stats['misses']}"""
                 # Constrain position
                 constrained_x = max(min_x, min(x, max_x))
                 constrained_y = max(min_y, min(y, max_y))
-                
+
                 # Move back if position was adjusted
                 if constrained_x != x or constrained_y != y:
                     logger.debug(f"Constraining dialog position from ({x},{y}) to ({constrained_x},{constrained_y})")
                     self.move(constrained_x, constrained_y)
-                    
+
             except (AttributeError, TypeError):
                 # In test environment with mocks, skip geometry validation
                 return

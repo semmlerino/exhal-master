@@ -132,7 +132,7 @@ class QualityReportGenerator:
 
         violations = self.mock_density_data.get("violations", [])
         avg_density = self.mock_density_data.get("summary", {}).get("avg_density", 0)
-        total_files = self.mock_density_data.get("total_files", 1)
+        self.mock_density_data.get("total_files", 1)
 
         # Start with good score
         score = 85.0

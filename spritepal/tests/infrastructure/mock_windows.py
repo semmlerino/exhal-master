@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import QMainWindow, QWidget
 class MockMainWindow(QMainWindow):
     """
     Mock MainWindow that provides real Qt signals without heavy initialization.
-    
+
     Inherits from QMainWindow for compatibility with qtbot and Qt tests
     while avoiding controller creation, panel loading, and resource initialization.
     """
@@ -102,7 +102,7 @@ class MockMainWindow(QMainWindow):
 class MockWorkerBase(QThread):
     """
     Mock base worker that provides real Qt signals without actual thread execution.
-    
+
     This mock prevents "QThread: Destroyed while thread is still running" errors
     by not actually starting threads but still providing signal behavior.
     """
@@ -197,7 +197,7 @@ class MockInjectionWorker(MockWorkerBase):
 class MockWorkerManager:
     """
     Mock WorkerManager that tracks workers without actual thread management.
-    
+
     This prevents thread cleanup issues during tests.
     """
 
@@ -237,7 +237,7 @@ class MockWorkerManager:
 def create_mock_main_window() -> MockMainWindow:
     """
     Factory function to create a properly configured MockMainWindow.
-    
+
     Returns:
         MockMainWindow instance ready for testing
     """
@@ -256,7 +256,7 @@ def create_mock_main_window() -> MockMainWindow:
 def patch_main_window_creation(monkeypatch):
     """
     Patch MainWindow creation to use MockMainWindow.
-    
+
     Args:
         monkeypatch: pytest monkeypatch fixture
     """

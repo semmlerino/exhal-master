@@ -362,8 +362,8 @@ class TestComplexIntegrationMigration:
             # OLD: Many interconnected mocks
             mock_main_window = Mock()
             mock_extraction_mgr = Mock()
-            mock_injection_mgr = Mock()
-            mock_session_mgr = Mock()
+            Mock()
+            Mock()
             mock_worker = Mock()
 
             # Complex mock interconnections
@@ -459,10 +459,10 @@ class TestComplexIntegrationMigration:
 def analyze_mock_usage_in_test_method(test_method_source: str) -> dict:
     """
     Helper to analyze mock usage in a test method for migration planning.
-    
+
     Args:
         test_method_source: Source code of test method as string
-        
+
     Returns:
         Analysis of mock usage and migration difficulty
     """
@@ -518,10 +518,10 @@ def analyze_mock_usage_in_test_method(test_method_source: str) -> dict:
 def generate_migration_plan(test_file_path: str) -> str:
     """
     Generate a migration plan for a test file.
-    
+
     Args:
         test_file_path: Path to test file to migrate
-        
+
     Returns:
         Migration plan as formatted string
     """

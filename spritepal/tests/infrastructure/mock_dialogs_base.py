@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QDialog
 class MockDialogBase(QObject):
     """
     Base class for all mock dialogs.
-    
+
     Provides:
     - Non-blocking exec() method
     - Real Qt signals
@@ -184,11 +184,11 @@ class MockProgressDialog(MockDialogBase):
 def create_mock_dialog(dialog_type: str, **kwargs) -> MockDialogBase:
     """
     Factory function to create mock dialogs.
-    
+
     Args:
         dialog_type: Type of dialog ('message', 'file', 'input', 'progress')
         **kwargs: Additional arguments for dialog creation
-        
+
     Returns:
         Mock dialog instance
     """
@@ -207,7 +207,7 @@ def create_mock_dialog(dialog_type: str, **kwargs) -> MockDialogBase:
 def patch_all_dialogs(monkeypatch):
     """
     Patch all Qt dialogs with mocks.
-    
+
     Args:
         monkeypatch: pytest monkeypatch fixture
     """

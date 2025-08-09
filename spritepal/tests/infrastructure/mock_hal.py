@@ -6,6 +6,7 @@ that eliminate process pool overhead while maintaining interface compatibility.
 Tests run 7x faster with these mocks compared to real HAL process pools.
 """
 
+import contextlib
 import hashlib
 import os
 import threading
@@ -19,7 +20,7 @@ from core.hal_compression import HALRequest, HALResult
 class MockHALProcessPool:
     """
     Fast mock implementation of HALProcessPool for unit tests.
-    
+
     Provides instant responses without process communication overhead.
     Maintains thread safety and singleton pattern compatibility.
     """
@@ -91,7 +92,7 @@ class MockHALProcessPool:
     def submit_request(self, request: HALRequest) -> HALResult:
         """
         Process a single request with mock implementation.
-        
+
         Returns predictable results instantly without process overhead.
         """
         if not self._pool_initialized or self._shutdown:
@@ -247,10 +248,8 @@ class MockHALProcessPool:
         """Reset singleton for test isolation."""
         with cls._lock:
             if cls._instance is not None:
-                try:
+                with contextlib.suppress(Exception):
                     cls._instance.force_reset()
-                except Exception:
-                    pass
                 cls._instance = None
                 cls._cleanup_registered = False  # Reset class attribute
 
@@ -295,7 +294,7 @@ class MockHALProcessPool:
 class MockHALCompressor:
     """
     Fast mock implementation of HALCompressor for unit tests.
-    
+
     Provides instant compression/decompression without subprocess overhead.
     """
 
@@ -497,7 +496,7 @@ class MockHALCompressor:
 def create_mock_hal_tools(tmp_path: Path) -> tuple[str, str]:
     """
     Create mock HAL tool executables for testing.
-    
+
     Returns paths to mock exhal and inhal executables.
     """
     exhal_path = tmp_path / "exhal"
@@ -520,7 +519,7 @@ def create_mock_hal_tools(tmp_path: Path) -> tuple[str, str]:
 def patch_hal_for_tests():
     """
     Patch HAL modules to use mock implementations.
-    
+
     Returns a context manager that replaces real HAL with mocks.
     """
     from unittest.mock import patch
@@ -535,7 +534,7 @@ def patch_hal_for_tests():
 def configure_hal_mocking(use_mocks: bool = True, deterministic: bool = True):
     """
     Configure global HAL mocking behavior.
-    
+
     Args:
         use_mocks: Whether to use mock implementations
         deterministic: Whether mocks should return deterministic data

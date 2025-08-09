@@ -9,7 +9,12 @@ from typing import Any
 from PyQt6.QtWidgets import QApplication
 
 from utils.logging_config import get_logger
-from utils.safe_logging import safe_debug, safe_info, safe_warning, suppress_logging_errors
+from utils.safe_logging import (
+    safe_debug,
+    safe_info,
+    safe_warning,
+    suppress_logging_errors,
+)
 
 from .exceptions import ManagerError
 from .extraction_manager import ExtractionManager

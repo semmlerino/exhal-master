@@ -741,7 +741,7 @@ class MainWindow(QMainWindow):
     @property
     def controller(self) -> ExtractionController:
         """Lazy initialization of controller to break circular dependency.
-        
+
         This allows tests to create MainWindow without hanging, as the controller
         is only created when actually needed (not during __init__).
         """

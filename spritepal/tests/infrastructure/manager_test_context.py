@@ -30,7 +30,7 @@ M = TypeVar("M", bound=BaseManager)
 class ManagerTestContext:
     """
     Context manager for safe manager lifecycle management in tests.
-    
+
     Provides:
     - Proper manager initialization and cleanup
     - Thread-safe operation
@@ -41,7 +41,7 @@ class ManagerTestContext:
     def __init__(self, ensure_qt_app: bool = True):
         """
         Initialize the manager test context.
-        
+
         Args:
             ensure_qt_app: Whether to ensure QApplication exists
         """
@@ -69,7 +69,7 @@ class ManagerTestContext:
     def initialize_managers(self, *manager_types: str) -> None:
         """
         Initialize specified manager types.
-        
+
         Args:
             *manager_types: Types of managers to initialize
                            ("extraction", "injection", "session", or "all")
@@ -85,13 +85,13 @@ class ManagerTestContext:
     def _create_manager(self, manager_type: str) -> BaseManager:
         """
         Create a manager of the specified type.
-        
+
         Args:
             manager_type: Type of manager to create
-            
+
         Returns:
             Created manager instance
-            
+
         Raises:
             ValueError: If manager type is unknown
         """
@@ -114,13 +114,13 @@ class ManagerTestContext:
     def get_manager(self, manager_type: str) -> BaseManager:
         """
         Get a manager by type.
-        
+
         Args:
             manager_type: Type of manager to get
-            
+
         Returns:
             Manager instance
-            
+
         Raises:
             KeyError: If manager not initialized
         """
@@ -132,11 +132,11 @@ class ManagerTestContext:
     def get_typed_manager(self, manager_type: str, manager_class: type[M]) -> M:
         """
         Get a typed manager with compile-time type safety.
-        
+
         Args:
             manager_type: Type of manager to get
             manager_class: Expected manager class for type checking
-            
+
         Returns:
             Typed manager instance
         """
@@ -162,15 +162,15 @@ class ManagerTestContext:
     def create_worker(self, manager_type: str, params: dict[str, Any] | None = None) -> QThread:
         """
         Create a worker for the specified manager type.
-        
+
         Args:
             manager_type: Type of manager to create worker for
             params: Optional parameters for the worker
-            
+
         Returns:
             Created worker instance
         """
-        manager = self.get_manager(manager_type)
+        self.get_manager(manager_type)
 
         if manager_type == "extraction":
             if params is None:
@@ -189,11 +189,11 @@ class ManagerTestContext:
     def run_worker_and_wait(self, worker: QThread, timeout: int = 5000) -> bool:
         """
         Run a worker and wait for completion.
-        
+
         Args:
             worker: Worker to run
             timeout: Maximum time to wait in milliseconds
-            
+
         Returns:
             True if worker completed, False if timeout
         """
@@ -259,13 +259,13 @@ class ManagerTestContext:
 def manager_context(*manager_types: str) -> Iterator[ManagerTestContext]:
     """
     Context manager for testing with managers.
-    
+
     Args:
         *manager_types: Types of managers to initialize
-        
+
     Yields:
         ManagerTestContext with initialized managers
-        
+
     Example:
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
@@ -284,9 +284,9 @@ def manager_context(*manager_types: str) -> Iterator[ManagerTestContext]:
 def isolated_manager_test() -> Iterator[ManagerTestContext]:
     """
     Context manager for completely isolated manager testing.
-    
+
     Creates a fresh manager context with no shared state.
-    
+
     Yields:
         ManagerTestContext for isolated testing
     """
@@ -302,14 +302,14 @@ def isolated_manager_test() -> Iterator[ManagerTestContext]:
 class ParallelManagerContext:
     """
     Context for running manager tests in parallel.
-    
+
     Ensures thread safety and isolation between parallel tests.
     """
 
     def __init__(self, num_contexts: int = 4):
         """
         Initialize parallel manager context.
-        
+
         Args:
             num_contexts: Number of parallel contexts to create
         """
@@ -337,7 +337,7 @@ class ParallelManagerContext:
     def get_context(self) -> Iterator[ManagerTestContext]:
         """
         Get an available context for parallel testing.
-        
+
         Yields:
             Available ManagerTestContext
         """

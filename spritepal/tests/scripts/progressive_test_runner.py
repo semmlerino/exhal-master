@@ -21,7 +21,6 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -182,8 +181,8 @@ class ProgressiveTestRunner:
 
     def run_all_stages(self,
                       continue_on_failure: bool = False,
-                      max_stage: Optional[str] = None,
-                      start_stage: Optional[str] = None) -> list[StageResult]:
+                      max_stage: str | None = None,
+                      start_stage: str | None = None) -> list[StageResult]:
         """Run all test stages progressively."""
 
         print("🚀 Starting Progressive Test Run")
@@ -224,7 +223,7 @@ class ProgressiveTestRunner:
 
         return self.results
 
-    def _filter_stages(self, start_stage: Optional[str], max_stage: Optional[str]) -> list[dict]:
+    def _filter_stages(self, start_stage: str | None, max_stage: str | None) -> list[dict]:
         """Filter stages based on start and max stage parameters."""
         stages = self.STAGES[:]
 
@@ -495,7 +494,7 @@ class ProgressiveTestRunner:
 
         print("")
 
-    def save_results(self, filepath: Optional[Path] = None) -> Path:
+    def save_results(self, filepath: Path | None = None) -> Path:
         """Save results to JSON file."""
         if filepath is None:
             timestamp = self.total_start_time.strftime("%Y%m%d_%H%M%S")

@@ -10,7 +10,7 @@ This conftest.py implements fixture scope optimizations that reduce fixture
 instantiations by 68.6% based on usage analysis:
 
 - qt_app: Session scope (1,129 → 1 instance, 99.9% reduction)
-- main_window: Class scope (129 → ~30 instances, 77% reduction)  
+- main_window: Class scope (129 → ~30 instances, 77% reduction)
 - controller: Class scope (119 → ~30 instances, 75% reduction)
 - mock_manager_registry: Module scope (81 → ~15 instances, 81% reduction)
 - mock_extraction_manager: Class scope (51 → ~12 instances, 77% reduction)
@@ -60,6 +60,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # Add spritepal directory
 # from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 
 # Import consolidated mock utilities
+import contextlib
+
 from .infrastructure.mock_factory import MockFactory
 from .infrastructure.mock_hal import (
     MockHALCompressor,
@@ -115,7 +117,7 @@ def pytest_configure(config):
         "gui: GUI tests requiring display/X11 environment (may be skipped in headless)",
         "headless: Tests that can run without display (safe for CI/headless environments)",
         "mock_only: Tests using only mocked components (fastest, most reliable)",
-        
+
         # Test Type Markers
         "unit: Unit tests (fast, isolated, no external dependencies)",
         "integration: Integration tests (may require files, databases, services)",
@@ -123,70 +125,70 @@ def pytest_configure(config):
         "performance: Performance tests",
         "stress: Stress/load testing",
         "slow: Slow tests (>1s execution time)",
-        
+
         # Qt Component Markers
         "qt_real: Tests using real Qt components (widgets, dialogs, etc.)",
         "qt_mock: Tests using mocked Qt components",
         "qt_app: Tests requiring QApplication instance",
         "no_qt: Tests with no Qt dependencies whatsoever",
-        
+
         # Threading and Concurrency Markers
         "thread_safety: Thread safety tests",
         "timer: Tests involving QTimer functionality",
         "worker_threads: Tests using worker threads",
         "signals_slots: Tests focused on Qt signal/slot mechanisms",
-        
+
         # Manager and Infrastructure Markers
         "manager: Tests focused on testing manager classes",
         "mock_managers: Tests using mocked managers",
         "real_managers: Tests using real manager instances",
         "no_manager_setup: Tests that skip manager initialization",
         "isolated_managers: Tests requiring fresh manager instances (slow)",
-        
+
         # Data and Resource Markers
         "rom_data: Tests requiring ROM files or data",
         "file_io: Tests involving file operations",
         "cache: Tests involving caching mechanisms",
         "memory: Memory management tests",
-        
+
         # Dialog and UI Markers
         "dialog: Tests involving dialogs",
         "mock_dialogs: Tests that mock dialog exec() methods",
         "widget: Tests involving widgets",
         "preview: Tests involving preview components",
-        
+
         # Stability and Quality Markers
         "stability: Stability/regression tests",
         "phase1_fixes: Tests validating Phase 1 critical fixes",
         "critical: Critical functionality tests that must always pass",
-        
+
         # Execution Control Markers
         "serial: Tests that must run in serial (not parallel)",
         "parallel_safe: Tests confirmed safe for parallel execution",
         "process_pool: Tests using process pools that need serial execution",
         "singleton: Tests manipulating singletons that conflict in parallel",
         "qt_application: Tests managing QApplication that conflict in parallel",
-        
+
         # Development and Debug Markers
         "debug: Debug-related tests",
         "validation: Validation and verification tests",
         "fixture_test: Tests validating test fixtures themselves",
         "infrastructure: Tests of testing infrastructure",
-        
+
         # Special Configuration Markers
         "timeout: Set custom timeout for test",
         "no_xvfb: Skip xvfb for specific tests",
         "qt_no_exception_capture: Disable Qt exception capture for specific tests",
-        
+
         # Platform and Environment Markers
         "wsl: Tests that behave differently on WSL",
         "linux_only: Tests that only run on Linux",
         "windows_only: Tests that only run on Windows",
-        
+
         # HAL Processing Markers (legacy compatibility)
         "real_hal: Mark test to use real HAL process pool (not mocked)",
         "mock_hal: Mark test to use mock HAL (default for unit tests)",
-        
+
         # Legacy markers for backward compatibility
         "mock: Tests using mocks (deprecated - use mock_only or mock_managers)",
         "mock_gui: GUI tests that use mocks (deprecated - use qt_mock)",
@@ -209,7 +211,7 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """
     Modify test collection based on environment capabilities and marker logic.
-    
+
     This enhanced hook handles:
     - GUI test skipping in headless environments
     - Automatic marker inference and validation
@@ -220,38 +222,38 @@ def pytest_collection_modifyitems(config, items):
     if IS_HEADLESS:
         skip_gui = pytest.mark.skip(reason="GUI tests requiring display skipped in headless environment")
         skip_qt_real = pytest.mark.skip(reason="Real Qt components require display - use mocked versions")
-        
+
         for item in items:
             # Skip GUI tests that require real Qt components in headless environments
-            if ("gui" in item.keywords and 
-                "mock_only" not in item.keywords and 
+            if ("gui" in item.keywords and
+                "mock_only" not in item.keywords and
                 "qt_mock" not in item.keywords):
                 item.add_marker(skip_gui)
-            
+
             # Skip tests requiring real Qt components unless they're mocked
-            if ("qt_real" in item.keywords and 
+            if ("qt_real" in item.keywords and
                 not any(marker in item.keywords for marker in ["mock_only", "qt_mock"])):
                 item.add_marker(skip_qt_real)
-    
+
     # Add automatic slow marker for certain test categories
     slow_patterns = ["integration", "gui", "rom_data", "performance", "benchmark"]
     for item in items:
         # Auto-mark tests as slow based on content patterns
         if any(pattern in item.keywords for pattern in slow_patterns) and "slow" not in item.keywords:
-            if ("qt_real" in item.keywords or 
-                "rom_data" in item.keywords or 
+            if ("qt_real" in item.keywords or
+                "rom_data" in item.keywords or
                 "performance" in item.keywords):
                 item.add_marker(pytest.mark.slow)
-    
+
     # Validation: Ensure marker consistency
     for item in items:
         # Warn about conflicting markers
         if ("gui" in item.keywords and "headless" in item.keywords):
             pytest.warns(UserWarning, f"Test {item.name} has conflicting gui/headless markers")
-        
+
         if ("qt_real" in item.keywords and "no_qt" in item.keywords):
             pytest.warns(UserWarning, f"Test {item.name} has conflicting qt_real/no_qt markers")
-        
+
         if ("serial" in item.keywords and "parallel_safe" in item.keywords):
             pytest.warns(UserWarning, f"Test {item.name} has conflicting serial/parallel_safe markers")
 
@@ -278,11 +280,11 @@ def qt_environment_setup() -> Generator[None, None, None]:
 def session_managers() -> Generator[None, None, None]:
     """
     Session-scoped managers for performance optimization.
-    
+
     This fixture initializes managers once per test session and keeps them
     alive for the entire session. Tests can use this for better performance
     by depending on this fixture instead of setup_managers.
-    
+
     Usage:
         def test_something(session_managers):
             # Managers are already initialized and shared across tests
@@ -311,11 +313,11 @@ def session_managers() -> Generator[None, None, None]:
 def fast_managers(session_managers):
     """
     Fast manager access using session-scoped managers.
-    
+
     This fixture provides manager access without per-test initialization overhead.
     Tests can use this instead of setup_managers for better performance when
     they don't need isolated manager state.
-    
+
     Usage:
         def test_something(fast_managers):
             # Uses shared session managers - much faster
@@ -333,7 +335,7 @@ def setup_managers(request):
     This fixture ensures proper manager initialization and cleanup
     for every test, replacing duplicated setup across test files.
     Skips setup if test is marked with 'no_manager_setup'.
-    
+
     For better performance, consider using 'fast_managers' fixture instead
     if your test doesn't require isolated manager state.
     """
@@ -530,10 +532,10 @@ def mock_extraction_worker() -> Any:  # MockExtractionWorkerProtocol
 @pytest.fixture(scope="class")
 def mock_extraction_manager() -> Any:  # MockExtractionManagerProtocol
     """Class-scoped mock extraction manager for performance optimization.
-    
+
     Used 51 times across tests. Class scope reduces instantiations
     from 51 to ~12 (77% reduction).
-    
+
     Provides a fully configured mock extraction manager.
     """
     return MockFactory.create_extraction_manager()
@@ -548,10 +550,10 @@ def mock_injection_manager() -> Any:  # MockInjectionManagerProtocol
 @pytest.fixture(scope="class")
 def mock_session_manager() -> Any:  # MockSessionManagerProtocol
     """Class-scoped mock session manager for performance optimization.
-    
+
     Used 26 times across tests. Class scope reduces instantiations
     from 26 to ~8 (69% reduction).
-    
+
     Provides a fully configured mock session manager.
     """
     return MockFactory.create_session_manager()
@@ -560,10 +562,10 @@ def mock_session_manager() -> Any:  # MockSessionManagerProtocol
 @pytest.fixture(scope="class")
 def mock_settings_manager() -> Mock:
     """Class-scoped mock settings manager for performance optimization.
-    
+
     Used 44 times across tests. Class scope reduces instantiations
     from 44 to ~10 (77% reduction).
-    
+
     Provides a mock settings manager with common configuration methods.
     """
     manager = Mock()
@@ -596,7 +598,7 @@ def mock_file_dialogs() -> dict[str, Mock]:
 def hal_pool(request, tmp_path):
     """
     Provide HAL process pool - mock or real based on test markers.
-    
+
     Tests marked with @pytest.mark.real_hal will get the real pool.
     All other tests get the fast mock implementation.
     """
@@ -638,7 +640,7 @@ def hal_pool(request, tmp_path):
 def hal_compressor(request, tmp_path):
     """
     Provide HAL compressor - mock or real based on test markers.
-    
+
     Tests marked with @pytest.mark.real_hal will get the real compressor.
     All other tests get the fast mock implementation.
     """
@@ -672,7 +674,7 @@ def hal_compressor(request, tmp_path):
 def auto_mock_hal(request, monkeypatch):
     """
     Automatically mock HAL for unit tests unless marked otherwise.
-    
+
     This fixture runs for all tests and patches the HAL module
     to use mocks unless the test is marked with @pytest.mark.real_hal.
     """
@@ -694,17 +696,15 @@ def auto_mock_hal(request, monkeypatch):
     yield
 
     # Cleanup singletons after test
-    try:
+    with contextlib.suppress(Exception):
         MockHALProcessPool.reset_singleton()
-    except Exception:
-        pass
 
 
 @pytest.fixture
 def mock_hal_tools(tmp_path):
     """
     Create mock HAL tool executables for testing.
-    
+
     Returns tuple of (exhal_path, inhal_path).
     """
     return create_mock_hal_tools(tmp_path)
@@ -714,7 +714,7 @@ def mock_hal_tools(tmp_path):
 def hal_test_data() -> dict[str, bytes]:
     """
     Provide standard test data for HAL compression tests.
-    
+
     Returns dict with various test data patterns.
     """
     return {
@@ -730,10 +730,10 @@ def hal_test_data() -> dict[str, bytes]:
 @pytest.fixture(scope="class")
 def rom_cache() -> Mock:
     """Class-scoped ROM cache fixture for performance optimization.
-    
+
     Used 48 times across tests. Class scope reduces instantiations
     from 48 to ~10 (79% reduction).
-    
+
     Provides a mock ROM cache with common caching functionality.
     """
     return MockFactory.create_rom_cache()
@@ -847,7 +847,7 @@ def minimal_injection_context() -> Any:  # ManagerContext type
 @pytest.fixture
 def real_extraction_manager() -> "ExtractionManager":
     """Create real ExtractionManager for testing.
-    
+
     Returns:
         ExtractionManager: Real manager instance for testing
     """
@@ -861,7 +861,7 @@ def real_extraction_manager() -> "ExtractionManager":
 @pytest.fixture
 def real_injection_manager() -> "InjectionManager":
     """Create real InjectionManager for testing.
-    
+
     Returns:
         InjectionManager: Real manager instance for testing
     """
@@ -910,10 +910,10 @@ def safe_qtbot(qtbot: Any) -> Any:  # QtBot | Mock but avoid circular import
 @pytest.fixture(scope="session")
 def qt_app() -> Any:
     """Session-scoped QApplication fixture for maximum performance.
-    
+
     Used 1,129 times across tests. Session scope reduces instantiations
     from 1,129 to 1 (99.9% reduction).
-    
+
     Handles QApplication singleton properly to avoid conflicts.
     """
     if IS_HEADLESS:
@@ -936,10 +936,10 @@ def qt_app() -> Any:
 @pytest.fixture(scope="class")
 def main_window() -> Any:
     """Class-scoped main window fixture for performance optimization.
-    
-    Used 129 times across tests. Class scope reduces instantiations 
+
+    Used 129 times across tests. Class scope reduces instantiations
     from 129 to ~30 (77% reduction).
-    
+
     Creates a fully configured mock main window with all required
     attributes and signals.
     """
@@ -979,10 +979,10 @@ def main_window() -> Any:
 @pytest.fixture(scope="class")
 def controller(main_window: Any) -> Any:
     """Class-scoped controller fixture for performance optimization.
-    
+
     Used 119 times across tests. Class scope reduces instantiations
     from 119 to ~30 (75% reduction).
-    
+
     Creates an ExtractionController instance with proper main window dependency.
     """
     if ExtractionController is None:
@@ -1004,10 +1004,10 @@ def controller(main_window: Any) -> Any:
 @pytest.fixture(scope="module")
 def mock_manager_registry() -> Mock:
     """Module-scoped manager registry fixture for performance optimization.
-    
+
     Used 81 times across tests. Module scope reduces instantiations
     from 81 to ~15 (81% reduction).
-    
+
     Provides a mock manager registry with common manager access methods.
     """
     registry = Mock()
@@ -1028,7 +1028,7 @@ def mock_manager_registry() -> Mock:
 @pytest.fixture(scope="class", autouse=True)
 def reset_main_window_state(main_window: Any) -> Generator[None, None, None]:
     """Auto-reset main window state between tests within the same class.
-    
+
     This fixture ensures state isolation when using class-scoped main_window.
     Runs automatically to reset state before each test method.
     """
@@ -1052,7 +1052,7 @@ def reset_main_window_state(main_window: Any) -> Generator[None, None, None]:
 @pytest.fixture(scope="class", autouse=True)
 def reset_controller_state(controller: Any) -> Generator[None, None, None]:
     """Auto-reset controller state between tests within the same class.
-    
+
     This fixture ensures state isolation when using class-scoped controller.
     Runs automatically to reset state before each test method.
     """
@@ -1076,11 +1076,11 @@ def reset_class_scoped_fixtures(
     mock_settings_manager: Any = None
 ) -> Generator[None, None, None]:
     """Auto-reset state for all class-scoped fixtures between tests.
-    
+
     This fixture ensures proper state isolation for performance-optimized
     class-scoped fixtures. Runs automatically before each test to reset
     mock call histories and state.
-    
+
     Only resets fixtures that are actually used by the test.
     """
     # Get list of fixture names used by current test
@@ -1097,9 +1097,8 @@ def reset_class_scoped_fixtures(
             mock_session_manager.reset_mock()
 
     # Reset rom_cache if used
-    if 'rom_cache' in fixture_names and rom_cache:
-        if isinstance(rom_cache, Mock):
-            rom_cache.reset_mock()
+    if 'rom_cache' in fixture_names and rom_cache and isinstance(rom_cache, Mock):
+        rom_cache.reset_mock()
 
     # Reset mock_settings_manager if used
     if 'mock_settings_manager' in fixture_names and mock_settings_manager:
@@ -1130,7 +1129,7 @@ def qapp(qt_app: Any) -> Any:
 @pytest.fixture(scope="session", autouse=True)
 def fixture_performance_monitor() -> Generator[None, None, None]:
     """Monitor fixture instantiation for performance validation.
-    
+
     This fixture helps validate that the scope optimizations are working
     as expected by tracking fixture usage patterns.
     """
@@ -1153,7 +1152,7 @@ def fixture_performance_monitor() -> Generator[None, None, None]:
 @pytest.fixture
 def safe_qapp(qt_app: Any) -> Any:  # QApplication | Mock but avoid circular import
     """Provide a QApplication that works in both headless and GUI environments.
-    
+
     This fixture now uses the optimized qt_app fixture instead of pytest-qt's qapp.
     """
     return qt_app

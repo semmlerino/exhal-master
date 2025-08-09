@@ -38,7 +38,7 @@ W = TypeVar("W", bound=QWidget)
 class QtTestCase:
     """
     Base class for Qt tests with real components.
-    
+
     Provides QApplication management, widget lifecycle, and cleanup.
     """
 
@@ -59,7 +59,7 @@ class QtTestCase:
     def _ensure_qapplication() -> QApplication:
         """
         Ensure QApplication exists for testing.
-        
+
         Returns:
             QApplication instance (existing or newly created)
         """
@@ -117,12 +117,12 @@ class QtTestCase:
     def create_widget(self, widget_class: type[W], *args, **kwargs) -> W:
         """
         Create a widget and track it for cleanup.
-        
+
         Args:
             widget_class: Widget class to instantiate
             *args: Positional arguments for widget constructor
             **kwargs: Keyword arguments for widget constructor
-            
+
         Returns:
             Created widget instance
         """
@@ -133,11 +133,11 @@ class QtTestCase:
     def create_timer(self, interval: int = 0, single_shot: bool = False) -> QTimer:
         """
         Create a timer and track it for cleanup.
-        
+
         Args:
             interval: Timer interval in milliseconds
             single_shot: Whether timer fires only once
-            
+
         Returns:
             Created timer instance
         """
@@ -150,7 +150,7 @@ class QtTestCase:
     def create_thread(self) -> QThread:
         """
         Create a thread and track it for cleanup.
-        
+
         Returns:
             Created thread instance
         """
@@ -171,13 +171,13 @@ class WidgetFactory:
     ) -> QDialog:
         """
         Create a dialog with standard configuration.
-        
+
         Args:
             title: Dialog window title
             modal: Whether dialog is modal
             size: Dialog size (width, height)
             parent: Parent widget
-            
+
         Returns:
             Configured dialog instance
         """
@@ -195,12 +195,12 @@ class WidgetFactory:
     ) -> tuple[W, Any]:
         """
         Create a widget with a layout.
-        
+
         Args:
             widget_class: Widget class to create
             layout_class: Layout class to apply
             parent: Parent widget
-            
+
         Returns:
             Tuple of (widget, layout)
         """
@@ -217,7 +217,7 @@ class EventLoopHelper:
     def process_events(duration_ms: int = 0, max_iterations: int = 100):
         """
         Process Qt events for a specified duration.
-        
+
         Args:
             duration_ms: Duration in milliseconds (0 = process pending only)
             max_iterations: Maximum iterations to prevent infinite loops
@@ -248,14 +248,14 @@ class EventLoopHelper:
     ) -> Generator[list[Any], None, None]:
         """
         Context manager to wait for a signal to be emitted.
-        
+
         Args:
             signal: Signal to wait for
             timeout_ms: Maximum wait time in milliseconds
-            
+
         Yields:
             List to collect signal arguments
-            
+
         Example:
             with EventLoopHelper.wait_for_signal(widget.clicked, 1000) as args:
                 widget.click()
@@ -291,12 +291,12 @@ class EventLoopHelper:
     ) -> bool:
         """
         Wait until a condition becomes true.
-        
+
         Args:
             condition: Callable that returns True when condition is met
             timeout_ms: Maximum wait time in milliseconds
             interval_ms: Check interval in milliseconds
-            
+
         Returns:
             True if condition was met, False if timeout
         """
@@ -335,12 +335,12 @@ class ThreadSafetyHelper:
     ) -> Generator[QThread, None, None]:
         """
         Run a function in a separate thread.
-        
+
         Args:
             func: Function to run in thread
             *args: Positional arguments for function
             **kwargs: Keyword arguments for function
-            
+
         Yields:
             Thread instance
         """
@@ -416,11 +416,11 @@ class MemoryHelper:
     ) -> Generator[None, None, None]:
         """
         Context manager to assert no memory leak of specific object type.
-        
+
         Args:
             obj_type: Object type to monitor
             max_increase: Maximum allowed increase in object count
-            
+
         Example:
             with MemoryHelper.assert_no_leak(QWidget):
                 widget = QWidget()
@@ -452,7 +452,7 @@ class WidgetPool:
     def __init__(self, widget_class: type[W], pool_size: int = 5):
         """
         Initialize widget pool.
-        
+
         Args:
             widget_class: Class of widgets to pool
             pool_size: Maximum pool size
@@ -465,11 +465,11 @@ class WidgetPool:
     def acquire(self, *args, **kwargs) -> W:
         """
         Acquire a widget from the pool.
-        
+
         Args:
             *args: Arguments for widget creation if pool is empty
             **kwargs: Keyword arguments for widget creation
-            
+
         Returns:
             Widget instance
         """
@@ -484,7 +484,7 @@ class WidgetPool:
     def release(self, widget: W):
         """
         Release a widget back to the pool.
-        
+
         Args:
             widget: Widget to release
         """

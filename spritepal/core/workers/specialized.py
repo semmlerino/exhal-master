@@ -188,7 +188,7 @@ class WorkerOwnedManagerMixin:
 
     Provides common initialization logic for workers that own their
     own manager instances for perfect thread isolation.
-    
+
     Note: This mixin should only be used with QObject-derived classes.
     """
 

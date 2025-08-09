@@ -38,7 +38,7 @@ class MockDensityAnalyzer:
     def __init__(self, max_density: float = 0.02):
         """
         Initialize the mock density analyzer.
-        
+
         Args:
             max_density: Maximum allowed mock density (mocks per line of code)
         """
@@ -48,10 +48,10 @@ class MockDensityAnalyzer:
     def analyze_file(self, filepath: Path) -> dict[str, Any]:
         """
         Analyze mock density in a single file.
-        
+
         Args:
             filepath: Path to the test file to analyze
-            
+
         Returns:
             Dictionary containing analysis results
         """
@@ -102,11 +102,11 @@ class MockDensityAnalyzer:
     def _count_mock_usage(self, code: str, lines: list[str]) -> tuple[int, list[dict[str, Any]]]:
         """
         Count mock usage in code.
-        
+
         Args:
             code: Full code content
             lines: List of code lines
-            
+
         Returns:
             (mock_count, list_of_mock_details)
         """
@@ -148,10 +148,10 @@ class MockDensityAnalyzer:
     def _analyze_ast_for_mocks(self, tree: ast.AST) -> list[dict[str, Any]]:
         """
         Analyze AST for mock patterns.
-        
+
         Args:
             tree: AST tree to analyze
-            
+
         Returns:
             List of mock details found via AST analysis
         """
@@ -193,11 +193,11 @@ class MockDensityAnalyzer:
     def analyze_directory(self, directory: Path, pattern: str = "test_*.py") -> list[dict[str, Any]]:
         """
         Analyze all test files in a directory.
-        
+
         Args:
             directory: Directory containing test files
             pattern: Glob pattern for test files
-            
+
         Returns:
             List of analysis results for each file
         """
@@ -216,10 +216,10 @@ class MockDensityAnalyzer:
     def generate_report(self, output_file: Path | None = None) -> str:
         """
         Generate a mock density report.
-        
+
         Args:
             output_file: Optional file to save report to
-            
+
         Returns:
             Report as string
         """
@@ -290,7 +290,7 @@ class MockDensityAnalyzer:
     def save_detailed_json(self, output_file: Path) -> None:
         """
         Save detailed analysis results to JSON.
-        
+
         Args:
             output_file: Path to save JSON results
         """
@@ -302,7 +302,7 @@ class MockDensityAnalyzer:
     def check_compliance(self) -> bool:
         """
         Check if all files comply with density limits.
-        
+
         Returns:
             True if all files are compliant
         """

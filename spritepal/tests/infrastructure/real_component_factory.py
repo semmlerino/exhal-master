@@ -11,7 +11,7 @@ MIGRATION GUIDE FROM MOCKFACTORY:
 OLD (MockFactory - deprecated):
     from tests.infrastructure.mock_factory import MockFactory
     from typing import cast
-    
+
     def test_extraction():
         # Creates mock with 15+ unsafe cast() operations
         manager = cast(ExtractionManager, MockFactory.create_extraction_manager())
@@ -20,7 +20,7 @@ OLD (MockFactory - deprecated):
 
 NEW (RealComponentFactory - recommended):
     from tests.infrastructure.real_component_factory import RealComponentFactory
-    
+
     def test_extraction(real_factory):  # Use fixture from conftest.py
         # Creates real manager, properly typed
         manager = real_factory.create_extraction_manager()
@@ -60,13 +60,15 @@ from ui.rom_extraction_panel import ROMExtractionPanel
 
 # Import widget classes for factory methods
 try:
-    from ui.zoomable_preview import ZoomablePreviewWidget, PreviewPanel
     from ui.row_arrangement_dialog import RowArrangementDialog
+    from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
 except ImportError:
     # Fallback for testing environments
     ZoomablePreviewWidget = QWidget
-    PreviewPanel = QWidget  
+    PreviewPanel = QWidget
     RowArrangementDialog = QWidget
+import contextlib
+
 from utils.rom_cache import ROMCache
 
 from .test_data_repository import TestDataRepository, get_test_data_repository
@@ -87,7 +89,7 @@ W = TypeVar("W", bound=QThread)
 class RealComponentFactory:
     """
     Factory for creating real components for testing.
-    
+
     Provides:
     - Real managers with test data injection
     - Type-safe component creation
@@ -98,7 +100,7 @@ class RealComponentFactory:
     def __init__(self, data_repository: TestDataRepository | None = None):
         """
         Initialize the real component factory.
-        
+
         Args:
             data_repository: Optional test data repository to use
         """
@@ -115,10 +117,10 @@ class RealComponentFactory:
     def create_extraction_manager(self, with_test_data: bool = True) -> ExtractionManager:
         """
         Create a real ExtractionManager for testing.
-        
+
         Args:
             with_test_data: Whether to inject test data paths
-            
+
         Returns:
             Real ExtractionManager instance
         """
@@ -139,10 +141,10 @@ class RealComponentFactory:
     def create_injection_manager(self, with_test_data: bool = True) -> InjectionManager:
         """
         Create a real InjectionManager for testing.
-        
+
         Args:
             with_test_data: Whether to inject test data paths
-            
+
         Returns:
             Real InjectionManager instance
         """
@@ -162,10 +164,10 @@ class RealComponentFactory:
     def create_session_manager(self, app_name: str = "TestApp") -> SessionManager:
         """
         Create a real SessionManager for testing.
-        
+
         Args:
             app_name: Application name for session management
-            
+
         Returns:
             Real SessionManager instance
         """
@@ -185,10 +187,10 @@ class RealComponentFactory:
     def create_manager_registry(self, populate: bool = True) -> ManagerRegistry:
         """
         Create a ManagerRegistry with real managers.
-        
+
         Args:
             populate: Whether to populate with default managers
-            
+
         Returns:
             ManagerRegistry instance with real managers
         """
@@ -203,10 +205,10 @@ class RealComponentFactory:
     def create_main_window(self, with_managers: bool = True) -> MainWindow:
         """
         Create a real MainWindow for testing.
-        
+
         Args:
             with_managers: Whether to initialize with real managers
-            
+
         Returns:
             Real MainWindow instance
         """
@@ -236,10 +238,10 @@ class RealComponentFactory:
     def create_rom_extraction_panel(self, parent: QWidget | None = None) -> ROMExtractionPanel:
         """
         Create a real ROMExtractionPanel for testing.
-        
+
         Args:
             parent: Optional parent widget
-            
+
         Returns:
             Real ROMExtractionPanel instance
         """
@@ -257,11 +259,11 @@ class RealComponentFactory:
     def create_extraction_worker(self, params: dict[str, Any] | None = None, worker_type: str = "vram") -> VRAMExtractionWorker | ROMExtractionWorker:
         """
         Create a real extraction worker for testing.
-        
+
         Args:
             params: Optional extraction parameters
             worker_type: Type of worker - "vram" or "rom"
-            
+
         Returns:
             Real VRAMExtractionWorker or ROMExtractionWorker instance
         """
@@ -285,11 +287,11 @@ class RealComponentFactory:
     def create_injection_worker(self, params: dict[str, Any] | None = None, worker_type: str = "vram") -> VRAMInjectionWorker | ROMInjectionWorker:
         """
         Create a real injection worker for testing.
-        
+
         Args:
             params: Optional injection parameters
             worker_type: Type of worker - "vram" or "rom"
-            
+
         Returns:
             Real VRAMInjectionWorker or ROMInjectionWorker instance
         """
@@ -310,11 +312,11 @@ class RealComponentFactory:
     def create_typed_manager(self, manager_class: type[M], **kwargs: Any) -> M:
         """
         Create a typed manager instance with type safety.
-        
+
         Args:
             manager_class: The manager class to instantiate
             **kwargs: Arguments to pass to manager constructor
-            
+
         Returns:
             Typed manager instance
         """
@@ -325,11 +327,11 @@ class RealComponentFactory:
     def create_typed_worker(self, worker_class: type[W], params: dict[str, Any] | None = None) -> W:
         """
         Create a typed worker instance with type safety.
-        
+
         Args:
             worker_class: The worker class to instantiate
             params: Optional parameters for the worker
-            
+
         Returns:
             Typed worker instance
         """
@@ -349,10 +351,10 @@ class RealComponentFactory:
     def create_rom_cache(self, cache_dir: Path | None = None) -> ROMCache:
         """
         Create a real ROM cache for testing.
-        
+
         Args:
             cache_dir: Optional cache directory
-            
+
         Returns:
             Real ROMCache instance
         """
@@ -373,10 +375,10 @@ class RealComponentFactory:
     def create_error_handler(self, parent: QWidget | None = None) -> ErrorHandler:
         """
         Create a real error handler for testing.
-        
+
         Args:
             parent: Optional parent widget
-            
+
         Returns:
             Real ErrorHandler instance
         """
@@ -392,7 +394,7 @@ class RealComponentFactory:
     def create_worker_manager(self) -> WorkerManager:
         """
         Create a real WorkerManager for testing.
-        
+
         Returns:
             Real WorkerManager instance
         """
@@ -401,7 +403,7 @@ class RealComponentFactory:
     def create_zoomable_preview_widget(self) -> ZoomablePreviewWidget:
         """
         Create a real ZoomablePreviewWidget for testing.
-        
+
         Returns:
             Real ZoomablePreviewWidget instance
         """
@@ -414,7 +416,7 @@ class RealComponentFactory:
     def create_preview_panel(self) -> PreviewPanel:
         """
         Create a real PreviewPanel for testing.
-        
+
         Returns:
             Real PreviewPanel instance
         """
@@ -427,11 +429,11 @@ class RealComponentFactory:
     def create_row_arrangement_dialog(self, sprite_path: str, tiles_per_row: int = 16) -> RowArrangementDialog:
         """
         Create a real RowArrangementDialog for testing.
-        
+
         Args:
             sprite_path: Path to the sprite file
             tiles_per_row: Number of tiles per row
-            
+
         Returns:
             Real RowArrangementDialog instance
         """
@@ -444,11 +446,11 @@ class RealComponentFactory:
     def create_test_widget(self, qtbot: Any, widget_class: type[QWidget] | None = None) -> QWidget:
         """
         Create a test widget for generic Qt component testing.
-        
+
         Args:
             qtbot: pytest-qt's qtbot fixture for widget management
             widget_class: Optional specific widget class to create
-            
+
         Returns:
             Real Qt widget instance managed by qtbot
         """
@@ -463,7 +465,7 @@ class RealComponentFactory:
     def inject_test_data(self, component: Any, data_size: str = "medium") -> None:
         """
         Inject test data into a component.
-        
+
         Args:
             component: Component to inject data into
             data_size: Size of test data to use
@@ -483,7 +485,7 @@ class RealComponentFactory:
     def _inject_data(self, component: Any, data: dict[str, Any]) -> None:
         """
         Helper to inject data into component attributes.
-        
+
         Args:
             component: Component to inject into
             data: Data dictionary to inject
@@ -521,10 +523,8 @@ class RealComponentFactory:
         import shutil
         for temp_dir in self._temp_dirs:
             if temp_dir.exists():
-                try:
+                with contextlib.suppress(Exception):
                     shutil.rmtree(temp_dir)
-                except Exception:
-                    pass
 
         self._temp_dirs.clear()
 
@@ -540,14 +540,14 @@ class RealComponentFactory:
 class TypedManagerFactory(Generic[M]):
     """
     Generic factory for creating typed managers with compile-time type safety.
-    
+
     This eliminates the need for unsafe cast() operations in tests.
     """
 
     def __init__(self, manager_class: type[M], factory: RealComponentFactory | None = None):
         """
         Initialize typed manager factory.
-        
+
         Args:
             manager_class: The manager class to create instances of
             factory: Optional RealComponentFactory to use
@@ -558,10 +558,10 @@ class TypedManagerFactory(Generic[M]):
     def create(self, **kwargs: Any) -> M:
         """
         Create a typed manager instance.
-        
+
         Args:
             **kwargs: Arguments for manager creation
-            
+
         Returns:
             Typed manager instance
         """
@@ -570,10 +570,10 @@ class TypedManagerFactory(Generic[M]):
     def create_with_test_data(self, data_size: str = "medium") -> M:
         """
         Create a manager with test data injected.
-        
+
         Args:
             data_size: Size of test data to inject
-            
+
         Returns:
             Typed manager with test data
         """
@@ -590,7 +590,7 @@ class TypedWorkerFactory(Generic[W]):
     def __init__(self, worker_class: type[W], factory: RealComponentFactory | None = None):
         """
         Initialize typed worker factory.
-        
+
         Args:
             worker_class: The worker class to create instances of
             factory: Optional RealComponentFactory to use
@@ -601,10 +601,10 @@ class TypedWorkerFactory(Generic[W]):
     def create(self, params: dict[str, Any] | None = None) -> W:
         """
         Create a typed worker instance.
-        
+
         Args:
             params: Optional parameters for the worker
-            
+
         Returns:
             Typed worker instance
         """
@@ -613,10 +613,10 @@ class TypedWorkerFactory(Generic[W]):
     def create_with_test_data(self, data_size: str = "small") -> W:
         """
         Create a worker with test data parameters.
-        
+
         Args:
             data_size: Size of test data to use
-            
+
         Returns:
             Typed worker with test parameters
         """

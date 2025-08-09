@@ -405,7 +405,7 @@ class PreviewPanel(QWidget):
         self.palette_toggle = QCheckBox("Apply Palette")
         self.palette_toggle.setChecked(False)
         _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
-        
+
         # Transparency toggle
         self.transparency_toggle = QCheckBox("Transparency")
         self.transparency_toggle.setChecked(True)
@@ -459,7 +459,7 @@ class PreviewPanel(QWidget):
             self._apply_current_palette()
         elif not checked:
             self._show_grayscale()
-    
+
     def _on_transparency_toggle(self, checked: bool) -> None:
         """Handle transparency toggle"""
         self._apply_transparency = checked

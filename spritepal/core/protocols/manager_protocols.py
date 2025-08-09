@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     pass

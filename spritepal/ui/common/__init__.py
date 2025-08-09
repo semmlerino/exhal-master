@@ -10,6 +10,7 @@ from .file_dialogs import (
     browse_for_open_file,
     browse_for_save_file,
 )
+
 # Import spacing and sizing constants explicitly
 from .spacing_constants import (
     BASE_UNIT,
@@ -76,24 +77,6 @@ from .widget_factory import (
 from .worker_manager import WorkerManager
 
 __all__ = [
-    # Core components
-    "CollapsibleGroupBox",
-    "ErrorHandler",
-    "FileDialogHelper",
-    "TabbedWidgetBase",
-    "WidgetFactory",
-    "WorkerManager",
-    # File dialog functions
-    "browse_for_directory",
-    "browse_for_open_file",
-    "browse_for_save_file",
-    # Widget factory functions
-    "create_browse_layout",
-    "create_checkbox_with_tooltip",
-    "create_info_label",
-    # Error handler functions
-    "get_error_handler",
-    "reset_error_handler",
     # Spacing and sizing constants
     "BASE_UNIT",
     "BORDER_THICK",
@@ -148,4 +131,22 @@ __all__ = [
     "TAB_SECTION_SPACING",
     "TILE_GRID_THICKNESS",
     "WIDE_WIDTH",
+    # Core components
+    "CollapsibleGroupBox",
+    "ErrorHandler",
+    "FileDialogHelper",
+    "TabbedWidgetBase",
+    "WidgetFactory",
+    "WorkerManager",
+    # File dialog functions
+    "browse_for_directory",
+    "browse_for_open_file",
+    "browse_for_save_file",
+    # Widget factory functions
+    "create_browse_layout",
+    "create_checkbox_with_tooltip",
+    "create_info_label",
+    # Error handler functions
+    "get_error_handler",
+    "reset_error_handler",
 ]

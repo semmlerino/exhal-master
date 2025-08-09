@@ -13,7 +13,7 @@ from typing import Any
 def is_logging_available() -> bool:
     """
     Check if the logging system is still active and functional.
-    
+
     Returns:
         True if logging is available, False if shutdown
     """
@@ -21,17 +21,14 @@ def is_logging_available() -> bool:
         # Check if we're in the process of shutting down
         if sys.is_finalizing():
             return False
-            
+
         # Check if logging handlers are still available
         if not hasattr(logging, '_handlers') or not logging._handlers:  # pyright: ignore[reportPrivateUsage]
             return False
-            
+
         # Try to get a logger and check if it has handlers
         test_logger = logging.getLogger("safe_logging_test")
-        if not test_logger.handlers and not logging.getLogger().handlers:
-            return False
-            
-        return True
+        return not (not test_logger.handlers and not logging.getLogger().handlers)
     except (AttributeError, ValueError, RuntimeError):
         # Logging system is in an invalid state
         return False
@@ -40,7 +37,7 @@ def is_logging_available() -> bool:
 def safe_log(logger: logging.Logger, level: int, message: str, *args: Any, **kwargs: Any) -> None:
     """
     Safely log a message, checking if logging is still active.
-    
+
     Args:
         logger: Logger instance to use
         level: Log level (logging.DEBUG, logging.INFO, etc.)
@@ -50,7 +47,7 @@ def safe_log(logger: logging.Logger, level: int, message: str, *args: Any, **kwa
     """
     if not is_logging_available():
         return
-        
+
     try:
         logger.log(level, message, *args, **kwargs)
     except (ValueError, RuntimeError, OSError, AttributeError):
@@ -81,7 +78,7 @@ def safe_error(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) 
 def suppress_logging_errors(func):
     """
     Decorator to suppress logging errors during cleanup operations.
-    
+
     This decorator catches ValueError exceptions that occur when logging
     to closed file handles and suppresses them during cleanup.
     """
@@ -114,5 +111,5 @@ def suppress_logging_errors(func):
             else:
                 # Re-raise if it's not logging-related
                 raise
-    
+
     return wrapper

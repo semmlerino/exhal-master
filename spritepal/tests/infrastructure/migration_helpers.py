@@ -7,10 +7,10 @@ unsafe mock-based testing to RealComponentFactory's type-safe real component tes
 Usage:
     # Analyze a test file for mock usage
     python -m tests.infrastructure.migration_helpers analyze tests/test_controller.py
-    
+
     # Get migration report for entire test suite
     python -m tests.infrastructure.migration_helpers report
-    
+
     # Generate migration script
     python -m tests.infrastructure.migration_helpers generate tests/test_controller.py
 """
@@ -57,7 +57,7 @@ class MigrationStatus:
 class MockToRealMigrator:
     """
     Helps migrate tests from MockFactory to RealComponentFactory.
-    
+
     Provides analysis, suggestions, and tracking for test migration.
     """
 
@@ -88,7 +88,7 @@ class MockToRealMigrator:
     def __init__(self, test_root: Path | None = None):
         """
         Initialize the migrator.
-        
+
         Args:
             test_root: Root directory for tests (defaults to tests/)
         """
@@ -100,10 +100,10 @@ class MockToRealMigrator:
     def analyze_test_file(self, file_path: Path) -> MigrationStatus:
         """
         Analyze a test file for mock usage.
-        
+
         Args:
             file_path: Path to the test file
-            
+
         Returns:
             MigrationStatus with analysis results
         """
@@ -197,10 +197,10 @@ class MockToRealMigrator:
     def suggest_replacements(self, status: MigrationStatus) -> list[str]:
         """
         Generate replacement suggestions for a migration status.
-        
+
         Args:
             status: MigrationStatus to generate suggestions for
-            
+
         Returns:
             List of suggestion strings
         """
@@ -245,10 +245,10 @@ class MockToRealMigrator:
     def scan_test_directory(self, directory: Path | None = None) -> dict[str, MigrationStatus]:
         """
         Scan an entire test directory for mock usage.
-        
+
         Args:
             directory: Directory to scan (defaults to test_root)
-            
+
         Returns:
             Dictionary mapping file paths to MigrationStatus
         """
@@ -267,7 +267,7 @@ class MockToRealMigrator:
     def track_migration_progress(self) -> dict[str, Any]:
         """
         Track overall migration progress across all tests.
-        
+
         Returns:
             Dictionary with migration statistics
         """
@@ -347,10 +347,10 @@ class MockToRealMigrator:
     def generate_migration_script(self, file_path: Path) -> str:
         """
         Generate a migration script for a test file.
-        
+
         Args:
             file_path: Path to the test file
-            
+
         Returns:
             Python code string for migration
         """
@@ -411,7 +411,7 @@ class MockToRealMigrator:
     def get_migration_report(self) -> str:
         """
         Generate a comprehensive migration report.
-        
+
         Returns:
             Formatted report string
         """
@@ -470,10 +470,10 @@ class MockToRealMigrator:
 def validate_migration_safety(file_path: Path) -> tuple[bool, list[str]]:
     """
     Validate if a migration is safe to perform.
-    
+
     Args:
         file_path: Path to test file to validate
-        
+
     Returns:
         Tuple of (is_safe, list_of_warnings)
     """

@@ -15,7 +15,7 @@ import threading
 import time
 import weakref
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
 
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 from utils.logging_config import get_logger
@@ -135,7 +135,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
 
         # For manual offset browsing, try raw extraction first
         tile_data = None
-        
+
         # First, try to extract raw uncompressed tile data
         # This is what manual offset browsing needs - just raw 4bpp tiles
         try:
@@ -143,7 +143,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
             if self.isInterruptionRequested():
                 logger.debug(f"Request {self._current_request_id} interrupted before extraction")
                 return
-            
+
             # Read raw bytes from ROM at the offset
             # Manual offset browsing shows raw tiles, not compressed sprites
             if self.offset + expected_size <= len(rom_data):
@@ -155,12 +155,12 @@ class PooledPreviewWorker(SpritePreviewWorker):
                 tile_data = rom_data[self.offset:]
                 logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
                 logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
-            
+
             # Check interruption after extraction
             if self.isInterruptionRequested():
                 logger.debug(f"Request {self._current_request_id} interrupted after extraction")
                 return
-                
+
         except Exception as e:
             # If raw extraction fails, try compressed extraction as fallback
             logger.debug(f"Raw extraction failed, trying compressed: {e}")
@@ -169,7 +169,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                 if self.isInterruptionRequested() or self._cancel_requested.is_set():
                     logger.debug(f"Request {self._current_request_id} cancelled")
                     return
-                    
+
                 # Try to extract as compressed sprite (fallback for actual compressed sprites)
                 compressed_size, tile_data = (
                     self.extractor.rom_injector.find_compressed_sprite(
@@ -177,7 +177,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                     )
                 )
                 logger.debug(f"Found compressed sprite: {compressed_size} bytes compressed")
-                
+
             except Exception as decomp_error:
                 # Both raw and compressed failed
                 if self.isInterruptionRequested() or self._cancel_requested.is_set():
@@ -411,7 +411,7 @@ class PreviewWorkerPool(QObject):
                     if worker:
                         # Setup and start worker
                         worker.setup_request(request, extractor, rom_cache)
-                        
+
                         # Connect signals only if not already connected
                         if not hasattr(worker, '_signals_connected') or not worker._signals_connected:
                             worker.preview_ready.connect(self._on_worker_ready)
@@ -583,14 +583,10 @@ class PreviewWorkerPool(QObject):
 
                     # Disconnect signals before cleanup
                     if hasattr(worker, '_signals_connected') and worker._signals_connected:
-                        try:
+                        with contextlib.suppress(TypeError):
                             worker.preview_ready.disconnect()
-                        except TypeError:
-                            pass
-                        try:
+                        with contextlib.suppress(TypeError):
                             worker.preview_error.disconnect()
-                        except TypeError:
-                            pass
                         worker._signals_connected = False
 
                     # Request interruption

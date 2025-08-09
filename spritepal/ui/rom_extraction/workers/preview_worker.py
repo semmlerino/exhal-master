@@ -124,7 +124,7 @@ class SpritePreviewWorker(BaseWorker):
             if self.sprite_name.startswith("manual_"):
                 # Manual offset browsing - just extract raw 4bpp tile data
                 expected_size = 4096  # 4KB for fast preview during manual browsing
-                
+
                 # Extract raw bytes from ROM at the offset
                 if self.offset + expected_size <= len(rom_data):
                     tile_data = rom_data[self.offset:self.offset + expected_size]
@@ -133,9 +133,9 @@ class SpritePreviewWorker(BaseWorker):
                     # Read what's available up to end of ROM
                     tile_data = rom_data[self.offset:]
                     logger.debug(f"Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
-                
+
                 compressed_size = 0  # Not compressed
-                
+
             else:
                 # Regular sprite extraction - try decompression
                 try:

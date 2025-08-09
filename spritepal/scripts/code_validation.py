@@ -47,10 +47,10 @@ class CodeValidator:
     def validate_syntax(self, code: str) -> bool:
         """
         Validate Python syntax using AST parsing.
-        
+
         Args:
             code: Python code to validate
-            
+
         Returns:
             True if syntax is valid, False otherwise
         """
@@ -72,11 +72,11 @@ class CodeValidator:
     def format_with_black(self, code: str, line_length: int = 88) -> tuple[bool, str]:
         """
         Format code with Black formatter.
-        
+
         Args:
             code: Python code to format
             line_length: Maximum line length for Black
-            
+
         Returns:
             (success, formatted_code)
         """
@@ -98,10 +98,10 @@ class CodeValidator:
     def sort_imports(self, code: str) -> tuple[bool, str]:
         """
         Sort imports using isort.
-        
+
         Args:
             code: Python code with imports to sort
-            
+
         Returns:
             (success, code_with_sorted_imports)
         """
@@ -129,10 +129,10 @@ class CodeValidator:
     def normalize_line_endings(self, code: str) -> str:
         """
         Normalize line endings to LF (Unix style).
-        
+
         Args:
             code: Code with potentially mixed line endings
-            
+
         Returns:
             Code with normalized LF line endings
         """
@@ -143,10 +143,10 @@ class CodeValidator:
     def validate_imports(self, code: str) -> bool:
         """
         Validate import statements for common issues.
-        
+
         Args:
             code: Python code to check
-            
+
         Returns:
             True if imports are valid
         """
@@ -170,15 +170,7 @@ class CodeValidator:
                 # Look for non-import, non-comment, non-docstring code before this
                 for prev_line in lines[:i-1]:
                     prev_clean = prev_line.strip()
-                    if (prev_clean and
-                        not prev_clean.startswith('#') and
-                        not prev_clean.startswith('"""') and
-                        not prev_clean.startswith("'''") and
-                        not prev_clean.startswith('from __future__') and
-                        not prev_clean.startswith('"""') and
-                        not prev_clean.startswith("'''") and
-                        not prev_clean == '"""' and
-                        not prev_clean == "'''"):
+                    if (prev_clean and not prev_clean.startswith('#') and not prev_clean.startswith('"""') and not prev_clean.startswith("'''") and not prev_clean.startswith('from __future__') and not prev_clean.startswith('"""') and not prev_clean.startswith("'''") and prev_clean not in {'"""', "'''"}):
                         # Check if it's not a docstring
                         if not (prev_clean.startswith('"""') or prev_clean.startswith("'''")):
                             self.warnings.append(f"Line {i}: Import after code - move to top")
@@ -194,10 +186,10 @@ class CodeValidator:
     def validate_type_annotations(self, code: str) -> bool:
         """
         Validate type annotations for common issues.
-        
+
         Args:
             code: Python code to check
-            
+
         Returns:
             True if type annotations are valid
         """
@@ -237,14 +229,14 @@ def validate_generated_code(
 ) -> tuple[bool, str, list[str]]:
     """
     Validate generated code for syntax and formatting.
-    
+
     Args:
         code: Code to validate
         language: Programming language (currently only 'python' supported)
         format_code: Whether to format code with Black
         sort_imports: Whether to sort imports with isort
         strict_mode: If True, warnings are treated as errors
-        
+
     Returns:
         (is_valid, formatted_code, errors_and_warnings)
     """
@@ -291,11 +283,11 @@ def validate_generated_code(
 def validate_test_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     """
     Validate test code with additional test-specific checks.
-    
+
     Args:
         code: Test code to validate
         **kwargs: Additional arguments for validate_generated_code
-        
+
     Returns:
         (is_valid, formatted_code, errors_and_warnings)
     """
@@ -334,11 +326,11 @@ def validate_test_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
 def validate_qt_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     """
     Validate Qt code with Qt-specific pattern checks.
-    
+
     Args:
         code: Qt code to validate
         **kwargs: Additional arguments for validate_generated_code
-        
+
     Returns:
         (is_valid, formatted_code, errors_and_warnings)
     """
@@ -384,7 +376,7 @@ def validate_qt_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
 def create_pre_commit_hook() -> str:
     """
     Generate pre-commit hook configuration for code validation.
-    
+
     Returns:
         YAML configuration for .pre-commit-hooks.yaml
     """
@@ -403,7 +395,7 @@ def create_pre_commit_hook() -> str:
 def get_ci_integration_script() -> str:
     """
     Generate CI/CD integration script.
-    
+
     Returns:
         Shell script for CI validation
     """
@@ -427,11 +419,11 @@ echo "Code validation completed successfully!"
 def validate_file(filepath: str | Path, **kwargs) -> tuple[bool, list[str]]:
     """
     Validate a Python file.
-    
+
     Args:
         filepath: Path to Python file
         **kwargs: Arguments for validation function
-        
+
     Returns:
         (is_valid, issues)
     """

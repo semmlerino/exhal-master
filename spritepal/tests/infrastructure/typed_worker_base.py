@@ -25,7 +25,7 @@ R = TypeVar("R")  # Result type
 class TypedWorkerBase(QThread, Generic[M, P, R]):
     """
     Generic base class for type-safe workers.
-    
+
     Provides compile-time type safety for:
     - Manager type (M)
     - Parameter type (P)
@@ -42,7 +42,7 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
     def __init__(self, manager: M, params: P, parent: QObject | None = None):
         """
         Initialize typed worker.
-        
+
         Args:
             manager: Typed manager instance
             params: Typed parameters
@@ -102,9 +102,9 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
     def _execute_work(self) -> R:
         """
         Execute the actual work.
-        
+
         Must be implemented by subclasses.
-        
+
         Returns:
             Typed result
         """
@@ -113,7 +113,7 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
     def check_interruption(self) -> bool:
         """
         Check if worker has been interrupted.
-        
+
         Returns:
             True if interrupted
         """
@@ -122,7 +122,7 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
     def emit_progress(self, value: int) -> None:
         """
         Emit progress update.
-        
+
         Args:
             value: Progress value (0-100)
         """
@@ -142,7 +142,7 @@ class ExtractionWorkerBase(TypedWorkerBase[M, P, R]):
     def emit_sprite_found(self, offset: int, sprite_data: Any) -> None:
         """
         Emit sprite found signal.
-        
+
         Args:
             offset: Sprite offset
             sprite_data: Sprite data
@@ -153,7 +153,7 @@ class ExtractionWorkerBase(TypedWorkerBase[M, P, R]):
     def emit_preview_ready(self, preview_data: bytes) -> None:
         """
         Emit preview ready signal.
-        
+
         Args:
             preview_data: Preview image data
         """
@@ -173,7 +173,7 @@ class InjectionWorkerBase(TypedWorkerBase[M, P, R]):
     def emit_validation_complete(self, valid: bool, message: str) -> None:
         """
         Emit validation complete signal.
-        
+
         Args:
             valid: Whether validation passed
             message: Validation message
@@ -184,7 +184,7 @@ class InjectionWorkerBase(TypedWorkerBase[M, P, R]):
     def emit_compression_progress(self, progress: int) -> None:
         """
         Emit compression progress signal.
-        
+
         Args:
             progress: Compression progress (0-100)
         """
@@ -200,7 +200,7 @@ class WorkerTestHelper(Generic[W]):
     def __init__(self, worker_class: type[W]):
         """
         Initialize worker test helper.
-        
+
         Args:
             worker_class: The worker class to test
         """
@@ -212,11 +212,11 @@ class WorkerTestHelper(Generic[W]):
     def create_worker(self, *args: Any, **kwargs: Any) -> W:
         """
         Create a worker instance.
-        
+
         Args:
             *args: Positional arguments for worker
             **kwargs: Keyword arguments for worker
-            
+
         Returns:
             Created worker instance
         """
@@ -247,10 +247,10 @@ class WorkerTestHelper(Generic[W]):
     def run_and_wait(self, timeout: int = 5000) -> bool:
         """
         Run the worker and wait for completion.
-        
+
         Args:
             timeout: Maximum time to wait in milliseconds
-            
+
         Returns:
             True if completed, False if timeout
         """
@@ -263,10 +263,10 @@ class WorkerTestHelper(Generic[W]):
     def get_signal_data(self, signal_name: str) -> list[Any]:
         """
         Get data received from a signal.
-        
+
         Args:
             signal_name: Name of the signal
-            
+
         Returns:
             List of signal emissions
         """
@@ -275,10 +275,10 @@ class WorkerTestHelper(Generic[W]):
     def was_signal_emitted(self, signal_name: str) -> bool:
         """
         Check if a signal was emitted.
-        
+
         Args:
             signal_name: Name of the signal
-            
+
         Returns:
             True if signal was emitted
         """
@@ -301,14 +301,14 @@ class TypedWorkerValidator:
     def validate_manager_type(worker: Any, expected_manager_type: type[M]) -> M:
         """
         Validate and return typed manager from worker.
-        
+
         Args:
             worker: Worker instance
             expected_manager_type: Expected manager type
-            
+
         Returns:
             Typed manager instance
-            
+
         Raises:
             TypeError: If manager type doesn't match
         """
@@ -328,14 +328,14 @@ class TypedWorkerValidator:
     def validate_params_type(worker: Any, expected_params_type: type[P]) -> P:
         """
         Validate and return typed parameters from worker.
-        
+
         Args:
             worker: Worker instance
             expected_params_type: Expected parameters type
-            
+
         Returns:
             Typed parameters
-            
+
         Raises:
             TypeError: If parameters type doesn't match
         """
@@ -360,14 +360,14 @@ class TypedWorkerValidator:
     def validate_result_type(worker: Any, expected_result_type: type[R]) -> R | None:
         """
         Validate and return typed result from worker.
-        
+
         Args:
             worker: Worker instance
             expected_result_type: Expected result type
-            
+
         Returns:
             Typed result or None
-            
+
         Raises:
             TypeError: If result type doesn't match
         """

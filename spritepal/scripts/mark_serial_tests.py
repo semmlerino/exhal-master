@@ -13,7 +13,7 @@ from pathlib import Path
 def analyze_test_file(content: str, filename: str) -> dict[str, any]:
     """
     Analyze a test file and determine all appropriate pytest markers.
-    
+
     Returns:
         Dictionary with marker categories and analysis results
     """
@@ -28,15 +28,15 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
 
     # Execution Environment Analysis
     has_qt_imports = any(qt_term in content for qt_term in [
-        'PyQt6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog', 
+        'PyQt6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog',
         'QApplication', 'QMainWindow', 'qtbot'
     ])
-    
+
     has_gui_usage = any(gui_term in content for gui_term in [
         'exec_()', 'show()', 'hide()', '.exec()', 'qtbot',
         'QApplication([])', 'QApplication.instance()'
     ])
-    
+
     uses_mocks = any(mock_term in content for mock_term in [
         'Mock', 'MagicMock', '@patch', 'mock_', 'patch('
     ])
@@ -46,7 +46,7 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
         analysis['reasons'].append('Real GUI components requiring display')
     elif uses_mocks or not has_qt_imports:
         analysis['execution_env'].append('headless')
-        
+
     if uses_mocks and not has_gui_usage:
         analysis['execution_env'].append('mock_only')
 
@@ -77,13 +77,13 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
         ('Real Qt components', r'real_qt|RealComponentFactory'),
         ('Timer usage', r'QTimer|timer'),
     ]
-    
+
     needs_serial = False
     for reason, pattern in threading_patterns:
         if re.search(pattern, content, re.IGNORECASE):
             analysis['reasons'].append(reason)
             needs_serial = True
-            
+
             if 'QApplication' in reason:
                 analysis['threading'].append('qt_application')
             elif 'Singleton' in reason or 'Manager registry' in reason:
@@ -125,28 +125,28 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
 def get_marker_list(analysis: dict[str, any]) -> list[str]:
     """Get comprehensive pytest markers from analysis results."""
     markers = []
-    
+
     # Add all markers from analysis categories
     all_marker_categories = [
         analysis['execution_env'],
-        analysis['test_type'], 
+        analysis['test_type'],
         analysis['qt_components'],
         analysis['threading'],
         analysis['special']
     ]
-    
+
     for category in all_marker_categories:
         for marker in category:
             markers.append(f'pytest.mark.{marker}')
-    
+
     # Remove duplicates and sort
-    return sorted(list(set(markers)))
+    return sorted(set(markers))
 
 
 def add_pytest_markers(file_path: Path, analysis: dict[str, any]) -> bool:
     """
     Add comprehensive pytest markers to a test file.
-    
+
     Returns:
         True if file was modified, False if markers already exist
     """
@@ -163,7 +163,7 @@ def add_pytest_markers(file_path: Path, analysis: dict[str, any]) -> bool:
         return False
 
     markers = get_marker_list(analysis)
-    
+
     if not markers:
         print(f"  Skipped {file_path.name} - no markers determined")
         return False
@@ -174,12 +174,12 @@ def add_pytest_markers(file_path: Path, analysis: dict[str, any]) -> bool:
         marker_comment = f"# Test characteristics: {', '.join(reasons)}"
     else:
         marker_comment = "# Systematic pytest markers applied based on test content analysis"
-    
+
     marker_lines = [marker_comment, "pytestmark = ["]
-    
+
     for marker in markers:
         marker_lines.append(f"    {marker},")
-    
+
     marker_lines.append("]")
     marker_block = "\n".join(marker_lines) + "\n\n"
 
@@ -232,7 +232,7 @@ def main():
     modified_count = 0
     skipped_count = 0
     error_count = 0
-    
+
     stats = {
         'gui': 0,
         'headless': 0,
@@ -260,39 +260,39 @@ def main():
                 modified_count += 1
             else:
                 skipped_count += 1
-                
+
         except Exception as e:
             print(f"  ✗ Error processing {test_file}: {e}")
             error_count += 1
 
-    print(f"\n📊 Processing Summary:")
+    print("\n📊 Processing Summary:")
     print(f"  Modified: {modified_count} files")
     print(f"  Skipped: {skipped_count} files (already marked or too short)")
     print(f"  Errors: {error_count} files")
-    
-    print(f"\n📈 Marker Statistics:")
+
+    print("\n📈 Marker Statistics:")
     for marker, count in sorted(stats.items()):
         if count > 0:
             print(f"  {marker}: {count} files")
-    
-    print(f"\n🚀 Usage Examples:")
-    print(f"  # Run only fast, headless tests:")
-    print(f"  pytest -m 'headless and not slow'")
-    print(f"  ")
-    print(f"  # Run only GUI tests (with display):")
-    print(f"  pytest -m 'gui'")
-    print(f"  ")
-    print(f"  # Run unit tests only:")
-    print(f"  pytest -m 'unit'")
-    print(f"  ")
-    print(f"  # Run parallel-safe tests:")
-    print(f"  pytest -m 'parallel_safe' -n auto")
-    print(f"  ")
-    print(f"  # Run serial tests only:")
-    print(f"  pytest -m 'serial'")
-    print(f"  ")
-    print(f"  # Skip slow tests for quick feedback:")
-    print(f"  pytest -m 'not slow'")
+
+    print("\n🚀 Usage Examples:")
+    print("  # Run only fast, headless tests:")
+    print("  pytest -m 'headless and not slow'")
+    print("  ")
+    print("  # Run only GUI tests (with display):")
+    print("  pytest -m 'gui'")
+    print("  ")
+    print("  # Run unit tests only:")
+    print("  pytest -m 'unit'")
+    print("  ")
+    print("  # Run parallel-safe tests:")
+    print("  pytest -m 'parallel_safe' -n auto")
+    print("  ")
+    print("  # Run serial tests only:")
+    print("  pytest -m 'serial'")
+    print("  ")
+    print("  # Skip slow tests for quick feedback:")
+    print("  pytest -m 'not slow'")
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
 

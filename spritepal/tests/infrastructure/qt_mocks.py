@@ -58,7 +58,7 @@ else:
 class SignalHolder(QObject):
     """
     Helper class to hold Qt signals for mock objects.
-    
+
     Since Qt signals must be class attributes on QObject subclasses,
     this class provides a way to attach real signals to mock objects.
     """
@@ -71,18 +71,18 @@ class SignalHolder(QObject):
 def create_signal_holder(**signals):
     """
     Create a SignalHolder with dynamic signals.
-    
+
     Args:
         **signals: Keyword arguments where key is signal name and value is signal type
                    e.g., extract_requested=pyqtSignal(), progress=pyqtSignal(int)
-    
+
     Returns:
         SignalHolder instance with the specified signals
     """
     if not QT_AVAILABLE:
         # Fallback for non-Qt environments
         holder = Mock()
-        for name, signal_type in signals.items():
+        for name, _signal_type in signals.items():
             setattr(holder, name, MockSignal())
         return holder
 
@@ -105,7 +105,7 @@ def create_signal_holder(**signals):
 class CommonSignalHolder(QObject):
     """
     Pre-defined signal holder with all common signals used in tests.
-    
+
     This avoids runtime signal creation issues by defining all signals
     at class definition time.
     """
@@ -183,7 +183,7 @@ class CommonSignalHolder(QObject):
 class TestMainWindow(QObject):
     """
     QObject-based test double for MainWindow.
-    
+
     This provides real Qt signals while mocking other functionality,
     avoiding segfaults from attaching signals to Mock objects.
     """
@@ -235,7 +235,7 @@ class TestMainWindow(QObject):
 class TestExtractionPanel(QObject):
     """
     QObject-based test double for ExtractionPanel.
-    
+
     Provides real Qt signals for extraction panel functionality.
     """
 
@@ -261,7 +261,7 @@ class TestExtractionPanel(QObject):
 class TestROMExtractionPanel(QObject):
     """
     QObject-based test double for ROMExtractionPanel.
-    
+
     Provides real Qt signals for ROM extraction panel functionality.
     """
 

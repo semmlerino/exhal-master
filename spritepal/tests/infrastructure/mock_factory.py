@@ -41,12 +41,12 @@ class MockFactory:
         - Real managers with test data injection
         - Better integration testing capabilities
         - Elimination of mock-related bugs
-        
+
         Migration guide:
         - Replace MockFactory.create_main_window() with RealComponentFactory.create_main_window()
         - Replace MockFactory.create_extraction_manager() with RealComponentFactory.create_extraction_manager()
         - See tests/infrastructure/migration_helpers.py for automated migration tools
-    
+
     This factory still works but emits deprecation warnings to guide migration.
     """
 
@@ -57,10 +57,10 @@ class MockFactory:
 
         .. deprecated:: 2.0
             Use RealComponentFactory.create_main_window() instead:
-            
+
             # Old (deprecated):
             window = MockFactory.create_main_window()
-            
+
             # New (recommended):
             from tests.infrastructure.real_component_factory import RealComponentFactory
             factory = RealComponentFactory()
@@ -173,10 +173,10 @@ class MockFactory:
     def create_real_extraction_manager_with_mocked_io() -> Any:
         """
         Create a real ExtractionManager with only I/O operations mocked.
-        
+
         This provides better test coverage by using real business logic
         while still maintaining test isolation from the file system.
-        
+
         Returns:
             Real ExtractionManager with mocked I/O operations
         """
@@ -230,7 +230,7 @@ class MockFactory:
     def create_real_injection_manager_with_mocked_io() -> Any:
         """
         Create a real InjectionManager with only I/O operations mocked.
-        
+
         Returns:
             Real InjectionManager with mocked I/O operations
         """
@@ -295,7 +295,7 @@ class MockFactory:
     def create_real_session_manager_with_mocked_io() -> Any:
         """
         Create a real SessionManager with only I/O operations mocked.
-        
+
         Returns:
             Real SessionManager with mocked I/O operations
         """
@@ -765,7 +765,7 @@ class MockFactory:
 # Convenience functions for backward compatibility
 def create_mock_main_window(**kwargs: Any) -> MockMainWindowProtocol:
     """Backward compatibility function.
-    
+
     .. deprecated:: 2.0
         Use RealComponentFactory.create_main_window() instead.
     """
@@ -780,7 +780,7 @@ def create_mock_main_window(**kwargs: Any) -> MockMainWindowProtocol:
 
 def create_mock_extraction_worker() -> MockExtractionWorkerProtocol:
     """Backward compatibility function.
-    
+
     .. deprecated:: 2.0
         Use RealComponentFactory.create_extraction_worker() instead.
     """
@@ -795,7 +795,7 @@ def create_mock_extraction_worker() -> MockExtractionWorkerProtocol:
 
 def create_mock_extraction_manager() -> MockExtractionManagerProtocol:
     """Backward compatibility function.
-    
+
     .. deprecated:: 2.0
         Use RealComponentFactory.create_extraction_manager() instead.
     """

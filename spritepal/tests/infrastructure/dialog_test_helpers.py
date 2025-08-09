@@ -13,7 +13,7 @@ Key Features:
 """
 
 import weakref
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 from PyQt6.QtCore import QObject, QPoint, Qt, QTimer
 from PyQt6.QtTest import QTest
@@ -45,11 +45,11 @@ class DialogTestHelper(QtTestCase):
     def open_dialog(self, dialog: QDialog, modal: bool = False) -> QDialog:
         """
         Open a dialog for testing.
-        
+
         Args:
             dialog: Dialog to open
             modal: Whether to open as modal
-            
+
         Returns:
             The dialog instance
         """
@@ -71,7 +71,7 @@ class DialogTestHelper(QtTestCase):
     def close_dialog(self, dialog: QDialog, accept: bool = True):
         """
         Close a dialog.
-        
+
         Args:
             dialog: Dialog to close
             accept: Whether to accept (True) or reject (False)
@@ -86,7 +86,7 @@ class DialogTestHelper(QtTestCase):
     def click_button(self, button: QAbstractButton):
         """
         Click a button and wait for events.
-        
+
         Args:
             button: Button to click
         """
@@ -96,7 +96,7 @@ class DialogTestHelper(QtTestCase):
     def click_dialog_button(self, dialog: QDialog, button_role: QDialogButtonBox.StandardButton):
         """
         Click a standard dialog button.
-        
+
         Args:
             dialog: Dialog containing the button box
             button_role: Standard button role (Ok, Cancel, etc.)
@@ -110,7 +110,7 @@ class DialogTestHelper(QtTestCase):
     def set_slider_value(self, slider: QSlider, value: int, use_mouse: bool = False):
         """
         Set slider value with optional mouse simulation.
-        
+
         Args:
             slider: Slider widget
             value: Value to set
@@ -144,7 +144,7 @@ class DialogTestHelper(QtTestCase):
     def set_input_text(self, input_widget: QLineEdit | QTextEdit, text: str):
         """
         Set text in an input widget.
-        
+
         Args:
             input_widget: Line edit or text edit widget
             text: Text to set
@@ -157,7 +157,7 @@ class DialogTestHelper(QtTestCase):
     def select_combo_item(self, combo: QComboBox, index: int | None = None, text: str | None = None):
         """
         Select item in combo box.
-        
+
         Args:
             combo: Combo box widget
             index: Item index to select
@@ -175,7 +175,7 @@ class DialogTestHelper(QtTestCase):
     def check_checkbox(self, checkbox: QCheckBox, checked: bool):
         """
         Set checkbox state.
-        
+
         Args:
             checkbox: Checkbox widget
             checked: Whether to check or uncheck
@@ -186,7 +186,7 @@ class DialogTestHelper(QtTestCase):
     def select_tab(self, tab_widget: QTabWidget, index: int | None = None, title: str | None = None):
         """
         Select a tab in tab widget.
-        
+
         Args:
             tab_widget: Tab widget
             index: Tab index to select
@@ -207,10 +207,10 @@ class DialogTestHelper(QtTestCase):
     def get_dialog_state(self, dialog: QDialog) -> dict[str, Any]:
         """
         Extract current state of all input widgets in dialog.
-        
+
         Args:
             dialog: Dialog to extract state from
-            
+
         Returns:
             Dictionary of widget states
         """
@@ -262,7 +262,7 @@ class DialogTestHelper(QtTestCase):
     def restore_dialog_state(self, dialog: QDialog, state: dict[str, Any]):
         """
         Restore dialog state from dictionary.
-        
+
         Args:
             dialog: Dialog to restore state to
             state: State dictionary from get_dialog_state
@@ -304,11 +304,11 @@ class DialogFactory:
     ) -> QDialog:
         """
         Create a simple dialog with button box.
-        
+
         Args:
             title: Dialog title
             buttons: Standard buttons to include
-            
+
         Returns:
             Dialog instance
         """
@@ -329,15 +329,15 @@ class DialogFactory:
     @staticmethod
     def create_input_dialog(
         title: str = "Input Dialog",
-        fields: dict[str, type] = None
+        fields: Optional[dict[str, type]] = None
     ) -> QDialog:
         """
         Create a dialog with input fields.
-        
+
         Args:
             title: Dialog title
             fields: Dictionary of field names and types
-            
+
         Returns:
             Dialog with input fields
         """
@@ -381,15 +381,15 @@ class DialogFactory:
     @staticmethod
     def create_tab_dialog(
         title: str = "Tab Dialog",
-        tabs: list[str] = None
+        tabs: Optional[list[str]] = None
     ) -> QDialog:
         """
         Create a dialog with tab widget.
-        
+
         Args:
             title: Dialog title
             tabs: List of tab names
-            
+
         Returns:
             Dialog with tab widget
         """
@@ -434,7 +434,7 @@ class ModalDialogTester:
     ):
         """
         Test a modal dialog by scheduling actions.
-        
+
         Args:
             dialog_factory: Function that creates and returns the dialog
             test_func: Function to test the dialog
@@ -486,10 +486,10 @@ class CrossDialogCommunicationTester:
     ) -> list[QDialog]:
         """
         Create multiple dialogs with signal connections.
-        
+
         Args:
             dialog_specs: List of dialog specifications
-            
+
         Returns:
             List of created dialogs
         """
@@ -521,7 +521,7 @@ class CrossDialogCommunicationTester:
     ):
         """
         Connect signal from one dialog to slot in another.
-        
+
         Args:
             source_dialog: Dialog emitting signal
             source_signal: Signal name
@@ -554,17 +554,14 @@ class CrossDialogCommunicationTester:
     ) -> bool:
         """
         Verify expected signals were emitted.
-        
+
         Args:
             expected_signals: List of (signal_name, args) tuples
-            
+
         Returns:
             True if all expected signals were logged
         """
-        for expected in expected_signals:
-            if expected not in self.signal_log:
-                return False
-        return True
+        return all(expected in self.signal_log for expected in expected_signals)
 
     def clear_log(self):
         """Clear signal log."""

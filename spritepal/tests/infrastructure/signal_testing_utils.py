@@ -17,9 +17,16 @@ from collections import deque
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
-from PyQt6.QtCore import QEventLoop, QObject, QThread, QTimer, pyqtBoundSignal, pyqtSignal
+from PyQt6.QtCore import (
+    QEventLoop,
+    QObject,
+    QThread,
+    QTimer,
+    pyqtBoundSignal,
+    pyqtSignal,
+)
 
 from .qt_real_testing import EventLoopHelper
 
@@ -42,14 +49,14 @@ class SignalEmission:
 class SignalSpy:
     """
     Spy for monitoring Qt signal emissions.
-    
+
     Replaces MockSignal with real signal monitoring capabilities.
     """
 
     def __init__(self, signal: pyqtSignal | pyqtBoundSignal, signal_name: str = "signal"):
         """
         Initialize signal spy.
-        
+
         Args:
             signal: Signal to monitor
             signal_name: Name for logging purposes
@@ -97,11 +104,11 @@ class SignalSpy:
     def wait(self, timeout_ms: int = 1000, count: int = 1) -> bool:
         """
         Wait for signal emissions.
-        
+
         Args:
             timeout_ms: Maximum wait time in milliseconds
             count: Number of emissions to wait for
-            
+
         Returns:
             True if required emissions received, False if timeout
         """
@@ -113,7 +120,7 @@ class SignalSpy:
     def assert_emitted(self, count: int | None = None, timeout_ms: int = 100):
         """
         Assert signal was emitted.
-        
+
         Args:
             count: Expected emission count (None = at least once)
             timeout_ms: Time to wait for emissions
@@ -132,7 +139,7 @@ class SignalSpy:
     def assert_not_emitted(self, timeout_ms: int = 100):
         """
         Assert signal was not emitted.
-        
+
         Args:
             timeout_ms: Time to wait to ensure no emissions
         """
@@ -144,7 +151,7 @@ class SignalSpy:
     def assert_emitted_with(self, *expected_args, timeout_ms: int = 100):
         """
         Assert signal was emitted with specific arguments.
-        
+
         Args:
             *expected_args: Expected signal arguments
             timeout_ms: Time to wait for emission
@@ -163,10 +170,10 @@ class SignalSpy:
     def get_emission(self, index: int = -1) -> SignalEmission | None:
         """
         Get specific emission.
-        
+
         Args:
             index: Emission index (negative for reverse indexing)
-            
+
         Returns:
             SignalEmission or None if index out of range
         """
@@ -178,10 +185,10 @@ class SignalSpy:
     def get_args(self, index: int = -1) -> tuple[Any, ...] | None:
         """
         Get arguments from specific emission.
-        
+
         Args:
             index: Emission index
-            
+
         Returns:
             Emission arguments or None
         """
@@ -218,11 +225,11 @@ class MultiSignalSpy:
     def add_signal(self, signal: pyqtSignal | pyqtBoundSignal, name: str) -> SignalSpy:
         """
         Add a signal to monitor.
-        
+
         Args:
             signal: Signal to monitor
             name: Signal name for identification
-            
+
         Returns:
             SignalSpy instance
         """
@@ -259,12 +266,12 @@ class MultiSignalSpy:
     ) -> bool:
         """
         Wait for a sequence of signal emissions.
-        
+
         Args:
             sequence: List of signal names in expected order
             timeout_ms: Maximum wait time
             ordered: Whether signals must occur in exact order
-            
+
         Returns:
             True if sequence detected, False if timeout
         """
@@ -294,7 +301,7 @@ class MultiSignalSpy:
     ):
         """
         Assert a sequence of signals was emitted.
-        
+
         Args:
             sequence: Expected signal sequence
             timeout_ms: Time to wait for sequence
@@ -304,16 +311,12 @@ class MultiSignalSpy:
 
         if not success:
             actual = [e.signal_name for e in self.all_emissions]
-            assert False, (
-                f"Expected signal sequence {sequence} "
-                f"{'(ordered)' if ordered else '(any order)'}, "
-                f"got {actual}"
-            )
+            raise AssertionError(f"Expected signal sequence {sequence} {'(ordered)' if ordered else '(any order)'}, got {actual}")
 
     def get_timeline(self) -> str:
         """
         Get timeline of all signal emissions.
-        
+
         Returns:
             Formatted timeline string
         """
@@ -338,11 +341,11 @@ class AsyncSignalTester:
     ) -> Generator[list[Any], None, None]:
         """
         Context manager to wait for signal emission.
-        
+
         Args:
             signal: Signal to wait for
             timeout_ms: Maximum wait time
-            
+
         Yields:
             List to collect signal arguments
         """
@@ -376,12 +379,12 @@ class AsyncSignalTester:
     ) -> QTimer:
         """
         Emit a signal after a delay.
-        
+
         Args:
             signal: Signal to emit
             delay_ms: Delay in milliseconds
             *args: Signal arguments
-            
+
         Returns:
             Timer instance (for cancellation if needed)
         """
@@ -398,11 +401,11 @@ class AsyncSignalTester:
     ) -> list[QTimer]:
         """
         Emit a sequence of signals with delays.
-        
+
         Args:
             signals: List of (signal, args) tuples
             interval_ms: Interval between emissions
-            
+
         Returns:
             List of timers
         """
@@ -427,12 +430,12 @@ class CrossThreadSignalTester:
     ) -> bool:
         """
         Verify signal is thread-safe.
-        
+
         Args:
             signal: Signal to test
             emit_in_thread: Whether to emit from worker thread
             connect_in_thread: Whether to connect from worker thread
-            
+
         Returns:
             True if thread-safe
         """
@@ -475,14 +478,14 @@ class CrossThreadSignalTester:
 
     @staticmethod
     def create_threaded_emitter(
-        signal_type: type = None
+        signal_type: Optional[type] = None
     ) -> tuple[QObject, QThread]:
         """
         Create an object that emits signals from a worker thread.
-        
+
         Args:
             signal_type: Signal type to use (default: pyqtSignal(int))
-            
+
         Returns:
             Tuple of (emitter object, thread)
         """
@@ -518,7 +521,7 @@ class SignalValidator:
     ):
         """
         Add validation rule.
-        
+
         Args:
             rule: Function that returns True if emission is valid
             description: Rule description for error messages
@@ -540,7 +543,7 @@ class SignalValidator:
     ):
         """
         Add rate limiting rule.
-        
+
         Args:
             max_rate: Maximum emissions per second
             window_ms: Time window for rate calculation
@@ -571,7 +574,7 @@ class SignalValidator:
     ):
         """
         Add rule for valid signal sequences.
-        
+
         Args:
             valid_sequences: List of valid signal name sequences
         """
@@ -594,10 +597,10 @@ class SignalValidator:
     def validate(self, spy: SignalSpy | MultiSignalSpy) -> bool:
         """
         Validate emissions against rules.
-        
+
         Args:
             spy: Signal spy with emissions to validate
-            
+
         Returns:
             True if all rules pass
         """

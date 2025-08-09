@@ -61,10 +61,10 @@ def test_user_registration():
     """Test user registration functionality."""
     mock_db = Mock()
     mock_db.save.return_value = True
-    
+
     user_service = UserService(mock_db)
     result = user_service.register("john@example.com", "password123")
-    
+
     assert result is True
     mock_db.save.assert_called_once()
 
@@ -90,17 +90,17 @@ from PyQt6.QtCore import pyqtSignal
 
 class MyWidget(QWidget):
     """Example Qt widget."""
-    
+
     data_changed = pyqtSignal(str)
-    
+
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout()  # This should trigger warning
         self.button = QPushButton("Click me")
-        
+
         # This should trigger warning about GUI in lambda
         self.button.clicked.connect(lambda: QMessageBox.information(self, "Title", "Message"))
-        
+
         if self.layout:  # This should trigger Qt boolean warning
             self.layout.addWidget(self.button)
 '''
@@ -120,10 +120,10 @@ def example_agent_workflow():
     def generate_code_with_validation(requirements: str) -> str:
         """
         Simulate an agent generating code with validation.
-        
+
         Args:
             requirements: What the code should do
-            
+
         Returns:
             Validated and formatted code
         """
@@ -133,7 +133,7 @@ def process_requirement():
     """Generated function for: {requirements}"""
     # TODO: Implement {requirements}
     pass
-    
+
 # Some other code here
 import os  # This import should be at top
 '''

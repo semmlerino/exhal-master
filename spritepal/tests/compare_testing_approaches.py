@@ -108,8 +108,8 @@ class TestingComparison:
         dialog.show()
 
         # Create signal spies (lightweight monitoring)
-        offset_spy = SignalSpy(dialog.offset_changed, "offset_changed")
-        sprite_spy = SignalSpy(dialog.sprite_found, "sprite_found")
+        SignalSpy(dialog.offset_changed, "offset_changed")
+        SignalSpy(dialog.sprite_found, "sprite_found")
 
         # Simulate test operations with real components
         for i in range(100):
@@ -237,7 +237,7 @@ The real Qt testing approach provides:
   • {code_reduction:.0f}% less test code
   • 100% real component behavior
   • Zero mock object overhead
-  
+
 This eliminates the 410MB memory overhead and 634 lines of mock code,
 while providing more accurate and maintainable tests.
         """)

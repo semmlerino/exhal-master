@@ -21,10 +21,10 @@ from PyQt6.QtWidgets import QDialog, QWidget
 class MockQDialog(QObject):
     """
     Mock QDialog that provides real Qt signals without requiring QApplication.
-    
+
     Following Pattern 1 from Qt Testing Best Practices:
     Real Qt signals with mocked behavior.
-    
+
     Inherits from QObject (not QDialog) to avoid QApplication requirement
     while still providing real Qt signals.
     """
@@ -33,7 +33,7 @@ class MockQDialog(QObject):
     accepted = pyqtSignal()
     rejected = pyqtSignal()
     finished = pyqtSignal(int)
-    
+
     def __init__(self, parent: Optional[QWidget] = None):
         # QObject doesn't require QApplication
         super().__init__()
@@ -99,7 +99,7 @@ class MockQDialog(QObject):
 class MockUnifiedManualOffsetDialog(MockQDialog):
     """
     Mock implementation of UnifiedManualOffsetDialog.
-    
+
     Provides all the signals and methods without triggering
     the DialogBase metaclass initialization issues.
     """
@@ -471,7 +471,7 @@ class MockUserErrorDialog(MockQDialog):
 class MockDialogSingleton:
     """
     Mock implementation of dialog singleton pattern.
-    
+
     Avoids QtThreadSafeSingleton issues during testing.
     """
     _instance = None
@@ -532,11 +532,11 @@ class MockDialogSingleton:
 def create_mock_dialog(dialog_class_name: str, parent: Optional[QWidget] = None) -> MockQDialog:
     """
     Factory function to create mock dialogs by class name.
-    
+
     Args:
         dialog_class_name: Name of the dialog class to mock
         parent: Optional parent widget
-        
+
     Returns:
         Mock dialog instance
     """
@@ -557,7 +557,7 @@ def create_mock_dialog(dialog_class_name: str, parent: Optional[QWidget] = None)
 def patch_dialog_imports():
     """
     Patch all dialog imports to use mock implementations.
-    
+
     This should be called in test setup to prevent real dialog imports
     that trigger DialogBase metaclass issues.
     """
