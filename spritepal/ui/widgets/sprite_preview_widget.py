@@ -705,8 +705,8 @@ class SpritePreviewWidget(QWidget):
         try:
             # Handle None or invalid pixmap by clearing
             if pixmap is None or pixmap.isNull():
-                logger.debug("[SPRITE_DISPLAY] Invalid pixmap, clearing")
-                self.clear()
+                logger.debug("[SPRITE_DISPLAY] Invalid pixmap, not updating display")
+                # Don't clear - keep previous preview visible
                 return
 
             logger.debug(f"[SPRITE_DISPLAY] Setting pixmap: {pixmap.width()}x{pixmap.height()}")
@@ -745,7 +745,7 @@ class SpritePreviewWidget(QWidget):
 
         except Exception as e:
             logger.exception("Failed to set sprite pixmap")
-            self.clear()
+            # Don't clear on error - keep previous preview visible
             self.essential_info_label.setText("Display error")
             self.info_label.setText(f"Error displaying sprite: {e}")
 

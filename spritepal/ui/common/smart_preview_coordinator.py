@@ -387,33 +387,54 @@ class SmartPreviewCoordinator(QObject):
             cache_key = self._cache.make_key(rom_path, offset)
 
             # Tier 1: Check memory cache first
+            logger.debug(f"[TRACE] Checking memory cache with key: {cache_key}")
             cached_data = self._cache.get(cache_key)
             if cached_data:
                 tile_data, width, height, sprite_name = cached_data
-                logger.debug("[SIGNAL_FLOW] About to emit preview_cached signal (memory cache hit)")
-                # Note: PyQt6 signals don't have receivers() method - removed debug line
-                self.preview_cached.emit(tile_data, width, height, sprite_name)
-                self._cache_stats["memory_hits"] += 1
-                logger.debug(f"[SIGNAL_FLOW] Memory cache hit signal emitted for 0x{offset:06X}")
-                return True
+                
+                # CRITICAL: Validate cached data before using it
+                if tile_data and len(tile_data) > 0:
+                    # Check if data is not all zeros (black)
+                    non_zero_count = sum(1 for b in tile_data[:min(100, len(tile_data))] if b != 0)
+                    if non_zero_count > 0:  # Has some non-zero data
+                        logger.debug(f"[TRACE] Valid cache hit: {len(tile_data)} bytes, {non_zero_count}/100 non-zero")
+                        self.preview_cached.emit(tile_data, width, height, sprite_name)
+                        self._cache_stats["memory_hits"] += 1
+                        logger.debug(f"[SIGNAL_FLOW] Memory cache hit signal emitted for 0x{offset:06X}")
+                        return True
+                    else:
+                        logger.debug(f"[TRACE] Cache hit but data is all zeros - ignoring and regenerating")
+                        # Remove invalid entry from cache
+                        self._cache.remove(cache_key)
+                else:
+                    logger.debug(f"[TRACE] Cache hit but data is empty - ignoring")
+                    # Remove invalid entry from cache
+                    self._cache.remove(cache_key)
 
             self._cache_stats["memory_misses"] += 1
 
             # Tier 2: Check ROM cache if available
+            logger.debug("[TRACE] Memory cache miss, checking ROM cache...")
             if self._rom_cache and self._rom_cache.cache_enabled:
                 rom_cache_data = self._check_rom_cache(rom_path, offset)
                 if rom_cache_data:
                     tile_data, width, height, sprite_name = rom_cache_data
-
-                    # Store in memory cache for faster future access
-                    self._cache.put(cache_key, rom_cache_data)
-
-                    logger.debug("[SIGNAL_FLOW] About to emit preview_cached signal (ROM cache hit)")
-                    # Note: PyQt6 signals don't have receivers() method - removed debug line
-                    self.preview_cached.emit(tile_data, width, height, sprite_name)
-                    self._cache_stats["rom_hits"] += 1
-                    logger.debug(f"[SIGNAL_FLOW] ROM cache hit signal emitted for 0x{offset:06X}")
-                    return True
+                    
+                    # CRITICAL: Validate ROM cached data before using it
+                    if tile_data and len(tile_data) > 0:
+                        non_zero_count = sum(1 for b in tile_data[:min(100, len(tile_data))] if b != 0)
+                        if non_zero_count > 0:  # Has some non-zero data
+                            logger.debug(f"[TRACE] Valid ROM cache hit: {len(tile_data)} bytes, {non_zero_count}/100 non-zero")
+                            # Store in memory cache for faster future access
+                            self._cache.put(cache_key, rom_cache_data)
+                            self.preview_cached.emit(tile_data, width, height, sprite_name)
+                            self._cache_stats["rom_hits"] += 1
+                            logger.debug(f"[SIGNAL_FLOW] ROM cache hit signal emitted for 0x{offset:06X}")
+                            return True
+                        else:
+                            logger.debug(f"[TRACE] ROM cache hit but data is all zeros - ignoring")
+                    else:
+                        logger.debug(f"[TRACE] ROM cache hit but data is empty - ignoring")
 
             if self._rom_cache and self._rom_cache.cache_enabled:
                 self._cache_stats["rom_misses"] += 1
@@ -650,22 +671,30 @@ class SmartPreviewCoordinator(QObject):
         # Update generation counter
         self._cache_stats["generations"] += 1
 
-        # Cache the result in both tiers
-        if self._rom_data_provider:
-            try:
-                rom_path, _, _ = self._rom_data_provider()
-                preview_data = (tile_data, width, height, sprite_name)
+        # Cache the result in both tiers - but ONLY if data is valid
+        if self._rom_data_provider and tile_data and len(tile_data) > 0:
+            # Validate data before caching to prevent caching black/empty sprites
+            non_zero_count = sum(1 for b in tile_data[:min(100, len(tile_data))] if b != 0)
+            
+            if non_zero_count > 0:  # Has some non-zero data - valid to cache
+                try:
+                    rom_path, _, _ = self._rom_data_provider()
+                    preview_data = (tile_data, width, height, sprite_name)
 
-                # Tier 1: Save to memory cache
-                cache_key = self._cache.make_key(rom_path, self._current_offset)
-                self._cache.put(cache_key, preview_data)
+                    # Tier 1: Save to memory cache
+                    cache_key = self._cache.make_key(rom_path, self._current_offset)
+                    self._cache.put(cache_key, preview_data)
+                    logger.debug(f"[TRACE] Cached valid preview data: {len(tile_data)} bytes, {non_zero_count}/100 non-zero")
 
-                # Tier 2: Save to ROM cache if available (use batching for efficiency)
-                if self._rom_cache:
-                    self._queue_rom_cache_save(rom_path, self._current_offset, preview_data)
-
-            except Exception as e:
-                logger.warning(f"[DEBUG] Error caching preview: {e}")
+                    # Tier 2: Save to ROM cache if available (use batching for efficiency)
+                    if self._rom_cache:
+                        self._queue_rom_cache_save(rom_path, self._current_offset, preview_data)
+                except Exception as e:
+                    logger.warning(f"[DEBUG] Error caching preview: {e}")
+            else:
+                logger.debug(f"[TRACE] Not caching preview - data appears to be all zeros (black)")
+        else:
+            logger.debug(f"[TRACE] Not caching preview - data is empty or invalid")
 
         # Emit preview ready with enhanced debugging
         logger.debug("[SIGNAL_FLOW] About to emit preview_ready signal")

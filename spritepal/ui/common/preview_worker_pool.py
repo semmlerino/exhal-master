@@ -50,6 +50,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
         self.rom_path = request.rom_path
         self.offset = request.offset
         self.sprite_name = f"manual_0x{request.offset:X}"
+        logger.debug(f"[TRACE] Worker setup: offset=0x{request.offset:X}, sprite_name={self.sprite_name}, request_id={request.request_id}")
         self.extractor = extractor
         self.rom_cache = rom_cache  # Store ROM cache for potential use
         self.sprite_config = None
@@ -147,11 +148,13 @@ class PooledPreviewWorker(SpritePreviewWorker):
             # Manual offset browsing shows raw tiles, not compressed sprites
             if self.offset + expected_size <= len(rom_data):
                 tile_data = rom_data[self.offset:self.offset + expected_size]
-                logger.debug(f"Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
+                logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
+                logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
             else:
                 # Read what's available up to end of ROM
                 tile_data = rom_data[self.offset:]
-                logger.debug(f"Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
+                logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
+                logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
             
             # Check interruption after extraction
             if self.isInterruptionRequested():
@@ -212,7 +215,8 @@ class PooledPreviewWorker(SpritePreviewWorker):
 
         # Emit success
         logger.debug(f"[TRACE] PoolWorker emitting preview_ready: request_id={self._current_request_id}, "
-                    f"data_len={len(tile_data) if tile_data else 0}, {width}x{height}")
+                    f"data_len={len(tile_data) if tile_data else 0}, {width}x{height}, sprite_name={self.sprite_name}")
+        logger.debug(f"[TRACE] Preview data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
         self.preview_ready.emit(self._current_request_id, tile_data, width, height, self.sprite_name)
         logger.debug("[TRACE] PoolWorker emitted preview_ready signal")
 

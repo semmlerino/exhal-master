@@ -130,6 +130,11 @@ class SimpleBrowseTab(QWidget):
 
         # Connect to valueChanged for compatibility (used by smart coordinator)
         self.position_slider.valueChanged.connect(self._on_slider_changed)
+        
+        # Debug: Add direct connections to track what signals are firing
+        self.position_slider.sliderPressed.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider pressed"))
+        self.position_slider.sliderMoved.connect(lambda v: logger.debug(f"[TRACE_SIGNAL] Slider moved to 0x{v:06X}"))
+        self.position_slider.sliderReleased.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider released"))
 
         # Smart preview coordinator will connect to pressed/moved/released signals
         self._smart_preview_coordinator = None
@@ -255,7 +260,7 @@ class SimpleBrowseTab(QWidget):
 
     def _on_slider_changed(self, value: int):
         """Handle slider changes - smart preview coordinator handles preview updates automatically."""
-        logger.debug(f"[DEBUG] _on_slider_changed called with value: 0x{value:06X}")
+        logger.debug(f"[TRACE_SIGNAL] _on_slider_changed (valueChanged) called with value: 0x{value:06X}")
         self._current_offset = value
         self._update_displays()
 
@@ -1209,8 +1214,8 @@ class UnifiedManualOffsetDialog(DialogBase):
             self.preview_widget.update()
             self.preview_widget.repaint()
             
-            # Ensure UI responsiveness during rapid updates
-            QApplication.processEvents()
+            # Don't use processEvents - it causes re-entrancy issues
+            # Qt's event loop will handle updates naturally
         else:
             logger.error("[DEBUG] preview_widget is None!")
 
