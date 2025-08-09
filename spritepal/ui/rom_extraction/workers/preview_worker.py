@@ -120,61 +120,73 @@ class SpritePreviewWorker(BaseWorker):
             # Validate offset is within ROM bounds
             _validate_offset_bounds(self.offset, rom_size)
 
-            # Find and decompress sprite with better error handling
-            try:
-                # Variables already initialized above
-                compressed_size = 0
+            # For manual offset browsing, extract raw tile data instead of compressed
+            if self.sprite_name.startswith("manual_"):
+                # Manual offset browsing - just extract raw 4bpp tile data
+                expected_size = 4096  # 4KB for fast preview during manual browsing
+                
+                # Extract raw bytes from ROM at the offset
+                if self.offset + expected_size <= len(rom_data):
+                    tile_data = rom_data[self.offset:self.offset + expected_size]
+                    logger.debug(f"Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
+                else:
+                    # Read what's available up to end of ROM
+                    tile_data = rom_data[self.offset:]
+                    logger.debug(f"Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
+                
+                compressed_size = 0  # Not compressed
+                
+            else:
+                # Regular sprite extraction - try decompression
+                try:
+                    # Variables already initialized above
+                    compressed_size = 0
 
-                # Check if we have offset variants and expected size from sprite config
-                offset_variants = []
-                expected_size = None
-                if hasattr(self, "sprite_config") and self.sprite_config:
-                    offset_variants = getattr(self.sprite_config, "offset_variants", [])
-                    expected_size = getattr(self.sprite_config, "estimated_size", None)
-                    if expected_size:
-                        logger.debug(f"Using expected size from config: {expected_size} bytes")
-                    else:
-                        # Try to get expected size from sprite configurations
-                        header = self.extractor.rom_injector.read_rom_header(self.rom_path)
-                        sprite_configs = self.extractor.sprite_config_loader.get_game_sprites(
-                            header.title, header.checksum
-                        )
-                        if self.sprite_name in sprite_configs:
-                            expected_size = sprite_configs[self.sprite_name].estimated_size
-                            logger.debug(f"Got expected size from config: {expected_size} bytes")
+                    # Check if we have offset variants and expected size from sprite config
+                    offset_variants = []
+                    expected_size = None
+                    if hasattr(self, "sprite_config") and self.sprite_config:
+                        offset_variants = getattr(self.sprite_config, "offset_variants", [])
+                        expected_size = getattr(self.sprite_config, "estimated_size", None)
+                        if expected_size:
+                            logger.debug(f"Using expected size from config: {expected_size} bytes")
+                        else:
+                            # Try to get expected size from sprite configurations
+                            header = self.extractor.rom_injector.read_rom_header(self.rom_path)
+                            sprite_configs = self.extractor.sprite_config_loader.get_game_sprites(
+                                header.title, header.checksum
+                            )
+                            if self.sprite_name in sprite_configs:
+                                expected_size = sprite_configs[self.sprite_name].estimated_size
+                                logger.debug(f"Got expected size from config: {expected_size} bytes")
 
-                # Apply default fallback if no expected size found
-                if not expected_size:
-                    # Use more conservative default for manual/unknown offsets
-                    if self.sprite_name.startswith("manual_"):
-                        expected_size = 4096  # More conservative 4KB for manual exploration
-                        logger.debug(f"Using conservative 4KB limit for manual offset {self.sprite_name}")
-                    else:
+                    # Apply default fallback if no expected size found
+                    if not expected_size:
                         expected_size = 8192  # Default 8KB for Kirby sprites
                         logger.warning(
                             f"No expected size found for {self.sprite_name}, using default: {expected_size} bytes. "
                             "This prevents oversized decompression but may need adjustment."
                         )
 
-                if offset_variants:
-                    # Use fallback mechanism with expected size
-                    compressed_size, tile_data, successful_offset = (
-                        self.extractor.rom_injector.find_compressed_sprite_with_fallback(
-                            rom_data, self.offset, offset_variants, expected_size
+                    if offset_variants:
+                        # Use fallback mechanism with expected size
+                        compressed_size, tile_data, successful_offset = (
+                            self.extractor.rom_injector.find_compressed_sprite_with_fallback(
+                                rom_data, self.offset, offset_variants, expected_size
+                            )
                         )
-                    )
-                    if successful_offset != self.offset:
-                        logger.info(f"Used alternate offset 0x{successful_offset:X} for {self.sprite_name}")
-                else:
-                    # Use standard method with expected size
-                    compressed_size, tile_data = (
-                        self.extractor.rom_injector.find_compressed_sprite(
-                            rom_data, self.offset, expected_size
+                        if successful_offset != self.offset:
+                            logger.info(f"Used alternate offset 0x{successful_offset:X} for {self.sprite_name}")
+                    else:
+                        # Use standard method with expected size
+                        compressed_size, tile_data = (
+                            self.extractor.rom_injector.find_compressed_sprite(
+                                rom_data, self.offset, expected_size
+                            )
                         )
-                    )
-            except Exception as decomp_error:
-                # Provide more specific error based on the type
-                _handle_decompression_error(decomp_error, self.offset)
+                except Exception as decomp_error:
+                    # Provide more specific error based on the type
+                    _handle_decompression_error(decomp_error, self.offset)
 
             # Validate extracted data
             _validate_sprite_data(tile_data, self.offset)
