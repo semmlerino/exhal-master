@@ -254,18 +254,9 @@ class SmartPreviewCoordinator(QObject):
         """
         logger.debug(f"[DEBUG] request_manual_preview called for offset 0x{offset:06X}")
         
-        with QMutexLocker(self._mutex):
-            self._current_offset = offset
-            self._request_counter += 1
-        
-        # First check cache for immediate display
-        if self._try_show_cached_preview_dual_tier():
-            logger.debug("[DEBUG] Showed cached preview immediately")
-            return
-        
-        # If not cached, request worker preview with high priority
-        # Bypass all debouncing for immediate response
-        self._request_worker_preview(priority=10)
+        # Just use high priority request for immediate response
+        # Avoid complex cache checking that could block
+        self.request_preview(offset, priority=10)
 
     def flush_rom_cache(self) -> None:
         """
@@ -291,20 +282,9 @@ class SmartPreviewCoordinator(QObject):
     def _on_drag_move(self, value: int) -> None:
         """Handle slider movement during dragging."""
         logger.debug(f"[DEBUG] _on_drag_move: value=0x{value:06X}")
-        
-        with QMutexLocker(self._mutex):
-            self._current_offset = value
-            self._request_counter += 1
-        
-        # Immediately check and show cached preview if available
-        if self._try_show_cached_preview_dual_tier():
-            logger.debug("[DEBUG] Showed cached preview during drag")
-            # Still request update in background for cache miss
-            self._drag_timer.stop()
-            self._drag_timer.start(self._drag_debounce_ms)
-        else:
-            # No cache hit, request preview with drag priority
-            self.request_preview(value, priority=1)
+        # Simple and fast - just request preview with drag priority
+        # Don't do heavy cache checking during rapid drag movements
+        self.request_preview(value, priority=1)
 
     def _on_drag_end(self) -> None:
         """Handle end of slider dragging."""

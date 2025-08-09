@@ -1169,11 +1169,15 @@ class UnifiedManualOffsetDialog(DialogBase):
             with QMutexLocker(self._preview_update_mutex):
                 self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
                 
-                # CRITICAL: Force immediate widget update without processEvents
-                # processEvents() is dangerous - it allows re-entrancy and can cause race conditions
+                # Force immediate widget update
                 logger.debug("[SPRITE_DISPLAY] Forcing widget updates after load_sprite_from_4bpp")
                 self.preview_widget.update()
-                self.preview_widget.repaint()
+            
+            # Limited processEvents to keep UI responsive without full re-entrancy
+            QApplication.processEvents(
+                QApplication.ProcessEventsFlag.ExcludeUserInputEvents,
+                5  # 5ms max
+            )
             
             logger.debug("[SIGNAL_RECEIVED] load_sprite_from_4bpp completed")
             
@@ -1207,15 +1211,16 @@ class UnifiedManualOffsetDialog(DialogBase):
             with QMutexLocker(self._preview_update_mutex):
                 self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
                 
-                # Force immediate widget update without processEvents
+                # Force immediate widget update
                 logger.debug("[SPRITE_DISPLAY] Forcing widget updates after cached load_sprite_from_4bpp")
                 self.preview_widget.update()
-                self.preview_widget.repaint()
-            self.preview_widget.update()
-            self.preview_widget.repaint()
             
-            # Don't use processEvents - it causes re-entrancy issues
-            # Qt's event loop will handle updates naturally
+            # Process paint events to keep UI responsive but with timeout to prevent blocking
+            # ExcludeUserInputEvents prevents re-entrancy from new slider movements
+            QApplication.processEvents(
+                QApplication.ProcessEventsFlag.ExcludeUserInputEvents,
+                5  # 5ms max to prevent blocking
+            )
         else:
             logger.error("[DEBUG] preview_widget is None!")
 
