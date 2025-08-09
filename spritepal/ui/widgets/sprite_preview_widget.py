@@ -48,6 +48,7 @@ class SpritePreviewWidget(QWidget):
         self.palettes: list[list[list[int]]] = []
         self.current_palette_index = 8  # Default sprite palette (was 8 in working version)
         self.sprite_data: bytes | None = None
+        self._update_in_progress = False  # Guard against concurrent updates
         self.default_palette_loader = DefaultPaletteLoader()
 
         # Similarity search related
@@ -326,47 +327,58 @@ class SpritePreviewWidget(QWidget):
 
     def _update_preview_with_palette(self, grayscale_img: Image.Image) -> None:
         """Update preview by applying selected palette to grayscale image"""
-        logger.debug(f"[DEBUG_SPRITE] _update_preview_with_palette called: palette_idx={self.current_palette_index}, has_palettes={bool(self.palettes)}, num_palettes={len(self.palettes)}")
+        import threading
         
-        # Ensure palette index is valid
-        if self.palettes and self.current_palette_index >= len(self.palettes):
-            self.current_palette_index = 0  # Reset to first palette if out of range
-            logger.debug(f"[DEBUG_SPRITE] Reset palette index to 0 (was out of range)")
+        thread_id = threading.get_ident()
+        logger.debug(f"[DEBUG_SPRITE] _update_preview_with_palette START - Thread {thread_id}")
+        logger.debug(f"[DEBUG_SPRITE] palette_idx={self.current_palette_index}, has_palettes={bool(self.palettes)}, num_palettes={len(self.palettes)}")
         
-        if not self.palettes or self.current_palette_index >= len(self.palettes):
-            # No palette - show grayscale with proper scaling
-            logger.debug("[DEBUG_SPRITE] No palette available, showing grayscale with scaling")
-            # Scale 4-bit values (0-15) to 8-bit (0-255)
-            import numpy as np
-            img_array = np.array(grayscale_img)
-            # Detect if values are in 4-bit range and scale them
-            if img_array.max() <= 15:
-                img_array = img_array * 17  # Scale 0-15 to 0-255
-                grayscale_img = Image.fromarray(img_array.astype(np.uint8), mode='L')
-            img_rgba = grayscale_img.convert("RGBA")
-        else:
-            # Apply palette
-            palette_colors = self.palettes[self.current_palette_index]
+        # CRITICAL: Prevent concurrent pixmap updates which can crash Qt
+        if self._update_in_progress:
+            logger.warning(f"[DEBUG_SPRITE] Update already in progress - skipping to prevent crash (Thread {thread_id})")
+            return
+            
+        self._update_in_progress = True
+        try:
+            # Ensure palette index is valid
+            if self.palettes and self.current_palette_index >= len(self.palettes):
+                self.current_palette_index = 0  # Reset to first palette if out of range
+                logger.debug(f"[DEBUG_SPRITE] Reset palette index to 0 (was out of range)")
+            
+            if not self.palettes or self.current_palette_index >= len(self.palettes):
+                # No palette - show grayscale with proper scaling
+                logger.debug("[DEBUG_SPRITE] No palette available, showing grayscale with scaling")
+                # Scale 4-bit values (0-15) to 8-bit (0-255)
+                import numpy as np
+                img_array = np.array(grayscale_img)
+                # Detect if values are in 4-bit range and scale them
+                if img_array.max() <= 15:
+                    img_array = img_array * 17  # Scale 0-15 to 0-255
+                    grayscale_img = Image.fromarray(img_array.astype(np.uint8), mode='L')
+                img_rgba = grayscale_img.convert("RGBA")
+            else:
+                # Apply palette
+                palette_colors = self.palettes[self.current_palette_index]
 
-            # Create indexed image
-            indexed = Image.new("P", grayscale_img.size)
-            indexed.putdata(list(grayscale_img.getdata()))
+                # Create indexed image
+                indexed = Image.new("P", grayscale_img.size)
+                indexed.putdata(list(grayscale_img.getdata()))
 
-            # Create palette (16 colors -> 256 color palette)
-            full_palette = []
-            for i in range(256):
-                if i < len(palette_colors):
-                    full_palette.extend(palette_colors[i])
-                else:
-                    full_palette.extend([0, 0, 0])
+                # Create palette (16 colors -> 256 color palette)
+                full_palette = []
+                for i in range(256):
+                    if i < len(palette_colors):
+                        full_palette.extend(palette_colors[i])
+                    else:
+                        full_palette.extend([0, 0, 0])
 
-            indexed.putpalette(full_palette)
+                indexed.putpalette(full_palette)
 
-            # Convert to RGBA for display
-            img_rgba = indexed.convert("RGBA")
+                # Convert to RGBA for display
+                img_rgba = indexed.convert("RGBA")
 
-        # Convert to QPixmap
-        logger.debug(f"[DEBUG_SPRITE] Converting PIL Image to QImage: {img_rgba.width}x{img_rgba.height}")
+            # Convert to QPixmap
+            logger.debug(f"[DEBUG_SPRITE] Converting PIL Image to QImage: {img_rgba.width}x{img_rgba.height}")
         
         # Get byte data and verify
         img_bytes = img_rgba.tobytes()
