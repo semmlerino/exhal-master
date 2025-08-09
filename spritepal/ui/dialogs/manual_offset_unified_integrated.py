@@ -859,32 +859,41 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_offset_changed(self, offset: int):
         """Handle offset changes from browse tab."""
-        logger.debug(f"[DEBUG] Dialog._on_offset_changed called with offset: 0x{offset:06X}")
+        logger.info(f"[OFFSET_CHANGED] ========== START: 0x{offset:06X} ===========")
         # Update cache stats
         self._cache_stats["total_requests"] += 1
+        logger.debug(f"[OFFSET_CHANGED] Cache stats updated: total_requests={self._cache_stats['total_requests']}")
 
         # Update mini ROM map
         if self.mini_rom_map is not None:
             self.mini_rom_map.set_current_offset(offset)
-            logger.debug(f"[DEBUG] Updated mini ROM map to offset: 0x{offset:06X}")
+            logger.debug(f"[OFFSET_CHANGED] Updated mini ROM map to offset: 0x{offset:06X}")
 
         # Update preview widget with current offset for similarity search
         if self.preview_widget is not None:
             self.preview_widget.set_current_offset(offset)
+            logger.debug(f"[OFFSET_CHANGED] Updated preview widget offset")
 
         # Emit signal immediately for external listeners
         self.offset_changed.emit(offset)
+        logger.debug(f"[OFFSET_CHANGED] Emitted offset_changed signal")
 
         # CRITICAL FIX: Request preview when offset changes!
         # Use request_manual_preview for immediate response without debounce
         if self._smart_preview_coordinator is not None:
-            logger.debug(f"[DEBUG] Requesting immediate preview for offset 0x{offset:06X}")
-            self._smart_preview_coordinator.request_manual_preview(offset)
+            logger.info(f"[OFFSET_CHANGED] Requesting manual preview for offset 0x{offset:06X}")
+            try:
+                self._smart_preview_coordinator.request_manual_preview(offset)
+                logger.info(f"[OFFSET_CHANGED] request_manual_preview() returned successfully")
+            except Exception as e:
+                logger.exception(f"[OFFSET_CHANGED] EXCEPTION calling request_manual_preview: {e}")
         else:
-            logger.error("[DEBUG] No smart preview coordinator available!")
+            logger.error("[OFFSET_CHANGED] No smart preview coordinator available!")
 
         # Schedule predictive preloading for adjacent offsets
         self._schedule_adjacent_preloading(offset)
+        
+        logger.info(f"[OFFSET_CHANGED] ========== END: 0x{offset:06X} ===========")
 
     def _on_offset_requested(self, offset: int):
         """Handle offset request from smart tab."""
@@ -1151,44 +1160,63 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_smart_preview_ready(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle preview ready from smart coordinator with guaranteed UI updates."""
-        logger.debug(f"[SIGNAL_RECEIVED] _on_smart_preview_ready called: data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
-        logger.debug(f"[SIGNAL_RECEIVED] tile_data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
+        logger.info(f"[PREVIEW_READY] ========== START ===========")
+        logger.info(f"[PREVIEW_READY] data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
+        logger.debug(f"[PREVIEW_READY] tile_data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
         
         # CRITICAL: Verify we're on main thread before calling widget methods
         from PyQt6.QtCore import QThread
-        if QThread.currentThread() != QApplication.instance().thread():
-            logger.warning("[THREAD_SAFETY] _on_smart_preview_ready called from worker thread!")
+        current_thread = QThread.currentThread()
+        main_thread = QApplication.instance().thread()
+        logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
+        
+        if current_thread != main_thread:
+            logger.error("[THREAD_SAFETY] _on_smart_preview_ready called from worker thread!")
             return
 
         if self.preview_widget is not None:
-            logger.debug("[SIGNAL_RECEIVED] Preview widget exists, calling load_sprite_from_4bpp")
-            logger.debug(f"[SIGNAL_RECEIVED] Preview widget type: {type(self.preview_widget)}")
-            logger.debug(f"[SIGNAL_RECEIVED] Preview widget visible: {self.preview_widget.isVisible()}")
+            logger.info("[PREVIEW_READY] Preview widget exists")
+            logger.debug(f"[PREVIEW_READY] Preview widget type: {type(self.preview_widget)}")
+            logger.debug(f"[PREVIEW_READY] Preview widget visible: {self.preview_widget.isVisible()}")
 
             # Use mutex to prevent concurrent preview updates
-            with QMutexLocker(self._preview_update_mutex):
-                self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
-                
-                # Force immediate widget update
-                logger.debug("[SPRITE_DISPLAY] Forcing widget updates after load_sprite_from_4bpp")
-                self.preview_widget.update()
+            logger.debug("[PREVIEW_READY] Acquiring mutex...")
+            try:
+                with QMutexLocker(self._preview_update_mutex):
+                    logger.info("[PREVIEW_READY] Calling load_sprite_from_4bpp...")
+                    self.preview_widget.load_sprite_from_4bpp(tile_data, width, height, sprite_name)
+                    logger.info("[PREVIEW_READY] load_sprite_from_4bpp returned successfully")
+                    
+                    # Force immediate widget update
+                    logger.debug("[PREVIEW_READY] Calling widget.update()...")
+                    self.preview_widget.update()
+                    logger.debug("[PREVIEW_READY] widget.update() completed")
+            except Exception as e:
+                logger.exception(f"[PREVIEW_READY] EXCEPTION in preview update: {e}")
+                raise
             
-            # Let Qt's event loop handle updates naturally
-            # processEvents causes crashes and re-entrancy issues
-            
-            logger.debug("[SIGNAL_RECEIVED] load_sprite_from_4bpp completed")
+            logger.info("[PREVIEW_READY] Mutex released, updates completed")
             
             # Log pixmap state after loading for debugging
-            if hasattr(self.preview_widget, 'preview_label') and self.preview_widget.preview_label:
-                pixmap = self.preview_widget.preview_label.pixmap()
-                logger.debug(f"[SPRITE_DISPLAY] Pixmap after load: exists={pixmap is not None}, null={pixmap.isNull() if pixmap else 'N/A'}")
+            try:
+                if hasattr(self.preview_widget, 'preview_label') and self.preview_widget.preview_label:
+                    pixmap = self.preview_widget.preview_label.pixmap()
+                    logger.info(f"[PREVIEW_READY] Final pixmap state: exists={pixmap is not None}, null={pixmap.isNull() if pixmap else 'N/A'}")
+                    if pixmap and not pixmap.isNull():
+                        logger.debug(f"[PREVIEW_READY] Pixmap size: {pixmap.width()}x{pixmap.height()}")
+            except Exception as e:
+                logger.error(f"[PREVIEW_READY] Error checking pixmap state: {e}")
         else:
-            logger.error("[SIGNAL_RECEIVED] preview_widget is None!")
+            logger.error("[PREVIEW_READY] preview_widget is None!")
 
-        current_offset = self.get_current_offset()
-        cache_status = self._get_cache_status_text()
-        self._update_status(f"High-quality preview at 0x{current_offset:06X} {cache_status}")
-        logger.debug("[SIGNAL_RECEIVED] _on_smart_preview_ready completed")
+        try:
+            current_offset = self.get_current_offset()
+            cache_status = self._get_cache_status_text()
+            self._update_status(f"High-quality preview at 0x{current_offset:06X} {cache_status}")
+        except Exception as e:
+            logger.error(f"[PREVIEW_READY] Error updating status: {e}")
+        
+        logger.info("[PREVIEW_READY] ========== END ===========")
 
     def _on_smart_preview_cached(self, tile_data: bytes, width: int, height: int, sprite_name: str):
         """Handle cached preview from smart coordinator."""
@@ -1217,30 +1245,47 @@ class UnifiedManualOffsetDialog(DialogBase):
         else:
             logger.error("[DEBUG] preview_widget is None!")
 
-        current_offset = self.get_current_offset()
-        cache_status = self._get_cache_status_text()
-        self._update_status(f"Cached preview at 0x{current_offset:06X} {cache_status}")
+        try:
+            current_offset = self.get_current_offset()
+            cache_status = self._get_cache_status_text()
+            self._update_status(f"Cached preview at 0x{current_offset:06X} {cache_status}")
+        except Exception as e:
+            logger.error(f"[PREVIEW_CACHED] Error updating status: {e}")
+        
+        logger.info("[PREVIEW_CACHED] ========== END ===========")
 
     def _on_smart_preview_error(self, error_msg: str):
         """Handle preview error from smart coordinator."""
-        logger.debug(f"[DEBUG] _on_smart_preview_error called: {error_msg}")
+        logger.warning(f"[PREVIEW_ERROR] ========== START ===========")
+        logger.warning(f"[PREVIEW_ERROR] Error message: {error_msg}")
         
         # CRITICAL: Verify we're on main thread before calling widget methods
         from PyQt6.QtCore import QThread
-        if QThread.currentThread() != QApplication.instance().thread():
-            logger.warning("[THREAD_SAFETY] _on_smart_preview_error called from worker thread!")
+        current_thread = QThread.currentThread()
+        main_thread = QApplication.instance().thread()
+        logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
+        
+        if current_thread != main_thread:
+            logger.error("[THREAD_SAFETY] _on_smart_preview_error called from worker thread!")
             return
             
         if self.preview_widget is not None:
-            logger.debug("[DEBUG] Updating status only, not clearing preview")
-            # Don't clear - keep last valid preview visible to prevent black flashing
-            self.preview_widget.info_label.setText("No sprite found")
-            
-            # Force widget updates
-            self.preview_widget.update()
-            self.preview_widget.repaint()
+            logger.info("[PREVIEW_ERROR] Updating info label only (not clearing preview)")
+            try:
+                # Don't clear - keep last valid preview visible to prevent black flashing
+                self.preview_widget.info_label.setText("No sprite found")
+                
+                # Force widget updates
+                logger.debug("[PREVIEW_ERROR] Calling widget.update()...")
+                self.preview_widget.update()
+                self.preview_widget.repaint()
+                logger.debug("[PREVIEW_ERROR] widget.update() completed")
+            except Exception as e:
+                logger.exception(f"[PREVIEW_ERROR] EXCEPTION updating widget: {e}")
         else:
-            logger.error("[DEBUG] preview_widget is None!")
+            logger.error("[PREVIEW_ERROR] preview_widget is None!")
+        
+        logger.warning("[PREVIEW_ERROR] ========== END ===========")
 
         current_offset = self.get_current_offset()
         self._update_status(f"No sprite at 0x{current_offset:06X}: {error_msg}")

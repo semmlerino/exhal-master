@@ -214,6 +214,7 @@ class SmartPreviewCoordinator(QObject):
             offset: ROM offset for preview
             priority: Request priority (higher = more important)
         """
+        logger.debug(f"[DEBUG] ========== REQUEST_PREVIEW START ==========")
         logger.debug(f"[DEBUG] Coordinator.request_preview called: offset=0x{offset:06X}, priority={priority}")
         start_time = time.time()
 
@@ -223,17 +224,27 @@ class SmartPreviewCoordinator(QObject):
             logger.debug(f"[DEBUG] Request counter: {self._request_counter}")
 
         # Try dual-tier cache lookup first
-        if self._try_show_cached_preview_dual_tier():
+        logger.debug("[DEBUG] Attempting cache lookup...")
+        cache_hit = False
+        try:
+            cache_hit = self._try_show_cached_preview_dual_tier()
+            logger.debug(f"[DEBUG] Cache lookup result: {cache_hit}")
+        except Exception as e:
+            logger.exception(f"[DEBUG] Exception during cache lookup: {e}")
+            
+        if cache_hit:
             # Record response time for cache hits
             response_time = (time.time() - start_time) * 1000  # Convert to ms
             self._cache_stats["response_times"].append(response_time)
             # Keep only last 100 response times
             if len(self._cache_stats["response_times"]) > 100:
                 self._cache_stats["response_times"].pop(0)
-            logger.debug("[DEBUG] Cache hit, returning early")
+            logger.debug(f"[DEBUG] Cache hit, returning early (response time: {response_time:.2f}ms)")
+            logger.debug(f"[DEBUG] ========== REQUEST_PREVIEW END (CACHE HIT) ==========")
             return
 
         # Immediate UI update for smooth feedback
+        logger.debug("[DEBUG] Cache miss, scheduling UI update...")
         self._schedule_ui_update()
 
         # Schedule preview based on current drag state
@@ -243,6 +254,8 @@ class SmartPreviewCoordinator(QObject):
         else:
             logger.debug(f"[DEBUG] Drag state is {self._drag_state}, scheduling release preview")
             self._schedule_release_preview()
+        
+        logger.debug(f"[DEBUG] ========== REQUEST_PREVIEW END (SCHEDULED) ==========")
 
     def request_manual_preview(self, offset: int) -> None:
         """
@@ -359,7 +372,10 @@ class SmartPreviewCoordinator(QObject):
             return False
 
         try:
+            logger.debug("[DEBUG] Getting ROM data from provider...")
             rom_path, _, _ = self._rom_data_provider()
+            logger.debug(f"[DEBUG] Got ROM path: {rom_path}")
+            
             with QMutexLocker(self._mutex):
                 offset = self._current_offset
                 logger.debug(f"[DEBUG] Checking cache for offset 0x{offset:06X}")
@@ -370,14 +386,20 @@ class SmartPreviewCoordinator(QObject):
             logger.debug(f"[TRACE] Checking memory cache with key: {cache_key}")
             cached_data = self._cache.get(cache_key)
             if cached_data:
+                logger.debug("[TRACE] Found data in memory cache")
                 tile_data, width, height, sprite_name = cached_data
+                logger.debug(f"[TRACE] Unpacked cache data: {len(tile_data) if tile_data else 0} bytes, {width}x{height}, name={sprite_name}")
                 
                 # CRITICAL: Validate cached data before using it
                 if tile_data and len(tile_data) > 0:
                     # Check if data is not all zeros (black)
-                    non_zero_count = sum(1 for b in tile_data[:min(100, len(tile_data))] if b != 0)
+                    sample_size = min(100, len(tile_data))
+                    non_zero_count = sum(1 for b in tile_data[:sample_size] if b != 0)
+                    logger.debug(f"[TRACE] Validation: {non_zero_count}/{sample_size} non-zero bytes")
+                    
                     if non_zero_count > 0:  # Has some non-zero data
-                        logger.debug(f"[TRACE] Valid cache hit: {len(tile_data)} bytes, {non_zero_count}/100 non-zero")
+                        logger.debug(f"[TRACE] Valid cache hit: {len(tile_data)} bytes, {non_zero_count}/{sample_size} non-zero")
+                        logger.debug("[TRACE] About to emit preview_cached signal...")
                         self.preview_cached.emit(tile_data, width, height, sprite_name)
                         self._cache_stats["memory_hits"] += 1
                         logger.debug(f"[SIGNAL_FLOW] Memory cache hit signal emitted for 0x{offset:06X}")

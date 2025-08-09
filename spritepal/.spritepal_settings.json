@@ -65,9 +65,9 @@
     "max_recent": 10
   },
   "manual_offset_dialog": {
-    "x": 4,
-    "y": 72,
-    "width": 1629,
-    "height": 897
+    "x": 100,
+    "y": 100,
+    "width": 800,
+    "height": 600
   }
 }
