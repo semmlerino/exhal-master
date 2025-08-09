@@ -11,7 +11,10 @@ from unittest.mock import Mock
 
 from PyQt6.QtWidgets import QDialog, QWidget
 
-from core.managers import get_injection_manager  # This now supports contexts!
+from core.managers import (  # This now supports contexts!
+    get_extraction_manager,
+    get_injection_manager,
+)
 
 # Import the new dependency injection infrastructure
 from core.managers.context import ManagerContext, manager_context

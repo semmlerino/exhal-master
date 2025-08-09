@@ -16,6 +16,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PyQt6.QtCore import (
+# Serial execution required: QApplication management, Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety
+]
+
+
     QEventLoop,
     QMutex,
     QMutexLocker,

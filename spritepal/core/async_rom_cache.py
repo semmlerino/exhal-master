@@ -1,0 +1,364 @@
+"""
+Async ROM Cache - Non-blocking cache operations for preview system
+
+This module provides asynchronous access to the ROM cache, ensuring that
+all I/O operations happen in background threads and never block the UI.
+
+Key Features:
+- All operations are non-blocking
+- Worker thread for disk I/O
+- Batch writes for efficiency
+- Automatic retry with backoff
+- Comprehensive error handling
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import (
+    QMutex,
+    QMutexLocker,
+    QObject,
+    QRecursiveMutex,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
+    pyqtSlot,
+)
+
+if TYPE_CHECKING:
+    from utils.rom_cache import ROMCache
+
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
+class CacheWorker(QObject):
+    """Worker that performs cache I/O in background thread"""
+
+    # Signals for async communication
+    data_loaded = pyqtSignal(str, bytes, dict)  # request_id, data, metadata
+    load_error = pyqtSignal(str, str)           # request_id, error
+    save_complete = pyqtSignal(str, bool)       # cache_key, success
+
+    def __init__(self, cache_dir: Path):
+        super().__init__()
+        self.cache_dir = cache_dir
+        self._stop_requested = threading.Event()
+
+    @pyqtSlot(str, str)
+    def load_from_cache(self, request_id: str, cache_key: str) -> None:
+        """Load data from cache file"""
+        if self._stop_requested.is_set():
+            return
+
+        try:
+            cache_file = self.cache_dir / f"{cache_key}.cache"
+
+            if not cache_file.exists():
+                self.load_error.emit(request_id, "Cache miss")
+                return
+
+            # Read cache file
+            with open(cache_file, "rb") as f:
+                # Read metadata size (4 bytes)
+                meta_size_bytes = f.read(4)
+                if len(meta_size_bytes) < 4:
+                    self.load_error.emit(request_id, "Invalid cache file")
+                    return
+
+                meta_size = int.from_bytes(meta_size_bytes, "little")
+
+                # Read metadata
+                meta_json = f.read(meta_size)
+                metadata = json.loads(meta_json)
+
+                # Read data
+                data = f.read()
+
+            # Check if still valid
+            if time.time() - metadata.get("timestamp", 0) > 86400:  # 24 hours
+                self.load_error.emit(request_id, "Cache expired")
+                cache_file.unlink(missing_ok=True)
+                return
+
+            self.data_loaded.emit(request_id, data, metadata)
+
+        except Exception as e:
+            logger.debug(f"Cache load error for {cache_key}: {e}")
+            self.load_error.emit(request_id, str(e))
+
+    @pyqtSlot(str, bytes, dict)
+    def save_to_cache(self, cache_key: str, data: bytes, metadata: dict) -> None:
+        """Save data to cache file"""
+        if self._stop_requested.is_set():
+            return
+
+        try:
+            cache_file = self.cache_dir / f"{cache_key}.cache"
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Add timestamp
+            metadata["timestamp"] = time.time()
+
+            # Write atomically using temp file
+            temp_file = cache_file.with_suffix(".tmp")
+
+            with open(temp_file, "wb") as f:
+                # Write metadata size (4 bytes)
+                meta_json = json.dumps(metadata).encode()
+                f.write(len(meta_json).to_bytes(4, "little"))
+
+                # Write metadata
+                f.write(meta_json)
+
+                # Write data
+                f.write(data)
+
+            # Atomic rename
+            temp_file.replace(cache_file)
+
+            self.save_complete.emit(cache_key, True)
+
+        except Exception as e:
+            logger.debug(f"Cache save error for {cache_key}: {e}")
+            self.save_complete.emit(cache_key, False)
+
+    def stop(self) -> None:
+        """Stop the worker"""
+        self._stop_requested.set()
+
+
+class AsyncROMCache(QObject):
+    """
+    Asynchronous interface to ROM cache.
+
+    This class provides non-blocking access to the ROM cache by performing
+    all I/O operations in a background thread and communicating via signals.
+
+    Signals:
+        cache_ready: Emitted when cached data is loaded
+        cache_error: Emitted when cache miss or error occurs
+    """
+
+    # Public signals
+    cache_ready = pyqtSignal(str, bytes, dict)  # request_id, data, metadata
+    cache_error = pyqtSignal(str, str)          # request_id, error
+
+    # Internal signals for worker communication
+    _request_load = pyqtSignal(str, str)        # request_id, cache_key
+    _request_save = pyqtSignal(str, bytes, dict)  # cache_key, data, metadata
+
+    def __init__(self, rom_cache: ROMCache | None = None):
+        """
+        Initialize async cache wrapper.
+
+        Args:
+            rom_cache: Optional ROM cache instance for configuration
+        """
+        super().__init__()
+
+        # Determine cache directory
+        if rom_cache and hasattr(rom_cache, "cache_dir"):
+            self.cache_dir = Path(rom_cache.cache_dir)
+        else:
+            self.cache_dir = Path.home() / ".spritepal_cache"
+
+        # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create worker thread
+        self._worker_thread = QThread()
+        self._worker = CacheWorker(self.cache_dir)
+        self._worker.moveToThread(self._worker_thread)
+
+        # Connect worker signals to our handlers
+        self._worker.data_loaded.connect(self._on_data_loaded)
+        self._worker.load_error.connect(self._on_load_error)
+        self._worker.save_complete.connect(self._on_save_complete)
+
+        # Connect our internal signals to worker slots (with queued connection for thread safety)
+        self._request_load.connect(
+            self._worker.load_from_cache,
+            Qt.ConnectionType.QueuedConnection
+        )
+        self._request_save.connect(
+            self._worker.save_to_cache,
+            Qt.ConnectionType.QueuedConnection
+        )
+
+        # Request tracking
+        self._pending_requests: dict[str, tuple[str, int]] = {}  # request_id -> (rom_path, offset)
+        self._request_mutex = QMutex()
+
+        # Batch save queue
+        self._save_queue: list[tuple[str, bytes, dict]] = []
+        self._save_mutex = QRecursiveMutex()  # Use recursive mutex to allow nested locking
+        self._save_timer = QTimer(self)
+        self._save_timer.timeout.connect(self._flush_save_queue)
+        self._save_timer.setInterval(1000)  # Flush every second
+
+        # Memory cache for recent items
+        self._memory_cache: dict[str, tuple[bytes, dict, float]] = {}
+        self._memory_cache_max = 10
+
+        # Start worker thread
+        self._worker_thread.start()
+
+        logger.info(f"AsyncROMCache initialized with directory: {self.cache_dir}")
+
+    def get_cached_async(self, rom_path: str, offset: int, request_id: str) -> None:
+        """
+        Request cached data asynchronously.
+
+        This method returns immediately and emits cache_ready or cache_error
+        signal when the operation completes.
+
+        Args:
+            rom_path: Path to ROM file
+            offset: Offset in ROM
+            request_id: Unique request identifier
+        """
+        cache_key = self._generate_cache_key(rom_path, offset)
+
+        # Check memory cache first
+        with QMutexLocker(self._request_mutex):
+            if cache_key in self._memory_cache:
+                data, metadata, timestamp = self._memory_cache[cache_key]
+                # Check if still fresh (5 minutes)
+                if time.time() - timestamp < 300:
+                    logger.debug(f"Memory cache hit for {cache_key}")
+                    self.cache_ready.emit(request_id, data, metadata)
+                    return
+                # Expired, remove from memory cache
+                logger.debug(f"Memory cache expired for {cache_key}, removing")
+                del self._memory_cache[cache_key]
+
+            # Track request
+            self._pending_requests[request_id] = (rom_path, offset)
+
+        # Request load from worker thread using signal (much cleaner than invokeMethod!)
+        self._request_load.emit(request_id, cache_key)
+
+    def save_cached_async(self, rom_path: str, offset: int, data: bytes,
+                         metadata: dict | None = None) -> None:
+        """
+        Save data to cache asynchronously.
+
+        This method queues the save operation and returns immediately.
+        Multiple saves are batched for efficiency.
+
+        Args:
+            rom_path: Path to ROM file
+            offset: Offset in ROM
+            data: Preview data to cache
+            metadata: Optional metadata to store
+        """
+        cache_key = self._generate_cache_key(rom_path, offset)
+
+        if metadata is None:
+            metadata = {}
+
+        # Add to memory cache
+        with QMutexLocker(self._request_mutex):
+            self._memory_cache[cache_key] = (data, metadata, time.time())
+
+            # Evict oldest if over limit
+            if len(self._memory_cache) > self._memory_cache_max:
+                oldest_key = min(
+                    self._memory_cache.keys(),
+                    key=lambda k: self._memory_cache[k][2]
+                )
+                del self._memory_cache[oldest_key]
+
+        # Queue for batch save
+        with QMutexLocker(self._save_mutex):
+            self._save_queue.append((cache_key, data, metadata))
+
+            # Start batch timer if not running
+            if not self._save_timer.isActive():
+                self._save_timer.start()
+
+            # Flush immediately if queue is large
+            if len(self._save_queue) >= 10:
+                self._flush_save_queue()
+
+    def clear_memory_cache(self) -> None:
+        """Clear the in-memory cache"""
+        with QMutexLocker(self._request_mutex):
+            self._memory_cache.clear()
+        logger.debug("Cleared memory cache")
+
+    def _flush_save_queue(self) -> None:
+        """Flush pending saves to disk"""
+        with QMutexLocker(self._save_mutex):
+            if not self._save_queue:
+                self._save_timer.stop()
+                return
+
+            # Process all pending saves
+            saves_to_process = self._save_queue.copy()
+            self._save_queue.clear()
+
+        # Send to worker thread using signal
+        for cache_key, data, metadata in saves_to_process:
+            self._request_save.emit(cache_key, data, metadata)
+
+    def _on_data_loaded(self, request_id: str, data: bytes, metadata: dict) -> None:
+        """Handle successful cache load"""
+        with QMutexLocker(self._request_mutex):
+            if request_id in self._pending_requests:
+                rom_path, offset = self._pending_requests.pop(request_id)
+                cache_key = self._generate_cache_key(rom_path, offset)
+
+                # Add to memory cache
+                self._memory_cache[cache_key] = (data, metadata, time.time())
+
+        # Emit signal outside of mutex lock
+        self.cache_ready.emit(request_id, data, metadata)
+
+    def _on_load_error(self, request_id: str, error: str) -> None:
+        """Handle cache load error"""
+        with QMutexLocker(self._request_mutex):
+            self._pending_requests.pop(request_id, None)
+
+        self.cache_error.emit(request_id, error)
+
+    def _on_save_complete(self, cache_key: str, success: bool) -> None:
+        """Handle save completion"""
+        if success:
+            logger.debug(f"Saved to cache: {cache_key}")
+        else:
+            logger.warning(f"Failed to save to cache: {cache_key}")
+
+    @staticmethod
+    def _generate_cache_key(rom_path: str, offset: int) -> str:
+        """Generate cache key for preview"""
+        import hashlib
+        rom_hash = hashlib.md5(rom_path.encode()).hexdigest()[:8]
+        return f"preview_{rom_hash}_{offset:08x}"
+
+    def __del__(self) -> None:
+        """Cleanup on deletion"""
+        try:
+            # Flush any pending saves
+            self._flush_save_queue()
+
+            # Stop worker
+            if hasattr(self, "_worker"):
+                self._worker.stop()
+
+            # Stop thread
+            if hasattr(self, "_worker_thread") and self._worker_thread.isRunning():
+                self._worker_thread.quit()
+                self._worker_thread.wait(1000)
+        except Exception:
+            # Ignore cleanup errors to avoid cascading issues
+            pass

@@ -6,7 +6,18 @@ from unittest.mock import Mock
 
 import pytest
 
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from ui.row_arrangement.grid_arrangement_manager import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
+
     ArrangementType,
     GridArrangementManager,
     TileGroup,

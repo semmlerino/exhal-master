@@ -5,7 +5,19 @@ Tests for SessionManager
 
 import pytest
 
-from spritepal.core.managers import SessionError, SessionManager, ValidationError
+from core.managers import SessionError, SessionManager, ValidationError
+
+
+# Test characteristics: Real GUI components requiring display
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+]
 
 
 class TestSessionManager:

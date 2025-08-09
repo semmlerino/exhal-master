@@ -9,6 +9,18 @@ from PyQt6.QtWidgets import QWidget
 from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 
+# Test characteristics: Real GUI components requiring display
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+    pytest.mark.widget,
+]
+
+
 class TestDialogLifecycle:
     """Test dialog lifecycle management"""
 
@@ -103,7 +115,7 @@ class TestDialogReopenScenarios:
     @pytest.mark.gui
     def test_non_singleton_dialog_lifecycle(self, qtbot):
         """Test that non-singleton dialogs are properly recreated"""
-        from spritepal.ui.injection_dialog import InjectionDialog
+        from ui.injection_dialog import InjectionDialog
 
         # Create first instance
         dialog1 = InjectionDialog(None, "test.png", "")

@@ -6,15 +6,26 @@ from unittest.mock import Mock
 
 from PIL import Image, ImageDraw
 
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from ui.row_arrangement.grid_arrangement_manager import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
+
     ArrangementType,
     GridArrangementManager,
     TileGroup,
     TilePosition,
 )
-from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
-from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-from spritepal.ui.row_arrangement.palette_colorizer import PaletteColorizer
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
+from ui.row_arrangement.palette_colorizer import PaletteColorizer
 
 
 class TestGridPreviewGenerator:
@@ -41,7 +52,7 @@ class TestGridPreviewGenerator:
 
     def test_inheritance_from_preview_generator(self):
         """Test that GridPreviewGenerator inherits from PreviewGenerator"""
-        from spritepal.ui.row_arrangement.preview_generator import PreviewGenerator
+        from ui.row_arrangement.preview_generator import PreviewGenerator
 
         generator = GridPreviewGenerator()
         assert isinstance(generator, PreviewGenerator)

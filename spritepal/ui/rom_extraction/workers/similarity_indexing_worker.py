@@ -10,12 +10,12 @@ import hashlib
 import pickle
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from core.managers import get_extraction_manager
+from core.managers import ExtractionManager, get_extraction_manager
 from core.visual_similarity_search import VisualSimilarityEngine
 from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
@@ -220,7 +220,8 @@ class SimilarityIndexingWorker(BaseWorker):
     def run(self) -> None:
         """Background indexing of pending sprites."""
         try:
-            extraction_manager = get_extraction_manager()
+            # Type cast for better type safety
+            extraction_manager = cast(ExtractionManager, get_extraction_manager())
             indexed_count = 0
 
             # Process pending sprites
@@ -280,7 +281,7 @@ class SimilarityIndexingWorker(BaseWorker):
             logger.exception("Similarity indexing failed")
             self.operation_finished.emit(False, f"Indexing failed: {e}")
 
-    def _extract_sprite_image(self, offset: int, extraction_manager) -> Image.Image | None:
+    def _extract_sprite_image(self, offset: int, extraction_manager: ExtractionManager) -> Image.Image | None:
         """
         Extract sprite image for indexing.
 

@@ -2,6 +2,7 @@
 Palette preview widget for SpritePal
 """
 
+from __future__ import annotations
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen

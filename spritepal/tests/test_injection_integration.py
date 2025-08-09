@@ -6,13 +6,23 @@ import tempfile
 import pytest
 from PIL import Image
 
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.injector import InjectionWorker, SpriteInjector
-from spritepal.core.palette_manager import PaletteManager
+from core.extractor import SpriteExtractor
+from core.injector import InjectionWorker, SpriteInjector
+from core.palette_manager import PaletteManager
 
 
 class TestInjectionWorkflowIntegration:
     """Test complete injection workflow integration"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
 
     @pytest.fixture
     def temp_workspace(self):

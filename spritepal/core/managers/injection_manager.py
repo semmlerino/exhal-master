@@ -385,6 +385,10 @@ class InjectionManager(BaseManager):
         if not metadata_path or not Path(metadata_path).exists():
             return None
 
+        # Initialize variables to avoid unbound variable errors
+        parsed_info = None
+        metadata = None
+
         try:
             with Path(metadata_path).open() as f:
                 metadata = json.load(f)
@@ -426,7 +430,7 @@ class InjectionManager(BaseManager):
             self._logger.warning(f"Failed to load metadata from {metadata_path}: {e}")
             return None
         else:
-            if "extraction" in metadata:
+            if metadata and "extraction" in metadata and parsed_info:
                 return parsed_info
             return {
                 "metadata": metadata,

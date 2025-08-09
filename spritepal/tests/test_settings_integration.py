@@ -7,13 +7,25 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.utils.settings_manager import SettingsManager, get_settings_manager
+from core.controller import ExtractionController
+from core.managers import cleanup_managers, initialize_managers
+from utils.settings_manager import SettingsManager, get_settings_manager
 
 
 class TestSettingsIntegration:
     """Test settings integration across application components"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
 
     @pytest.fixture
     def temp_settings_dir(self):
@@ -41,6 +53,9 @@ class TestSettingsIntegration:
 
     def test_settings_persistence_across_sessions(self, temp_settings_dir):
         """Test that settings persist across application restarts"""
+        # Initialize managers first
+        initialize_managers("TestApp")
+        
         # Session 1: Save settings
         settings1 = SettingsManager("TestApp")
 
@@ -54,6 +69,12 @@ class TestSettingsIntegration:
 
         settings1.save_settings()
 
+        # Clean up first session
+        cleanup_managers()
+        
+        # Initialize for session 2
+        initialize_managers("TestApp")
+        
         # Session 2: Load settings in new instance
         settings2 = SettingsManager("TestApp")
 
@@ -68,9 +89,9 @@ class TestSettingsIntegration:
     def test_controller_settings_integration(self, temp_settings_dir, mock_main_window):
         """Test controller interaction with settings manager"""
         # Reset global instance to ensure it uses temp directory
-        import spritepal.utils.settings_manager
+        import utils.settings_manager
 
-        spritepal.utils.settings_manager._settings_instance = None
+        utils.settings_manager._settings_instance = None
 
         settings = get_settings_manager()
 
@@ -96,6 +117,9 @@ class TestSettingsIntegration:
 
     def test_window_geometry_persistence(self, temp_settings_dir):
         """Test UI geometry settings persistence"""
+        # Initialize managers first
+        initialize_managers("SpritePal")
+        
         # Create fresh settings instance to avoid conflicts
         settings = SettingsManager("SpritePal")
 
@@ -114,6 +138,12 @@ class TestSettingsIntegration:
 
         settings.save_settings()
 
+        # Clean up first session
+        cleanup_managers()
+        
+        # Initialize for second session  
+        initialize_managers("SpritePal")
+        
         # Load in new instance
         new_settings = SettingsManager("SpritePal")
 
@@ -127,6 +157,8 @@ class TestSettingsIntegration:
 
     def test_recent_files_management(self, temp_settings_dir):
         """Test recent files list in settings"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings = get_settings_manager()
 
         # Add recent files
@@ -156,6 +188,8 @@ class TestSettingsIntegration:
 
     def test_extraction_preferences_persistence(self, temp_settings_dir):
         """Test extraction preference settings"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings = get_settings_manager()
 
         # Set extraction preferences
@@ -173,6 +207,12 @@ class TestSettingsIntegration:
 
         settings.save_settings()
 
+        # Clean up first session
+        cleanup_managers()
+        
+        # Initialize for second session
+        initialize_managers("TestApp")
+        
         # Verify in new session
         new_settings = get_settings_manager()
         for key, expected in prefs.items():
@@ -181,6 +221,8 @@ class TestSettingsIntegration:
 
     def test_color_scheme_persistence(self, temp_settings_dir):
         """Test UI color scheme settings"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings = get_settings_manager()
 
         # Save color scheme
@@ -213,10 +255,10 @@ class TestSettingsIntegration:
             json.dump(old_settings, f)
 
         # Need to ensure SessionManager loads from our temp file
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create a session manager with our temp settings file
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -230,6 +272,8 @@ class TestSettingsIntegration:
 
     def test_concurrent_settings_access(self, temp_settings_dir):
         """Test concurrent access to settings"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings1 = get_settings_manager()
         settings2 = get_settings_manager()
 
@@ -248,10 +292,10 @@ class TestSettingsIntegration:
             f.write("{ corrupted json }")
 
         # Need to ensure SessionManager loads from our temp file
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create a session manager with our temp settings file
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -273,6 +317,8 @@ class TestSettingsIntegration:
 
     def test_settings_permission_handling(self, temp_settings_dir):
         """Test handling of permission errors"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings = get_settings_manager()
 
         # Set some data
@@ -292,6 +338,8 @@ class TestSettingsIntegration:
 
     def test_export_import_settings(self, temp_settings_dir):
         """Test exporting and importing settings"""
+        # Initialize managers first
+        initialize_managers("TestApp")
         settings = get_settings_manager()
 
         # Configure settings

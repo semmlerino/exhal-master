@@ -4,6 +4,7 @@ Main controller for SpritePal extraction workflow
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,12 +15,12 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
-    from core.protocols import (
+    from core.protocols.manager_protocols import (
         ExtractionManagerProtocol,
         InjectionManagerProtocol,
+        MainWindowProtocol,
         SessionManagerProtocol,
     )
-    from ui.main_window import MainWindow
 
 from core.managers import (
     ExtractionManager,
@@ -169,13 +170,13 @@ class ExtractionController(QObject):
 
     def __init__(
         self,
-        main_window: MainWindow,
+        main_window: MainWindowProtocol,
         extraction_manager: ExtractionManagerProtocol | None = None,
         session_manager: SessionManagerProtocol | None = None,
         injection_manager: InjectionManagerProtocol | None = None,
     ) -> None:
         super().__init__()
-        self.main_window: MainWindow = main_window
+        self.main_window: MainWindowProtocol = main_window
 
         # Use injected managers or fall back to global registry for backward compatibility
         # Keep union types for maximum flexibility while ensuring we have the required interface
@@ -241,27 +242,24 @@ class ExtractionController(QObject):
             self.main_window.extraction_failed(str(e))
             return
 
-        # DEFENSIVE VALIDATION: Prevent blocking I/O operations with invalid files
+        # DEFENSIVE VALIDATION: Only validate files that exist to prevent blocking I/O
         # This ensures fail-fast behavior before expensive worker thread operations
         vram_path = params.get("vram_path", "")
-        if not vram_path:
-            self.main_window.extraction_failed("VRAM file path is required")
-            return
 
         # CRITICAL FIX FOR BUG #11: Add file format validation to prevent 2+ minute blocking
-        # Validate VRAM file format and size to prevent expensive processing of invalid files
-        vram_result = FileValidator.validate_vram_file(vram_path)
-        if not vram_result.is_valid:
-            self.main_window.extraction_failed(vram_result.error_message or "VRAM file validation failed")
-            return
+        # Only validate VRAM file if it was provided (already checked by parameter validation)
+        if vram_path:
+            vram_result = FileValidator.validate_vram_file(vram_path)
+            if not vram_result.is_valid:
+                self.main_window.extraction_failed(vram_result.error_message or "VRAM file validation failed")
+                return
 
-        # Show warnings if any
-        for warning in vram_result.warnings:
-            logger.warning(f"VRAM file warning: {warning}")
+            # Show warnings if any
+            for warning in vram_result.warnings:
+                logger.warning(f"VRAM file warning: {warning}")
 
         cgram_path = params.get("cgram_path", "")
-        grayscale_mode = params.get("grayscale_mode", False)
-        if not grayscale_mode and cgram_path:
+        if cgram_path:  # Only validate if CGRAM path was provided
             cgram_result = FileValidator.validate_cgram_file(cgram_path)
             if not cgram_result.is_valid:
                 self.main_window.extraction_failed(cgram_result.error_message or "CGRAM file validation failed")
@@ -285,7 +283,7 @@ class ExtractionController(QObject):
         # Create and start worker thread
         # Import VRAMExtractionParams from the worker module
         from core.workers.extraction import VRAMExtractionParams
-        
+
         # Convert validated params dict to VRAMExtractionParams TypedDict
         extraction_params: VRAMExtractionParams = {
             "vram_path": params["vram_path"],
@@ -435,8 +433,7 @@ class ExtractionController(QObject):
     def open_in_editor(self, sprite_file: str) -> None:
         """Open the extracted sprites in the pixel editor"""
         # Get the directory where this spritepal package is located
-        current_file = Path(__file__).resolve()
-        spritepal_dir = current_file.parent.parent
+        spritepal_dir = Path(os.path.dirname(os.path.dirname(__file__)))
         exhal_dir = spritepal_dir.parent
 
         # Look for pixel editor launcher using absolute paths
@@ -610,7 +607,7 @@ class ExtractionController(QObject):
     def start_injection(self) -> None:
         """Start the injection process using InjectionManager"""
         # Get sprite path and metadata path
-        output_base = self.main_window._output_path
+        output_base = self.main_window.get_output_path()
         if not output_base:
             self.main_window.status_bar.showMessage("No extraction to inject")
             return

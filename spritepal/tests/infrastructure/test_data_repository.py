@@ -13,7 +13,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import pytest
 from PIL import Image
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 
 
 @dataclass
@@ -254,9 +265,9 @@ class TestDataRepository:
     def _generate_test_files(self, data_set: TestDataSet) -> None:
         """Generate test files for a data set."""
         size_map = {
-            "small_test": {"vram_size": 0x4000, "rom_size": 0x100000},  # 16KB VRAM, 1MB ROM
+            "small_test": {"vram_size": 0x10000, "rom_size": 0x100000},  # 64KB VRAM (minimum required), 1MB ROM
             "medium_test": {"vram_size": 0x10000, "rom_size": 0x400000},  # 64KB VRAM, 4MB ROM
-            "comprehensive_test": {"vram_size": 0x10000, "rom_size": 0x600000},  # 64KB VRAM, 6MB ROM
+            "comprehensive_test": {"vram_size": 0x20000, "rom_size": 0x600000},  # 128KB VRAM, 6MB ROM
         }
 
         config = size_map.get(data_set.name, size_map["medium_test"])

@@ -9,6 +9,43 @@ from __future__ import annotations
 
 from typing import Any, Callable, TypeAlias
 
+# Python compatibility imports for typing
+# These are re-exported for use in other modules
+try:
+    from typing import NotRequired, Protocol, TypedDict, TypeGuard, override
+    __all__ = [
+        "ImageMode",
+        "ImageSize",
+        "NotRequired",
+        "PILImage",
+        "Protocol",
+        "TypeGuard",
+        "TypedDict",
+        "override",
+    ]
+except ImportError:
+    # Fallback for older Python versions
+    try:
+        from typing_extensions import (
+            NotRequired,
+            Protocol,
+            TypedDict,
+            TypeGuard,
+            override,
+        )
+        __all__ = [
+            "ImageMode",
+            "ImageSize",
+            "NotRequired",
+            "PILImage",
+            "Protocol",
+            "TypeGuard",
+            "TypedDict",
+            "override",
+        ]
+    except ImportError:
+        __all__ = ["ImageMode", "ImageSize", "PILImage"]
+
 from PIL import Image
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QWidget

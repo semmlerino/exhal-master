@@ -14,7 +14,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pytest
 from PyQt6.QtWidgets import QWidget
 
-from spritepal.ui.common import get_error_handler, reset_error_handler
+from ui.common import get_error_handler, reset_error_handler
+
+
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
 
 
 class TestErrorHandlerThreadSafety:
@@ -139,7 +147,7 @@ class TestErrorHandlerThreadSafety:
         handler1 = get_error_handler()
 
         # Track lock acquisition by patching the module's lock
-        from spritepal.ui.common import error_handler
+        from ui.common import error_handler
         original_lock = error_handler._error_handler_lock
         lock_calls = []
 

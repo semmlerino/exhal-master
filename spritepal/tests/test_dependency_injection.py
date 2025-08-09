@@ -11,6 +11,14 @@ import threading
 import time
 
 from core.managers.context import (
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
     ManagerContext, 
     manager_context, 
     get_current_context,

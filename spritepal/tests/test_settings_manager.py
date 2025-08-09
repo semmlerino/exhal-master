@@ -7,11 +7,23 @@ from unittest.mock import patch
 
 import pytest
 
-from spritepal.utils.settings_manager import SettingsManager, get_settings_manager
+from utils.settings_manager import SettingsManager, get_settings_manager
 
 
 class TestSettingsManager:
     """Test the SettingsManager class"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
 
     @pytest.fixture
     def temp_dir(self):
@@ -22,13 +34,13 @@ class TestSettingsManager:
     @pytest.fixture
     def settings_manager(self, temp_dir):
         """Create a SettingsManager in temp directory"""
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create temp settings file path
         settings_file = Path(temp_dir) / ".testapp_settings.json"
 
-        # Create a session manager with our temp settings file
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        # Create a session manager with our temp settings file  
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -57,11 +69,11 @@ class TestSettingsManager:
 
     def test_settings_file_path(self, temp_dir):
         """Test settings file path generation"""
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         settings_file = Path(temp_dir) / ".testapp_settings.json"
 
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -73,7 +85,7 @@ class TestSettingsManager:
 
     def test_load_existing_settings(self, temp_dir):
         """Test loading existing settings file"""
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create settings file
         settings_data = {
@@ -85,7 +97,7 @@ class TestSettingsManager:
             json.dump(settings_data, f)
 
         # Load settings
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -96,7 +108,7 @@ class TestSettingsManager:
 
     def test_load_corrupted_settings(self, temp_dir):
         """Test loading corrupted settings file"""
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create corrupted settings file
         settings_file = Path(temp_dir) / ".testapp_settings.json"
@@ -104,7 +116,7 @@ class TestSettingsManager:
             f.write("{ invalid json }")
 
         # Should return default settings
-        with patch("spritepal.utils.settings_manager.get_session_manager") as mock_get_sm:
+        with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
 
@@ -259,26 +271,40 @@ class TestGlobalSettingsInstance:
 
     def test_get_settings_manager_singleton(self):
         """Test that get_settings_manager returns singleton"""
-        # Reset global instance
-        import spritepal.utils.settings_manager
+        # Reset global instance  
+        import utils.settings_manager
 
-        spritepal.utils.settings_manager._settings_instance = None
+        utils.settings_manager._SettingsManagerSingleton._instance = None
 
-        # Get instance twice
-        manager1 = get_settings_manager()
-        manager2 = get_settings_manager()
+        # Initialize managers for global instance to work
+        from core.managers import initialize_managers, cleanup_managers
+        initialize_managers("TestApp")
 
-        assert manager1 is manager2
-        assert isinstance(manager1, SettingsManager)
+        try:
+            # Get instance twice
+            manager1 = get_settings_manager()
+            manager2 = get_settings_manager()
+
+            assert manager1 is manager2
+            assert isinstance(manager1, SettingsManager)
+        finally:
+            cleanup_managers()
 
     def test_get_settings_manager_preserves_state(self):
         """Test that singleton preserves state"""
-        import spritepal.utils.settings_manager
+        import utils.settings_manager
 
-        spritepal.utils.settings_manager._settings_instance = None
+        utils.settings_manager._SettingsManagerSingleton._instance = None
 
-        manager1 = get_settings_manager()
-        manager1.set("custom", "key", "value")
+        # Initialize managers for global instance to work
+        from core.managers import initialize_managers, cleanup_managers
+        initialize_managers("TestApp")
 
-        manager2 = get_settings_manager()
-        assert manager2.get("custom", "key") == "value"
+        try:
+            manager1 = get_settings_manager()
+            manager1.set("custom", "key", "value")
+
+            manager2 = get_settings_manager()
+            assert manager2.get("custom", "key") == "value"
+        finally:
+            cleanup_managers()

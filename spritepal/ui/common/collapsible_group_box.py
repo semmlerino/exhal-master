@@ -215,8 +215,8 @@ class CollapsibleGroupBox(QFrame):
 
                 # Track connections
                 self._animation_connections = [
-                    lambda: self._animation.valueChanged.disconnect(on_collapse_value_changed),
-                    lambda: self._animation.finished.disconnect(on_collapse_finished)
+                    lambda: self._animation.valueChanged.disconnect(on_collapse_value_changed) if self._animation else None,
+                    lambda: self._animation.finished.disconnect(on_collapse_finished) if self._animation else None
                 ]
             elif not collapsed and self._content_widget is not None:
                 # Expand: animate to natural height
@@ -255,8 +255,8 @@ class CollapsibleGroupBox(QFrame):
 
                 # Track connections
                 self._animation_connections = [
-                    lambda: self._animation.valueChanged.disconnect(on_value_changed),
-                    lambda: self._animation.finished.disconnect(on_finished)
+                    lambda: self._animation.valueChanged.disconnect(on_value_changed) if self._animation else None,
+                    lambda: self._animation.finished.disconnect(on_finished) if self._animation else None
                 ]
 
             self._animation.start()
@@ -298,15 +298,19 @@ class CollapsibleGroupBox(QFrame):
             for i in range(self._content_layout.count()):
                 item = self._content_layout.itemAt(i)
                 if item and item.widget():
-                    widget_hint = item.widget().sizeHint()
-                    if widget_hint.height() > 0:
-                        total_height += widget_hint.height()
-                        child_count += 1
-                elif item and item.layout():
-                    layout_hint = item.layout().sizeHint()
-                    if layout_hint.height() > 0:
-                        total_height += layout_hint.height()
-                        child_count += 1
+                    widget = item.widget()
+                    if widget is not None:
+                        widget_hint = widget.sizeHint()
+                        if widget_hint.height() > 0:
+                            total_height += widget_hint.height()
+                            child_count += 1
+                elif item and item.layout() is not None:
+                    layout = item.layout()
+                    if layout is not None:
+                        layout_hint = layout.sizeHint()
+                        if layout_hint.height() > 0:
+                            total_height += layout_hint.height()
+                            child_count += 1
 
             # Add spacing between items
             if child_count > 1:

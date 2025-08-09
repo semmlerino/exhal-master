@@ -15,16 +15,29 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.core.rom_injector import SpritePointer
-from spritepal.ui.components.panels.status_panel import StatusPanel
-from spritepal.ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
-from spritepal.ui.rom_extraction.workers.scan_worker import SpriteScanWorker
-from spritepal.utils.rom_cache import ROMCache, get_rom_cache
+from core.managers import cleanup_managers, initialize_managers
+from core.rom_injector import SpritePointer
+from ui.components.panels.status_panel import StatusPanel
+from ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
+from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
+from utils.rom_cache import ROMCache, get_rom_cache
 
 # ============================================================================
 # Enhanced Fixtures
 # ============================================================================
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.performance,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
@@ -33,7 +46,7 @@ def setup_teardown():
     yield
     cleanup_managers()
     # Reset global cache instance using the new pattern
-    from spritepal.utils.rom_cache import _ROMCacheSingleton
+    from utils.rom_cache import _ROMCacheSingleton
     _ROMCacheSingleton._instance = None
 
 
@@ -67,21 +80,21 @@ def rom_cache(temp_cache_dir):
 @pytest.fixture
 def mock_rom_cache(rom_cache):
     """Automatically patch get_rom_cache to return test instance and clean up after."""
-    with patch("spritepal.utils.rom_cache.get_rom_cache") as mock_get:
+    with patch("utils.rom_cache.get_rom_cache") as mock_get:
         mock_get.return_value = rom_cache
         # Also patch in all the widget modules
-        with patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache") as mock_widget:
+        with patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache") as mock_widget:
             mock_widget.return_value = rom_cache
             yield rom_cache
     # Clean up global state using the new pattern
-    from spritepal.utils.rom_cache import _ROMCacheSingleton
+    from utils.rom_cache import _ROMCacheSingleton
     _ROMCacheSingleton._instance = None
 
 
 @pytest.fixture
 def disabled_cache(temp_cache_dir):
     """Create a cache instance with caching disabled."""
-    with patch("spritepal.utils.rom_cache.get_settings_manager") as mock_settings:
+    with patch("utils.rom_cache.get_settings_manager") as mock_settings:
         mock_manager = MagicMock()
         mock_manager.get_cache_enabled.return_value = False
         mock_settings.return_value = mock_manager
@@ -120,7 +133,7 @@ class TestROMFileWidgetCacheDisplay:
 
     def test_cache_status_with_disabled_cache(self, qtbot, test_rom_file):
         """Test that no cache UI appears when caching is disabled."""
-        with patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache") as mock_get:
+        with patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache") as mock_get:
             # Create disabled cache
             cache = MagicMock()
             cache._cache_enabled = False
@@ -234,7 +247,7 @@ class TestCacheErrorConditions:
         cache_dir.mkdir(mode=0o444)
 
         try:
-            with patch("spritepal.utils.rom_cache.Path.home") as mock_home:
+            with patch("utils.rom_cache.Path.home") as mock_home:
                 mock_home.return_value = cache_dir
 
                 # Should fallback to temp directory
@@ -364,7 +377,7 @@ class TestCacheUIHelpers:
         cache1 = get_rom_cache()
 
         # Reset global cache instance using the new pattern
-        from spritepal.utils.rom_cache import _ROMCacheSingleton
+        from utils.rom_cache import _ROMCacheSingleton
         _ROMCacheSingleton._instance = None
 
         # Get new instance

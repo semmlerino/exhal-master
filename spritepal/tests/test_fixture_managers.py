@@ -15,6 +15,15 @@ real implementations instead of mocks.
 
 
 from tests.fixtures.test_managers import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
+
     create_colorizer_fixture,
     create_grid_arrangement_fixture,
     create_grid_processor_fixture,

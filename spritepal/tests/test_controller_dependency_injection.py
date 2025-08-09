@@ -11,8 +11,19 @@ from unittest.mock import Mock
 
 import pytest
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import ExtractionManager, InjectionManager, SessionManager
+from core.controller import ExtractionController
+from core.managers import ExtractionManager, InjectionManager, SessionManager
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
 
 
 class TestControllerDependencyInjection:

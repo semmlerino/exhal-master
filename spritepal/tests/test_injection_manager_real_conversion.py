@@ -8,16 +8,31 @@ from mocked injection_manager methods to real implementations.
 import json
 import os
 import tempfile
+from typing import Generator, Optional
 from unittest.mock import Mock, patch
 
 import pytest
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 from tests.infrastructure import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
+
     TestApplicationFactory,
 )
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import (
+from core.controller import ExtractionController
+from core.managers import (
     cleanup_managers,
     get_injection_manager,
     initialize_managers,
@@ -72,7 +87,7 @@ class TestInjectionManagerRealConversion:
                 }, f)
 
             # Mock only UI components, use real injection_manager methods
-            with patch("spritepal.core.controller.InjectionDialog") as mock_dialog:
+            with patch("core.controller.InjectionDialog") as mock_dialog:
                 mock_dialog_instance = Mock()
                 mock_dialog_instance.exec.return_value = 1  # Accepted
                 mock_dialog_instance.get_parameters.return_value = {

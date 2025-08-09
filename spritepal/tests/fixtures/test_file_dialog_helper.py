@@ -13,6 +13,21 @@ from typing import Any
 from PyQt6.QtWidgets import QFileDialog
 
 
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.parallel_safe,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
 class TestFileDialogHelper:
     """
     Helper for testing file dialogs with real QFileDialog components.

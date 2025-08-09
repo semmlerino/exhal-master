@@ -78,7 +78,7 @@ class WorkerManager:
         if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
             logger.debug(f"{worker_name}: Requesting cancellation via worker.cancel()")
             try:
-                getattr(worker, "cancel")()  # Type-safe method call
+                worker.cancel()  # Type-safe method call
             except Exception as e:
                 logger.warning(f"{worker_name}: Error calling cancel(): {e}")
 
@@ -199,7 +199,7 @@ class WorkerManager:
         if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
             logger.debug(f"{worker_name}: Calling worker.cancel()")
             try:
-                getattr(worker, "cancel")()  # Type-safe method call
+                worker.cancel()  # Type-safe method call
             except Exception as e:
                 logger.warning(f"{worker_name}: Error during cancel(): {e}")
 

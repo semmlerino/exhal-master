@@ -11,9 +11,21 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import business logic components - no more manual path setup needed
-from spritepal.core.controller import ExtractionController
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.palette_manager import PaletteManager
+from core.controller import ExtractionController
+from core.extractor import SpriteExtractor
+from core.palette_manager import PaletteManager
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 @pytest.mark.mock
@@ -61,7 +73,7 @@ class TestVRAMExtractionWorkerMocked:
             pytest.fail(f"Test failed: {e}")
         # Manager cleanup handled by centralized fixture
 
-    @patch("spritepal.utils.image_utils.QPixmap")
+    @patch("utils.image_utils.QPixmap")
     def test_pixmap_creation_mocked(self, mock_qpixmap):
         """Test pixmap creation with mocked QPixmap"""
         from PIL import Image
@@ -75,7 +87,7 @@ class TestVRAMExtractionWorkerMocked:
         mock_qpixmap.return_value = mock_pixmap_instance
 
         # Import and test the pil_to_qpixmap function
-        from spritepal.core.controller import pil_to_qpixmap
+        from core.controller import pil_to_qpixmap
 
         # Test pixmap creation
         result = pil_to_qpixmap(test_image)
@@ -93,8 +105,8 @@ class TestVRAMExtractionWorkerMocked:
 class TestControllerMocked:
     """Test ExtractionController with mocked components"""
 
-    @patch("spritepal.core.controller.QObject")
-    @patch("spritepal.core.controller.VRAMExtractionWorker")
+    @patch("core.controller.QObject")
+    @patch("core.controller.VRAMExtractionWorker")
     def test_controller_workflow(
         self, mock_worker_class, mock_qobject,
         mock_main_window_configured, standard_test_params

@@ -6,8 +6,18 @@ import struct
 
 import pytest
 
-from spritepal.core.rom_validator import ROMValidator
-from spritepal.utils.rom_exceptions import (
+from core.rom_validator import ROMValidator
+from utils.rom_exceptions import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
+
     InvalidROMError,
     ROMChecksumError,
     ROMHeaderError,

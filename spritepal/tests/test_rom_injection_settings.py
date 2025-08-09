@@ -9,9 +9,23 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.core.managers import InjectionManager
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.utils.constants import (
+from core.managers import InjectionManager
+from ui.injection_dialog import InjectionDialog
+from utils.constants import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
+
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
@@ -19,7 +33,7 @@ from spritepal.utils.constants import (
     SETTINGS_KEY_LAST_SPRITE_LOCATION,
     SETTINGS_NS_ROM_INJECTION,
 )
-from spritepal.utils.settings_manager import SettingsManager
+from utils.settings_manager import SettingsManager
 
 
 class TestROMInjectionSettingsPersistence:
@@ -40,13 +54,13 @@ class TestROMInjectionSettingsPersistence:
         # Mock the SessionManager to use temporary storage
         import json
 
-        from spritepal.core.managers.session_manager import SessionManager
+        from core.managers.session_manager import SessionManager
 
         # Create a mock session manager with temporary file storage
         mock_session_manager = SessionManager(settings_path=Path(temp_settings_file))
 
         # Override get_session_manager to return our mock
-        with patch("spritepal.utils.settings_manager.get_session_manager", return_value=mock_session_manager):
+        with patch("utils.settings_manager.get_session_manager", return_value=mock_session_manager):
             manager = SettingsManager()
 
             # Add _settings property for test compatibility

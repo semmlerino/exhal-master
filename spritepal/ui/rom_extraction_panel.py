@@ -2,6 +2,8 @@
 ROM extraction panel for SpritePal
 """
 
+from __future__ import annotations
+
 import threading
 from operator import itemgetter
 from pathlib import Path
@@ -57,7 +59,7 @@ logger = get_logger(__name__)
 
 class ScanDialog(QDialog):
     """Dialog for sprite scanning with typed attributes."""
-    
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         # Typed attributes that will be set during initialization
@@ -87,17 +89,22 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
     This singleton uses proper thread synchronization and Qt thread affinity checking
     to prevent crashes when accessed from worker threads.
     """
-    _instance: "UnifiedManualOffsetDialog | None" = None
-    _creator_panel: "ROMExtractionPanel | None" = None
+    _instance: UnifiedManualOffsetDialog | None = None
+    _creator_panel: ROMExtractionPanel | None = None
+    _destroyed: bool = False  # Track if the dialog has been destroyed
     _lock = threading.Lock()
 
     @classmethod
-    def _create_instance(cls, creator_panel: "ROMExtractionPanel" = None) -> "UnifiedManualOffsetDialog":
+    def _create_instance(cls, creator_panel: ROMExtractionPanel = None) -> UnifiedManualOffsetDialog:
         """Create a new dialog instance (thread-safe, main thread only)."""
         # Ensure we're on the main thread for Qt object creation
         cls._ensure_main_thread()
 
         logger.debug("Creating new ManualOffsetDialog singleton instance")
+
+        # Reset destroyed flag when creating new instance
+        cls._destroyed = False
+
         # Create new instance with None as parent to avoid widget hierarchy contamination
         instance = UnifiedManualOffsetDialog(None)
         cls._creator_panel = creator_panel
@@ -113,13 +120,19 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         return instance
 
     @classmethod
-    def get_dialog(cls, creator_panel: "ROMExtractionPanel") -> "UnifiedManualOffsetDialog":
+    def get_dialog(cls, creator_panel: ROMExtractionPanel) -> UnifiedManualOffsetDialog:
         """Get or create the singleton dialog instance (thread-safe)."""
         logger.debug("ManualOffsetDialogSingleton.get_dialog called")
         logger.debug(f"Current instance exists: {cls._instance is not None}")
 
         # Get instance using thread-safe pattern
         instance = cls.get(creator_panel)
+
+        # Check if the dialog was marked as destroyed
+        if cls._destroyed:
+            logger.debug("Dialog was destroyed, creating new instance")
+            cls.reset()
+            instance = cls.get(creator_panel)
 
         # Check if existing instance is still valid (only on main thread)
         if cls.safe_qt_call(lambda: instance.isVisible()):
@@ -128,8 +141,8 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         # Dialog exists but is not visible - check if it's still valid
         try:
             cls._ensure_main_thread()
-            # Test if the dialog is still valid by checking a property
-            _ = instance.isVisible()
+            # Test if the dialog is still valid by accessing windowTitle (this will throw RuntimeError if deleted)
+            _ = instance.windowTitle()
             logger.warning("[DEBUG] Existing dialog not visible, but still valid")
         except RuntimeError:
             # Dialog has been destroyed by Qt but our reference is stale
@@ -150,16 +163,25 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             if cls._instance is not None:
                 # Schedule deletion on main thread
                 cls.safe_qt_call(lambda: cls._instance.deleteLater())
-            cls._cleanup_instance(cls._instance)
+                cls._cleanup_instance(cls._instance)
+                cls._instance = None  # Clear the instance reference
 
     @classmethod
     def _on_dialog_destroyed(cls):
         """Handle dialog destroyed signal for ultimate cleanup (thread-safe)."""
         logger.debug("Manual offset dialog destroyed signal received")
+        with cls._lock:
+            cls._destroyed = True
         cls.reset()
 
     @classmethod
-    def _cleanup_instance(cls, instance: "UnifiedManualOffsetDialog") -> None:
+    def reset(cls):
+        """Reset the singleton instance and all associated state."""
+        cls._destroyed = False
+        super().reset()
+
+    @classmethod
+    def _cleanup_instance(cls, instance: UnifiedManualOffsetDialog) -> None:
         """Clean up the singleton instance (thread-safe)."""
         logger.debug("Cleaning up ManualOffsetDialog singleton instance")
         cls._creator_panel = None
@@ -176,7 +198,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         return is_visible is True  # Handle None return from safe_qt_call
 
     @classmethod
-    def get_current_dialog(cls) -> "UnifiedManualOffsetDialog | None":
+    def get_current_dialog(cls) -> UnifiedManualOffsetDialog | None:
         """Get current dialog instance if it exists and is visible (thread-safe)."""
         if cls._instance is None:
             return None
@@ -574,9 +596,13 @@ class ROMExtractionPanel(QWidget):
 
         # Show the dialog (or bring to front if already visible)
         if not dialog.isVisible():
-            logger.warning("[DEBUG] Dialog not visible, calling show()")
+            logger.warning("[DEBUG] Dialog not visible, showing and raising")
             dialog.show()
-            logger.warning("[DEBUG] Showed ManualOffsetDialog singleton")
+            dialog.raise_()  # Also raise to ensure it's on top
+            dialog.activateWindow()  # And activate to ensure focus
+            # Process events to ensure the show takes effect immediately
+            QApplication.processEvents()
+            logger.warning("[DEBUG] Showed and raised ManualOffsetDialog singleton")
         else:
             # Bring to front if already visible
             logger.warning("[DEBUG] Dialog already visible, raising to front")
@@ -1115,7 +1141,7 @@ class ROMExtractionPanel(QWidget):
         dialog.cache_status_label.setText(text)
         dialog.cache_status_label.setStyleSheet(self._get_cache_status_style(status))
 
-    def _connect_scan_signals(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+    def _connect_scan_signals(self, dialog: ScanDialog, context: ScanContext) -> None:
         """Connect scan worker signals to handlers.
 
         Args:
@@ -1148,7 +1174,7 @@ class ROMExtractionPanel(QWidget):
         dialog.progress_bar.setValue(int((current / total) * 100))
         dialog.progress_bar.setFormat(f"Scanning... {current}/{total}")
 
-    def _on_sprite_found(self, dialog: ScanDialog, context: 'ScanContext', sprite_info: dict) -> None:
+    def _on_sprite_found(self, dialog: ScanDialog, context: ScanContext, sprite_info: dict) -> None:
         """Handle sprite found during scan."""
         context.found_offsets.append(sprite_info)
 
@@ -1179,7 +1205,7 @@ class ROMExtractionPanel(QWidget):
         text += "\n"
         return text
 
-    def _on_scan_complete(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+    def _on_scan_complete(self, dialog: ScanDialog, context: ScanContext) -> None:
         """Handle scan completion."""
         dialog.progress_bar.setValue(100)
         dialog.progress_bar.setFormat("Scan complete")
@@ -1272,7 +1298,7 @@ class ROMExtractionPanel(QWidget):
         if progress > 0:
             dialog.cache_status_label.setText(f"💾 Saving progress ({progress}%)...")
 
-    def _connect_dialog_signals(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+    def _connect_dialog_signals(self, dialog: ScanDialog, context: ScanContext) -> None:
         """Connect dialog button signals.
 
         Args:
@@ -1288,14 +1314,14 @@ class ROMExtractionPanel(QWidget):
         if dialog.apply_btn:
             dialog.apply_btn.clicked.connect(lambda: self._on_apply_clicked(dialog, context))
 
-    def _on_apply_clicked(self, dialog: ScanDialog, context: 'ScanContext') -> None:
+    def _on_apply_clicked(self, dialog: ScanDialog, context: ScanContext) -> None:
         """Handle Apply button click."""
         if context.found_offsets:
             # Use the best quality offset
             context.selected_offset = context.found_offsets[0]["offset"]
             dialog.accept()
 
-    def _on_dialog_finished(self, dialog: ScanDialog, result: int, context: 'ScanContext') -> None:
+    def _on_dialog_finished(self, dialog: ScanDialog, result: int, context: ScanContext) -> None:
         """Handle dialog close."""
         # Clean up worker
         WorkerManager.cleanup_worker(self.scan_worker)

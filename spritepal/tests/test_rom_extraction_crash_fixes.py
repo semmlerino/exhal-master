@@ -9,8 +9,21 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
+from ui.injection_dialog import InjectionDialog
+from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestSignalLoopFixes:

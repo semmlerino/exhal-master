@@ -13,7 +13,16 @@ from PyQt6.QtCore import QPropertyAnimation
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QLabel, QVBoxLayout
 
-from spritepal.ui.common.collapsible_group_box import CollapsibleGroupBox
+from ui.common.collapsible_group_box import CollapsibleGroupBox
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestCollapsibleGroupBox:
@@ -299,7 +308,7 @@ class TestCollapsibleGroupBox:
         widget.set_collapsed(True)
         QTest.qWait(50)  # Allow brief animation start
 
-    @patch("spritepal.ui.common.collapsible_group_box.QPropertyAnimation")
+    @patch("ui.common.collapsible_group_box.QPropertyAnimation")
     def test_animation_creation_and_cleanup_integration(self, mock_animation_class, qtbot):
         """Test full animation lifecycle with cleanup integration"""
         # Mock animation instance - set up BEFORE widget creation

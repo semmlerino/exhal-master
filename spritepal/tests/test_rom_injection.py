@@ -9,8 +9,21 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from spritepal.core.hal_compression import HALCompressionError, HALCompressor
-from spritepal.core.rom_injector import ROMHeader, ROMInjector
+from core.hal_compression import HALCompressionError, HALCompressor
+from core.rom_injector import ROMHeader, ROMInjector
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestHALCompression(unittest.TestCase):
@@ -161,7 +174,7 @@ class TestROMInjectionDialog(unittest.TestCase):
 
     def test_dialog_creation(self):
         """Test that dialog can be created"""
-        from spritepal.ui.injection_dialog import InjectionDialog
+        from ui.injection_dialog import InjectionDialog
 
         dialog = InjectionDialog()
         self.qtbot.addWidget(dialog)

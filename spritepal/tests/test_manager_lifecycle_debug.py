@@ -4,7 +4,17 @@ Debug test to investigate manager lifecycle issues.
 
 import tempfile
 
-from spritepal.core.managers import (
+from core.managers import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
+
     are_managers_initialized,
     cleanup_managers,
     get_extraction_manager,

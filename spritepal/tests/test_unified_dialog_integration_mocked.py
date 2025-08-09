@@ -5,17 +5,30 @@ This test suite validates integration points of the unified manual offset dialog
 using MockFactory to create lightweight, fast, and reliable test implementations.
 """
 
+import os
+# Force Qt to use offscreen platform to avoid display issues
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import Mock, call
 
 import pytest
+
+# Ensure QApplication exists for Qt signal tests
+try:
+    from PyQt6.QtCore import QCoreApplication
+    from PyQt6.QtWidgets import QApplication
+    if QCoreApplication.instance() is None:
+        _app = QApplication([])
+except ImportError:
+    pass  # Qt not available, tests will use fallback mocks
+
 from tests.infrastructure.mock_factory import (
     create_manual_offset_dialog_tabs,
     create_signal_coordinator,
     create_unified_dialog_services,
 )
-from tests.infrastructure.qt_mocks import MockSignal
 
 
 class TestUnifiedDialogIntegrationMocked:
@@ -29,7 +42,76 @@ class TestUnifiedDialogIntegrationMocked:
     @pytest.fixture
     def mock_tabs(self):
         """Create mock tabs for testing."""
-        return create_manual_offset_dialog_tabs()
+        # Create pure mock tabs without Qt dependencies
+        
+        # Helper class for mock signals
+        class MockSignalImpl:
+            def __init__(self):
+                self._callbacks = []
+                self.emit = Mock(side_effect=self._emit)
+                self.connect = Mock(side_effect=self._connect)
+                self.disconnect = Mock(side_effect=self._disconnect)
+            
+            def _connect(self, callback):
+                self._callbacks.append(callback)
+            
+            def _disconnect(self, callback=None):
+                if callback is None:
+                    self._callbacks.clear()
+                elif callback in self._callbacks:
+                    self._callbacks.remove(callback)
+            
+            def _emit(self, *args):
+                for callback in self._callbacks:
+                    try:
+                        callback(*args)
+                    except Exception:
+                        pass
+        
+        # Browse tab
+        browse_tab = Mock()
+        browse_tab.offset_changed = MockSignalImpl()
+        browse_tab.find_next_clicked = MockSignalImpl()
+        browse_tab.find_prev_clicked = MockSignalImpl()
+        browse_tab.get_offset = Mock(return_value=0x200000)
+        browse_tab.set_offset = Mock()
+        browse_tab.set_rom_size = Mock()
+        browse_tab.slider = Mock()
+        browse_tab.slider.setValue = Mock()
+        browse_tab.slider.value = Mock(return_value=0x200000)
+        browse_tab.slider.maximum = Mock(return_value=0x400000)
+        
+        # Smart tab
+        smart_tab = Mock()
+        smart_tab.smart_mode_changed = MockSignalImpl()
+        smart_tab.offset_requested = MockSignalImpl()
+        smart_tab.smart_checkbox = Mock()
+        smart_tab.smart_checkbox.setChecked = Mock()
+        smart_tab.smart_checkbox.isChecked = Mock(return_value=False)
+        smart_tab.locations_combo = Mock()
+        smart_tab.locations_combo.setCurrentIndex = Mock()
+        smart_tab.locations_combo.currentIndex = Mock(return_value=0)
+        
+        # History tab
+        history_tab = Mock()
+        history_tab.sprite_selected = MockSignalImpl()
+        history_tab.clear_requested = MockSignalImpl()
+        history_tab.add_sprite = Mock()
+        history_tab.clear_sprites = Mock()
+        history_tab.list_widget = Mock()
+        history_tab.list_widget.count = Mock(return_value=0)
+        history_tab.list_widget.item = Mock(return_value=Mock())
+        history_tab.summary_label = Mock()
+        history_tab.summary_label.text = Mock(return_value="No sprites found yet")
+        history_tab.clear_button = Mock()
+        history_tab.clear_button.isEnabled = Mock(return_value=False)
+        history_tab.clear_button.click = Mock()
+        
+        return {
+            "browse_tab": browse_tab,
+            "smart_tab": smart_tab,
+            "history_tab": history_tab,
+        }
 
     @pytest.fixture
     def mock_coordinator(self, mock_services):
@@ -76,9 +158,36 @@ class TestUnifiedDialogIntegrationMocked:
         dialog.accept = Mock()
         dialog.reject = Mock()
 
-        # Signals
-        dialog.offset_changed = MockSignal()
-        dialog.sprite_found = MockSignal()
+        # Signals - use pure mock signals for mock testing
+        # Import the fallback MockSignal class directly
+        from tests.infrastructure.qt_mocks import MockSignal as FallbackMockSignal
+        
+        # Create mock signals that work without Qt
+        class MockSignalImpl:
+            def __init__(self):
+                self._callbacks = []
+                self.emit = Mock(side_effect=self._emit)
+                self.connect = Mock(side_effect=self._connect)
+                self.disconnect = Mock(side_effect=self._disconnect)
+            
+            def _connect(self, callback):
+                self._callbacks.append(callback)
+            
+            def _disconnect(self, callback=None):
+                if callback is None:
+                    self._callbacks.clear()
+                elif callback in self._callbacks:
+                    self._callbacks.remove(callback)
+            
+            def _emit(self, *args):
+                for callback in self._callbacks:
+                    try:
+                        callback(*args)
+                    except Exception:
+                        pass
+        
+        dialog.offset_changed = MockSignalImpl()
+        dialog.sprite_found = MockSignalImpl()
 
         # Services
         dialog.preview_generator = mock_services["preview_generator"]
@@ -555,8 +664,33 @@ class TestCompatibilityIntegrationMocked:
     def mock_dialog_for_compatibility(self):
         """Create dialog mock for compatibility testing."""
         dialog = Mock()
-        dialog.offset_changed = MockSignal()
-        dialog.sprite_found = MockSignal()
+        
+        # Create mock signals that work without Qt 
+        class MockSignalImpl:
+            def __init__(self):
+                self._callbacks = []
+                self.emit = Mock(side_effect=self._emit)
+                self.connect = Mock(side_effect=self._connect)
+                self.disconnect = Mock(side_effect=self._disconnect)
+            
+            def _connect(self, callback):
+                self._callbacks.append(callback)
+            
+            def _disconnect(self, callback=None):
+                if callback is None:
+                    self._callbacks.clear()
+                elif callback in self._callbacks:
+                    self._callbacks.remove(callback)
+            
+            def _emit(self, *args):
+                for callback in self._callbacks:
+                    try:
+                        callback(*args)
+                    except Exception:
+                        pass
+        
+        dialog.offset_changed = MockSignalImpl()
+        dialog.sprite_found = MockSignalImpl()
         dialog.result = Mock(return_value=Mock())
         dialog.show = Mock()
         dialog.hide = Mock()

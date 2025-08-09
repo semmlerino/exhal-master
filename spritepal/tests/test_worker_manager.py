@@ -5,6 +5,18 @@ Test the WorkerManager utility class.
 from PyQt6.QtCore import QThread, pyqtSignal
 from ui.common import WorkerManager
 from ui.common.timing_constants import (
+# Test characteristics: Real GUI components requiring display, Thread safety concerns
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+]
+
+
     SLEEP_MEDIUM,
     TEST_TIMEOUT_MEDIUM,
     WORKER_TIMEOUT_LONG,
@@ -89,7 +101,7 @@ class TestWorkerManager:
         qtbot.waitUntil(worker.isRunning, timeout=TEST_TIMEOUT_MEDIUM)
 
         # Cleanup without forced termination should respect the timeout
-        WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT, force_terminate=False)
+        WorkerManager.cleanup_worker(worker, timeout=WORKER_TIMEOUT_SHORT, enable_force_cleanup=False)
 
         # Worker should be stopped since our quit() implementation works
         assert not worker.isRunning()

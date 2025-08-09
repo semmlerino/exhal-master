@@ -29,6 +29,14 @@ from PyQt6.QtTest import QSignalSpy, QTest
 from PyQt6.QtWidgets import QCheckBox, QLineEdit, QPushButton
 
 # Add parent directory for imports
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -44,10 +52,10 @@ from tests.infrastructure import (
     validate_qt_object_lifecycle,
 )
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
+from core.managers.registry import cleanup_managers, initialize_managers
 
 # Import real MainWindow (not mocked!)
-from spritepal.ui.main_window import MainWindow
+from ui.main_window import MainWindow
 
 
 class TestRealMainWindowStateIntegration:

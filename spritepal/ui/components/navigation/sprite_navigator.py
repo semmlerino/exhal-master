@@ -10,6 +10,8 @@ Features:
 - Keyboard-friendly navigation
 """
 
+from __future__ import annotations
+
 import time
 from typing import TYPE_CHECKING
 
@@ -684,7 +686,7 @@ class SpriteNavigator(QWidget):
 
     # Public API
 
-    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: "ExtractionManager"):
+    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: ExtractionManager):
         """Set ROM data for navigation"""
         self.rom_path = rom_path
         self.rom_size = rom_size

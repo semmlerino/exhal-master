@@ -5,10 +5,14 @@ These protocols define the interfaces that controllers, workers, and UI componen
 depend on, enabling loose coupling and better testability through dependency injection.
 """
 
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 
 from PIL import Image
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QWidget
+
+if TYPE_CHECKING:
+    pass
 
 
 @runtime_checkable
@@ -302,4 +306,53 @@ class SessionManagerProtocol(BaseManagerProtocol, Protocol):
 
     def import_settings(self, file_path: str) -> None:
         """Import settings from file."""
+        ...
+
+
+@runtime_checkable
+class MainWindowProtocol(Protocol):
+    """Protocol for main window functionality needed by controller."""
+
+    # Signals the controller connects to
+    extract_requested: pyqtSignal
+    open_in_editor_requested: pyqtSignal
+    arrange_rows_requested: pyqtSignal
+    arrange_grid_requested: pyqtSignal
+    inject_requested: pyqtSignal
+
+    # UI components accessed by controller
+    status_bar: Any  # QStatusBar
+    sprite_preview: Any  # SpritePreviewWidget
+    preview_coordinator: Any  # PreviewCoordinator
+    palette_preview: Any  # PalettePreviewWidget
+    extraction_panel: Any  # ExtractionPanel
+    status_bar_manager: Any  # StatusBarManager
+    rom_extraction_panel: Any  # ROMExtractionPanel
+
+    def get_extraction_params(self) -> dict[str, Any]:
+        """Get extraction parameters from UI."""
+        ...
+
+    def extraction_failed(self, error_message: str) -> None:
+        """Handle extraction failure."""
+        ...
+
+    def extraction_complete(self, extracted_files: list[str]) -> None:
+        """Handle extraction completion."""
+        ...
+
+    def get_output_path(self) -> str:
+        """Get output path for extraction."""
+        ...
+
+    def show_cache_operation_badge(self, badge_text: str) -> None:
+        """Show cache operation badge."""
+        ...
+
+    def hide_cache_operation_badge(self) -> None:
+        """Hide cache operation badge."""
+        ...
+
+    def update_cache_status(self) -> None:
+        """Update cache status display."""
         ...

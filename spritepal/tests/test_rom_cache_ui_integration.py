@@ -14,16 +14,32 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
 # Managers are handled by conftest.py
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.core.rom_injector import SpritePointer
-from spritepal.ui.dialogs.resume_scan_dialog import ResumeScanDialog
-from spritepal.ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
-from spritepal.ui.rom_extraction.widgets.sprite_selector_widget import (
+from core.rom_extractor import ROMExtractor
+from core.rom_injector import SpritePointer
+from ui.dialogs.resume_scan_dialog import ResumeScanDialog
+from ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
+from ui.rom_extraction.widgets.sprite_selector_widget import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.performance,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+    pytest.mark.widget,
+]
+
+
     SpriteSelectorWidget,
 )
-from spritepal.ui.rom_extraction.workers.scan_worker import SpriteScanWorker
-from spritepal.ui.rom_extraction_panel import ROMExtractionPanel
-from spritepal.utils.rom_cache import ROMCache
+from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
+from ui.rom_extraction_panel import ROMExtractionPanel
+from utils.rom_cache import ROMCache
 
 # Manager setup is handled by conftest.py setup_managers fixture
 
@@ -73,7 +89,7 @@ class TestROMFileWidgetCacheDisplay:
         assert "📊" not in info_text
         assert "cached" not in info_text
 
-    @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
+    @patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_cache_status_with_sprites_cached(self, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test cache status display when sprites are cached."""
         # Make ROMFileWidget use our test cache instance
@@ -138,7 +154,7 @@ class TestROMFileWidgetCacheDisplay:
         assert "💾 3 sprites cached" in info_text
         assert "color: #0078d4" in info_text  # Blue color for sprite cache
 
-    @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
+    @patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_cache_status_with_partial_scan(self, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test cache status display when partial scan is cached."""
         # Make ROMFileWidget use our test cache instance
@@ -187,7 +203,7 @@ class TestROMFileWidgetCacheDisplay:
         assert "📊 Partial scan cached" in info_text
         assert "color: #107c41" in info_text  # Green color for scan cache
 
-    @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
+    @patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_cache_invalidation_on_rom_change(self, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test cache status updates when ROM file is modified."""
         # Make ROMFileWidget use our test cache instance
@@ -324,7 +340,7 @@ class TestSpriteScanWorkerCacheIntegration:
         print(f"Cache returned: {partial_result}")
 
         # Now test with worker
-        with patch("spritepal.utils.rom_cache.get_rom_cache", return_value=rom_cache):
+        with patch("utils.rom_cache.get_rom_cache", return_value=rom_cache):
             worker = SpriteScanWorker(test_rom_file, extractor, use_cache=True)
 
             finished = False
@@ -371,7 +387,7 @@ class TestSpriteScanWorkerCacheIntegration:
         )
 
         # Create worker
-        with patch("spritepal.utils.rom_cache.get_rom_cache", return_value=rom_cache):
+        with patch("utils.rom_cache.get_rom_cache", return_value=rom_cache):
             extractor = ROMExtractor()
             worker = SpriteScanWorker(test_rom_file, extractor, use_cache=True)
 
@@ -400,8 +416,8 @@ class TestSpriteScanWorkerCacheIntegration:
             assert finished, f"Worker did not finish. Last message: {last_msg}"
 
     @pytest.mark.slow
-    @patch("spritepal.utils.rom_cache.get_rom_cache")
-    @patch("spritepal.core.rom_injector.ROMInjector.find_compressed_sprite")
+    @patch("utils.rom_cache.get_rom_cache")
+    @patch("core.rom_injector.ROMInjector.find_compressed_sprite")
     def test_scan_worker_cache_save_progress(self, mock_find_sprite, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test cache save progress during scanning."""
         mock_get_rom_cache.return_value = rom_cache
@@ -604,7 +620,7 @@ class TestROMExtractionPanelCacheUI:
         assert found_cached
         assert found_fresh
 
-    @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
+    @patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_partial_scan_detection(self, mock_get_rom_cache, qtbot, test_rom_file, rom_cache):
         """Test that partial scan is detected when ROM is loaded."""
         # Make ROMFileWidget use our test cache instance
@@ -667,7 +683,7 @@ class TestCacheUIEndToEnd:
         rom_cache.save_sprite_locations(test_rom_file, sprite_locations)
 
         # Create panel with cache
-        with patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache", return_value=rom_cache):
+        with patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache", return_value=rom_cache):
             panel = ROMExtractionPanel()
             qtbot.addWidget(panel)
 
@@ -684,7 +700,7 @@ class TestCacheUIEndToEnd:
             assert sprite_locations is not None
             assert len(sprite_locations) > 0
 
-    @patch("spritepal.ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
+    @patch("ui.rom_extraction.widgets.rom_file_widget.get_rom_cache")
     def test_cache_persistence_across_sessions(self, mock_get_rom_cache, qtbot, test_rom_file, temp_cache_dir):
         """Test that cache persists and is recognized in new session."""
         # First session - perform scan

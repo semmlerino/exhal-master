@@ -7,11 +7,23 @@ from unittest.mock import Mock
 import pytest
 from PIL import Image
 
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from ui.row_arrangement.grid_arrangement_manager import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
+
     TileGroup,
     TilePosition,
 )
-from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
 
 
 class TestGridImageProcessor:
@@ -527,7 +539,7 @@ class TestGridImageProcessor:
 
     def test_inheritance_from_row_image_processor(self):
         """Test that GridImageProcessor properly inherits from RowImageProcessor"""
-        from spritepal.ui.row_arrangement.image_processor import RowImageProcessor
+        from ui.row_arrangement.image_processor import RowImageProcessor
 
         processor = GridImageProcessor()
         assert isinstance(processor, RowImageProcessor)

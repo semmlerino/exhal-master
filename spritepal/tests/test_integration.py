@@ -12,11 +12,11 @@ import pytest
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.workers import VRAMExtractionWorker
-from spritepal.utils.constants import (
+from core.controller import ExtractionController
+from core.extractor import SpriteExtractor
+from core.palette_manager import PaletteManager
+from core.workers import VRAMExtractionWorker
+from utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
     SPRITE_PALETTE_END,
@@ -28,6 +28,16 @@ from spritepal.utils.constants import (
 
 class TestEndToEndWorkflow:
     """Test complete extraction workflows"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+]
+
 
     @pytest.fixture
     def sample_files(self):
@@ -175,10 +185,10 @@ class TestVRAMExtractionWorker:
         }
 
     @pytest.mark.gui
-    def test_worker_signals(self, worker_params, qtbot):
+    def test_worker_signals(self, worker_params, qtbot, worker_timeout):
         """Test VRAMExtractionWorker signal emission"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -194,7 +204,7 @@ class TestVRAMExtractionWorker:
             worker.extraction_finished.connect(lambda files: finished_files.extend(files))
 
             # Start worker as real thread and wait for completion
-            with qtbot.waitSignal(worker.extraction_finished, timeout=10000):
+            with qtbot.waitSignal(worker.extraction_finished, timeout=worker_timeout):
                 worker.start()
 
             # Wait for worker to fully complete
@@ -220,10 +230,10 @@ class TestVRAMExtractionWorker:
             cleanup_managers()
 
     @pytest.mark.gui
-    def test_worker_error_handling(self, qtbot):
+    def test_worker_error_handling(self, qtbot, worker_timeout):
         """Test VRAMExtractionWorker error handling"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -244,7 +254,7 @@ class TestVRAMExtractionWorker:
             worker.error.connect(lambda e: errors.append(e))
 
             # Start worker as real thread and wait for error signal
-            with qtbot.waitSignal(worker.error, timeout=10000):
+            with qtbot.waitSignal(worker.error, timeout=worker_timeout):
                 worker.start()
 
             # Wait for worker to complete
@@ -455,7 +465,7 @@ class TestFullWorkflowIntegration:
     ):
         """Test complete UI-Controller-Worker integration workflow"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -519,8 +529,8 @@ class TestFullWorkflowIntegration:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
             ):
                 # Configure mocks
                 mock_qpixmap_utils.return_value = mock_pixmap_instance
@@ -592,7 +602,7 @@ class TestFullWorkflowIntegration:
     ):
         """Test error recovery and system cleanup integration"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -615,8 +625,8 @@ class TestFullWorkflowIntegration:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
             ):
                 # Configure mocks
                 mock_qpixmap_utils.return_value = mock_pixmap_instance
@@ -674,8 +684,8 @@ class TestFullWorkflowIntegration:
                 mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
                 with (
-                    patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                    patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                    patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                    patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
                 ):
                     # Configure mocks
                     mock_qpixmap_utils.return_value = mock_pixmap_instance
@@ -714,7 +724,7 @@ class TestFullWorkflowIntegration:
     ):
         """Test complete OAM analysis integration workflow"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -747,8 +757,8 @@ class TestFullWorkflowIntegration:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
             ):
                 # Configure mocks
                 mock_qpixmap_utils.return_value = mock_pixmap_instance

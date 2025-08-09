@@ -12,8 +12,17 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtTest import QSignalSpy
 
-from spritepal.core.managers.base_manager import BaseManager
-from spritepal.core.workers.specialized import (
+from core.managers.base_manager import BaseManager
+from core.workers.specialized import (
+# Serial execution required: QApplication management, Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety
+]
+
+
     ExtractionWorkerBase,
     InjectionWorkerBase,
     PreviewWorkerBase,

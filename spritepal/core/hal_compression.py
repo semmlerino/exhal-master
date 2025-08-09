@@ -31,13 +31,13 @@ except ImportError:
 
 from utils.constants import (
     DATA_SIZE,
-    HAL_POOL_SHUTDOWN_TIMEOUT,
     HAL_POOL_SIZE_DEFAULT,
     HAL_POOL_SIZE_MAX,
     HAL_POOL_SIZE_MIN,
     HAL_POOL_TIMEOUT_SECONDS,
 )
 from utils.logging_config import get_logger
+from utils.safe_logging import safe_debug, safe_info, safe_warning, suppress_logging_errors
 
 logger = get_logger(__name__)
 
@@ -76,6 +76,7 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
     Runs in a separate process and handles HAL compression/decompression requests.
     """
     import os  # noqa: PLC0415
+    import queue  # noqa: PLC0415
     import signal  # noqa: PLC0415
 
     # Ignore interrupt signals in worker processes
@@ -99,17 +100,21 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
     worker_logger.debug(f"HAL worker process {os.getpid()} started")
 
     while True:
+        request: HALRequest | None = None  # Initialize request to avoid unbound variable
         try:
             # Get request from queue (blocking) with error handling for closed pipes
             try:
-                request = request_queue.get(timeout=1.0)
-            except (BrokenPipeError, EOFError, OSError, ConnectionResetError) as e:
-                # Queue closed, main process has shut down
-                worker_logger.debug(f"Worker process {os.getpid()}: Request queue closed, exiting: {e}")
+                request = request_queue.get(timeout=0.5)  # Shorter timeout for faster shutdown
+            except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
+                # Queue closed, main process has shut down - this is normal during cleanup
+                worker_logger.debug(f"Worker process {os.getpid()}: Request queue closed, normal shutdown")
                 break
+            except queue.Empty:
+                # Timeout is normal, continue waiting
+                continue
             except Exception as e:
                 # Other queue errors (e.g., queue corrupted)
-                worker_logger.debug(f"Worker process {os.getpid()}: Queue error, exiting: {e}")
+                worker_logger.debug(f"Worker process {os.getpid()}: Queue error, exiting: {e.__class__.__name__}")
                 break
 
             if request is None:  # Shutdown signal
@@ -152,7 +157,7 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
                 result = HALResult(
                     success=False,
                     error_message=f"Worker process error: {e!s}",
-                    request_id=getattr(request, "request_id", None) if "request" in locals() else None
+                    request_id=getattr(request, "request_id", None) if request is not None else None
                 )
                 result_queue.put(result)
             except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
@@ -299,11 +304,11 @@ class HALProcessPool:
             return
 
         self._initialized = True
-        self._pool_lock = threading.RLock()
-        self._pool = None
-        self._manager = None
-        self._request_queue = None
-        self._result_queue = None
+        self._pool_lock: threading.RLock = threading.RLock()
+        self._pool_initialized = False  # Use a boolean flag for initialization status
+        self._manager: Any | None = None
+        self._request_queue: mp.Queue[HALRequest] | None = None
+        self._result_queue: mp.Queue[HALResult] | None = None
         self._processes: list[mp.Process] = []
         self._process_pids: list[int] = []  # Track PIDs for debugging
         self._shutdown = False
@@ -320,15 +325,23 @@ class HALProcessPool:
     def _register_cleanup_hooks(self) -> None:
         """Register cleanup hooks to prevent memory leaks"""
         if not HALProcessPool._cleanup_registered:
-            # Register atexit handler
-            atexit.register(self.shutdown)
+            # Register atexit handler with suppress_logging_errors to prevent I/O errors during shutdown
+            @suppress_logging_errors
+            def cleanup_at_exit():
+                try:
+                    self.shutdown()
+                except Exception:
+                    pass  # Ignore errors during shutdown
+            
+            atexit.register(cleanup_at_exit)
 
             # Register with Qt if available
             if QT_AVAILABLE:
                 try:
                     app = QApplication.instance()
                     if app is not None:
-                        app.aboutToQuit.connect(self.shutdown)
+                        # Use suppressed version for Qt cleanup too
+                        app.aboutToQuit.connect(cleanup_at_exit)
                         logger.debug("Registered HAL pool cleanup with QApplication.aboutToQuit")
                 except Exception as e:
                     logger.debug(f"Could not register Qt cleanup: {e}")
@@ -342,7 +355,7 @@ class HALProcessPool:
             True if initialization successful, False otherwise
         """
         with self._pool_lock:
-            if self._pool is not None:
+            if self._pool_initialized:
                 logger.debug("Pool already initialized")
                 return True
 
@@ -368,7 +381,8 @@ class HALProcessPool:
                     )
                     p.start()
                     self._processes.append(p)
-                    self._process_pids.append(p.pid)
+                    if p.pid is not None:  # Ensure PID is available before appending
+                        self._process_pids.append(p.pid)
                     logger.debug(f"Started worker process {i+1}/{pool_size}: PID {p.pid}")
 
                 # Connect to Qt application aboutToQuit signal if available
@@ -392,7 +406,7 @@ class HALProcessPool:
                 except queue.Empty:
                     raise HALPoolError("Pool communication test failed - no response from workers") from None
 
-                self._pool = True  # Mark as initialized
+                self._pool_initialized = True  # Mark as initialized
                 logger.info("HAL process pool initialized successfully")
                 return True
 
@@ -425,19 +439,21 @@ class HALProcessPool:
         Returns:
             HAL operation result
         """
-        if self._pool is None or self._shutdown:
+        if not self._pool_initialized or self._shutdown:
             return HALResult(
                 success=False,
                 error_message="Pool not initialized or shutting down",
                 request_id=request.request_id
             )
 
+        # Set timeout before try block to ensure it's available in exception handlers
+        timeout = HAL_POOL_TIMEOUT_SECONDS
+
         try:
             # Put request in queue
             self._request_queue.put(request)
 
             # Wait for result with timeout
-            timeout = HAL_POOL_TIMEOUT_SECONDS
             return self._result_queue.get(timeout=timeout)
 
 
@@ -463,7 +479,7 @@ class HALProcessPool:
         Returns:
             List of HAL operation results in same order as requests
         """
-        if self._pool is None or self._shutdown:
+        if not self._pool_initialized or self._shutdown:
             return [
                 HALResult(
                     success=False,
@@ -519,183 +535,75 @@ class HALProcessPool:
                 for req in requests
             ]
 
+    @suppress_logging_errors
     def shutdown(self):
-        """Shutdown the process pool gracefully with robust error handling."""
+        """Properly shutdown pool with process joining."""
         with self._pool_lock:
-            if self._pool is None or self._shutdown:
+            if not self._pool_initialized or self._shutdown:
                 return
 
             self._shutdown = True
-            logger.info(f"Shutting down HAL process pool (PIDs: {self._process_pids})")
+            safe_info(logger, f"Shutting down HAL process pool (PIDs: {self._process_pids})")
 
-            # Phase 1: Send shutdown signals to workers
-            self._send_shutdown_signals()
-
-            # Phase 2: Graceful shutdown with individual process handling
-            alive_processes = self._graceful_shutdown_processes()
-
-            # Phase 3: Forceful termination for stuck processes
-            self._force_terminate_processes(alive_processes)
-
-            # Phase 4: Manager shutdown
-            self._shutdown_manager()
-
-            # Phase 5: Final cleanup
-            self._final_cleanup()
-
-    def _send_shutdown_signals(self) -> None:
-        """Send shutdown signals to all worker processes.
-
-        Attempts to send None to the request queue for each alive process,
-        which signals workers to exit gracefully.
-        """
-        shutdown_signals_sent = 0
-        if self._request_queue is not None:
-            for i, p in enumerate(self._processes):
+            # Send shutdown signals to all worker processes
+            if self._request_queue is not None:
                 try:
-                    # Only send to alive processes to avoid queue errors
-                    if p.is_alive():
-                        self._request_queue.put(None, timeout=0.5)
-                        shutdown_signals_sent += 1
-                        logger.debug(f"Sent shutdown signal to process {p.pid}")
-                    else:
-                        logger.debug(f"Process {p.pid} already terminated, skipping shutdown signal")
-                except (queue.Full, BrokenPipeError, EOFError, OSError) as e:
-                    # Queue full, closed, or process already terminated
-                    logger.debug(f"Could not send shutdown signal to process {i}: {e}")
+                    for _ in range(len(self._processes)):
+                        self._request_queue.put(None)  # None signals shutdown
                 except Exception as e:
-                    logger.debug(f"Unexpected error sending shutdown signal to process {i}: {e}")
+                    safe_debug(logger, f"Error sending shutdown signals: {e}")
 
-        logger.debug(f"Sent {shutdown_signals_sent} shutdown signals to {len(self._processes)} processes")
-
-    def _graceful_shutdown_processes(self) -> list[mp.Process]:
-        """Attempt graceful shutdown of all processes.
-
-        Returns:
-            List of processes that did not terminate gracefully.
-        """
-        alive_processes = []
-        deadline = time.time() + HAL_POOL_SHUTDOWN_TIMEOUT
-
-        for i, p in enumerate(self._processes):
-            try:
-                # Check if process is still alive (may have exited already)
-                if not p.is_alive():
-                    logger.debug(f"Process {p.pid} already terminated")
-                    continue
-
-                remaining = max(0.1, deadline - time.time())  # Minimum 0.1 seconds
-                if remaining > 0:
-                    try:
-                        p.join(timeout=remaining)
-                        if not p.is_alive():
-                            logger.debug(f"Process {p.pid} gracefully terminated")
-                        else:
-                            logger.debug(f"Process {p.pid} did not terminate gracefully, will force terminate")
-                            alive_processes.append(p)
-                    except Exception as e:
-                        logger.debug(f"Error during graceful join for PID {p.pid}: {e}")
-                        # Process might have terminated during join, check again
+            # Wait for processes to finish gracefully with shorter timeouts
+            for p in self._processes:
+                try:
+                    # Give process a short time to exit cleanly
+                    p.join(timeout=0.5)
+                    if p.is_alive():
+                        safe_debug(logger, f"Process {p.pid} did not shutdown gracefully, terminating")
+                        p.terminate()
+                        p.join(timeout=0.5)
                         if p.is_alive():
-                            alive_processes.append(p)
-                else:
-                    logger.debug(f"Shutdown timeout reached, will force terminate process {p.pid}")
-                    if p.is_alive():
-                        alive_processes.append(p)
-            except Exception as e:
-                logger.debug(f"Error checking process {i} status: {e}")
-                # Assume process needs force termination if we can't check status
-                alive_processes.append(p)
-
-        return alive_processes
-
-    def _force_terminate_processes(self, processes: list[mp.Process]) -> None:
-        """Forcefully terminate processes that did not exit gracefully.
-
-        Args:
-            processes: List of processes to terminate.
-        """
-        for p in processes:
-            try:
-                # Double-check if process is still alive before terminating
-                if not p.is_alive():
-                    logger.debug(f"Process {p.pid} terminated while waiting, skipping force termination")
-                    continue
-
-                logger.warning(f"Force terminating stuck worker process {p.pid}")
-                self._terminate_single_process(p)
-            except Exception as e:
-                logger.debug(f"Error in force termination loop for process {getattr(p, 'pid', 'unknown')}: {e}")
-
-    def _terminate_single_process(self, process: mp.Process) -> None:
-        """Terminate a single process, escalating to kill if necessary.
-
-        Args:
-            process: Process to terminate.
-        """
-        try:
-            process.terminate()
-            # Give process a short time to terminate gracefully
-            process.join(timeout=1.0)
-
-            if process.is_alive():
-                logger.error(f"Process {process.pid} still alive after terminate(), attempting kill()")
-                try:
-                    process.kill()
-                    process.join(timeout=1.0)
-                    if process.is_alive():
-                        logger.error(f"Process {process.pid} survived kill() - potential zombie")
-                    else:
-                        logger.debug(f"Process {process.pid} killed successfully")
-                except (ProcessLookupError, OSError) as e:
-                    # Process may have terminated between checks
-                    logger.debug(f"Process {process.pid} no longer exists during kill: {e}")
+                            safe_debug(logger, f"Process {p.pid} did not terminate, killing")
+                            p.kill()
+                            p.join(timeout=0.1)  # Brief wait after kill
                 except Exception as e:
-                    logger.exception(f"Failed to kill process {process.pid}: {e}")
-            else:
-                logger.debug(f"Process {process.pid} terminated successfully")
-        except (ProcessLookupError, OSError) as e:
-            # Process may have terminated between alive check and terminate call
-            logger.debug(f"Process {process.pid} no longer exists during terminate: {e}")
-        except Exception as e:
-            logger.exception(f"Error terminating process {process.pid}: {e}")
+                    safe_debug(logger, f"Error shutting down process {getattr(p, 'pid', 'unknown')}: {e}")
 
-    def _shutdown_manager(self) -> None:
-        """Shutdown the multiprocessing manager with timeout protection."""
-        if self._manager is not None:
-            try:
-                logger.debug("Shutting down multiprocessing manager")
-                # Set a short timeout to avoid hanging if manager is stuck
-                manager_shutdown_thread = threading.Thread(target=self._manager.shutdown, daemon=True)
-                manager_shutdown_thread.start()
-                manager_shutdown_thread.join(timeout=2.0)
+            self._pool_initialized = False
 
-                if manager_shutdown_thread.is_alive():
-                    logger.warning("Manager shutdown is taking too long, proceeding with cleanup")
-                else:
-                    logger.debug("Manager shutdown completed successfully")
+            # Close manager properly with timeout
+            if self._manager:
+                try:
+                    # Use a thread with timeout for manager shutdown
+                    def shutdown_manager():
+                        try:
+                            self._manager.shutdown()
+                        except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
+                            pass  # Expected during shutdown
+                        except Exception as e:
+                            safe_debug(logger, f"Manager shutdown error: {e}")
+                    
+                    shutdown_thread = threading.Thread(target=shutdown_manager)
+                    shutdown_thread.daemon = True
+                    shutdown_thread.start()
+                    shutdown_thread.join(timeout=1.0)  # Give manager 1 second to shutdown
+                    
+                    if shutdown_thread.is_alive():
+                        safe_debug(logger, "Manager shutdown timed out")
+                except Exception as e:
+                    safe_debug(logger, f"Error during manager shutdown: {e}")
+                finally:
+                    self._manager = None
 
-            except (OSError, EOFError, BrokenPipeError, ConnectionResetError) as e:
-                # These are expected during shutdown when processes are terminated
-                logger.debug(f"Expected manager shutdown error: {e}")
-            except Exception as e:
-                logger.warning(f"Unexpected error during manager shutdown: {e}")
-
-    def _final_cleanup(self) -> None:
-        """Perform final cleanup of all resources."""
-        try:
+            # Clear all references
             self._processes.clear()
             self._process_pids.clear()
-            self._pool = None
-            self._manager = None
+            if hasattr(self, '_process_refs'):
+                self._process_refs.clear()
             self._request_queue = None
             self._result_queue = None
-            logger.info("HAL process pool shutdown complete")
-        except Exception as e:
-            logger.exception(f"Error during final cleanup: {e}")
-            # Even if cleanup fails, mark as shutdown to prevent loops
-            self._pool = None
-            self._shutdown = True
+
+            safe_info(logger, "HAL process pool shutdown complete")
 
     def _force_cleanup_zombies(self):
         """Emergency cleanup for zombie processes with robust error handling."""
@@ -749,16 +657,11 @@ class HALProcessPool:
         """Destructor to ensure cleanup happens even if shutdown is not called explicitly."""
         try:
             # More defensive checks during destructor
-            if (hasattr(self, "_pool") and
+            if (hasattr(self, "_pool_initialized") and
                 hasattr(self, "_shutdown") and
-                self._pool is not None and
+                self._pool_initialized and
                 not self._shutdown):
-                # Use a more basic logger approach during shutdown to avoid issues
-                try:
-                    logger.debug("HALProcessPool destructor triggered - cleaning up resources")
-                except Exception:
-                    # Logger might not be available during interpreter shutdown
-                    pass
+                safe_debug(logger, "HALProcessPool destructor triggered - cleaning up resources")
                 self.shutdown()
         except Exception:
             # Ignore all errors in destructor to prevent issues during interpreter shutdown
@@ -768,7 +671,24 @@ class HALProcessPool:
     @property
     def is_initialized(self) -> bool:
         """Check if pool is initialized and ready."""
-        return self._pool is not None and not self._shutdown
+        return self._pool_initialized and not self._shutdown
+
+    @property
+    def _pool(self) -> bool | None:
+        """Backward compatibility property for tests.
+        
+        Returns None when not initialized, True when initialized.
+        This maintains the interface that tests expect.
+        """
+        return True if self._pool_initialized else None
+
+    @_pool.setter
+    def _pool(self, value: bool | None) -> None:
+        """Setter for backward compatibility with tests.
+        
+        Tests may set _pool directly to simulate different states.
+        """
+        self._pool_initialized = bool(value) if value is not None else False
 
     def force_reset(self) -> None:
         """Force reset the pool state - for test cleanup and error recovery.
@@ -782,28 +702,35 @@ class HALProcessPool:
             # Mark as shutdown first to prevent new operations
             self._shutdown = True
 
-            # Force terminate all processes without waiting
+            # Immediately terminate and kill all processes
             if self._processes:
                 for p in self._processes:
                     try:
                         if p.is_alive():
                             p.terminate()
-                            # Brief wait to allow graceful termination
-                            p.join(timeout=0.1)
+                            # Minimal wait before force kill
+                            time.sleep(0.1)
                             if p.is_alive():
-                                p.kill()  # Force kill if still alive
+                                p.kill()
                     except Exception as e:
                         logger.debug(f"Error force terminating process {getattr(p, 'pid', 'unknown')}: {e}")
 
-            # Force manager shutdown with timeout
+            # Direct manager shutdown with minimal timeout
             if self._manager is not None:
                 try:
-                    # Use a separate thread to avoid blocking on manager shutdown
-                    shutdown_thread = threading.Thread(target=self._manager.shutdown, daemon=True)
+                    # Force manager shutdown in a thread with very short timeout
+                    def force_shutdown_manager():
+                        try:
+                            self._manager.shutdown()
+                        except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
+                            pass  # Expected during force shutdown
+                        except Exception:
+                            pass  # Ignore all errors during force shutdown
+                    
+                    shutdown_thread = threading.Thread(target=force_shutdown_manager)
+                    shutdown_thread.daemon = True
                     shutdown_thread.start()
-                    shutdown_thread.join(timeout=1.0)  # 1 second timeout
-                    if shutdown_thread.is_alive():
-                        logger.warning("Manager shutdown timed out during force reset")
+                    shutdown_thread.join(timeout=0.2)  # Very short timeout for force reset
                 except Exception as e:
                     logger.debug(f"Error force shutting down manager: {e}")
 
@@ -812,7 +739,7 @@ class HALProcessPool:
             self._process_pids.clear()
             if hasattr(self, '_process_refs'):
                 self._process_refs.clear()
-            self._pool = None
+            self._pool_initialized = False
             self._manager = None
             self._request_queue = None
             self._result_queue = None
@@ -827,13 +754,15 @@ class HALProcessPool:
     def reset_singleton(cls) -> None:
         """Reset the singleton instance - for testing purposes only."""
         with cls._lock:
+            # Reset flag first to ensure it happens even if force_reset fails
+            cls._cleanup_registered = False  # Allow re-registration
+            
             if cls._instance is not None:
                 try:
                     cls._instance.force_reset()
                 except Exception as e:
                     logger.debug(f"Error during singleton reset: {e}")
                 cls._instance = None
-                cls._cleanup_registered = False  # Allow re-registration
                 logger.debug("HAL process pool singleton reset")
 
 
@@ -917,7 +846,7 @@ class HALCompressor:
                 # Check if file is executable
                 if not os.access(full_path, os.X_OK):
                     logger.warning(f"Found {tool_name} but it may not be executable: {full_path}")
-                return full_path
+                return str(full_path)
             logger.debug(f"Location {i}/{len(search_paths)}: Not found at {full_path}")
 
         logger.error(f"Could not find {tool_name} executable in any search path")
@@ -1309,6 +1238,7 @@ class HALCompressor:
 
 
 # Module-level cleanup for memory leak prevention
+@suppress_logging_errors
 def _cleanup_hal_singleton():
     """Cleanup HAL singleton at module exit"""
     try:

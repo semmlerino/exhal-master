@@ -2,6 +2,8 @@
 Main window for SpritePal application
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -10,7 +12,11 @@ if TYPE_CHECKING:
     from core.managers.session_manager import SessionManager
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCloseEvent, QKeyEvent
+
+if TYPE_CHECKING:
+    from PyQt6.QtGui import QCloseEvent, QKeyEvent
+else:
+    from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
@@ -63,13 +69,18 @@ class MainWindow(QMainWindow):
     arrange_grid_requested = pyqtSignal(str)  # sprite file path for grid arrangement
     inject_requested = pyqtSignal()  # inject sprite to VRAM
 
+    # Completion signals for controller communication
+    extraction_completed = pyqtSignal(list)  # list of extracted files
+    extraction_error_occurred = pyqtSignal(str)     # error message
+
     def __init__(self) -> None:
         super().__init__()
         # Declare instance variables with type hints
         self._output_path: str
         self._extracted_files: list[str]
         self.session_manager: SessionManager
-        self.controller: ExtractionController
+        self._controller: ExtractionController | None
+        self.left_panel: QWidget
         self.extraction_tabs: QTabWidget
         self.rom_extraction_panel: ROMExtractionPanel
         self.extraction_panel: ExtractionPanel
@@ -88,16 +99,15 @@ class MainWindow(QMainWindow):
 
         self._output_path = ""
         self._extracted_files = []
+        self._controller = None  # Lazy initialization to break circular dependency
         self.session_manager = get_session_manager()
 
         self._setup_ui()
         self._setup_managers()  # This creates all UI widgets via managers
         self._connect_signals()
 
-        # Create controller (lazy import to avoid circular dependency)
-        # Delayed import to avoid circular dependency: main_window -> controller -> main_window
-        from core.controller import ExtractionController  # noqa: PLC0415
-        self.controller = ExtractionController(self)
+        # Controller will be created on first access via property
+        # This breaks the circular dependency: tests can create MainWindow without hanging
 
         # Restore session after UI is set up
         self.session_coordinator.restore_session()
@@ -121,14 +131,14 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(main_splitter)
 
         # Left panel - Input and controls
-        left_panel = self._create_left_panel()
+        self.left_panel = self._create_left_panel()
 
         # Right panel - Previews (will be created by PreviewCoordinator)
         self.sprite_preview = PreviewPanel()
         self.palette_preview = PalettePreviewWidget()
 
         # Add panels to main splitter (right panel created by manager)
-        main_splitter.addWidget(left_panel)
+        main_splitter.addWidget(self.left_panel)
         # Right panel will be added by PreviewCoordinator
 
         # Configure main splitter
@@ -137,7 +147,7 @@ class MainWindow(QMainWindow):
         main_splitter.setStretchFactor(1, 1)  # Right panel stretches
 
         # Set minimum sizes for panels
-        left_panel.setMinimumWidth(300)
+        self.left_panel.setMinimumWidth(300)
 
         # Status bar
         self.status_bar = QStatusBar()
@@ -180,6 +190,10 @@ class MainWindow(QMainWindow):
         self.output_settings_manager = OutputSettingsManager(self, self)
         self.toolbar_manager = ToolbarManager(self, self)
         self.preview_coordinator = PreviewCoordinator(self.sprite_preview, self.palette_preview)
+
+        # Backward compatibility: expose preview_info for existing code/tests
+        self.preview_info = self.preview_coordinator.preview_info
+
         self.session_coordinator = SessionCoordinator(self, self.extraction_panel, self.output_settings_manager)
 
         # Tab coordinator needs several managers
@@ -205,20 +219,18 @@ class MainWindow(QMainWindow):
         self.status_bar_manager.setup_status_bar_indicators()
 
         # Add output settings to left panel
-        left_panel = self.centralWidget().findChild(QWidget)
-        if left_panel:
-            left_layout = left_panel.layout()
-            if left_layout is not None:
-                # Insert output settings group before the stretch
-                output_group = self.output_settings_manager.create_output_settings_group()
-                left_layout.insertWidget(left_layout.count() - 1, output_group)
+        left_layout = self.left_panel.layout()
+        if left_layout is not None:
+            # Insert output settings group before the stretch
+            output_group = self.output_settings_manager.create_output_settings_group()
+            left_layout.insertWidget(left_layout.count() - 1, output_group)
 
-                # Add toolbar buttons
-                button_layout = QGridLayout()
-                button_layout.setContentsMargins(0, 10, 0, 0)
-                button_layout.setSpacing(5)
-                self.toolbar_manager.create_action_buttons(button_layout)
-                left_layout.insertLayout(left_layout.count() - 1, button_layout)
+            # Add toolbar buttons
+            button_layout = QGridLayout()
+            button_layout.setContentsMargins(0, 10, 0, 0)
+            button_layout.setSpacing(5)
+            self.toolbar_manager.create_action_buttons(button_layout)
+            left_layout.insertLayout(left_layout.count() - 1, button_layout)
 
         # Add preview panel to main splitter
         main_splitter = self.centralWidget().findChild(QSplitter)
@@ -597,6 +609,14 @@ class MainWindow(QMainWindow):
             "grayscale_mode": self.extraction_panel.is_grayscale_mode(),
         }
 
+    def get_output_path(self) -> str:
+        """Get the current output path
+
+        Returns:
+            The current output path string, or empty string if not set
+        """
+        return self._output_path
+
     def extraction_complete(self, extracted_files: list[str]) -> None:
         """Called when extraction is complete"""
         self._extracted_files = extracted_files
@@ -623,6 +643,9 @@ class MainWindow(QMainWindow):
             # No PNG file found - this shouldn't happen with successful extraction
             self.status_bar_manager.show_message("Extraction failed: No sprite file created")
 
+        # Emit signal for controller/test communication
+        self.extraction_completed.emit(extracted_files)
+
     def extraction_failed(self, error_message: str) -> None:
         """Called when extraction fails"""
         self.toolbar_manager.set_extract_enabled(True)
@@ -633,6 +656,9 @@ class MainWindow(QMainWindow):
             error_message,
             error_message  # Pass full error as technical details
         )
+
+        # Emit signal for controller/test communication
+        self.extraction_error_occurred.emit(error_message)
 
     # Session restore/save now handled by SessionCoordinator
 
@@ -711,3 +737,21 @@ class MainWindow(QMainWindow):
         if hasattr(self, "output_settings_manager"):
             return self.output_settings_manager.metadata_check
         return None
+
+    @property
+    def controller(self) -> ExtractionController:
+        """Lazy initialization of controller to break circular dependency.
+        
+        This allows tests to create MainWindow without hanging, as the controller
+        is only created when actually needed (not during __init__).
+        """
+        if self._controller is None:
+            # Import here to avoid circular dependency at module level
+            from core.controller import ExtractionController  # noqa: PLC0415
+            self._controller = ExtractionController(self)
+        return self._controller
+
+    @controller.setter
+    def controller(self, value: ExtractionController) -> None:
+        """Allow setting controller for testing purposes."""
+        self._controller = value

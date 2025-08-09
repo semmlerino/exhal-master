@@ -15,6 +15,20 @@ from pathlib import Path
 import pytest
 
 # Add parent directories to path
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.parallel_safe,
+    pytest.mark.performance,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.fixtures.test_preview_helper import (

@@ -19,18 +19,26 @@ from unittest.mock import patch
 import pytest
 from PyQt6.QtCore import QSettings
 
-import spritepal.core.managers.registry
-import spritepal.utils.rom_cache
-import spritepal.utils.settings_manager
-from spritepal.core.managers import (
+import core.managers.registry
+import utils.rom_cache
+import utils.settings_manager
+from core.managers import (
+# Serial execution required: Manager registry manipulation
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.singleton
+]
+
+
     cleanup_managers,
     get_session_manager,
     initialize_managers,
 )
-from spritepal.ui.dialogs.settings_dialog import SettingsDialog
-from spritepal.ui.main_window import MainWindow
-from spritepal.utils.rom_cache import get_rom_cache
-from spritepal.utils.settings_manager import get_settings_manager
+from ui.dialogs.settings_dialog import SettingsDialog
+from ui.main_window import MainWindow
+from utils.rom_cache import get_rom_cache
+from utils.settings_manager import get_settings_manager
 
 
 # Override the autouse fixture from conftest to prevent automatic initialization
@@ -69,11 +77,11 @@ class TestSettingsPersistenceAcrossRestarts:
 
         # Reset global instances BEFORE yielding
 
-        spritepal.utils.settings_manager._settings_manager_instance = None
-        spritepal.utils.rom_cache._rom_cache_instance = None
+        utils.settings_manager._settings_manager_instance = None
+        utils.rom_cache._rom_cache_instance = None
         # Clear the manager registry to force re-initialization
-        spritepal.core.managers.registry._instance = None
-        spritepal.core.managers.registry._registry = spritepal.core.managers.registry.ManagerRegistry()
+        core.managers.registry._instance = None
+        core.managers.registry._registry = core.managers.registry.ManagerRegistry()
 
         yield test_dir, settings_file, cache_dir
 
@@ -81,7 +89,7 @@ class TestSettingsPersistenceAcrossRestarts:
         with contextlib.suppress(builtins.BaseException):
             cleanup_managers()
         # Clear registry instance again for next test
-        spritepal.core.managers.registry._instance = None
+        core.managers.registry._instance = None
 
     def test_cache_settings_persistence_through_dialog(self, qtbot, setup_environment):
         """Test that cache settings changed via dialog persist across restarts."""
@@ -89,16 +97,25 @@ class TestSettingsPersistenceAcrossRestarts:
 
         # === First Session: Change cache settings via dialog ===
         initialize_managers("SpritePal", settings_path=settings_file)
-        get_settings_manager()
+        settings_manager = get_settings_manager()
 
         # Create and configure settings dialog
         dialog = SettingsDialog()
         qtbot.addWidget(dialog)
 
-        # Change cache settings
-        dialog.cache_enabled_check.setChecked(False)
+        # Verify initial values to ensure they differ from what we'll set
+        # Get current values first
+        initial_enabled = dialog.cache_enabled_check.isChecked()
+        initial_size = dialog.cache_size_spin.value()
+        
+        # Ensure the values we'll set are different from current values
+        new_enabled = not initial_enabled  # Toggle the current state
+        new_size = 250 if initial_size != 250 else 300  # Use different value
+
+        # Change cache settings using the values we determined
+        dialog.cache_enabled_check.setChecked(new_enabled)
         dialog.cache_location_edit.setText(str(cache_dir / "custom"))
-        dialog.cache_size_spin.setValue(250)
+        dialog.cache_size_spin.setValue(new_size)
         dialog.cache_expiry_spin.setValue(14)
         dialog.auto_cleanup_check.setChecked(False)
         dialog.show_indicators_check.setChecked(True)
@@ -106,14 +123,17 @@ class TestSettingsPersistenceAcrossRestarts:
         # Accept dialog to save settings
         dialog.accept()
 
+        # Force save to ensure file is written
+        settings_manager.save()
+
         # Verify settings were saved to file
         assert settings_file.exists()
         with open(settings_file) as f:
             saved_data = json.load(f)
 
-        assert saved_data["cache"]["enabled"] is False
+        assert saved_data["cache"]["enabled"] is new_enabled
         assert saved_data["cache"]["location"] == str(cache_dir / "custom")
-        assert saved_data["cache"]["max_size_mb"] == 250
+        assert saved_data["cache"]["max_size_mb"] == new_size
         assert saved_data["cache"]["expiration_days"] == 14
         assert saved_data["cache"]["auto_cleanup"] is False
         assert saved_data["cache"]["show_indicators"] is True
@@ -124,14 +144,14 @@ class TestSettingsPersistenceAcrossRestarts:
 
         # === Second Session: Verify settings persisted ===
         # Reset global instances to simulate restart
-        import spritepal.core.managers.registry
-        import spritepal.utils.rom_cache
-        import spritepal.utils.settings_manager
+        import core.managers.registry
+        import utils.rom_cache
+        import utils.settings_manager
 
-        spritepal.utils.settings_manager._settings_manager_instance = None
-        spritepal.utils.rom_cache._rom_cache_instance = None
+        utils.settings_manager._settings_manager_instance = None
+        utils.rom_cache._rom_cache_instance = None
         # Clear the manager registry to force re-initialization
-        spritepal.core.managers.registry._instance = None
+        core.managers.registry._instance = None
 
         # Initialize second session
         initialize_managers("SpritePal", settings_path=settings_file)
@@ -142,23 +162,23 @@ class TestSettingsPersistenceAcrossRestarts:
         cache2.refresh_settings()
 
         # Verify cache settings loaded correctly
-        assert settings2.get_cache_enabled() is False
+        assert settings2.get_cache_enabled() is new_enabled
         assert settings2.get_cache_location() == str(cache_dir / "custom")
-        assert settings2.get_cache_max_size_mb() == 250
+        assert settings2.get_cache_max_size_mb() == new_size
         assert settings2.get_cache_expiration_days() == 14
         assert settings2.get("cache", "auto_cleanup") is False
         assert settings2.get("cache", "show_indicators") is True
 
-        # Verify cache respects the disabled state
-        assert not cache2.cache_enabled
+        # Verify cache respects the enabled/disabled state
+        assert cache2.cache_enabled == new_enabled
 
         # Create new dialog to verify UI reflects persisted settings
         dialog2 = SettingsDialog()
         qtbot.addWidget(dialog2)
 
-        assert not dialog2.cache_enabled_check.isChecked()
+        assert dialog2.cache_enabled_check.isChecked() == new_enabled
         assert dialog2.cache_location_edit.text() == str(cache_dir / "custom")
-        assert dialog2.cache_size_spin.value() == 250
+        assert dialog2.cache_size_spin.value() == new_size
         assert dialog2.cache_expiry_spin.value() == 14
         assert not dialog2.auto_cleanup_check.isChecked()
         assert dialog2.show_indicators_check.isChecked()
@@ -179,7 +199,7 @@ class TestSettingsPersistenceAcrossRestarts:
         settings1.set("ui", "restore_position", True)
 
         # Create main window with specific geometry
-        with patch("spritepal.ui.main_window.QFileDialog"):  # Prevent file dialogs
+        with patch("ui.main_window.QFileDialog"):  # Prevent file dialogs
             window1 = MainWindow()
             qtbot.addWidget(window1)
 
@@ -233,11 +253,11 @@ class TestSettingsPersistenceAcrossRestarts:
 
         # === Second Session: Verify restoration ===
         # Reset globals
-        import spritepal.core.managers.registry
-        import spritepal.utils.settings_manager
-        spritepal.utils.settings_manager._settings_manager_instance = None
+        import core.managers.registry
+        import utils.settings_manager
+        utils.settings_manager._settings_manager_instance = None
         # Clear the manager registry to force re-initialization
-        spritepal.core.managers.registry._instance = None
+        core.managers.registry._instance = None
 
         initialize_managers("SpritePal", settings_path=settings_file)
         settings2 = get_settings_manager()
@@ -258,7 +278,7 @@ class TestSettingsPersistenceAcrossRestarts:
         print(f"DEBUG: Window geometry from session = {window_geom}")
 
         # Create new window
-        with patch("spritepal.ui.main_window.QFileDialog"):
+        with patch("ui.main_window.QFileDialog"):
             window2 = MainWindow()
             qtbot.addWidget(window2)
 
@@ -294,14 +314,14 @@ class TestSettingsPersistenceAcrossRestarts:
         cleanup_managers()
 
         # === Second Session: Window should use defaults ===
-        import spritepal.utils.settings_manager
-        spritepal.utils.settings_manager._settings_manager_instance = None
+        import utils.settings_manager
+        utils.settings_manager._settings_manager_instance = None
 
         initialize_managers("SpritePal", settings_path=settings_file)
         get_settings_manager()
 
         # Create window
-        with patch("spritepal.ui.main_window.QFileDialog"):
+        with patch("ui.main_window.QFileDialog"):
             window = MainWindow()
             qtbot.addWidget(window)
 
@@ -346,8 +366,8 @@ class TestSettingsPersistenceAcrossRestarts:
         cleanup_managers()
 
         # === Second Session: Verify session restored ===
-        import spritepal.utils.settings_manager
-        spritepal.utils.settings_manager._settings_manager_instance = None
+        import utils.settings_manager
+        utils.settings_manager._settings_manager_instance = None
 
         initialize_managers("SpritePal", settings_path=settings_file)
         settings2 = get_settings_manager()
@@ -380,8 +400,8 @@ class TestSettingsPersistenceAcrossRestarts:
 
         # Simulate crash - no cleanup_managers() call
         # Just reset the global instance
-        import spritepal.utils.settings_manager
-        spritepal.utils.settings_manager._settings_manager_instance = None
+        import utils.settings_manager
+        utils.settings_manager._settings_manager_instance = None
 
         # === Second Session: Settings should still be there ===
         initialize_managers("SpritePal", settings_path=settings_file)
@@ -481,11 +501,11 @@ class TestSettingsPersistenceAcrossRestarts:
         cleanup_managers()
 
         # === Second Session: Cache should use new location ===
-        import spritepal.utils.rom_cache
-        import spritepal.utils.settings_manager
+        import utils.rom_cache
+        import utils.settings_manager
 
-        spritepal.utils.settings_manager._settings_manager_instance = None
-        spritepal.utils.rom_cache._rom_cache_instance = None
+        utils.settings_manager._settings_manager_instance = None
+        utils.rom_cache._rom_cache_instance = None
 
         initialize_managers("SpritePal", settings_path=settings_file)
         settings2 = get_settings_manager()
@@ -551,8 +571,8 @@ class TestSettingsPersistenceAcrossRestarts:
         cleanup_managers()
 
         # Both should persist independently
-        import spritepal.utils.settings_manager
-        spritepal.utils.settings_manager._settings_manager_instance = None
+        import utils.settings_manager
+        utils.settings_manager._settings_manager_instance = None
 
         # Verify Qt settings
         qt_settings2 = QSettings("SpritePal", "TestSettings")

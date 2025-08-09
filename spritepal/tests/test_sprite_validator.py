@@ -9,7 +9,17 @@ import tempfile
 import pytest
 from PIL import Image
 
-from spritepal.core.sprite_validator import SpriteValidator
+from core.sprite_validator import SpriteValidator
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 
 
 class TestSpriteValidator:

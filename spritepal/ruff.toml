@@ -18,7 +18,8 @@ exclude = [
     "scripts/analysis/**",
     "scripts/install_*.py",
     "scripts/profile_*.py",
-    "scripts/run_*.py"
+    "scripts/run_*.py",
+    "archive_2025_08_09/**"
 ]
 
 # Lint configuration

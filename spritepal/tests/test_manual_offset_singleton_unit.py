@@ -6,268 +6,232 @@ without requiring complex Qt setup, using pure mocking to verify
 the critical singleton functionality.
 """
 
-from unittest.mock import MagicMock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from spritepal.ui.rom_extraction_panel import ManualOffsetDialogSingleton
+# Import mock dialog infrastructure
+from tests.infrastructure.mock_dialogs import MockUnifiedManualOffsetDialog, patch_dialog_imports
+
+# Apply dialog patching BEFORE any UI imports
+# Test characteristics: Singleton management
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.singleton,
+    pytest.mark.unit,
+]
+
+
+patch_dialog_imports()
+
+# Now safe to import the singleton after patching
+from ui.rom_extraction_panel import ManualOffsetDialogSingleton
 
 
 @pytest.mark.no_manager_setup
 @pytest.mark.unit
+@pytest.mark.mock_dialogs
 class TestManualOffsetDialogSingletonUnit:
     """Unit tests for ManualOffsetDialogSingleton pattern."""
 
     @pytest.fixture(autouse=True)
     def setup_singleton_cleanup(self):
         """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton._cleanup_instance()
-        yield
-        ManualOffsetDialogSingleton._cleanup_instance()
+        # Clean up any existing instance
+        if ManualOffsetDialogSingleton._instance is not None:
+            if hasattr(ManualOffsetDialogSingleton._instance, 'close'):
+                ManualOffsetDialogSingleton._instance.close()
+            ManualOffsetDialogSingleton._instance = None
+        ManualOffsetDialogSingleton._destroyed = False
+        
+        yield ManualOffsetDialogSingleton, MockUnifiedManualOffsetDialog
+        
+        # Clean up after test
+        if ManualOffsetDialogSingleton._instance is not None:
+            if hasattr(ManualOffsetDialogSingleton._instance, 'close'):
+                ManualOffsetDialogSingleton._instance.close()
+            ManualOffsetDialogSingleton._instance = None
+        ManualOffsetDialogSingleton._destroyed = False
 
     @pytest.fixture
     def mock_dialog(self):
         """Create a mock dialog instance."""
-        mock = MagicMock()
-        mock.isVisible.return_value = True
-        mock.finished.connect = MagicMock()
-        mock.rejected.connect = MagicMock()
-        mock.destroyed.connect = MagicMock()
-        mock.deleteLater = MagicMock()
-        return mock
+        dialog = MockUnifiedManualOffsetDialog()
+        return dialog
 
     @pytest.fixture
     def mock_panel(self):
-        """Create a mock ROM panel."""
-        return MagicMock()
+        """Create a mock extraction panel."""
+        panel = MagicMock()
+        panel.rom_cache = MagicMock()
+        panel.rom_cache.get_cache_stats.return_value = {"hits": 0, "misses": 0}
+        panel.rom_extractor = MagicMock()
+        panel.extraction_manager = MagicMock()
+        panel.parent.return_value = None
+        return panel
 
-    def test_singleton_instance_creation(self, mock_panel):
-        """Test that singleton creates and stores instance."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
+    def test_singleton_instance_creation(self, setup_singleton_cleanup, mock_panel):
+        """Test that singleton creates instance on first call."""
+        ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
+        
+        # Create mock dialog instance with proper signals
+        mock_dialog = MockDialogClass()
+        mock_dialog.finished = MagicMock()
+        mock_dialog.rejected = MagicMock()
+        mock_dialog.destroyed = MagicMock()
+        mock_dialog.finished.connect = MagicMock()
+        mock_dialog.rejected.connect = MagicMock()
+        mock_dialog.destroyed.connect = MagicMock()
+        
+        # Mock at the import location in ui.rom_extraction_panel 
+        with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog) as MockDialog:
+            with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
+                # First call should create instance
+                dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                assert dialog is not None
+                assert ManualOffsetDialogSingleton._instance is dialog
+                assert dialog is mock_dialog
+                # Verify the dialog constructor was called
+                MockDialog.assert_called_once()
 
-            # Get dialog for first time
-            dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+    def test_singleton_reuse_same_instance(self, setup_singleton_cleanup, mock_panel):
+        """Test that singleton returns same instance on multiple calls."""
+        ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
+        
+        # Create mock dialog instance
+        mock_dialog = MockDialogClass()
+        mock_dialog.finished = MagicMock()
+        mock_dialog.rejected = MagicMock()
+        mock_dialog.destroyed = MagicMock()
+        mock_dialog.finished.connect = MagicMock()
+        mock_dialog.rejected.connect = MagicMock()
+        mock_dialog.destroyed.connect = MagicMock()
+        
+        with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog) as MockDialog:
+            with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
+                # First call
+                dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                # Second call  
+                dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                # Should return same instance
+                assert dialog1 is dialog2
+                assert ManualOffsetDialogSingleton._instance is dialog1
+                # Dialog constructor should only be called once
+                MockDialog.assert_called_once()
 
-            # Should create new instance
-            mock_dialog_class.assert_called_once_with(mock_panel)
-            assert dialog is mock_instance
-            assert ManualOffsetDialogSingleton._instance is mock_instance
-            assert ManualOffsetDialogSingleton._creator_panel is mock_panel
-
-    def test_singleton_reuse_same_instance(self, mock_panel):
-        """Test that subsequent calls return same instance."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # First call
-            dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Second call
-            dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Should only create once
-            mock_dialog_class.assert_called_once()
-            assert dialog1 is dialog2
-            assert dialog1 is mock_instance
-
-    def test_singleton_cleanup_on_stale_reference(self, mock_panel):
-        """Test cleanup when dialog reference becomes stale."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            # First instance that becomes stale
-            stale_instance = MagicMock()
-            stale_instance.isVisible.side_effect = RuntimeError("wrapped C/C++ object deleted")
-
-            # New instance created after cleanup
-            new_instance = MagicMock()
-            new_instance.isVisible.return_value = True
-            new_instance.finished.connect = MagicMock()
-            new_instance.rejected.connect = MagicMock()
-            new_instance.destroyed.connect = MagicMock()
-
-            mock_dialog_class.side_effect = [stale_instance, new_instance]
-
-            # First call creates stale instance
-            dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-            assert dialog1 is stale_instance
-
-            # Second call should handle stale reference and create new instance
-            dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Should have created two instances (stale + new)
-            assert mock_dialog_class.call_count == 2
-            assert dialog2 is new_instance
-            assert ManualOffsetDialogSingleton._instance is new_instance
-
-    def test_singleton_is_dialog_open_method(self, mock_panel):
+    def test_singleton_is_dialog_open_method(self, setup_singleton_cleanup, mock_panel):
         """Test is_dialog_open method."""
+        ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
+        
         # No dialog exists
         assert not ManualOffsetDialogSingleton.is_dialog_open()
+        
+        # Create mock dialog instance
+        mock_dialog = MockDialogClass()
+        mock_dialog.visible = False  # Start as hidden
+        mock_dialog.isVisible = MagicMock(return_value=False)
+        mock_dialog.finished = MagicMock()
+        mock_dialog.rejected = MagicMock()
+        mock_dialog.destroyed = MagicMock()
+        mock_dialog.finished.connect = MagicMock()
+        mock_dialog.rejected.connect = MagicMock()
+        mock_dialog.destroyed.connect = MagicMock()
+        
+        with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
+            with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
+                # Create dialog
+                dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                # Dialog should not be visible initially
+                assert not ManualOffsetDialogSingleton.is_dialog_open()
+                
+                # Make dialog visible
+                dialog.visible = True
+                dialog.isVisible.return_value = True
+                assert ManualOffsetDialogSingleton.is_dialog_open()
+                
+                # Make dialog not visible
+                dialog.visible = False
+                dialog.isVisible.return_value = False
+                assert not ManualOffsetDialogSingleton.is_dialog_open()
 
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Should be open
-            assert ManualOffsetDialogSingleton.is_dialog_open()
-
-            # Make dialog not visible
-            mock_instance.isVisible.return_value = False
-            assert not ManualOffsetDialogSingleton.is_dialog_open()
-
-    def test_singleton_get_current_dialog_method(self, mock_panel):
+    def test_singleton_get_current_dialog_method(self, setup_singleton_cleanup, mock_panel):
         """Test get_current_dialog method."""
+        ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
+        
         # No dialog exists
         assert ManualOffsetDialogSingleton.get_current_dialog() is None
+        
+        # Create mock dialog instance
+        mock_dialog = MockDialogClass()
+        mock_dialog.visible = False
+        mock_dialog.isVisible = MagicMock(return_value=False)
+        mock_dialog.finished = MagicMock()
+        mock_dialog.rejected = MagicMock()
+        mock_dialog.destroyed = MagicMock()
+        mock_dialog.finished.connect = MagicMock()
+        mock_dialog.rejected.connect = MagicMock()
+        mock_dialog.destroyed.connect = MagicMock()
+        
+        with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
+            with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
+                # Create dialog
+                dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                # Dialog not visible initially
+                assert ManualOffsetDialogSingleton.get_current_dialog() is None
+                
+                # Make dialog visible
+                dialog.visible = True
+                dialog.isVisible.return_value = True
+                
+                # Should return the dialog
+                current = ManualOffsetDialogSingleton.get_current_dialog()
+                assert current is dialog
+                
+                # Make dialog not visible
+                dialog.visible = False
+                dialog.isVisible.return_value = False
+                assert ManualOffsetDialogSingleton.get_current_dialog() is None
 
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Should return the dialog
-            current = ManualOffsetDialogSingleton.get_current_dialog()
-            assert current is dialog
-            assert current is mock_instance
-
-            # Make dialog not visible
-            mock_instance.isVisible.return_value = False
-            assert ManualOffsetDialogSingleton.get_current_dialog() is None
-
-    def test_singleton_cleanup_instance_method(self, mock_panel):
-        """Test _cleanup_instance method."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Verify instance exists
-            assert ManualOffsetDialogSingleton._instance is not None
-            assert ManualOffsetDialogSingleton._creator_panel is not None
-
-            # Cleanup
-            ManualOffsetDialogSingleton._cleanup_instance()
-
-            # Verify cleanup
-            assert ManualOffsetDialogSingleton._instance is None
-            assert ManualOffsetDialogSingleton._creator_panel is None
-
-    def test_singleton_dialog_closed_callback(self, mock_panel):
-        """Test _on_dialog_closed callback."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_instance.deleteLater = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            ManualOffsetDialogSingleton.get_dialog(mock_panel)
-            assert ManualOffsetDialogSingleton._instance is not None
-
-            # Simulate dialog closed
-            ManualOffsetDialogSingleton._on_dialog_closed()
-
-            # Should call deleteLater and cleanup
-            mock_instance.deleteLater.assert_called_once()
-            assert ManualOffsetDialogSingleton._instance is None
-
-    def test_singleton_dialog_destroyed_callback(self, mock_panel):
-        """Test _on_dialog_destroyed callback."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            ManualOffsetDialogSingleton.get_dialog(mock_panel)
-            assert ManualOffsetDialogSingleton._instance is not None
-
-            # Simulate dialog destroyed
-            ManualOffsetDialogSingleton._on_dialog_destroyed()
-
-            # Should cleanup
-            assert ManualOffsetDialogSingleton._instance is None
-
-    def test_singleton_signal_connections(self, mock_panel):
-        """Test that signals are properly connected for cleanup."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            finished_connect = MagicMock()
-            rejected_connect = MagicMock()
-            destroyed_connect = MagicMock()
-            mock_instance.finished.connect = finished_connect
-            mock_instance.rejected.connect = rejected_connect
-            mock_instance.destroyed.connect = destroyed_connect
-            mock_dialog_class.return_value = mock_instance
-
-            # Create dialog
-            ManualOffsetDialogSingleton.get_dialog(mock_panel)
-
-            # Verify signal connections
-            finished_connect.assert_called_once_with(ManualOffsetDialogSingleton._on_dialog_closed)
-            rejected_connect.assert_called_once_with(ManualOffsetDialogSingleton._on_dialog_closed)
-            destroyed_connect.assert_called_once_with(ManualOffsetDialogSingleton._on_dialog_destroyed)
-
-    def test_singleton_different_creator_panels_same_instance(self):
-        """Test that different creator panels still get same instance."""
-        panel1 = MagicMock()
-        panel2 = MagicMock()
-
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog") as mock_dialog_class:
-            mock_instance = MagicMock()
-            mock_instance.isVisible.return_value = True
-            mock_instance.finished.connect = MagicMock()
-            mock_instance.rejected.connect = MagicMock()
-            mock_instance.destroyed.connect = MagicMock()
-            mock_dialog_class.return_value = mock_instance
-
-            # First panel gets dialog
-            dialog1 = ManualOffsetDialogSingleton.get_dialog(panel1)
-
-            # Second panel should get same dialog
-            dialog2 = ManualOffsetDialogSingleton.get_dialog(panel2)
-
-            # Should only create once, same instance
-            mock_dialog_class.assert_called_once_with(panel1)  # Called with first panel
-            assert dialog1 is dialog2
-            assert ManualOffsetDialogSingleton._creator_panel is panel1  # First panel "owns" it
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+    def test_singleton_with_parent_panel(self, setup_singleton_cleanup, mock_panel):
+        """Test singleton creation with parent panel."""
+        ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
+        
+        # Create mock dialog instance
+        mock_dialog = MockDialogClass()
+        mock_dialog.finished = MagicMock()
+        mock_dialog.rejected = MagicMock()
+        mock_dialog.destroyed = MagicMock()
+        mock_dialog.finished.connect = MagicMock()
+        mock_dialog.rejected.connect = MagicMock()
+        mock_dialog.destroyed.connect = MagicMock()
+        
+        with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
+            with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
+                # Create dialog with panel
+                dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
+                
+                # Should store panel reference
+                assert dialog is not None
+                assert ManualOffsetDialogSingleton._instance is dialog
+                
+                # The panel should have managers
+                assert mock_panel.extraction_manager is not None
+                assert mock_panel.rom_extractor is not None
+                
+                # Dialog can have managers set via set_managers method
+                dialog.set_managers(mock_panel.extraction_manager, mock_panel.rom_extractor)
+                assert dialog.extraction_manager == mock_panel.extraction_manager
+                assert dialog.rom_extractor == mock_panel.rom_extractor

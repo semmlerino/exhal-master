@@ -8,7 +8,7 @@ For backward compatibility, this module now imports from the new infrastructure.
 
 import warnings
 
-from spritepal.tests.infrastructure.mock_factory import MockFactory
+from tests.infrastructure.mock_factory import MockFactory
 
 # Import from new infrastructure for backward compatibility
 
@@ -49,7 +49,7 @@ def create_mock_extraction_worker():
 
 def create_mock_signals():
     """Backward compatibility function."""
-    from spritepal.tests.infrastructure.qt_mocks import (
+    from tests.infrastructure.qt_mocks import (
         create_mock_signals as _create_mock_signals,
     )
     return _create_mock_signals()

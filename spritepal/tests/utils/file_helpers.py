@@ -41,27 +41,27 @@ def create_test_files(
     Returns:
         Dictionary mapping file types to their paths
     """
-    base_path = Path(base_path)
-    base_path.mkdir(parents=True, exist_ok=True)
+    base_path_obj = Path(base_path)
+    base_path_obj.mkdir(parents=True, exist_ok=True)
 
     file_paths = {}
 
     for file_type in file_types:
         if file_type == "vram":
             data = _generate_vram_data(**kwargs)
-            filename = base_path / "test_vram.dmp"
+            filename = base_path_obj / "test_vram.dmp"
 
         elif file_type == "cgram":
             data = generate_cgram_data(kwargs.get("palette_count", 16))
-            filename = base_path / "test_cgram.dmp"
+            filename = base_path_obj / "test_cgram.dmp"
 
         elif file_type == "oam":
             data = generate_oam_data(kwargs.get("oam_entries", 128))
-            filename = base_path / "test_oam.dmp"
+            filename = base_path_obj / "test_oam.dmp"
 
         elif file_type == "rom":
             data = _generate_rom_data(**kwargs)
-            filename = base_path / "test_rom.sfc"
+            filename = base_path_obj / "test_rom.sfc"
 
         elif file_type == "png":
             # Create a test PNG image
@@ -73,7 +73,7 @@ def create_test_files(
                 kwargs.get("mode", "L"),
                 kwargs.get("pattern", "gradient")
             )
-            filename = base_path / "test_sprite.png"
+            filename = base_path_obj / "test_sprite.png"
             img.save(filename)
             file_paths[file_type] = str(filename)
             continue
@@ -90,7 +90,7 @@ def create_test_files(
                 kwargs.get("style", "varied")
             )
 
-            filename = base_path / "test_palette.pal.json"
+            filename = base_path_obj / "test_palette.pal.json"
             with open(filename, "w") as f:
                 json.dump(palettes[0], f)  # Save first palette
 
@@ -113,7 +113,7 @@ def create_test_files(
                 }
             }
 
-            filename = base_path / "test_sprite.metadata.json"
+            filename = base_path_obj / "test_sprite.metadata.json"
             with open(filename, "w") as f:
                 json.dump(metadata, f, indent=2)
 
@@ -134,7 +134,7 @@ def create_test_files(
 
 def _generate_vram_data(**kwargs) -> bytearray:
     """Generate VRAM data with sprite data at the correct offset."""
-    from spritepal.utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
+    from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 
     vram_size = kwargs.get("vram_size", 0x10000)  # 64KB
     data = bytearray(vram_size)
@@ -191,7 +191,7 @@ def cleanup_test_files(file_paths: list[str] | dict[str, str] | str):
 
 def create_test_workspace(
     workspace_name: str = "test_workspace",
-    include_files: list[str | None] | None = None
+    include_files: list[str] | None = None
 ) -> dict[str, str]:
     """
     Create a complete test workspace with common file types.

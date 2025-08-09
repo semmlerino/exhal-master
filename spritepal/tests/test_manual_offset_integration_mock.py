@@ -9,21 +9,30 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from spritepal.ui.rom_extraction_panel import ManualOffsetDialogSingleton
+from ui.rom_extraction_panel import ManualOffsetDialogSingleton
+
+# Mark this entire module for fast, mock-based testing
+pytestmark = [
+    pytest.mark.headless,  # Can run without display
+    pytest.mark.mock_only,  # Uses only mocked components
+    pytest.mark.integration,  # Integration test
+    pytest.mark.qt_mock,  # Uses mocked Qt components
+    pytest.mark.parallel_safe,  # Safe for parallel execution
+    pytest.mark.dialog,  # Tests involving dialogs
+    pytest.mark.mock_dialogs,  # Tests that mock dialog exec() methods
+]
 
 
 @pytest.mark.no_manager_setup
-@pytest.mark.mock_gui
-@pytest.mark.integration
 class TestManualOffsetDialogIntegrationMock:
     """Integration tests using mocks to verify key user workflows."""
 
     @pytest.fixture(autouse=True)
     def setup_singleton_cleanup(self):
         """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton._cleanup_instance()
+        ManualOffsetDialogSingleton.reset()
         yield
-        ManualOffsetDialogSingleton._cleanup_instance()
+        ManualOffsetDialogSingleton.reset()
 
     @pytest.fixture
     def mock_dialog_with_ui(self):
@@ -74,7 +83,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_user_opens_dialog_multiple_times_same_instance(self, mock_panel, mock_dialog_with_ui):
         """Test user opening dialog multiple times gets same instance."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             # User opens dialog first time
             dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
@@ -88,7 +97,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_user_adjusts_slider_no_duplicate_created(self, mock_panel, mock_dialog_with_ui):
         """Test that adjusting slider doesn't create duplicates."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
             # User adjusts slider multiple times
@@ -105,7 +114,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_user_closes_and_reopens_dialog_workflow(self, mock_panel, mock_dialog_with_ui):
         """Test user workflow of closing and reopening dialog."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             # User opens dialog
             dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
             assert dialog1 is mock_dialog_with_ui
@@ -124,7 +133,7 @@ class TestManualOffsetDialogIntegrationMock:
             new_mock_dialog.rejected.connect = MagicMock()
             new_mock_dialog.destroyed.connect = MagicMock()
 
-            with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=new_mock_dialog):
+            with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=new_mock_dialog):
                 # User reopens dialog - should get new instance
                 dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
                 assert dialog2 is new_mock_dialog
@@ -132,7 +141,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_user_workflow_with_sprite_history(self, mock_panel, mock_dialog_with_ui):
         """Test user workflow involving sprite history."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
             # User finds sprites at different offsets
@@ -152,7 +161,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_user_workflow_error_recovery(self, mock_panel, mock_dialog_with_ui):
         """Test that singleton works after error conditions."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
             # Simulate error in dialog operation
@@ -181,7 +190,7 @@ class TestManualOffsetDialogIntegrationMock:
         panel2 = MagicMock()
         panel3 = MagicMock()
 
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             # Different panels request dialog
             dialog1 = ManualOffsetDialogSingleton.get_dialog(panel1)
             dialog2 = ManualOffsetDialogSingleton.get_dialog(panel2)
@@ -196,7 +205,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_ui_element_consistency_across_accesses(self, mock_panel, mock_dialog_with_ui):
         """Test that UI elements remain consistent across multiple accesses."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
             # Get references to UI components
@@ -216,7 +225,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_dialog_visibility_state_consistency(self, mock_panel, mock_dialog_with_ui):
         """Test dialog visibility state is consistent."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             # Dialog starts visible
             mock_dialog_with_ui.isVisible.return_value = True
 
@@ -233,7 +242,7 @@ class TestManualOffsetDialogIntegrationMock:
 
     def test_rom_data_persistence_across_accesses(self, mock_panel, mock_dialog_with_ui):
         """Test that ROM data persists across dialog accesses."""
-        with patch("spritepal.ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
+        with patch("ui.rom_extraction_panel.UnifiedManualOffsetDialog", return_value=mock_dialog_with_ui):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
 
             # Set ROM data

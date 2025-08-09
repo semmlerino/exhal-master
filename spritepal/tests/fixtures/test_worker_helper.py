@@ -6,7 +6,19 @@ Test worker helpers for synchronous execution in tests
 from pathlib import Path
 from typing import Any
 
-from spritepal.core.workers import ROMExtractionWorker, VRAMExtractionWorker
+from core.workers import ROMExtractionWorker, VRAMExtractionWorker
+
+
+# Test characteristics: Thread safety concerns
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.worker_threads,
+]
 
 
 class TestExtractionWorker(VRAMExtractionWorker):
@@ -58,7 +70,7 @@ class TestExtractionController:
         self.rom_worker: TestROMExtractionWorker | None = None
 
         # Get managers
-        from spritepal.core.managers import (
+        from core.managers import (
             get_extraction_manager,
             get_injection_manager,
             get_session_manager,

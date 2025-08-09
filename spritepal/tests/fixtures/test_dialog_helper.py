@@ -11,9 +11,17 @@ from typing import Any
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.injection_dialog import InjectionDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
+
+
+# Serial execution required: QApplication management
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application
+]
 
 
 def ensure_headless_qt():

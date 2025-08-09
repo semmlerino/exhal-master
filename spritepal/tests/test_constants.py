@@ -1,12 +1,22 @@
-"""Tests for constants module"""
+"""
+Tests for constants module.
 
-import sys
-from pathlib import Path
+This file tests pure constants and utility functions that don't require
+manager initialization. Marked with @pytest.mark.no_manager_setup for optimal performance.
+"""
 
-# Add parent directories to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+import pytest
 
-from spritepal.utils.constants import (
+# Mark this entire module for fast, pure unit tests
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.unit,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.no_manager_setup,
+]
+
+from utils.constants import (
     BYTES_PER_TILE,
     CGRAM_PALETTE_SIZE,
     CGRAM_PATTERNS,
@@ -27,6 +37,7 @@ from spritepal.utils.constants import (
 )
 
 
+@pytest.mark.no_manager_setup
 class TestConstants:
     """Test constants are properly defined"""
 

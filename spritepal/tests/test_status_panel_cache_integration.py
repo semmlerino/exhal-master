@@ -6,13 +6,13 @@ This module provides comprehensive testing of StatusPanel's cache functionality:
 - Real-time cache statistics updates
 - Settings integration (show_indicators setting)
 
-import spritepal.utils.rom_cache as rom_cache_module
+import utils.rom_cache as rom_cache_module
 
-import spritepal.utils.rom_cache as rom_cache_module
+import utils.rom_cache as rom_cache_module
 
-import spritepal.utils.rom_cache as rom_cache_module
+import utils.rom_cache as rom_cache_module
 
-import spritepal.utils.rom_cache as rom_cache_module
+import utils.rom_cache as rom_cache_module
 - Error handling and edge cases
 """
 
@@ -21,13 +21,24 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.ui.components.panels.status_panel import StatusPanel
-from spritepal.utils.rom_cache import ROMCache
+from core.managers import cleanup_managers, initialize_managers
+from ui.components.panels.status_panel import StatusPanel
+from utils.rom_cache import ROMCache
 
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
@@ -36,7 +47,7 @@ def setup_teardown():
     yield
     cleanup_managers()
     # Reset global cache instance
-    import spritepal.utils.rom_cache as rom_cache_module
+    import utils.rom_cache as rom_cache_module
     rom_cache_module._rom_cache_instance = None
 
 
@@ -57,7 +68,7 @@ def rom_cache(temp_cache_dir):
 @pytest.fixture
 def mock_rom_cache(rom_cache):
     """Automatically patch get_rom_cache to return test instance."""
-    with patch("spritepal.utils.rom_cache.get_rom_cache") as mock_get:
+    with patch("utils.rom_cache.get_rom_cache") as mock_get:
         mock_get.return_value = rom_cache
         yield rom_cache
 
@@ -65,7 +76,7 @@ def mock_rom_cache(rom_cache):
 @pytest.fixture
 def mock_settings_manager():
     """Create a mock settings manager with cache enabled by default."""
-    with patch("spritepal.utils.settings_manager.get_settings_manager") as mock_get:
+    with patch("utils.settings_manager.get_settings_manager") as mock_get:
         mock_manager = MagicMock()
         mock_manager.get.return_value = True  # show_indicators = True
         mock_manager.get_cache_enabled.return_value = True
@@ -248,7 +259,7 @@ class TestStatusPanelCacheErrorHandling:
     def test_cache_creation_error_handling(self, qtbot, mock_settings_manager):
         """Test handling when cache cannot be created."""
         # Make get_rom_cache raise an exception
-        with patch("spritepal.utils.rom_cache.get_rom_cache", side_effect=RuntimeError("Cache init failed")):
+        with patch("utils.rom_cache.get_rom_cache", side_effect=RuntimeError("Cache init failed")):
             panel = StatusPanel()
             qtbot.addWidget(panel)
 
@@ -267,7 +278,7 @@ class TestStatusPanelSettingsIntegration:
     def test_cache_status_respects_show_indicators_setting(self, qtbot, mock_rom_cache):
         """Test that cache status respects the show_indicators setting."""
         # Test with indicators enabled
-        with patch("spritepal.utils.settings_manager.get_settings_manager") as mock_get:
+        with patch("utils.settings_manager.get_settings_manager") as mock_get:
             mock_manager = MagicMock()
             mock_manager.get.return_value = True  # show_indicators = True
             mock_manager.get_cache_enabled.return_value = True
@@ -278,7 +289,7 @@ class TestStatusPanelSettingsIntegration:
             assert hasattr(panel1, "cache_status_widget")
 
         # Test with indicators disabled
-        with patch("spritepal.utils.settings_manager.get_settings_manager") as mock_get:
+        with patch("utils.settings_manager.get_settings_manager") as mock_get:
             mock_manager = MagicMock()
             mock_manager.get.return_value = False  # show_indicators = False
             mock_manager.get_cache_enabled.return_value = True

@@ -78,7 +78,7 @@ class FormRow(QWidget):
 
         # Add input widget if provided
         self.input_widget: QWidget | None = None
-        if input_widget:
+        if input_widget is not None:
             self.set_input_widget(input_widget)
 
         # Add help text if provided

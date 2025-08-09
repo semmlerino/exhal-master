@@ -579,5 +579,5 @@ class NavigationManager(BaseManager):
         logger.debug(f"Triggered background learning for {rom_path}")
 
 
-class NavigationError(Exception):
+class NavigationException(Exception):
     """Navigation-specific error."""

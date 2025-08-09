@@ -72,8 +72,8 @@ class TestBasicFileValidator:
             tmp.write(b"test")
             tmp.flush()
 
-        # Mock only the open call to simulate permission error
-        with patch("builtins.open", side_effect=PermissionError("Access denied")):
+        # Mock Path.open to simulate permission error
+        with patch("pathlib.Path.open", side_effect=PermissionError("Access denied")):
             result = BasicFileValidator.validate_existence(tmp.name)
             assert not result.is_valid
             assert "Permission denied" in result.error_message

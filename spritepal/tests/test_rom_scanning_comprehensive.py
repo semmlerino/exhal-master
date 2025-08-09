@@ -11,7 +11,19 @@ from unittest.mock import patch
 
 import pytest
 
-from spritepal.core.rom_extractor import ROMExtractor
+from core.rom_extractor import ROMExtractor
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 class TestROMScanning:
@@ -338,7 +350,7 @@ class TestROMExtractorAdvancedFeatures:
         rom_path.write_bytes(rom_data)
 
         # Mock the rom injector's find_sprite_locations method
-        from spritepal.core.rom_injector import SpritePointer
+        from core.rom_injector import SpritePointer
         with patch.object(rom_extractor.rom_injector, "find_sprite_locations") as mock_find_locations:
             mock_locations = {
                 "kirby_normal": SpritePointer(offset=0x8000, bank=0x10, address=0x0000),

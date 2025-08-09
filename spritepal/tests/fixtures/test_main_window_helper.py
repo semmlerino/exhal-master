@@ -9,8 +9,19 @@ from typing import Any
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QStatusBar
 
-from spritepal.ui.palette_preview import PalettePreviewWidget
-from spritepal.ui.zoomable_preview import PreviewPanel
+from ui.palette_preview import PalettePreviewWidget
+from ui.zoomable_preview import PreviewPanel
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.integration,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestMainWindowHelper(QObject):

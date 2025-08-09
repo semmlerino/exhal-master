@@ -39,8 +39,10 @@ class PreviewCoordinator(QObject):
         self.sprite_preview = sprite_preview
         self.palette_preview = palette_preview
 
-        # Preview info label
-        self.preview_info: QLabel
+        # Initialize preview info label immediately for backward compatibility
+        # This will be reconfigured in create_preview_panel() if that method is called
+        self.preview_info = QLabel("No sprites loaded")
+        self.preview_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def create_preview_panel(self, parent: QWidget) -> QWidget:
         """Create and configure the preview panel
@@ -62,9 +64,7 @@ class PreviewCoordinator(QObject):
             self.sprite_preview, 1
         )  # Give stretch factor to expand
 
-        # Preview info
-        self.preview_info = QLabel("No sprites loaded")
-        self.preview_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Configure existing preview info label (created in __init__)
         self.preview_info.setStyleSheet(get_muted_text_style())
         self.preview_info.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum

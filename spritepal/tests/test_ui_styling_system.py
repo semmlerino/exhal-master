@@ -11,6 +11,15 @@ from ui.styles import get_button_style, get_input_style, get_muted_text_style, g
 """
 
 from ui.styles import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+]
+
+
     COLORS,
     DIMENSIONS,
     get_dialog_button_box_style,

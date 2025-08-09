@@ -6,7 +6,18 @@ from unittest.mock import MagicMock
 import pytest
 from PIL import Image
 
-from spritepal.core.injector import InjectionWorker, SpriteInjector, encode_4bpp_tile
+# Mark this entire module for core logic tests
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.unit,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.file_io,  # Involves file operations
+    pytest.mark.rom_data,  # Tests requiring ROM files or data
+    pytest.mark.worker_threads,  # Tests using worker threads
+]
+
+from core.injector import InjectionWorker, SpriteInjector, encode_4bpp_tile
 
 
 # Module-level fixtures for shared use

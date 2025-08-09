@@ -8,12 +8,24 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
+from ui.components.visualization.rom_map_widget import ROMMapWidget
 
 # Add parent directories to path
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
+from core.managers import cleanup_managers, initialize_managers
 
 
 class TestROMMapWidget:
@@ -28,12 +40,17 @@ class TestROMMapWidget:
 
     # Using parent_widget fixture from qt_test_helpers instead of mock_parent
 
-    def test_rom_map_widget_creation(self, parent_widget):
+    def test_rom_map_widget_creation(self, qtbot):
         """Test ROMMapWidget can be created with proper Qt parent"""
         # Test component creation with real Qt parent
-
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         # Create widget with proper parent
         widget = ROMMapWidget(parent_widget)
+        qtbot.addWidget(widget)
 
         # Verify basic initialization with actual attributes
         assert hasattr(widget, "found_sprites")
@@ -41,11 +58,16 @@ class TestROMMapWidget:
         assert hasattr(widget, "rom_size")
         assert widget.parent() == parent_widget
 
-    def test_add_sprite_data(self, parent_widget):
+    def test_add_sprite_data(self, qtbot):
         """Test adding sprite data to ROM map"""
-        from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-
+        from ui.components.visualization.rom_map_widget import ROMMapWidget
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         widget = ROMMapWidget(parent_widget)
+        qtbot.addWidget(widget)
 
         # Test adding sprite with quality
         offset = 0x1000
@@ -57,15 +79,20 @@ class TestROMMapWidget:
         assert len(widget.found_sprites) == 1
         assert widget.found_sprites[0] == (offset, quality)
 
-    def test_sprite_count_limits(self, parent_widget):
+    def test_sprite_count_limits(self, qtbot):
         """Test sprite count limits prevent memory leaks"""
-        from spritepal.ui.components.visualization.rom_map_widget import (
+        from ui.components.visualization.rom_map_widget import (
             SPRITE_CLEANUP_TARGET,
             SPRITE_CLEANUP_THRESHOLD,
             ROMMapWidget,
         )
-
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         widget = ROMMapWidget(parent_widget)
+        qtbot.addWidget(widget)
 
         # Add many sprites to test limits
         for i in range(SPRITE_CLEANUP_THRESHOLD + 100):  # More than the cleanup threshold
@@ -76,11 +103,16 @@ class TestROMMapWidget:
         assert len(widget.found_sprites) <= SPRITE_CLEANUP_TARGET + 100  # Allow small buffer
         assert len(widget.found_sprites) < SPRITE_CLEANUP_THRESHOLD  # But definitely below threshold
 
-    def test_cleanup_method(self, parent_widget):
+    def test_cleanup_method(self, qtbot):
         """Test cleanup method clears resources"""
-        from spritepal.ui.components.visualization.rom_map_widget import ROMMapWidget
-
+        from ui.components.visualization.rom_map_widget import ROMMapWidget
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         widget = ROMMapWidget(parent_widget)
+        qtbot.addWidget(widget)
 
         # Add some sprite data
         widget.add_found_sprite(0x1000, 1.0)
@@ -106,36 +138,44 @@ class TestScanControlsPanel:
 
     # Using parent_widget fixture from qt_test_helpers instead of mock_parent
 
-    def test_scan_controls_creation(self, parent_widget):
+    def test_scan_controls_creation(self, qtbot):
         """Test ScanControlsPanel creation"""
-        from spritepal.ui.components.panels.scan_controls_panel import ScanControlsPanel
-
+        from ui.components.panels.scan_controls_panel import ScanControlsPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         panel = ScanControlsPanel(parent_widget)
+        qtbot.addWidget(panel)
 
-        # Verify initialization
-        assert hasattr(panel, "start_button")
-        assert hasattr(panel, "stop_button")
-        assert hasattr(panel, "range_start_spinbox")
-        assert hasattr(panel, "range_end_spinbox")
+        # Verify initialization - use the actual button names from the implementation
+        assert hasattr(panel, "scan_range_btn")
+        assert hasattr(panel, "scan_all_btn") 
+        assert hasattr(panel, "pause_btn")
+        assert hasattr(panel, "stop_btn")
+        assert hasattr(panel, "cache_status_label")
 
-    def test_scan_parameters_validation(self, parent_widget):
+    def test_scan_parameters_validation(self, qtbot):
         """Test scan parameter validation"""
-        from spritepal.ui.components.panels.scan_controls_panel import ScanControlsPanel
-
+        from ui.components.panels.scan_controls_panel import ScanControlsPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         panel = ScanControlsPanel(parent_widget)
+        qtbot.addWidget(panel)
 
-        # Mock spinbox values
-        panel.range_start_spinbox = Mock()
-        panel.range_end_spinbox = Mock()
-        panel.range_start_spinbox.value.return_value = 0x1000
-        panel.range_end_spinbox.value.return_value = 0x2000
-
-        # Test parameter validation
-        params = panel.get_scan_parameters()
-
-        assert params["start_offset"] == 0x1000
-        assert params["end_offset"] == 0x2000
-        assert params["end_offset"] > params["start_offset"]
+        # Test the validation method directly with mock parameters
+        start_offset = 0x1000
+        end_offset = 0x2000
+        
+        # Test parameter validation - use the actual validation method from the implementation
+        is_valid = panel._validate_scan_parameters(start_offset, end_offset)
+        
+        assert is_valid is True, "Valid scan parameters should pass validation"
+        assert end_offset > start_offset, "End offset should be greater than start offset"
 
 
 class TestImportExportPanel:
@@ -150,34 +190,46 @@ class TestImportExportPanel:
 
     # Using parent_widget fixture from qt_test_helpers instead of mock_parent
 
-    def test_import_export_creation(self, parent_widget):
+    def test_import_export_creation(self, qtbot):
         """Test ImportExportPanel creation"""
-        from spritepal.ui.components.panels.import_export_panel import ImportExportPanel
-
+        from ui.components.panels.import_export_panel import ImportExportPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         panel = ImportExportPanel(parent_widget)
+        qtbot.addWidget(panel)
 
-        # Verify initialization
-        assert hasattr(panel, "import_button")
-        assert hasattr(panel, "export_button")
+        # Verify initialization - use actual button names from implementation
+        assert hasattr(panel, "import_btn")
+        assert hasattr(panel, "export_btn")
 
-    def test_file_operations(self, parent_widget):
+    def test_file_operations(self, qtbot):
         """Test file import/export operations"""
-        from spritepal.ui.components.panels.import_export_panel import ImportExportPanel
+        from ui.components.panels.import_export_panel import ImportExportPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
+        panel = ImportExportPanel(parent_widget)
+        qtbot.addWidget(panel)
 
-        with patch("PyQt6.QtWidgets.QFileDialog") as mock_file_dialog:
-            panel = ImportExportPanel(parent_widget)
-
-            # Mock file dialog
-            mock_file_dialog.getOpenFileName.return_value = ("/path/to/file.json", "")
-            mock_file_dialog.getSaveFileName.return_value = ("/path/to/save.json", "")
-
-            # Test import operation
-            import_file = panel.get_import_file()
-            assert import_file == "/path/to/file.json"
-
-            # Test export operation
-            export_file = panel.get_export_file()
-            assert export_file == "/path/to/save.json"
+        # Test that the panel has the required state variables
+        assert hasattr(panel, "found_sprites")
+        assert hasattr(panel, "rom_path")
+        assert hasattr(panel, "rom_size")
+        
+        # Test setting ROM data
+        panel.set_rom_data("/test/path/test_rom.smc", 0x400000)
+        assert panel.rom_path == "/test/path/test_rom.smc"
+        assert panel.rom_size == 0x400000
+        
+        # Test setting sprite data
+        test_sprites = [(0x1000, 0.8), (0x2000, 0.9)]
+        panel.set_found_sprites(test_sprites)
+        assert panel.found_sprites == test_sprites
 
 
 class TestStatusPanel:
@@ -192,32 +244,72 @@ class TestStatusPanel:
 
     # Using parent_widget fixture from qt_test_helpers instead of mock_parent
 
-    def test_status_panel_creation(self, parent_widget):
+    def test_status_panel_creation(self, qtbot):
         """Test StatusPanel creation"""
-        from spritepal.ui.components.panels.status_panel import StatusPanel
-
+        from ui.components.panels.status_panel import StatusPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         panel = StatusPanel(parent_widget)
+        qtbot.addWidget(panel)
 
-        # Verify initialization
-        assert hasattr(panel, "status_label")
-        assert hasattr(panel, "progress_bar")
+        # Verify initialization - use actual attribute names from implementation
+        assert hasattr(panel, "detection_info")  # Status label
+        assert hasattr(panel, "scan_progress")   # Progress bar
+        assert hasattr(panel, "cache_status_widget")  # Cache status
 
-    def test_status_updates(self, parent_widget):
+    def test_status_updates(self, qtbot):
         """Test status message updates"""
-        from spritepal.ui.components.panels.status_panel import StatusPanel
-
+        from ui.components.panels.status_panel import StatusPanel
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
         panel = StatusPanel(parent_widget)
+        qtbot.addWidget(panel)
+        
+        # Ensure the parent widget is shown so the entire hierarchy is visible
+        parent_widget.show()
+        panel.show()
 
-        # Mock the label
-        panel.status_label = Mock()
-        panel.progress_bar = Mock()
-
-        # Test status update
-        panel.update_status("Scanning ROM...", 50)
-
-        # Verify methods were called
-        panel.status_label.setText.assert_called_with("Scanning ROM...")
-        panel.progress_bar.setValue.assert_called_with(50)
+        # Test status update - use actual StatusPanel methods and attributes
+        panel.update_status("Scanning ROM...")
+        assert panel.detection_info.text() == "Scanning ROM..."
+        
+        # Test progress bar functionality
+        panel.show_progress(0, 100)
+        
+        # Test the actual progress bar state directly
+        assert panel.scan_progress.minimum() == 0
+        assert panel.scan_progress.maximum() == 100
+        assert panel.scan_progress.value() == 0  # setValue(minimum) in show_progress
+        
+        # Test update_progress method - should work since show_progress makes it visible
+        # and the parent hierarchy is shown
+        panel.update_progress(50)
+        assert panel.scan_progress.value() == 50
+        
+        # Test hide functionality
+        panel.hide_progress()
+        # Progress bar should still have the value even when hidden
+        assert panel.scan_progress.value() == 50
+        
+        # Test update_progress when progress bar is hidden (should not update)
+        panel.update_progress(25)  # Should not change value since bar is hidden
+        assert panel.scan_progress.value() == 50  # Should still be 50
+        
+        # Show again and test update works
+        panel.show_progress(0, 100)
+        panel.update_progress(75)
+        assert panel.scan_progress.value() == 75
+        
+        # Test progress bar methods exist
+        assert hasattr(panel, "show_progress")
+        assert hasattr(panel, "hide_progress") 
+        assert hasattr(panel, "update_progress")
 
 
 class TestRangeScanDialog:
@@ -232,50 +324,73 @@ class TestRangeScanDialog:
 
     # Using parent_widget fixture from qt_test_helpers instead of mock_parent
 
-    def test_range_scan_dialog_creation(self, parent_widget):
+    def test_range_scan_dialog_creation(self, qtbot):
         """Test RangeScanDialog creation"""
-        from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
+        from ui.components.dialogs.range_scan_dialog import RangeScanDialog
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
+        dialog = RangeScanDialog(current_offset=0x10000, rom_size=0x400000, parent=parent_widget)
+        qtbot.addWidget(dialog)
 
-        dialog = RangeScanDialog(parent_widget)
+        # Verify initialization - use actual attributes from RangeScanDialog
+        assert hasattr(dialog, "range_combo")
+        assert hasattr(dialog, "range_label")
+        assert hasattr(dialog, "current_offset")
+        assert hasattr(dialog, "rom_size")
+        
+        # Check that attributes are set correctly
+        assert dialog.current_offset == 0x10000
+        assert dialog.rom_size == 0x400000
 
-        # Verify initialization
-        assert hasattr(dialog, "start_offset_spinbox")
-        assert hasattr(dialog, "end_offset_spinbox")
-        assert hasattr(dialog, "scan_button")
-
-    def test_scan_parameters(self, parent_widget):
+    def test_scan_parameters(self, qtbot):
         """Test scan parameter collection"""
-        from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
+        from ui.components.dialogs.range_scan_dialog import RangeScanDialog
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
+        dialog = RangeScanDialog(current_offset=0x10000, rom_size=0x400000, parent=parent_widget)
+        qtbot.addWidget(dialog)
 
-        dialog = RangeScanDialog(parent_widget)
+        # Test default range selection (index 2 = ±16KB)
+        start_offset, end_offset = dialog.get_range()
+        
+        # The dialog should calculate the range based on current_offset and selected range size
+        # Default is ±16KB (0x4000), so from 0x10000:
+        # start = max(0, 0x10000 - 0x4000) = 0xC000
+        # end = min(0x3FFFFF, 0x10000 + 0x4000) = 0x14000
+        assert start_offset == 0xC000
+        assert end_offset == 0x14000
 
-        # Mock spinboxes
-        dialog.start_offset_spinbox = Mock()
-        dialog.end_offset_spinbox = Mock()
-        dialog.start_offset_spinbox.value.return_value = 0x10000
-        dialog.end_offset_spinbox.value.return_value = 0x20000
+    def test_validation_with_large_range(self, qtbot):
+        """Test dialog can handle large range selection"""
+        from ui.components.dialogs.range_scan_dialog import RangeScanDialog
+        from PyQt6.QtWidgets import QWidget
+        
+        parent_widget = QWidget()
+        qtbot.addWidget(parent_widget)
+        
+        # Create dialog with offset near the beginning of a large ROM
+        dialog = RangeScanDialog(current_offset=0x10000, rom_size=0x400000, parent=parent_widget)
+        qtbot.addWidget(dialog)
 
-        # Test parameter collection
-        params = dialog.get_scan_parameters()
-
-        assert params["start_offset"] == 0x10000
-        assert params["end_offset"] == 0x20000
-
-    def test_validation_with_large_range(self, parent_widget):
-        """Test validation prevents excessively large scan ranges"""
-        from spritepal.ui.components.dialogs.range_scan_dialog import RangeScanDialog
-
-        with patch("PyQt6.QtWidgets.QMessageBox") as mock_msgbox:
-            dialog = RangeScanDialog(parent_widget)
-
-            # Mock spinboxes with large range
-            dialog.start_offset_spinbox = Mock()
-            dialog.end_offset_spinbox = Mock()
-            dialog.start_offset_spinbox.value.return_value = 0x0
-            dialog.end_offset_spinbox.value.return_value = 0x200000  # 2MB range
-
-            # Test validation
-            is_valid = dialog.validate_parameters()
-
-            # Should warn about large range
-            assert not is_valid or mock_msgbox.warning.called
+        # Select the largest range option (±256KB = index 4)
+        dialog.range_combo.setCurrentIndex(4)
+        
+        # Get the calculated range
+        start_offset, end_offset = dialog.get_range()
+        
+        # With ±256KB (0x40000) from 0x10000:
+        # start = max(0, 0x10000 - 0x40000) = 0
+        # end = min(0x3FFFFF, 0x10000 + 0x40000) = 0x50000
+        assert start_offset == 0
+        assert end_offset == 0x50000
+        
+        # Verify the range is large but valid
+        range_size = end_offset - start_offset
+        assert range_size == 0x50000  # 320KB range
+        assert range_size <= 0x1000000  # Less than 16MB max

@@ -14,6 +14,14 @@ from PyQt6.QtWidgets import QApplication
 
 
 # Ensure headless Qt environment
+# Serial execution required: QApplication management
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application
+]
+
+
 def ensure_headless_qt():
     """Ensure Qt is running in headless mode for testing"""
     os.environ["QT_QPA_PLATFORM"] = "offscreen"

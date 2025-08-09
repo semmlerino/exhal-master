@@ -10,6 +10,19 @@ from unittest.mock import Mock
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.parallel_safe,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
 class TestMainWindowHelperSimple(QObject):
     """Simplified helper for MainWindow testing without real Qt widgets"""
 
@@ -39,6 +52,9 @@ class TestMainWindowHelperSimple(QObject):
         self._mock_palette_preview: Any | None = None
         self._mock_preview_info: Any | None = None
         self._mock_extraction_panel: Any | None = None
+        self._mock_preview_coordinator: Any | None = None
+        self._mock_status_bar_manager: Any | None = None
+        self._mock_rom_extraction_panel: Any | None = None
 
         # Track signal emissions for testing
         self.signal_emissions: dict[str, list[Any]] = {
@@ -120,6 +136,22 @@ class TestMainWindowHelperSimple(QObject):
         """Set extraction parameters for testing"""
         self._extraction_params = params.copy()
 
+    def get_output_path(self) -> str:
+        """Get output path for extraction (required by MainWindowProtocol)"""
+        return self._output_path or str(self.temp_path / "test_output")
+
+    def show_cache_operation_badge(self, badge_text: str) -> None:
+        """Show cache operation badge (required by MainWindowProtocol)"""
+        self.signal_emissions["status_messages"].append(f"Cache badge: {badge_text}")
+
+    def hide_cache_operation_badge(self) -> None:
+        """Hide cache operation badge (required by MainWindowProtocol)"""
+        self.signal_emissions["status_messages"].append("Cache badge hidden")
+
+    def update_cache_status(self) -> None:
+        """Update cache status (required by MainWindowProtocol)"""
+        self.signal_emissions["status_messages"].append("Cache status updated")
+
     def extraction_complete(self, extracted_files: list[str]):
         """Handle extraction completion (mimics MainWindow.extraction_complete)"""
         self._extracted_files = extracted_files
@@ -198,6 +230,31 @@ class TestMainWindowHelperSimple(QObject):
             self.offset_changed = Mock()
             self.offset_changed.connect = Mock()
 
+    class MockPreviewCoordinator:
+        def __init__(self, helper):
+            self.helper = helper
+
+        @property
+        def preview_info(self):
+            """Get preview_info for backward compatibility"""
+            return self.helper.preview_info
+
+        def update_preview_info(self, text: str):
+            """Update preview info text through coordinator"""
+            self.helper._preview_info_text = text
+
+    class MockStatusBarManager:
+        def __init__(self, helper):
+            self.helper = helper
+
+        def show_message(self, message: str):
+            self.helper._status_message = message
+            self.helper.signal_emissions["status_messages"].append(message)
+
+    class MockROMExtractionPanel:
+        def __init__(self, helper):
+            self.helper = helper
+
     @property
     def status_bar(self):
         """Get mock status bar"""
@@ -232,6 +289,27 @@ class TestMainWindowHelperSimple(QObject):
         if self._mock_extraction_panel is None:
             self._mock_extraction_panel = self.MockExtractionPanel(self)
         return self._mock_extraction_panel
+
+    @property
+    def preview_coordinator(self):
+        """Get mock preview coordinator"""
+        if self._mock_preview_coordinator is None:
+            self._mock_preview_coordinator = self.MockPreviewCoordinator(self)
+        return self._mock_preview_coordinator
+
+    @property
+    def status_bar_manager(self):
+        """Get mock status bar manager"""
+        if self._mock_status_bar_manager is None:
+            self._mock_status_bar_manager = self.MockStatusBarManager(self)
+        return self._mock_status_bar_manager
+
+    @property
+    def rom_extraction_panel(self):
+        """Get mock ROM extraction panel"""
+        if self._mock_rom_extraction_panel is None:
+            self._mock_rom_extraction_panel = self.MockROMExtractionPanel(self)
+        return self._mock_rom_extraction_panel
 
     def get_extracted_files(self) -> list[str]:
         """Get list of extracted files"""

@@ -9,7 +9,17 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.extractor import SpriteExtractor
+# Mark this entire module for core logic tests
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.unit,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.file_io,  # Involves file operations
+    pytest.mark.rom_data,  # Tests requiring ROM files or data
+]
+
+from core.extractor import SpriteExtractor
 
 
 class TestSpriteExtractor:

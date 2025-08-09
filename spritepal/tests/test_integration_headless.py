@@ -10,10 +10,10 @@ from PIL import Image
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.extractor import SpriteExtractor
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.core.workers import VRAMExtractionWorker
-from spritepal.utils.constants import (
+from core.extractor import SpriteExtractor
+from core.palette_manager import PaletteManager
+from core.workers import VRAMExtractionWorker
+from utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
     SPRITE_PALETTE_END,
@@ -24,6 +24,14 @@ from spritepal.utils.constants import (
 
 class TestVRAMExtractionWorkerHeadless:
     """Test VRAMExtractionWorker in headless environment"""
+
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
 
     @pytest.fixture
     def mock_qt_imports(self):
@@ -87,12 +95,12 @@ class TestVRAMExtractionWorkerHeadless:
     def test_worker_logic_without_qt(self, worker_params, mock_qt_imports):
         """Test worker logic without Qt dependencies"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
             # Mock the extraction manager before creating worker
-            with patch("spritepal.core.workers.extraction.get_extraction_manager") as mock_get_manager:
+            with patch("core.workers.extraction.get_extraction_manager") as mock_get_manager:
                 # Create mock manager
                 mock_manager = Mock()
                 mock_get_manager.return_value = mock_manager
@@ -145,7 +153,7 @@ class TestVRAMExtractionWorkerHeadless:
                 worker.error = error_mock
 
                 # Mock pixmap creation to avoid Qt dependency
-                with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap, \
+                with patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap, \
                      patch.object(worker, "disconnect_manager_signals") as mock_disconnect:
                     mock_pil_to_qpixmap.return_value = Mock()
                     mock_disconnect.return_value = None
@@ -178,7 +186,7 @@ class TestVRAMExtractionWorkerHeadless:
     def test_worker_error_handling_headless(self, mock_qt_imports):
         """Test error handling without Qt"""
         # Initialize managers for this test
-        from spritepal.core.managers import cleanup_managers, initialize_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -203,7 +211,7 @@ class TestVRAMExtractionWorkerHeadless:
             worker.finished = Mock()
 
             # Mock pil_to_qpixmap to avoid Qt dependency
-            with patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
+            with patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap:
                 mock_pil_to_qpixmap.return_value = Mock()
 
                 # Run worker
@@ -286,13 +294,13 @@ class TestWorkerBusinessLogic:
         test_img = Image.new("P", (128, 128), 0)
 
         # Mock QPixmap in the correct location (image_utils.py)
-        with patch("spritepal.utils.image_utils.QPixmap") as mock_pixmap_class:
+        with patch("utils.image_utils.QPixmap") as mock_pixmap_class:
             mock_pixmap = Mock()
             mock_pixmap.loadFromData.return_value = True
             mock_pixmap_class.return_value = mock_pixmap
 
             # Import and test the pil_to_qpixmap function
-            from spritepal.core.controller import pil_to_qpixmap
+            from core.controller import pil_to_qpixmap
 
             # Test pixmap creation
             result = pil_to_qpixmap(test_img)

@@ -10,8 +10,8 @@ import pytest
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.palette_manager import PaletteManager
-from spritepal.utils.constants import (
+from core.palette_manager import PaletteManager
+from utils.constants import (
     COLORS_PER_PALETTE,
     SPRITE_PALETTE_END,
     SPRITE_PALETTE_START,
@@ -20,6 +20,16 @@ from spritepal.utils.constants import (
 
 class TestPaletteManager:
     """Test the PaletteManager functionality"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
 
     @pytest.fixture
     def palette_manager(self):

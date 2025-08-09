@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PIL import Image
 
-from spritepal.utils.image_utils import create_checkerboard_pattern, pil_to_qpixmap
+from utils.image_utils import create_checkerboard_pattern, pil_to_qpixmap
 
 # Check if Qt is available without initializing
 try:
@@ -20,6 +20,16 @@ except ImportError:
 
 def is_headless_environment():
     """Check if we're in a headless environment"""
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.parallel_safe,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+]
+
+
     import os
     import sys
 
@@ -140,7 +150,7 @@ class TestPilToQPixmap:
         pil_image = Image.new("RGB", (10, 10), "white")
 
         # Mock QPixmap to fail loading
-        with patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_class:
+        with patch("utils.image_utils.QPixmap") as mock_qpixmap_class:
             mock_pixmap = MagicMock()
             mock_pixmap.loadFromData.return_value = False
             mock_qpixmap_class.return_value = mock_pixmap

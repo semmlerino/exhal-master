@@ -8,8 +8,18 @@ import numpy as np
 import pytest
 from PIL import Image
 
-import spritepal.core.sprite_visual_validator as validator_module
-from spritepal.core.sprite_visual_validator import SpriteVisualValidator
+import core.sprite_visual_validator as validator_module
+from core.sprite_visual_validator import SpriteVisualValidator
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 
 
 @pytest.fixture

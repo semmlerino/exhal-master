@@ -6,7 +6,19 @@ import pytest
 from PyQt6.QtTest import QSignalSpy
 from PyQt6.QtWidgets import QWidget
 
-from spritepal.ui.common import get_error_handler, reset_error_handler
+from ui.common import get_error_handler, reset_error_handler
+
+
+# Test characteristics: Real GUI components requiring display
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+    pytest.mark.widget,
+]
 
 
 class TestErrorHandler:

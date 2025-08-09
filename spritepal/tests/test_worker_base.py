@@ -12,8 +12,16 @@ from unittest.mock import Mock, patch
 import pytest
 from PyQt6.QtTest import QSignalSpy
 
-from spritepal.core.managers.base_manager import BaseManager
-from spritepal.core.workers.base import BaseWorker, ManagedWorker
+from core.managers.base_manager import BaseManager
+from core.workers.base import BaseWorker, ManagedWorker
+
+
+# Serial execution required: QApplication management
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application
+]
 
 
 class TestBaseWorker:
@@ -192,8 +200,9 @@ class TestManagedWorker:
 
         class TestManagedWorker(ManagedWorker):
             def connect_manager_signals(self):
-                # Mock connection
+                # Mock connection with disconnect method
                 connection = Mock()
+                connection.disconnect = Mock()
                 self._connections.append(connection)
 
             def perform_operation(self):
@@ -208,10 +217,10 @@ class TestManagedWorker:
         assert len(worker._connections) == 1
 
         # Test disconnection
-        with patch("PyQt6.QtCore.QObject.disconnect") as mock_disconnect:
-            worker.disconnect_manager_signals()
-            mock_disconnect.assert_called_once()
-            assert worker._connections == []
+        worker.disconnect_manager_signals()
+        # Verify disconnect was called on the connection
+        worker._connections[0].disconnect.assert_called_once()
+        assert worker._connections == []
 
     def test_successful_operation_lifecycle(self, qtbot):
         """Test successful operation lifecycle."""
@@ -273,12 +282,12 @@ class TestManagedWorker:
 
         # Verify error handling
         assert len(error_spy) == 1
-        assert "Operation failed: Test error" in error_spy[0][0]
+        assert "Data format error during managed operation: Test error" in error_spy[0][0]
         assert isinstance(error_spy[0][1], ValueError)
 
         assert len(finished_spy) == 1
         assert finished_spy[0][0] is False  # Success = False
-        assert "Operation failed: Test error" in finished_spy[0][1]
+        assert "Data format error during managed operation: Test error" in finished_spy[0][1]
 
     def test_cancellation_handling(self, qtbot):
         """Test cancellation handling in managed worker."""

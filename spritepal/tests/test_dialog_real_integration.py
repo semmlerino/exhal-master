@@ -29,6 +29,19 @@ import pytest
 from PyQt6.QtWidgets import QApplication
 
 # Add parent directory for imports
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -44,24 +57,24 @@ from tests.infrastructure import (
 )
 
 # Import real dialogs and managers (not mocked!)
-from spritepal.core.managers import (
+from core.managers import (
     cleanup_managers,
     get_extraction_manager,
     get_injection_manager,
     get_session_manager,
     initialize_managers,
 )
-from spritepal.ui.dialogs import (
+from ui.dialogs import (
     ResumeScanDialog,
     SettingsDialog,
     UserErrorDialog,
 )
-from spritepal.ui.dialogs import (
+from ui.dialogs import (
     UnifiedManualOffsetDialog as ManualOffsetDialog,
 )
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.injection_dialog import InjectionDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
 
 
 class TestRealDialogIntegration:

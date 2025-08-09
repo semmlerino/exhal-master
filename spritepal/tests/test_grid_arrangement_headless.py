@@ -8,17 +8,25 @@ import time
 from unittest.mock import Mock
 
 import pytest
+
+# Mark this entire module as headless, integration, and no Qt dependencies
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+]
 from PIL import Image
 
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from ui.row_arrangement.grid_arrangement_manager import (
     ArrangementType,
     GridArrangementManager,
     TileGroup,
     TilePosition,
 )
-from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
-from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-from spritepal.ui.row_arrangement.palette_colorizer import PaletteColorizer
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
+from ui.row_arrangement.palette_colorizer import PaletteColorizer
 
 
 class TestGridArrangementHeadless:

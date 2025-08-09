@@ -15,8 +15,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Import SpritePal components after path setup
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
+from core.managers import cleanup_managers, initialize_managers
+from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 
 # Import mock utilities
 from .fixtures.qt_mocks import (

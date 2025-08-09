@@ -11,10 +11,22 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.core.managers.exceptions import ManagerError, ValidationError
-from spritepal.core.managers.extraction_manager import ExtractionManager
-from spritepal.core.managers.injection_manager import InjectionManager
-from spritepal.core.managers.session_manager import SessionManager
+from core.managers.exceptions import ManagerError, ValidationError
+from core.managers.extraction_manager import ExtractionManager
+from core.managers.injection_manager import InjectionManager
+from core.managers.session_manager import SessionManager
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
 
 
 class TestManagerTypeHintsValidation:
@@ -71,7 +83,7 @@ class TestManagerTypeHintsValidation:
         # Mock successful extraction
         with patch.object(manager, "validate_extraction_params"), \
              patch.object(manager, "_is_operation_running", return_value=False), \
-             patch("spritepal.core.workers.extraction_worker.ExtractionWorker") as mock_worker:
+             patch("core.workers.extraction_worker.ExtractionWorker") as mock_worker:
 
             mock_worker_instance = Mock()
             mock_worker.return_value = mock_worker_instance
@@ -276,7 +288,7 @@ class TestManagerTypeHintsValidation:
         # Test None return types for async operations
         with patch.object(manager, "validate_extraction_params"), \
              patch.object(manager, "_is_operation_running", return_value=False), \
-             patch("spritepal.core.workers.extraction_worker.ExtractionWorker"):
+             patch("core.workers.extraction_worker.ExtractionWorker"):
 
             result = manager.extract_from_vram({})
             assert result is None, "Should return None as annotated"
@@ -330,7 +342,7 @@ class TestManagerTypeHintsValidation:
         # Test that async operations return None but store workers properly
         with patch.object(manager, "validate_extraction_params"), \
              patch.object(manager, "_is_operation_running", return_value=False), \
-             patch("spritepal.core.workers.extraction_worker.ExtractionWorker") as mock_worker:
+             patch("core.workers.extraction_worker.ExtractionWorker") as mock_worker:
 
             mock_worker_instance = Mock()
             mock_worker.return_value = mock_worker_instance

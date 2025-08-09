@@ -12,9 +12,20 @@ from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap
 
 # Add parent directories to path
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
+from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
 
 
 @pytest.mark.gui
@@ -297,7 +308,7 @@ class TestPreviewPanel:
         assert panel.palette_toggle.isChecked() is False
         assert panel.palette_selector.isEnabled() is False
 
-    @patch("spritepal.ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
+    @patch("ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
     def test_show_grayscale_preserves_view(
         self, mock_pil_to_pixmap, panel, test_grayscale_image
     ):
@@ -318,7 +329,7 @@ class TestPreviewPanel:
         # Should call update_pixmap (not set_preview)
         panel.preview.update_pixmap.assert_called_once_with(mock_pixmap)
 
-    @patch("spritepal.ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
+    @patch("ui.zoomable_preview.PreviewPanel._pil_to_pixmap")
     def test_apply_palette_preserves_view(
         self, mock_pil_to_pixmap, panel, test_grayscale_image, test_palettes
     ):

@@ -7,28 +7,30 @@ These tests verify that the new manager-per-worker pattern provides:
 - No shared state between tests
 - Proper Qt object lifecycle management
 
-import time
-from PyQt6.QtWidgets import QApplication
-
-import time
-from PyQt6.QtWidgets import QApplication
-
-import time
-from PyQt6.QtWidgets import QApplication
-
-import time
-from PyQt6.QtWidgets import QApplication
 """
 
 import os
 import tempfile
+import time
 
 import pytest
 from PIL import Image
+from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtTest import QSignalSpy
+from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.managers.factory import StandardManagerFactory
-from spritepal.core.workers.injection import (
+from core.managers.factory import StandardManagerFactory
+from core.workers.injection import (
+# Serial execution required: QApplication management
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application
+]
+
+
+    VRAMInjectionParams,
+    ROMInjectionParams,
     WorkerOwnedROMInjectionWorker,
     WorkerOwnedVRAMInjectionWorker,
 )
@@ -84,7 +86,7 @@ class TestWorkerOwnedInjectionPattern:
     def test_worker_owns_its_injection_manager(self, qtbot, test_sprite_files, test_vram_files):
         """Test that worker-owned injection workers have their own manager instances."""
         # Prepare parameters
-        params = {
+        params: VRAMInjectionParams = {
             "mode": "vram",
             "sprite_path": test_sprite_files["sprite_path"],
             "input_vram": test_vram_files["input_vram"],
@@ -115,7 +117,7 @@ class TestWorkerOwnedInjectionPattern:
         # NOTE: This test deliberately does NOT initialize global managers to prove isolation
 
         # Prepare parameters
-        params = {
+        params: VRAMInjectionParams = {
             "mode": "vram",
             "sprite_path": test_sprite_files["sprite_path"],
             "input_vram": test_vram_files["input_vram"],
@@ -177,7 +179,7 @@ class TestWorkerOwnedInjectionPattern:
     def test_multiple_concurrent_injection_workers_isolated(self, qtbot, test_sprite_files, test_vram_files):
         """Test that multiple worker-owned injection workers don't interfere with each other."""
         # Create parameters for two different injections
-        params1 = {
+        params1: VRAMInjectionParams = {
             "mode": "vram",
             "sprite_path": test_sprite_files["sprite_path"],
             "input_vram": test_vram_files["input_vram"],
@@ -185,7 +187,7 @@ class TestWorkerOwnedInjectionPattern:
             "offset": 0xC000,
         }
 
-        params2 = {
+        params2: VRAMInjectionParams = {
             "mode": "vram",
             "sprite_path": test_sprite_files["sprite_path"],
             "input_vram": test_vram_files["input_vram"],
@@ -238,7 +240,7 @@ class TestWorkerOwnedInjectionPattern:
         factory = StandardManagerFactory(default_parent_strategy="application")
 
         # Prepare parameters
-        params = {
+        params: VRAMInjectionParams = {
             "mode": "vram",
             "sprite_path": test_sprite_files["sprite_path"],
             "input_vram": test_vram_files["input_vram"],
@@ -291,7 +293,7 @@ class TestWorkerOwnedInjectionPattern:
                 f.write(rom_data)
 
             # Prepare parameters
-            params = {
+            params: ROMInjectionParams = {
                 "mode": "rom",
                 "sprite_path": test_sprite_files["sprite_path"],
                 "input_rom": input_rom,
@@ -341,6 +343,9 @@ def qtbot():
         app.setQuitOnLastWindowClosed(False)  # Prevent premature quit
 
     class QtBot:
+        def __init__(self):
+            self._app: QApplication | QCoreApplication | None = None
+            
         def addWidget(self, widget):
             pass
 

@@ -8,6 +8,19 @@ from unittest.mock import Mock
 import pytest
 
 
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
+
 class TestGridGraphicsViewZoomMock:
     """Test zoom functionality using mocks to avoid Qt initialization issues"""
 

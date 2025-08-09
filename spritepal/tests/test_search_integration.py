@@ -18,6 +18,14 @@ from PIL import Image
 from ui.dialogs.advanced_search_dialog import AdvancedSearchDialog
 from ui.rom_extraction.workers.search_worker import SpriteSearchWorker
 
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
 logger = logging.getLogger(__name__)
 
 

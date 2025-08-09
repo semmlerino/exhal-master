@@ -7,10 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-try:
-    from typing import override
-except ImportError:
-    from typing_extensions import override
+from utils.type_aliases import override
 
 if TYPE_CHECKING:
     from core.extractor import SpriteExtractor

@@ -40,6 +40,14 @@ from core.managers.exceptions import ValidationError
 from PIL import Image
 from tests.utils.file_helpers import create_temp_directory, create_test_files
 from utils.constants import (
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
     BYTES_PER_TILE,
     CGRAM_EXPECTED_SIZE,
     CGRAM_PATTERNS,

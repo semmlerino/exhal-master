@@ -12,10 +12,22 @@ from unittest.mock import Mock
 import pytest
 
 # Add parent directories to path
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # We'll test the core drag-drop logic without Qt dependencies
-from spritepal.utils.constants import VRAM_SPRITE_OFFSET
+from utils.constants import VRAM_SPRITE_OFFSET
 
 
 class TestDragDropIntegration:

@@ -14,6 +14,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 from core.parallel_sprite_finder import (
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
     AdaptiveSpriteFinder,
     ParallelSpriteFinder,
     SearchChunk,

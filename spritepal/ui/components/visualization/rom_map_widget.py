@@ -4,6 +4,8 @@ ROM Map Visualization Widget
 Visual representation of ROM with sprite locations for manual offset exploration.
 """
 
+from __future__ import annotations
+
 try:
     from typing import override
 except ImportError:

@@ -8,7 +8,20 @@ from unittest.mock import Mock
 
 from PIL import Image
 
-from spritepal.ui.row_arrangement.palette_colorizer import PaletteColorizer
+from ui.row_arrangement.palette_colorizer import PaletteColorizer
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+]
 
 
 class TestPaletteColorizerEnhanced:

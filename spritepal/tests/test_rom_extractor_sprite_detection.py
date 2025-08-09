@@ -6,13 +6,25 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.core.rom_extractor import ROMExtractor
+from core.rom_extractor import ROMExtractor
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 @pytest.fixture
 def rom_extractor():
     """Create a ROMExtractor instance with mocked dependencies"""
-    with patch("spritepal.core.rom_extractor.HALCompressor"):
+    with patch("core.rom_extractor.HALCompressor"):
         extractor = ROMExtractor()
         # Mock the rom_injector
         extractor.rom_injector = Mock()

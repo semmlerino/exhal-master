@@ -1,4 +1,0 @@
-Profile: injection_dialog_validation - Parameter validation after refactoring
-============================================================
-
-============================================================

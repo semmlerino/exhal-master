@@ -6,17 +6,30 @@ import builtins
 import contextlib
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (
-    QColor,
-    QDragEnterEvent,
-    QDragLeaveEvent,
-    QDropEvent,
-    QKeyEvent,
-    QPainter,
-    QPen,
-)
+
+if TYPE_CHECKING:
+    from PyQt6.QtGui import (
+        QColor,
+        QDragEnterEvent,
+        QDragLeaveEvent,
+        QDropEvent,
+        QKeyEvent,
+        QPainter,
+        QPen,
+    )
+else:
+    from PyQt6.QtGui import (
+        QColor,
+        QDragEnterEvent,
+        QDragLeaveEvent,
+        QDropEvent,
+        QKeyEvent,
+        QPainter,
+        QPen,
+    )
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -102,7 +115,7 @@ class DropZone(QWidget):
         _ = self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def dragEnterEvent(self, a0: QDragEnterEvent | None):
+    def dragEnterEvent(self, a0: Optional['QDragEnterEvent']):
         """Handle drag enter events"""
         if a0:
             mime_data = a0.mimeData()
@@ -118,7 +131,7 @@ class DropZone(QWidget):
                 """
                 )
 
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):
+    def dragLeaveEvent(self, a0: Optional['QDragLeaveEvent']):
         """Handle drag leave events"""
         self.setStyleSheet(
             """
@@ -130,7 +143,7 @@ class DropZone(QWidget):
         """
         )
 
-    def dropEvent(self, a0: QDropEvent | None):
+    def dropEvent(self, a0: Optional['QDropEvent']):
         """Handle drop events"""
         if a0:
             mime_data = a0.mimeData()

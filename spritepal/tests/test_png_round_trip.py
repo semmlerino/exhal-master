@@ -9,8 +9,18 @@ import tempfile
 import pytest
 from PIL import Image
 
-from spritepal.core.injector import SpriteInjector, encode_4bpp_tile
-from spritepal.core.rom_extractor import ROMExtractor
+from core.injector import SpriteInjector, encode_4bpp_tile
+from core.rom_extractor import ROMExtractor
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 
 
 class TestPNGRoundTrip:

@@ -6,11 +6,16 @@ ensuring consistent interfaces, proper error handling, and type safety.
 """
 
 import weakref
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, Optional, ParamSpec, TypeVar
 
-from PyQt6.QtCore import QMetaObject, QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QMetaObject, QThread, pyqtSignal
+
+if TYPE_CHECKING:
+    from PyQt6.QtCore import QObject
+else:
+    from PyQt6.QtCore import QObject
 
 if TYPE_CHECKING:
     from core.managers.factory import ManagerFactory
@@ -36,12 +41,12 @@ def handle_worker_errors(
 
     Handles the common exception patterns found across worker classes:
     - Re-raises InterruptedError for proper cancellation handling (or handles it if handle_interruption=True)
-    - Catches file I/O errors: (OSError, IOError, PermissionError) - logs only
-    - Catches data format errors: (ValueError, TypeError) - logs only
-    - Optionally catches RuntimeError (for base class compatibility) - logs only
-    - Catches general exceptions as fallback - logs AND emits signals
+    - Catches file I/O errors: (OSError, IOError, PermissionError) - logs and emits signals
+    - Catches data format errors: (ValueError, TypeError) - logs and emits signals
+    - Optionally catches RuntimeError (for base class compatibility) - logs and emits signals
+    - Catches general exceptions as fallback - logs and emits signals
 
-    This pattern prevents duplicate signal emissions while ensuring all errors are logged.
+    All handled exceptions emit both error and operation_finished signals for consistent error handling.
 
     Args:
         operation_context: Context string for error messages (e.g., "VRAM extraction")
@@ -76,18 +81,24 @@ def handle_worker_errors(
             except (OSError, PermissionError) as e:
                 error_msg = f"File I/O error during {operation_context}: {e!s}"
                 logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-                # Note: No signal emission for specific errors - only log
+                # Emit signals for error handling
+                self.emit_error(error_msg, e)
+                self.operation_finished.emit(False, error_msg)
 
             except (ValueError, TypeError) as e:
                 error_msg = f"Data format error during {operation_context}: {e!s}"
                 logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-                # Note: No signal emission for specific errors - only log
+                # Emit signals for error handling
+                self.emit_error(error_msg, e)
+                self.operation_finished.emit(False, error_msg)
 
             except RuntimeError as e:
                 if include_runtime_error:
                     error_msg = f"Runtime error during {operation_context}: {e!s}"
                     logger.exception(f"{self._operation_name}: {error_msg}", exc_info=e)
-                    # Note: No signal emission for specific errors - only log
+                    # Emit signals for error handling
+                    self.emit_error(error_msg, e)
+                    self.operation_finished.emit(False, error_msg)
                 else:
                     # If not handling RuntimeError, let it propagate
                     raise
@@ -103,8 +114,34 @@ def handle_worker_errors(
     return decorator
 
 
-class WorkerMeta(type(QThread), ABCMeta):
-    """Metaclass to resolve conflict between QThread and ABC metaclasses."""
+class WorkerMeta(type(QThread)):
+    """Metaclass that properly combines QThread and ABC functionality."""
+
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        # First create the class with QThread metaclass
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        # Add ABC functionality manually for abstract methods
+        if any(hasattr(base, '__abstractmethods__') for base in bases):
+            # Collect abstract methods from all bases
+            abstracts = set()
+            for base in bases:
+                if hasattr(base, '__abstractmethods__'):
+                    abstracts.update(base.__abstractmethods__)
+
+            # Add abstract methods from current class
+            for name, value in namespace.items():
+                if getattr(value, '__isabstractmethod__', False):
+                    abstracts.add(name)
+
+            # Remove implemented methods
+            for method in list(abstracts):
+                if method in namespace and not getattr(namespace[method], '__isabstractmethod__', False):
+                    abstracts.discard(method)
+
+            cls.__abstractmethods__ = frozenset(abstracts)
+
+        return cls
 
 
 class BaseWorker(QThread, metaclass=WorkerMeta):
@@ -126,7 +163,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
     # Standard finished signal - use this instead of QThread.finished
     operation_finished = pyqtSignal(bool, str)  # success, message
 
-    def __init__(self, parent: QObject | None = None) -> None:
+    def __init__(self, parent: Optional['QObject'] = None) -> None:
         super().__init__(parent)
         self._is_cancelled = False
         self._is_paused = False
@@ -272,11 +309,20 @@ class ManagedWorker(BaseWorker):
     manager creation (recommended for new code).
     """
 
+    # Additional signals for specialized worker operations
+    preview_ready = pyqtSignal(object, int)  # PIL Image, tile_count
+    preview_image_ready = pyqtSignal(object)  # PIL Image
+    injection_finished = pyqtSignal(bool)  # success
+    progress_percent = pyqtSignal(int)  # percentage (0-100)
+    compression_info = pyqtSignal(str)  # compression info string
+    palettes_ready = pyqtSignal(object)  # Palette data
+    active_palettes_ready = pyqtSignal(object)  # Active palette indices
+
     def __init__(
         self,
         manager: BaseManager | None = None,
         manager_factory: "ManagerFactory | None" = None,
-        parent: QObject | None = None
+        parent: Optional['QObject'] = None
     ) -> None:
         super().__init__(parent)
 

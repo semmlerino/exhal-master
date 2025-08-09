@@ -12,20 +12,35 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Add parent directories to path
+# Test characteristics: Thread safety concerns
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.widget,
+    pytest.mark.worker_threads,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.core.managers.registry import (
+from core.controller import ExtractionController
+from core.managers import cleanup_managers, initialize_managers
+from core.managers.registry import (
     cleanup_managers as cleanup_managers_registry,
 )
-from spritepal.core.managers.registry import (
+from core.managers.registry import (
     initialize_managers as initialize_managers_registry,
 )
-from spritepal.core.workers import VRAMExtractionWorker
-from spritepal.utils.constants import (
+from core.workers import VRAMExtractionWorker
+from utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
     SPRITE_PALETTE_END,
@@ -156,9 +171,9 @@ class TestCompleteUserWorkflow:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-                patch("spritepal.core.workers.base.QThread") as mock_qthread,
+                                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("core.workers.base.QThread") as mock_qthread,
             ):
 
                 # Configure mocks
@@ -286,9 +301,9 @@ class TestCompleteUserWorkflow:
         mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
         with (
-                        patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-            patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.workers.base.QThread") as mock_qthread,
+                        patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+            patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            patch("core.workers.base.QThread") as mock_qthread,
         ):
 
             # Configure mocks
@@ -326,9 +341,9 @@ class TestCompleteUserWorkflow:
         # Patch dialog creation to avoid Qt widget issues in tests
         # Must patch BEFORE emitting the signal since dialog creation is synchronous
         with (
-            patch("spritepal.ui.row_arrangement_dialog.RowArrangementDialog") as mock_dialog_class,
-            patch("spritepal.ui.common.error_handler.QMessageBox.critical"),
-            patch("spritepal.core.controller.RowArrangementDialog") as mock_controller_dialog):
+            patch("ui.row_arrangement_dialog.RowArrangementDialog") as mock_dialog_class,
+            patch("ui.common.error_handler.QMessageBox.critical"),
+            patch("core.controller.RowArrangementDialog") as mock_controller_dialog):
             mock_dialog_instance = Mock()
             mock_dialog_instance.exec.return_value = True
             mock_dialog_instance.get_arranged_path.return_value = sprite_file + "_arranged"
@@ -376,9 +391,9 @@ class TestCompleteUserWorkflow:
         active_palette_calls = []
 
         with (
-                        patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-            patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.workers.base.QThread"),
+                        patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+            patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            patch("core.workers.base.QThread"),
         ):
 
             # Configure mocks
@@ -472,9 +487,9 @@ class TestCompleteUserWorkflow:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-                patch("spritepal.core.workers.base.QThread"),
+                                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("core.workers.base.QThread"),
                 ):
 
                 # Configure mocks
@@ -541,9 +556,9 @@ class TestCompleteUserWorkflow:
         mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
         with (
-                        patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-            patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.workers.base.QThread"),
+                        patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+            patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            patch("core.workers.base.QThread"),
         ):
 
             # Configure mocks
@@ -590,9 +605,9 @@ class TestCompleteUserWorkflow:
         mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
         with (
-                        patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-            patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-            patch("spritepal.core.workers.base.QThread"),
+                        patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+            patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+            patch("core.workers.base.QThread"),
         ):
 
             # Configure mocks
@@ -666,9 +681,9 @@ class TestCompleteUserWorkflow:
             mock_pixmap_instance.loadFromData = Mock(return_value=True)
 
             with (
-                patch("spritepal.utils.image_utils.QPixmap") as mock_qpixmap_utils,
-                patch("spritepal.core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
-                patch("spritepal.core.workers.base.QThread"),
+                patch("utils.image_utils.QPixmap") as mock_qpixmap_utils,
+                patch("core.controller.pil_to_qpixmap") as mock_pil_to_qpixmap,
+                patch("core.workers.base.QThread"),
             ):
                 # Configure external mocks only
                 mock_qpixmap_utils.return_value = mock_pixmap_instance

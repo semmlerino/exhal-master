@@ -2,7 +2,7 @@
 
 import pytest
 
-from spritepal.utils.exceptions import (
+from utils.exceptions import (
     CGRAMError,
     ExtractionError,
     FileFormatError,
@@ -17,6 +17,15 @@ from spritepal.utils.exceptions import (
 
 class TestExceptions:
     """Test custom exception classes"""
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
 
     def test_sprite_pal_error_base(self):
         """Test base SpritePalError"""

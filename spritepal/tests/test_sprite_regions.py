@@ -8,7 +8,18 @@ import time
 
 import pytest
 
-from spritepal.utils.sprite_regions import (
+from utils.sprite_regions import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.headless,
+    pytest.mark.no_qt,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
+
+
     RegionUpdateManager,
     SpriteRegion,
     SpriteRegionClassifier,

@@ -20,6 +20,7 @@ from contextlib import contextmanager
 from typing import Any, TypeVar
 
 from utils.logging_config import get_logger
+from utils.safe_logging import safe_debug, suppress_logging_errors
 
 from .exceptions import ManagerError
 
@@ -266,9 +267,9 @@ class ThreadLocalContextManager:
         self._storage.context = context
 
         if context:
-            logger.debug(f"Set current context to '{context._name}' in thread {current_thread.name}")
+            safe_debug(logger, f"Set current context to '{context._name}' in thread {current_thread.name}")
         else:
-            logger.debug(f"Cleared current context in thread {current_thread.name}")
+            safe_debug(logger, f"Cleared current context in thread {current_thread.name}")
 
     def push_context(self, context: ManagerContext) -> None:
         """
@@ -325,19 +326,23 @@ class ThreadLocalContextManager:
         """Clean up references for a thread that has ended"""
         with self._lock:
             self._thread_refs.pop(thread_id, None)
-        logger.debug(f"Cleaned up context references for thread {thread_id}")
+        if logger is not None:
+            safe_debug(logger, f"Cleaned up context references for thread {thread_id}")
 
+    @suppress_logging_errors
     def _cleanup_all_threads(self) -> None:
         """Cleanup all thread references at exit"""
         with self._lock:
             self._thread_refs.clear()
-        logger.debug("Cleaned up all thread context references")
+        if logger is not None:
+            safe_debug(logger, "Cleaned up all thread context references")
 
 
 # Global instance for thread-local context management
 _context_manager = ThreadLocalContextManager()
 
 # Module-level cleanup for context manager
+@suppress_logging_errors
 def _cleanup_context_manager():
     """Cleanup context manager at module exit"""
     global _context_manager

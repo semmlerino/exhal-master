@@ -8,10 +8,25 @@ instances that can be used in dependency injection contexts.
 from typing import Any, List, Optional
 from unittest.mock import Mock, MagicMock
 
+import pytest
+
 from core.managers.context import ManagerContext
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+]
 
 
 class TestManagerFactory:
@@ -37,18 +52,17 @@ class TestManagerFactory:
         mock.is_initialized.return_value = True
         mock.cleanup.return_value = None
         
-        # Extraction methods
-        mock.extract_from_vram.return_value = {
-            "success": True,
-            "output_files": ["test_sprite.png"],
-            "metadata": {"tile_count": 10, "width": 64, "height": 64}
-        }
+        # Extraction methods - return list[str] to match actual implementation
+        mock.extract_from_vram.return_value = [
+            "test_sprite.png",
+            "test_sprite.pal.json",
+            "test_sprite.metadata.json"
+        ]
         
-        mock.extract_from_rom.return_value = {
-            "success": True,
-            "output_files": ["test_sprite.png"],
-            "rom_info": {"title": "TEST ROM", "checksum": 0x1234}
-        }
+        mock.extract_from_rom.return_value = [
+            "test_sprite.png",
+            "test_sprite.pal.json"
+        ]
         
         # Preview methods
         mock.generate_preview.return_value = {
@@ -57,8 +71,10 @@ class TestManagerFactory:
             "dimensions": (64, 64)
         }
         
-        # Validation methods
-        mock.validate_extraction_params.return_value = (True, [])
+        # Validation methods - use real validation logic for parameter testing
+        from core.managers.extraction_manager import ExtractionManager
+        real_manager = ExtractionManager()
+        mock.validate_extraction_params = real_manager.validate_extraction_params
         
         return mock
     

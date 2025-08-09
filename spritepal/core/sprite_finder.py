@@ -3,6 +3,7 @@ Comprehensive sprite finder that scans ROMs for actual character sprites
 """
 
 import json
+import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -156,6 +157,8 @@ class SpriteFinder:
                 logger.info(f"Progress: {progress:.1f}% ({processed}/{total_offsets}), found {found_count} candidates")
 
             # Try to decompress at this offset
+            compressed_size = 0
+            sprite_data = b""
             try:
                 compressed_size, sprite_data = self.extractor.rom_injector.find_compressed_sprite(
                     rom_data, offset, expected_size=None
@@ -330,6 +333,8 @@ class SpriteFinder:
         Returns:
             Sprite info dict if found, None otherwise
         """
+        compressed_size = 0
+        sprite_data = b""
         try:
             # Try to decompress sprite at this offset
             compressed_size, sprite_data = self.extractor.rom_injector.find_compressed_sprite(

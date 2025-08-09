@@ -26,12 +26,12 @@ from __future__ import annotations
 import time
 import weakref
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QMutex, QMutexLocker, QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QSlider
 
 from ui.common.preview_cache import PreviewCache
@@ -97,7 +97,7 @@ class SmartPreviewCoordinator(QObject):
     preview_cached = pyqtSignal(bytes, int, int, str)  # Cached preview displayed
     preview_error = pyqtSignal(str)  # Error message
 
-    def __init__(self, parent: QObject | None = None, rom_cache: "ROMCache" | None = None):
+    def __init__(self, parent: QObject | None = None, rom_cache: ROMCache | None = None):
         super().__init__(parent)
 
         # State management
@@ -129,8 +129,13 @@ class SmartPreviewCoordinator(QObject):
 
         # Worker pool and dual-tier caching
         self._worker_pool = PreviewWorkerPool(max_workers=8)
-        self._worker_pool.preview_ready.connect(self._on_worker_preview_ready)
-        self._worker_pool.preview_error.connect(self._on_worker_preview_error)
+        # Use QueuedConnection for thread-safe signal delivery
+        self._worker_pool.preview_ready.connect(
+            self._on_worker_preview_ready, Qt.ConnectionType.QueuedConnection
+        )
+        self._worker_pool.preview_error.connect(
+            self._on_worker_preview_error, Qt.ConnectionType.QueuedConnection
+        )
 
         # Tier 1: Fast LRU memory cache
         self._cache = PreviewCache(max_size=20)  # ~2MB cache
@@ -147,6 +152,13 @@ class SmartPreviewCoordinator(QObject):
             "generations": 0,
             "response_times": []
         }
+
+        # Batch caching for efficiency
+        self._pending_rom_cache_saves: dict[str, dict[int, tuple[bytes, int, int, str]]] = {}
+        self._batch_save_timer = QTimer(self)
+        self._batch_save_timer.setSingleShot(True)
+        self._batch_save_timer.timeout.connect(self._flush_pending_rom_cache_saves)
+        self._batch_save_delay_ms = 2000  # 2 seconds delay for batching
 
         # Callbacks for external integration
         self._ui_update_callback: Callable[[int | None], None] | None = None
@@ -169,7 +181,10 @@ class SmartPreviewCoordinator(QObject):
         slider.sliderMoved.connect(self._on_drag_move)
         slider.sliderReleased.connect(self._on_drag_end)
 
-        logger.debug(f"Connected to slider {slider.objectName()}")
+        # ALSO connect to valueChanged for non-drag changes (keyboard, programmatic, etc)
+        # Note: We'll get this via offset_changed from the browse tab now
+
+        logger.debug(f"[DEBUG] Connected to slider {slider.objectName()} - drag events only")
 
     def set_ui_update_callback(self, callback: Callable[[int], None]) -> None:
         """Set callback for immediate UI updates during dragging."""
@@ -198,11 +213,13 @@ class SmartPreviewCoordinator(QObject):
             offset: ROM offset for preview
             priority: Request priority (higher = more important)
         """
+        logger.debug(f"[DEBUG] Coordinator.request_preview called: offset=0x{offset:06X}, priority={priority}")
         start_time = time.time()
 
         with QMutexLocker(self._mutex):
             self._current_offset = offset
             self._request_counter += 1
+            logger.debug(f"[DEBUG] Request counter: {self._request_counter}")
 
         # Try dual-tier cache lookup first
         if self._try_show_cached_preview_dual_tier():
@@ -212,6 +229,7 @@ class SmartPreviewCoordinator(QObject):
             # Keep only last 100 response times
             if len(self._cache_stats["response_times"]) > 100:
                 self._cache_stats["response_times"].pop(0)
+            logger.debug("[DEBUG] Cache hit, returning early")
             return
 
         # Immediate UI update for smooth feedback
@@ -219,8 +237,10 @@ class SmartPreviewCoordinator(QObject):
 
         # Schedule preview based on current drag state
         if self._drag_state == DragState.DRAGGING:
+            logger.debug("[DEBUG] Drag state is DRAGGING, scheduling drag preview")
             self._schedule_drag_preview()
         else:
+            logger.debug(f"[DEBUG] Drag state is {self._drag_state}, scheduling release preview")
             self._schedule_release_preview()
 
     def request_manual_preview(self, offset: int) -> None:
@@ -240,6 +260,15 @@ class SmartPreviewCoordinator(QObject):
         # Restore previous state
         self._drag_state = old_state
 
+    def flush_rom_cache(self) -> None:
+        """
+        Manually flush all pending ROM cache saves.
+
+        This can be called to force immediate persistence of cached preview data
+        without waiting for the batch timer.
+        """
+        self._flush_pending_rom_cache_saves()
+
     def _on_drag_start(self) -> None:
         """Handle start of slider dragging."""
         logger.debug("Drag start detected")
@@ -254,6 +283,7 @@ class SmartPreviewCoordinator(QObject):
 
     def _on_drag_move(self, value: int) -> None:
         """Handle slider movement during dragging."""
+        logger.debug(f"[DEBUG] _on_drag_move: value=0x{value:06X}")
         # Request preview with drag priority
         self.request_preview(value, priority=1)
 
@@ -270,6 +300,10 @@ class SmartPreviewCoordinator(QObject):
 
         # Return to idle state after brief settling period
         QTimer.singleShot(500, lambda: setattr(self, "_drag_state", DragState.IDLE))
+
+        # Flush any pending ROM cache saves when drag ends (for immediate persistence)
+        if self._pending_rom_cache_saves:
+            self._flush_pending_rom_cache_saves()
 
     def _schedule_ui_update(self) -> None:
         """Schedule immediate UI update for smooth feedback."""
@@ -320,13 +354,16 @@ class SmartPreviewCoordinator(QObject):
         Returns:
             bool: True if cached preview was shown
         """
+        logger.debug("[DEBUG] _try_show_cached_preview_dual_tier called")
         if not self._rom_data_provider:
+            logger.debug("[DEBUG] No ROM data provider, returning False")
             return False
 
         try:
             rom_path, _, _ = self._rom_data_provider()
             with QMutexLocker(self._mutex):
                 offset = self._current_offset
+                logger.debug(f"[DEBUG] Checking cache for offset 0x{offset:06X}")
 
             cache_key = self._cache.make_key(rom_path, offset)
 
@@ -334,9 +371,11 @@ class SmartPreviewCoordinator(QObject):
             cached_data = self._cache.get(cache_key)
             if cached_data:
                 tile_data, width, height, sprite_name = cached_data
+                logger.debug("[SIGNAL_FLOW] About to emit preview_cached signal (memory cache hit)")
+                # Note: PyQt6 signals don't have receivers() method - removed debug line
                 self.preview_cached.emit(tile_data, width, height, sprite_name)
                 self._cache_stats["memory_hits"] += 1
-                logger.debug(f"Memory cache hit for 0x{offset:06X}")
+                logger.debug(f"[SIGNAL_FLOW] Memory cache hit signal emitted for 0x{offset:06X}")
                 return True
 
             self._cache_stats["memory_misses"] += 1
@@ -350,9 +389,11 @@ class SmartPreviewCoordinator(QObject):
                     # Store in memory cache for faster future access
                     self._cache.put(cache_key, rom_cache_data)
 
+                    logger.debug("[SIGNAL_FLOW] About to emit preview_cached signal (ROM cache hit)")
+                    # Note: PyQt6 signals don't have receivers() method - removed debug line
                     self.preview_cached.emit(tile_data, width, height, sprite_name)
                     self._cache_stats["rom_hits"] += 1
-                    logger.debug(f"ROM cache hit for 0x{offset:06X}")
+                    logger.debug(f"[SIGNAL_FLOW] ROM cache hit signal emitted for 0x{offset:06X}")
                     return True
 
             if self._rom_cache and self._rom_cache.cache_enabled:
@@ -387,16 +428,23 @@ class SmartPreviewCoordinator(QObject):
             return None
 
         try:
-            # Generate cache key compatible with ROM cache system
-
-            # Try to get preview data from ROM cache
-            # Note: ROM cache uses different storage - this is a conceptual implementation
-            # The actual implementation would need preview-specific caching in ROM cache
             logger.debug(f"Checking ROM cache for preview at 0x{offset:06X}")
 
-            # For now, return None as ROM cache doesn't store preview data yet
-            # This will be extended when ROM cache adds preview storage support
-            return None
+            # Get preview data from ROM cache
+            preview_data = self._rom_cache.get_preview_data(rom_path, offset)
+            if not preview_data:
+                return None
+
+            # Extract data components
+            tile_data = preview_data["tile_data"]
+            width = preview_data["width"]
+            height = preview_data["height"]
+
+            # Generate sprite name from offset
+            sprite_name = f"ROM_0x{offset:06X}"
+
+            logger.debug(f"ROM cache hit: {len(tile_data)} bytes, {width}x{height}")
+            return (tile_data, width, height, sprite_name)
 
         except Exception as e:
             logger.warning(f"Error checking ROM cache: {e}")
@@ -419,31 +467,132 @@ class SmartPreviewCoordinator(QObject):
             return False
 
         try:
-            # Generate cache key
+            tile_data, width, height, sprite_name = preview_data
 
-            # Save to ROM cache
-            # Note: This is a conceptual implementation - ROM cache would need
-            # preview-specific storage methods
-            logger.debug(f"Saving preview to ROM cache for 0x{offset:06X}")
+            logger.debug(f"Saving preview to ROM cache for 0x{offset:06X} ({len(tile_data)} bytes, {width}x{height})")
 
-            # For now, return False as ROM cache doesn't support preview storage yet
-            return False
+            # Save to ROM cache using existing preview storage method
+            success = self._rom_cache.save_preview_data(
+                rom_path=rom_path,
+                offset=offset,
+                tile_data=tile_data,
+                width=width,
+                height=height,
+                params=None  # No special parameters for now
+            )
+
+            if success:
+                logger.debug(f"Successfully saved preview to ROM cache for 0x{offset:06X}")
+            else:
+                logger.debug(f"Failed to save preview to ROM cache for 0x{offset:06X}")
+
+            return success
 
         except Exception as e:
             logger.warning(f"Error saving to ROM cache: {e}")
             return False
 
+    def _queue_rom_cache_save(self, rom_path: str, offset: int,
+                             preview_data: tuple[bytes, int, int, str]) -> None:
+        """
+        Queue preview data for batch saving to ROM cache.
+
+        This reduces I/O overhead by batching multiple saves together.
+
+        Args:
+            rom_path: Path to ROM file
+            offset: ROM offset
+            preview_data: Tuple of (tile_data, width, height, sprite_name)
+        """
+        if not self._rom_cache or not self._rom_cache.cache_enabled:
+            return
+
+        # Add to pending saves
+        if rom_path not in self._pending_rom_cache_saves:
+            self._pending_rom_cache_saves[rom_path] = {}
+
+        self._pending_rom_cache_saves[rom_path][offset] = preview_data
+
+        # Schedule batch save
+        self._batch_save_timer.stop()
+        self._batch_save_timer.start(self._batch_save_delay_ms)
+
+        logger.debug(f"Queued ROM cache save for 0x{offset:06X} (batch size: {len(self._pending_rom_cache_saves[rom_path])})")
+
+    def _flush_pending_rom_cache_saves(self) -> None:
+        """
+        Flush all pending ROM cache saves using batch operations.
+
+        This method processes all queued preview data and saves it to ROM cache
+        using batch operations for maximum efficiency.
+        """
+        if not self._pending_rom_cache_saves:
+            return
+
+        total_saved = 0
+        total_failed = 0
+
+        for rom_path, offset_data in self._pending_rom_cache_saves.items():
+            if not offset_data:
+                continue
+
+            try:
+                # Convert to batch format expected by ROM cache
+                batch_data = {}
+                for offset, (tile_data, width, height, _sprite_name) in offset_data.items():
+                    batch_data[offset] = {
+                        "tile_data": tile_data,
+                        "width": width,
+                        "height": height,
+                        "params": None  # No special parameters for now
+                    }
+
+                # Use ROM cache batch save for efficiency
+                if len(batch_data) > 1:
+                    success = self._rom_cache.save_preview_batch(rom_path, batch_data)
+                    if success:
+                        total_saved += len(batch_data)
+                        logger.debug(f"Batch saved {len(batch_data)} previews to ROM cache for {rom_path}")
+                    else:
+                        total_failed += len(batch_data)
+                        logger.warning(f"Failed to batch save {len(batch_data)} previews to ROM cache")
+                else:
+                    # Single save for lone entries
+                    offset = next(iter(batch_data.keys()))
+                    data = batch_data[offset]
+                    success = self._rom_cache.save_preview_data(
+                        rom_path, offset, data["tile_data"],
+                        data["width"], data["height"], data["params"]
+                    )
+                    if success:
+                        total_saved += 1
+                    else:
+                        total_failed += 1
+
+            except Exception as e:
+                logger.warning(f"Error flushing ROM cache saves for {rom_path}: {e}")
+                total_failed += len(offset_data)
+
+        # Clear pending saves
+        self._pending_rom_cache_saves.clear()
+
+        if total_saved > 0 or total_failed > 0:
+            logger.debug(f"ROM cache batch flush complete: {total_saved} saved, {total_failed} failed")
+
     def _request_worker_preview(self, priority: int) -> None:
         """Request preview from worker pool."""
+        logger.debug(f"[DEBUG] _request_worker_preview called with priority={priority}")
         if not self._rom_data_provider:
-            logger.warning("No ROM data provider set")
+            logger.warning("[DEBUG] No ROM data provider set!")
             return
 
         try:
             rom_path, extractor, rom_cache = self._rom_data_provider()
+            logger.debug(f"[DEBUG] Got ROM data: path={bool(rom_path)}, extractor={bool(extractor)}, cache={bool(rom_cache)}")
             with QMutexLocker(self._mutex):
                 offset = self._current_offset
                 request_id = self._request_counter
+                logger.debug(f"[DEBUG] Creating request: id={request_id}, offset=0x{offset:06X}")
 
             # Create preview request
             request = PreviewRequest(
@@ -454,19 +603,21 @@ class SmartPreviewCoordinator(QObject):
             )
 
             # Submit to worker pool with ROM cache support
+            logger.debug("[DEBUG] Submitting request to worker pool")
             self._worker_pool.submit_request(request, extractor, rom_cache)
 
         except Exception as e:
-            logger.exception("Error requesting worker preview")  # TRY401: exception already logged
+            logger.exception("[DEBUG] Error requesting worker preview")  # TRY401: exception already logged
             self.preview_error.emit(f"Preview request failed: {e}")
 
     def _on_worker_preview_ready(self, request_id: int, tile_data: bytes,
                                 width: int, height: int, sprite_name: str) -> None:
         """Handle preview ready from worker."""
+        logger.debug(f"[DEBUG] _on_worker_preview_ready: request_id={request_id}, data_len={len(tile_data) if tile_data else 0}, {width}x{height}")
         # Check if this is still the current request
         with QMutexLocker(self._mutex):
-            if request_id < self._request_counter - 2:  # Allow some lag
-                logger.debug(f"Ignoring stale preview {request_id} (current: {self._request_counter})")
+            if request_id < self._request_counter - 1:  # Allow some lag
+                logger.debug(f"[DEBUG] Ignoring stale preview {request_id} (current: {self._request_counter})")
                 return
 
         # Update generation counter
@@ -482,22 +633,28 @@ class SmartPreviewCoordinator(QObject):
                 cache_key = self._cache.make_key(rom_path, self._current_offset)
                 self._cache.put(cache_key, preview_data)
 
-                # Tier 2: Save to ROM cache if available
+                # Tier 2: Save to ROM cache if available (use batching for efficiency)
                 if self._rom_cache:
-                    self._save_to_rom_cache(rom_path, self._current_offset, preview_data)
+                    self._queue_rom_cache_save(rom_path, self._current_offset, preview_data)
 
             except Exception as e:
-                logger.warning(f"Error caching preview: {e}")
+                logger.warning(f"[DEBUG] Error caching preview: {e}")
 
-        # Emit preview ready
+        # Emit preview ready with enhanced debugging
+        logger.debug("[SIGNAL_FLOW] About to emit preview_ready signal")
+        logger.debug(f"[SIGNAL_FLOW] Signal data: request_id={request_id}, data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
+        # Note: PyQt6 signals don't have receivers() method - removed debug line
+
         self.preview_ready.emit(tile_data, width, height, sprite_name)
-        logger.debug(f"Preview ready for request {request_id}")
+
+        logger.debug(f"[SIGNAL_FLOW] Preview ready signal emitted successfully for request {request_id}")
+        logger.debug(f"[SIGNAL_FLOW] Emitted tile_data: first 20 bytes = {tile_data[:20].hex() if tile_data else 'None'}")
 
     def _on_worker_preview_error(self, request_id: int, error_msg: str) -> None:
         """Handle preview error from worker."""
         # Check if this is still relevant
         with QMutexLocker(self._mutex):
-            if request_id < self._request_counter - 2:
+            if request_id < self._request_counter - 1:
                 return
 
         self.preview_error.emit(error_msg)
@@ -511,6 +668,10 @@ class SmartPreviewCoordinator(QObject):
         self._drag_timer.stop()
         self._release_timer.stop()
         self._ui_timer.stop()
+        self._batch_save_timer.stop()
+
+        # Flush any pending ROM cache saves
+        self._flush_pending_rom_cache_saves()
 
         # Cleanup worker pool
         self._worker_pool.cleanup()
@@ -580,6 +741,10 @@ class SmartPreviewCoordinator(QObject):
 
             # ROM cache availability
             "rom_cache_enabled": self._rom_cache is not None and self._rom_cache.cache_enabled,
+
+            # Batch cache stats
+            "pending_rom_cache_saves": sum(len(saves) for saves in self._pending_rom_cache_saves.values()),
+            "batch_save_timer_active": self._batch_save_timer.isActive(),
 
             # Total requests
             "total_requests": total_requests

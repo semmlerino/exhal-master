@@ -15,17 +15,27 @@ import tempfile
 
 from PIL import Image
 
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from spritepal.core.managers import ExtractionManager, InjectionManager, SessionManager
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from core.managers import ExtractionManager, InjectionManager, SessionManager
+from ui.row_arrangement.grid_arrangement_manager import (
     GridArrangementManager,
     TilePosition,
 )
-from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
-from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-from spritepal.ui.row_arrangement.palette_colorizer import PaletteColorizer
-from spritepal.ui.row_arrangement.preview_generator import PreviewGenerator
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
+from ui.row_arrangement.palette_colorizer import PaletteColorizer
+from ui.row_arrangement.preview_generator import PreviewGenerator
 
 
 class TestExtractionManagerFixture:

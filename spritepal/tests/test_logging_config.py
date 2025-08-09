@@ -10,7 +10,20 @@ from unittest.mock import patch
 
 import pytest
 
-from spritepal.utils.logging_config import get_logger, setup_logging
+from utils.logging_config import get_logger, setup_logging
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestSetupLogging:

@@ -14,14 +14,27 @@ import pytest
 from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 # Import all dialogs
-from spritepal.ui.dialogs import (
+from ui.dialogs import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
+
     ResumeScanDialog,
     SettingsDialog,
     UserErrorDialog,
 )
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.injection_dialog import InjectionDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
 
 
 class TestDialogInstantiation:
@@ -31,7 +44,7 @@ class TestDialogInstantiation:
     def setup_qt_app(self, qapp):
         """Ensure Qt application is available."""
 
-    def test_manual_offset_dialog_creation(self, qtbot):
+    def test_manual_offset_dialog_creation(self, qtbot, managers):
         """Test ManualOffsetDialog can be created and used."""
         dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
@@ -42,11 +55,10 @@ class TestDialogInstantiation:
         assert dialog.smart_tab is not None
         assert dialog.history_tab is not None
 
-        # Test that service adapters are initialized
-        assert dialog.preview_service is not None
-        assert dialog.validation_service is not None
-        assert dialog.error_service is not None
-
+        # Test that preview widget is initialized
+        assert dialog.preview_widget is not None
+        assert dialog.status_panel is not None
+        
         # Test that we can call basic methods that use these components
         # If any widget is None, this will raise AttributeError naturally
         # Don't call set_rom_data as it needs a real extraction_manager
@@ -67,7 +79,7 @@ class TestDialogInstantiation:
 
     def test_injection_dialog_creation(self, qtbot):
         """Test InjectionDialog can be created."""
-        with patch("spritepal.ui.injection_dialog.get_injection_manager"), \
+        with patch("ui.injection_dialog.get_injection_manager"), \
              patch.object(InjectionDialog, "_load_metadata"), \
              patch.object(InjectionDialog, "_set_initial_paths"), \
              patch.object(InjectionDialog, "_load_rom_info"):
@@ -112,7 +124,7 @@ class TestDialogInstantiation:
             f.write(b"test data")
 
         try:
-            with patch("spritepal.ui.row_arrangement_dialog.RowImageProcessor") as mock_processor:
+            with patch("ui.row_arrangement_dialog.RowImageProcessor") as mock_processor:
                 # Configure mock to return expected tuple (image, tile_rows)
                 mock_instance = mock_processor.return_value
                 mock_instance.process_sprite_sheet.return_value = (None, [])  # (original_image, tile_rows)
@@ -137,7 +149,7 @@ class TestDialogInstantiation:
             f.write(b"test data")
 
         try:
-            with patch("spritepal.ui.grid_arrangement_dialog.GridImageProcessor") as mock_processor:
+            with patch("ui.grid_arrangement_dialog.GridImageProcessor") as mock_processor:
                 # Configure mock to return expected tuple (image, tiles)
                 mock_instance = mock_processor.return_value
                 mock_instance.process_sprite_sheet_as_grid.return_value = (None, {})  # (original_image, tiles)
@@ -158,7 +170,7 @@ class TestDialogInstantiation:
 class TestDialogMethodCalls:
     """Test that dialog methods can be called without AttributeError."""
 
-    def test_manual_offset_dialog_methods(self, qtbot):
+    def test_manual_offset_dialog_methods(self, qtbot, managers):
         """Test ManualOffsetDialog methods don't fail on None attributes."""
         dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)
@@ -182,7 +194,7 @@ class TestDialogMethodCalls:
 class TestInitializationOrder:
     """Specific tests for initialization order issues."""
 
-    def test_no_overwritten_widgets(self, qtbot):
+    def test_no_overwritten_widgets(self, qtbot, managers):
         """Test that widgets created in _setup methods aren't overwritten."""
         dialog = ManualOffsetDialog()
         qtbot.addWidget(dialog)

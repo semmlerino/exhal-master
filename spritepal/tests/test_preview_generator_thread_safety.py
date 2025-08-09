@@ -19,6 +19,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.preview_generator import (

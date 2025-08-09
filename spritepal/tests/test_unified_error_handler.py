@@ -10,6 +10,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from core.managers.exceptions import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.widget,
+]
+
+
     ExtractionError,
     ValidationError,
 )

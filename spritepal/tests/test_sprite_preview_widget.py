@@ -1,5 +1,8 @@
 """
 Test sprite preview widget functionality
+
+This is a real Qt widget test that requires a GUI environment and tests
+actual widget rendering, pixmap handling, and Qt-specific behavior.
 """
 
 import os
@@ -9,8 +12,20 @@ import pytest
 from PIL import Image
 from PyQt6.QtWidgets import QApplication
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.ui.widgets.sprite_preview_widget import SpritePreviewWidget
+from core.managers import cleanup_managers, initialize_managers
+from ui.widgets.sprite_preview_widget import SpritePreviewWidget
+
+
+# Skip in headless environments - this tests real Qt widget functionality
+pytestmark = [
+    pytest.mark.skipif(
+        "DISPLAY" not in os.environ,
+        reason="Requires GUI environment - tests real Qt widget rendering"
+    ),
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.qt_integration
+]
 
 
 @pytest.fixture(autouse=True)

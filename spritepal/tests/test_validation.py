@@ -3,7 +3,19 @@
 import tempfile
 from pathlib import Path
 
-from spritepal.utils.validation import (
+import pytest
+
+# Mark this entire module for fast, pure unit tests
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.unit,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.file_io,  # Involves file operations
+    pytest.mark.validation,  # Validation tests
+]
+
+from utils.validation import (
     sanitize_filename,
     validate_cgram_file,
     validate_image_file,

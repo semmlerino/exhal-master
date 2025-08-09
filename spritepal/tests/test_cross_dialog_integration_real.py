@@ -21,6 +21,13 @@ from PyQt6.QtWidgets import QApplication
 
 # Import real testing infrastructure
 from tests.infrastructure import (
+# Serial execution required: Real Qt components
+pytestmark = [
+    
+    pytest.mark.serial
+]
+
+
     QtTestingFramework,
     RealManagerFixtureFactory,
     TestApplicationFactory,

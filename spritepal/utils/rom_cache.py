@@ -19,8 +19,8 @@ try:
 except ImportError:
     # Fallback logger
     import logging
-    def get_logger(name: str) -> logging.Logger:
-        return logging.getLogger(name)
+    def get_logger(module_name: str) -> logging.Logger:
+        return logging.getLogger(module_name)
 
 # Delayed import to avoid circular dependency
 def get_settings_manager():
@@ -57,10 +57,15 @@ class ROMCache:
             cache_dir: Optional custom cache directory. If None, uses settings or default
 
         """
+        # Initialize hash cache for performance optimization
+        self._hash_cache: dict[str, str] = {}
+        self._hash_cache_lock = threading.Lock()
+
         # Get settings manager (might be None if managers not initialized yet)
         try:
             self.settings_manager = get_settings_manager()
-        except (ImportError, AttributeError, RuntimeError) as e:
+        except (ImportError, AttributeError, RuntimeError, Exception) as e:
+            # Catch all exceptions including ManagerError from uninitialized managers
             logger.warning(f"Could not get settings manager during ROM cache initialization: {e}")
             self.settings_manager = None
 
@@ -119,7 +124,11 @@ class ROMCache:
         return True
 
     def _get_rom_hash(self, rom_path: str) -> str:
-        """Generate SHA-256 hash of ROM file for cache key with proper error handling.
+        """Generate SHA-256 hash of ROM file for cache key with caching optimization.
+
+        Uses file metadata (path + mtime + size) as cache key to avoid expensive
+        SHA-256 recalculation for unchanged files. This provides significant
+        performance improvement for large ROM files (8-32MB).
 
         Args:
             rom_path: Path to ROM file
@@ -128,18 +137,74 @@ class ROMCache:
             Hex digest of ROM file hash, or path-based hash for non-existent files
 
         """
-        try:
-            rom_path_obj = Path(rom_path)
-            if rom_path_obj.exists():
-                sha256_hash = hashlib.sha256()
-                with rom_path_obj.open("rb") as f:
-                    # Read in chunks to handle large files efficiently
-                    for chunk in iter(lambda: f.read(8192), b""):
-                        sha256_hash.update(chunk)
-                return sha256_hash.hexdigest()
-            # For non-existent files (like test scenarios), use path-based hash
-            path_data = f"nonexistent_{Path(rom_path).resolve()}"
+        return self._get_rom_hash_cached(rom_path)
+
+    def _get_rom_hash_cached(self, rom_path: str) -> str:
+        """Get ROM hash with metadata-based caching for performance.
+
+        Cache key uses file path + mtime + size to detect changes without
+        recalculating full SHA-256 hash every time.
+
+        Args:
+            rom_path: Path to ROM file
+
+        Returns:
+            Cached or computed SHA-256 hash of ROM file
+        """
+        rom_path_obj = Path(rom_path)
+
+        # Handle non-existent files (test scenarios)
+        if not rom_path_obj.exists():
+            path_data = f"nonexistent_{rom_path_obj.resolve()}"
             return hashlib.sha256(path_data.encode()).hexdigest()
+
+        try:
+            # Get file metadata for cache key
+            stat = rom_path_obj.stat()
+            metadata_key = f"{rom_path}_{stat.st_mtime}_{stat.st_size}"
+
+            # Thread-safe cache access
+            with self._hash_cache_lock:
+                if metadata_key in self._hash_cache:
+                    logger.debug(f"ROM hash cache hit for {rom_path_obj.name}")
+                    return self._hash_cache[metadata_key]
+
+                # Cache miss - compute full hash
+                logger.debug(f"ROM hash cache miss for {rom_path_obj.name}, computing SHA-256...")
+                computed_hash = self._compute_full_hash(rom_path)
+
+                # Store in cache (limit cache size to prevent memory growth)
+                if len(self._hash_cache) >= 100:  # Reasonable limit for ROM hashes
+                    # Remove oldest entry (simple LRU-like behavior)
+                    oldest_key = next(iter(self._hash_cache))
+                    del self._hash_cache[oldest_key]
+
+                self._hash_cache[metadata_key] = computed_hash
+                return computed_hash
+
+        except (OSError, PermissionError) as e:
+            # Fallback for permission/access errors
+            logger.debug(f"Could not read ROM file metadata for hashing, using path-based hash: {e}")
+            return hashlib.sha256(str(rom_path).encode()).hexdigest()
+
+    def _compute_full_hash(self, rom_path: str) -> str:
+        """Compute full SHA-256 hash of ROM file.
+
+        Separated from caching logic for clarity and testability.
+
+        Args:
+            rom_path: Path to ROM file
+
+        Returns:
+            SHA-256 hex digest of file contents
+        """
+        try:
+            sha256_hash = hashlib.sha256()
+            with Path(rom_path).open("rb") as f:
+                # Read in 64KB chunks for better I/O performance on large files
+                for chunk in iter(lambda: f.read(65536), b""):
+                    sha256_hash.update(chunk)
+            return sha256_hash.hexdigest()
         except (OSError, PermissionError) as e:
             # Ultimate fallback: just use the path itself
             logger.debug(f"Could not read ROM file for hashing, using path-based hash: {e}")
@@ -353,7 +418,7 @@ class ROMCache:
             return {"error": str(e), "cache_enabled": False}
 
     def clear_cache(self, older_than_days: int | None = None) -> int:
-        """Clear cache files with error handling."""
+        """Clear cache files and hash cache with error handling."""
         if not self._cache_enabled:
             return 0
 
@@ -370,6 +435,16 @@ class ROMCache:
                         removed_count += 1
                 except (OSError, PermissionError):
                     pass  # Continue with other files
+
+            # Clear hash cache when clearing file cache
+            with self._hash_cache_lock:
+                if older_than_days is None:
+                    # Clear all hash cache entries
+                    self._hash_cache.clear()
+                    logger.debug("Cleared ROM hash cache")
+                # Note: For time-based clearing, we can't easily determine which
+                # hash cache entries correspond to old files, so we keep them
+                # for performance. They'll be evicted naturally by LRU behavior.
 
         except Exception as e:
             logger.warning(f"Failed to clear cache: {e}")
@@ -415,7 +490,9 @@ class ROMCache:
                     # REQUIRED DELAYED IMPORT: Prevents circular dependency:
                     # rom_cache -> rom_injector -> managers -> rom_cache
                     try:
-                        from core.rom_injector import SpritePointer  # noqa: PLC0415
+                        from core.rom_injector import (
+                            SpritePointer,
+                        )
                         # Restore SpritePointer object from cached data
                         restored_locations[name] = SpritePointer(
                             offset=location_data["offset"],

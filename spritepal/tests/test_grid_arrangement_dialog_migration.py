@@ -3,19 +3,30 @@ Test GridArrangementDialog migration to SplitterDialog
 
 Validates that the migrated GridArrangementDialog maintains all original functionality
 while using the new SplitterDialog architecture.
+
+This is a real Qt integration test that requires a GUI environment.
 """
 
-
-
-
 import contextlib
+import os
 import tempfile
 
 import pytest
 from PIL import Image
 
-from spritepal.ui.components import SplitterDialog
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.components import SplitterDialog
+from ui.grid_arrangement_dialog import GridArrangementDialog
+
+
+# Skip in headless environments - this tests real Qt dialog behavior
+pytestmark = [
+    pytest.mark.skipif(
+        "DISPLAY" not in os.environ,
+        reason="Requires GUI environment - this is a real Qt integration test"
+    ),
+    pytest.mark.serial,
+    pytest.mark.qt_integration
+]
 
 
 class TestGridArrangementDialogMigration:
@@ -181,7 +192,7 @@ class TestGridArrangementDialogMigration:
         # Test with non-existent file
         # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
         from unittest.mock import patch
-        with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+        with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
             dialog = GridArrangementDialog("/non/existent/file.png", tiles_per_row=16)
         qtbot.addWidget(dialog)
 

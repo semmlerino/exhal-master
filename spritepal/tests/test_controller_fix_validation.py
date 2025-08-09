@@ -13,6 +13,21 @@ from pathlib import Path
 import pytest
 
 # Add parent directory for imports
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.widget,
+]
+
+
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -23,12 +38,12 @@ from tests.infrastructure import (
 )
 from tests.infrastructure.test_data_repository import get_test_data_repository
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import (
+from core.controller import ExtractionController
+from core.managers import (
     cleanup_managers,
     initialize_managers,
 )
-from spritepal.ui.main_window import MainWindow
+from ui.main_window import MainWindow
 
 
 class TestControllerDefensiveValidationFix:

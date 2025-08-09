@@ -15,6 +15,19 @@ from collections import defaultdict
 from pathlib import Path
 
 # Add parent directory for imports
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.parallel_safe,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 

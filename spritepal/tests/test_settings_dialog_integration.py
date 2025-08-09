@@ -16,14 +16,27 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox
 
-from spritepal.core.managers import cleanup_managers, initialize_managers
-from spritepal.ui.dialogs.settings_dialog import SettingsDialog
-from spritepal.utils.rom_cache import ROMCache
-from spritepal.utils.settings_manager import SettingsManager
+from core.managers import cleanup_managers, initialize_managers
+from ui.dialogs.settings_dialog import SettingsDialog
+from utils.rom_cache import ROMCache
+from utils.settings_manager import SettingsManager
 
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
+
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
@@ -32,7 +45,7 @@ def setup_teardown():
     yield
     cleanup_managers()
     # Reset global cache instance
-    import spritepal.utils.rom_cache as rom_cache_module
+    import utils.rom_cache as rom_cache_module
     rom_cache_module._rom_cache_instance = None
 
 
@@ -87,8 +100,8 @@ def rom_cache(temp_cache_dir):
 @pytest.fixture
 def settings_dialog(qtbot, mock_settings_manager, rom_cache):
     """Create a settings dialog with mocked dependencies."""
-    with patch("spritepal.ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
-        with patch("spritepal.ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
+    with patch("ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
+        with patch("ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
             mock_get_settings.return_value = mock_settings_manager
             mock_get_cache.return_value = rom_cache
 
@@ -138,8 +151,8 @@ class TestSettingsDialogInitialization:
         mock_settings_manager.get_cache_expiration_days.return_value = 14
 
         # Create dialog with the custom mocked settings
-        with patch("spritepal.ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
-            with patch("spritepal.ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
+        with patch("ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
+            with patch("ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
                 mock_get_settings.return_value = mock_settings_manager
                 mock_get_cache.return_value = rom_cache
 
@@ -264,8 +277,8 @@ class TestCacheIntegration:
         # Start with cache disabled
         mock_settings_manager.get_cache_enabled.return_value = False
 
-        with patch("spritepal.ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
-            with patch("spritepal.ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
+        with patch("ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
+            with patch("ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
                 mock_get_settings.return_value = mock_settings_manager
                 mock_get_cache.return_value = rom_cache
 
@@ -445,7 +458,7 @@ class TestDirectorySelection:
         dialog, mock_settings, cache = settings_dialog
 
         # Mock file dialog to return test directory
-        with patch("spritepal.ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
+        with patch("ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
             mock_dialog.return_value = temp_dumps_dir
 
             # Click browse button
@@ -464,7 +477,7 @@ class TestDirectorySelection:
         dialog, mock_settings, cache = settings_dialog
 
         # Mock file dialog to return test directory
-        with patch("spritepal.ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
+        with patch("ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
             mock_dialog.return_value = temp_cache_dir
 
             # Click browse button
@@ -487,7 +500,7 @@ class TestDirectorySelection:
         dialog.dumps_dir_edit.setText(initial_value)
 
         # Mock file dialog to return empty string (cancelled)
-        with patch("spritepal.ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
+        with patch("ui.dialogs.settings_dialog.QFileDialog.getExistingDirectory") as mock_dialog:
             mock_dialog.return_value = ""
 
             # Click browse button
@@ -544,8 +557,8 @@ class TestSettingsValidationAndEdgeCases:
         mock_settings_manager.get.side_effect = mock_get_with_paths
         mock_settings_manager.get_cache_location.return_value = "/initial/cache"
 
-        with patch("spritepal.ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
-            with patch("spritepal.ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
+        with patch("ui.dialogs.settings_dialog.get_settings_manager") as mock_get_settings:
+            with patch("ui.dialogs.settings_dialog.get_rom_cache") as mock_get_cache:
                 mock_get_settings.return_value = mock_settings_manager
                 mock_get_cache.return_value = rom_cache
 

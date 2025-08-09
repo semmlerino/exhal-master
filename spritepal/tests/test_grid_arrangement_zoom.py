@@ -11,8 +11,16 @@ from PyQt6.QtCore import QPointF, Qt
 from PyQt6.QtGui import QKeyEvent, QMouseEvent
 from PyQt6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
 
-from spritepal.ui.grid_arrangement_dialog import GridGraphicsView, SelectionMode
-from spritepal.ui.row_arrangement.grid_arrangement_manager import TilePosition
+from ui.grid_arrangement_dialog import GridGraphicsView, SelectionMode
+from ui.row_arrangement.grid_arrangement_manager import TilePosition
+
+
+# Serial execution required: QApplication management
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application
+]
 
 
 @pytest.mark.gui

@@ -9,7 +9,19 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from spritepal.core.sprite_finder import SpriteCandidate, SpriteFinder
+from core.sprite_finder import SpriteCandidate, SpriteFinder
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 @pytest.fixture
@@ -124,8 +136,8 @@ class TestSpriteFinder:
 
     def test_init(self, temp_output_dir):
         """Test sprite finder initialization"""
-        with patch("spritepal.core.sprite_finder.ROMExtractor") as mock_ext_class, \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator") as mock_val_class:
+        with patch("core.sprite_finder.ROMExtractor") as mock_ext_class, \
+             patch("core.sprite_finder.SpriteVisualValidator") as mock_val_class:
 
             finder = SpriteFinder(temp_output_dir)
 
@@ -151,9 +163,9 @@ class TestSpriteFinder:
             Exception("No sprite"),  # Rest fail
         ]
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
-             patch("spritepal.core.sprite_finder.Image") as mock_image:
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
+             patch("core.sprite_finder.Image") as mock_image:
 
             # Mock image operations
             mock_img = Mock()
@@ -192,8 +204,8 @@ class TestSpriteFinder:
         sprite_data = b"\x01\x02" * 256  # 512 bytes
         mock_extractor.rom_injector.find_compressed_sprite.return_value = (256, sprite_data)
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
 
             finder = SpriteFinder(temp_output_dir)
             candidates = finder.find_sprites_in_rom(
@@ -217,8 +229,8 @@ class TestSpriteFinder:
         small_sprite = b"\x00" * 100  # Too small
         mock_extractor.rom_injector.find_compressed_sprite.return_value = (50, small_sprite)
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
 
             finder = SpriteFinder(temp_output_dir)
             candidates = finder.find_sprites_in_rom(rom_path, start_offset=0, end_offset=0x100)
@@ -235,9 +247,9 @@ class TestSpriteFinder:
         sprite_data = b"\x01" * 512
         mock_extractor.rom_injector.find_compressed_sprite.return_value = (256, sprite_data)
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
-             patch("spritepal.core.sprite_finder.Image") as mock_image:
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
+             patch("core.sprite_finder.Image") as mock_image:
 
             mock_img = Mock()
             mock_image.open.return_value = mock_img
@@ -266,9 +278,9 @@ class TestSpriteFinder:
         sprite_data = b"\x01" * 512
         mock_extractor.rom_injector.find_compressed_sprite.return_value = (256, sprite_data)
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
-             patch("spritepal.core.sprite_finder.Image"):
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator), \
+             patch("core.sprite_finder.Image"):
 
             finder = SpriteFinder(temp_output_dir)
             candidates = finder.find_sprites_in_rom(
@@ -284,7 +296,7 @@ class TestSpriteFinder:
 
     def test_convert_to_png(self, temp_output_dir, mock_extractor):
         """Test PNG conversion method"""
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor):
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor):
             finder = SpriteFinder(temp_output_dir)
 
             tile_data = b"\x00" * 512
@@ -297,8 +309,8 @@ class TestSpriteFinder:
 
     def test_save_results_summary(self, temp_output_dir):
         """Test saving results summary"""
-        with patch("spritepal.core.sprite_finder.ROMExtractor"), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator"):
+        with patch("core.sprite_finder.ROMExtractor"), \
+             patch("core.sprite_finder.SpriteVisualValidator"):
 
             finder = SpriteFinder(temp_output_dir)
 
@@ -347,8 +359,8 @@ class TestSpriteFinder:
         with Path(rom_path).open("wb") as f:
             f.write(mock_rom_data)
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor"), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator"):
+        with patch("core.sprite_finder.ROMExtractor"), \
+             patch("core.sprite_finder.SpriteVisualValidator"):
 
             finder = SpriteFinder(temp_output_dir)
 
@@ -377,8 +389,8 @@ class TestSpriteFinder:
         # Make decompression always fail
         mock_extractor.rom_injector.find_compressed_sprite.side_effect = Exception("Decompress error")
 
-        with patch("spritepal.core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
-             patch("spritepal.core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
+        with patch("core.sprite_finder.ROMExtractor", return_value=mock_extractor), \
+             patch("core.sprite_finder.SpriteVisualValidator", return_value=mock_validator):
 
             finder = SpriteFinder(temp_output_dir)
 

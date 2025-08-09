@@ -6,7 +6,15 @@ Tests for manager registry
 
 import pytest
 
-from spritepal.core.managers import (
+from core.managers import (
+# Serial execution required: Thread safety concerns
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+]
+
+
     ExtractionManager,
     ManagerError,
     SessionManager,
@@ -17,7 +25,7 @@ from spritepal.core.managers import (
     get_session_manager,
     initialize_managers,
 )
-from spritepal.core.managers.registry import ManagerRegistry
+from core.managers.registry import ManagerRegistry
 
 
 class TestManagerRegistry:

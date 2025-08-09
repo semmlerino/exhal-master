@@ -116,6 +116,9 @@ class RowArrangementDialog(SplitterDialog):
 
     def _setup_ui(self):
         """Set up the dialog UI using SplitterDialog panels"""
+        # Call parent _setup_ui first to initialize the main splitter
+        super()._setup_ui()
+
         # Create horizontal content splitter for Available/Arranged panels
         content_splitter = self.add_horizontal_splitter(handle_width=8)
 

@@ -12,6 +12,19 @@ import pytest
 from PIL import Image
 from PyQt6.QtGui import QPixmap
 from utils.preview_generator import (
+# Test characteristics: Timer usage
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.headless,
+    pytest.mark.performance,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.widget,
+    pytest.mark.worker_threads,
+]
+
+
     LRUCache,
     PaletteData,
     PreviewGenerator,

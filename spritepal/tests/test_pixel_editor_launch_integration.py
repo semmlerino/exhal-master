@@ -14,10 +14,24 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Add parent directories to path
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+]
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from spritepal.core.controller import ExtractionController
-from spritepal.core.managers import cleanup_managers, initialize_managers
+from core.controller import ExtractionController
+from core.managers import cleanup_managers, initialize_managers
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +111,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher path exists during discovery and validation
@@ -143,7 +157,7 @@ class TestPixelEditorLaunchIntegration:
         # Mock missing launcher
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - no launcher exists
@@ -170,7 +184,7 @@ class TestPixelEditorLaunchIntegration:
         # Mock validation failure
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found
@@ -208,7 +222,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found
@@ -245,7 +259,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found in discovery and validation
@@ -287,7 +301,7 @@ class TestPixelEditorLaunchIntegration:
         for sprite_file, validation_result in test_cases:
             with (
                 patch("os.path.exists") as mock_exists,
-                patch("spritepal.core.controller.validate_image_file") as mock_validate,
+                patch("core.controller.validate_image_file") as mock_validate,
             ):
 
                 # Set up mocks - ensure launcher is found during discovery
@@ -328,7 +342,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during path discovery
@@ -385,7 +399,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -438,7 +452,7 @@ class TestPixelEditorLaunchIntegration:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -496,7 +510,7 @@ class TestPixelEditorLaunchErrorRecovery:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -547,7 +561,7 @@ class TestPixelEditorLaunchErrorRecovery:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -587,7 +601,7 @@ class TestPixelEditorLaunchErrorRecovery:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -647,7 +661,7 @@ class TestPixelEditorLaunchPerformance:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery
@@ -694,7 +708,7 @@ class TestPixelEditorLaunchPerformance:
             patch("subprocess.Popen") as mock_popen,
             patch("os.path.exists") as mock_exists,
             patch("os.path.abspath") as mock_abspath,
-            patch("spritepal.core.controller.validate_image_file") as mock_validate,
+            patch("core.controller.validate_image_file") as mock_validate,
         ):
 
             # Set up mocks - ensure launcher is found during discovery

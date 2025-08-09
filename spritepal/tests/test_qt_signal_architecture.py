@@ -20,6 +20,15 @@ from PyQt6.QtWidgets import QApplication
 
 from core.controller import ExtractionController
 from core.managers import (
+# Serial execution required: QApplication management, Thread safety concerns, Real Qt components
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety
+]
+
+
     ExtractionManager,
     InjectionManager,
     get_session_manager,
@@ -30,7 +39,7 @@ from core.protocols.manager_protocols import (
     InjectionManagerProtocol,
     SessionManagerProtocol,
 )
-from tests.infrastructure.mock_factory import MockFactory
+from tests.infrastructure.real_component_factory import RealComponentFactory
 
 
 class SignalCapture(QObject):
@@ -101,7 +110,7 @@ class TestQtSignalArchitecture:
     @pytest.fixture
     def mock_factory(self):
         """Get mock factory instance"""
-        return MockFactory()
+        return RealComponentFactory()
     
     def test_signal_connection_with_casting(self, app, mock_factory, signal_capture):
         """Test that signal connections work correctly with protocol casting"""

@@ -9,15 +9,27 @@ from unittest.mock import Mock
 import pytest
 from PIL import Image
 
-from spritepal.ui.row_arrangement.grid_arrangement_manager import (
+from ui.row_arrangement.grid_arrangement_manager import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
+
+
     ArrangementType,
     GridArrangementManager,
     TileGroup,
     TilePosition,
 )
-from spritepal.ui.row_arrangement.grid_image_processor import GridImageProcessor
-from spritepal.ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-from spritepal.ui.row_arrangement.palette_colorizer import PaletteColorizer
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
+from ui.row_arrangement.palette_colorizer import PaletteColorizer
 
 
 class TestGridArrangementIntegration:

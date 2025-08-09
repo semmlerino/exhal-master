@@ -25,7 +25,7 @@ class SpritePreviewWorker(BaseWorker):
     )  # tile_data, width, height, sprite_name
     preview_error = pyqtSignal(str)  # error message
 
-    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None, parent: "QObject | None" = None):
+    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None, parent: QObject | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.offset = offset
@@ -124,7 +124,7 @@ class SpritePreviewWorker(BaseWorker):
             try:
                 # Variables already initialized above
                 compressed_size = 0
-                
+
                 # Check if we have offset variants and expected size from sprite config
                 offset_variants = []
                 expected_size = None

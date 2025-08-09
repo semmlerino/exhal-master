@@ -3,19 +3,30 @@ Test RowArrangementDialog migration to SplitterDialog
 
 Validates that the migrated RowArrangementDialog maintains all original functionality
 while using the new SplitterDialog architecture.
+
+This is a real Qt integration test that requires a GUI environment.
 """
 
-
-
-
 import contextlib
+import os
 import tempfile
 
 import pytest
 from PIL import Image
 
-from spritepal.ui.components import SplitterDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from ui.components import SplitterDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
+
+
+# Skip in headless environments - this tests real Qt dialog behavior
+pytestmark = [
+    pytest.mark.skipif(
+        "DISPLAY" not in os.environ,
+        reason="Requires GUI environment - this is a real Qt integration test"
+    ),
+    pytest.mark.serial,
+    pytest.mark.qt_integration
+]
 
 
 class TestRowArrangementDialogMigration:

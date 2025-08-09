@@ -6,18 +6,28 @@ from pathlib import Path
 
 import pytest
 from tests.fixtures.test_managers import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
+
+
     create_extraction_manager_fixture,
     create_injection_manager_fixture,
 )
 
-from spritepal.core.managers import (
+from core.managers import (
     cleanup_managers,
     get_extraction_manager,
     get_injection_manager,
     get_session_manager,
     initialize_managers,
 )
-from spritepal.core.managers.exceptions import ValidationError
+from core.managers.exceptions import ValidationError
 
 
 @pytest.fixture(autouse=True)

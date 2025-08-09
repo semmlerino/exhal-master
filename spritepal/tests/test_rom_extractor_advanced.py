@@ -7,8 +7,20 @@ from unittest.mock import Mock
 
 import pytest
 
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.utils.constants import BYTES_PER_TILE
+from core.rom_extractor import ROMExtractor
+from utils.constants import BYTES_PER_TILE
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 class TestROMExtractorScanMethods:

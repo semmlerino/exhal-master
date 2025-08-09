@@ -12,7 +12,19 @@ from unittest.mock import patch
 
 import pytest
 
-from spritepal.utils.rom_cache import ROMCache
+from utils.rom_cache import ROMCache
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 class TestROMCacheExceptionHandling:
@@ -185,7 +197,7 @@ class TestROMCacheExceptionHandling:
         cache = cache_with_temp_path
 
         # Mock settings manager to return None (not available)
-        with patch("spritepal.utils.rom_cache.get_settings_manager", return_value=None):
+        with patch("utils.rom_cache.get_settings_manager", return_value=None):
             # Should handle missing settings manager gracefully
             cache.refresh_settings()
             # Cache should still be functional

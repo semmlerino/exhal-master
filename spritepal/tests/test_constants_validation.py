@@ -3,20 +3,32 @@ Test constants validation and usage in Phase 2 improvements.
 
 Validates that constants are properly defined, used consistently,
 
-from spritepal.utils import constants
+from utils import constants
 
-from spritepal.utils import constants
+from utils import constants
 
-from spritepal.utils import constants
+from utils import constants
 
-from spritepal.utils import constants
+from utils import constants
 and that the replacement of magic numbers is effective.
 """
 
 from unittest.mock import patch
 
-from spritepal.ui.common import spacing_constants
-from spritepal.utils import constants
+from ui.common import spacing_constants
+from utils import constants
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.widget,
+]
 
 
 class TestConstantsValidation:
@@ -316,12 +328,12 @@ class TestConstantUsageValidation:
             assert len(key) > 0, f"Settings key {key} should not be empty"
             assert key.replace("_", "").isalnum(), f"Settings key {key} has invalid characters"
 
-    @patch("spritepal.utils.constants.VRAM_SPRITE_OFFSET", 0x8000)
+    @patch("utils.constants.VRAM_SPRITE_OFFSET", 0x8000)
     def test_constant_modification_impact(self):
         """Test that modifying constants has expected impact"""
         # This test demonstrates that constants can be modified for testing
         # and validates that such modifications would work as expected
-        from spritepal.utils import constants
+        from utils import constants
 
         # Verify the patch worked
         assert constants.VRAM_SPRITE_OFFSET == 0x8000

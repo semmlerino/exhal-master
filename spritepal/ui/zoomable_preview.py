@@ -2,18 +2,30 @@
 Zoomable sprite preview widget for SpritePal
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
-from PyQt6.QtGui import (
-    QColor,
-    QMouseEvent,
-    QPainter,
-    QPen,
-    QPixmap,
-    QTransform,
-    QWheelEvent,
-)
+
+if TYPE_CHECKING:
+    from PyQt6.QtGui import (
+        QColor,
+        QMouseEvent,
+        QPainter,
+        QPen,
+        QPixmap,
+        QTransform,
+        QWheelEvent,
+    )
+else:
+    from PyQt6.QtGui import (
+        QColor,
+        QMouseEvent,
+        QPainter,
+        QPen,
+        QPixmap,
+        QTransform,
+        QWheelEvent,
+    )
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -71,8 +83,8 @@ class ZoomablePreviewWidget(QWidget):
         self.setStyleSheet(
             """
             ZoomablePreviewWidget {
-                background-color: #1e1e1e;
-                border: {BORDER_THIN}px solid #555;
+                background-color: #f0f0f0;
+                border: 1px solid #999;
             }
         """
         )
@@ -80,7 +92,8 @@ class ZoomablePreviewWidget(QWidget):
     def paintEvent(self, a0: Any) -> None:
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(30, 30, 30))
+        # Use a light gray background for better contrast with dark sprites
+        painter.fillRect(self.rect(), QColor(240, 240, 240))
 
         if self._pixmap is not None:
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -110,8 +123,8 @@ class ZoomablePreviewWidget(QWidget):
             painter.resetTransform()
 
             # Draw zoom level indicator
-            # Light gray grid color
-            painter.setPen(QPen(QColor(200, 200, 200), BORDER_THIN))
+            # Dark gray text for visibility on light background
+            painter.setPen(QPen(QColor(60, 60, 60), BORDER_THIN))
             painter.setFont(painter.font())
             zoom_text = f"Zoom: {self._zoom:.1f}x"
             painter.drawText(10, 20, zoom_text)
@@ -122,7 +135,7 @@ class ZoomablePreviewWidget(QWidget):
 
         else:
             # Draw placeholder
-            # Dark gray selection border
+            # Dark gray text for visibility on light background
             painter.setPen(QPen(QColor(100, 100, 100), PREVIEW_SCALE_FACTOR))
             painter.drawText(
                 self.rect(),
@@ -152,11 +165,11 @@ class ZoomablePreviewWidget(QWidget):
 
         for y in range(top, bottom, tile_size):
             for x in range(left, right, tile_size):
-                # Alternate colors
+                # Alternate colors - use white and light gray for better contrast
                 if (x // tile_size + y // tile_size) % 2 == 0:
-                    painter.fillRect(x, y, tile_size, tile_size, QColor(180, 180, 180))
+                    painter.fillRect(x, y, tile_size, tile_size, QColor(255, 255, 255))
                 else:
-                    painter.fillRect(x, y, tile_size, tile_size, QColor(120, 120, 120))
+                    painter.fillRect(x, y, tile_size, tile_size, QColor(220, 220, 220))
 
     def _draw_pixel_grid(self, painter: Any, transform: Any) -> None:
         """Draw a pixel grid when zoomed in"""
@@ -175,8 +188,8 @@ class ZoomablePreviewWidget(QWidget):
         top = max(0, int(visible_rect.top()))
         bottom = min(self._pixmap.height(), int(visible_rect.bottom()) + 1)
 
-        # Draw grid
-        painter.setPen(QPen(QColor(60, 60, 60), TILE_GRID_THICKNESS))
+        # Draw grid - use darker color for better visibility on light background
+        painter.setPen(QPen(QColor(100, 100, 100), TILE_GRID_THICKNESS))
 
         # Vertical lines
         for x in range(left, right + 1):
@@ -190,7 +203,7 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
-    def wheelEvent(self, a0: QWheelEvent | None) -> None:
+    def wheelEvent(self, a0: Optional['QWheelEvent']) -> None:
         """Handle mouse wheel for zooming"""
         if self._pixmap is None or not a0:
             return
@@ -250,7 +263,7 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
-    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+    def mousePressEvent(self, a0: Optional['QMouseEvent']) -> None:
         """Handle mouse press for panning"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = True
@@ -260,13 +273,13 @@ class ZoomablePreviewWidget(QWidget):
             # Right click to reset view
             self.reset_view()
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
+    def mouseReleaseEvent(self, a0: Optional['QMouseEvent']) -> None:
         """Handle mouse release"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+    def mouseMoveEvent(self, a0: Optional['QMouseEvent']) -> None:
         """Handle mouse move for panning"""
         if a0 and self._is_panning and self._last_mouse_pos is not None:
             delta = a0.position() - self._last_mouse_pos
@@ -355,6 +368,7 @@ class PreviewPanel(QWidget):
         super().__init__()
         self._grayscale_image = None
         self._colorized_image = None
+        self._apply_transparency = True  # Toggle for transparency
 
         # Initialize colorizer component
         self.colorizer = PaletteColorizer()
@@ -391,6 +405,12 @@ class PreviewPanel(QWidget):
         self.palette_toggle = QCheckBox("Apply Palette")
         self.palette_toggle.setChecked(False)
         _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
+        
+        # Transparency toggle
+        self.transparency_toggle = QCheckBox("Transparency")
+        self.transparency_toggle.setChecked(True)
+        self.transparency_toggle.setToolTip("Toggle transparency for palette index 0")
+        _ = self.transparency_toggle.toggled.connect(self._on_transparency_toggle)
 
         self.palette_selector = QComboBox(self)
         self.palette_selector.setMinimumWidth(PALETTE_SELECTOR_MIN_WIDTH)
@@ -418,6 +438,7 @@ class PreviewPanel(QWidget):
 
         controls.addWidget(self.palette_toggle)
         controls.addWidget(self.palette_selector)
+        controls.addWidget(self.transparency_toggle)
         controls.addWidget(QLabel("|"))  # Separator
         controls.addWidget(self.zoom_fit_btn)
         controls.addWidget(self.zoom_reset_btn)
@@ -437,6 +458,15 @@ class PreviewPanel(QWidget):
         if checked and self._grayscale_image and self.colorizer.has_palettes():
             self._apply_current_palette()
         elif not checked:
+            self._show_grayscale()
+    
+    def _on_transparency_toggle(self, checked: bool) -> None:
+        """Handle transparency toggle"""
+        self._apply_transparency = checked
+        # Refresh the display with new transparency setting
+        if self.palette_toggle.isChecked() and self._grayscale_image:
+            self._apply_current_palette()
+        elif self._grayscale_image:
             self._show_grayscale()
 
     def _on_palette_changed(self, palette_name: str) -> None:
@@ -486,8 +516,8 @@ class PreviewPanel(QWidget):
                         # For grayscale images, map to palette index
                         palette_index = min(15, pixel_value // 16)
 
-                    if palette_index == 0:
-                        # Set transparent pixel
+                    if palette_index == 0 and self._apply_transparency:
+                        # Set transparent pixel only if transparency is enabled
                         pixels[x, y] = (0, 0, 0, 0)
                     else:
                         # Keep grayscale value with full alpha
@@ -496,7 +526,12 @@ class PreviewPanel(QWidget):
                             if self._grayscale_image.mode != "P"
                             else (pixel_value * MAX_BYTE_VALUE) // 15
                         )
-                        pixels[x, y] = (gray_value, gray_value, gray_value, MAX_BYTE_VALUE)
+                        # Ensure non-zero pixels are visible even if index is 0
+                        if palette_index == 0 and not self._apply_transparency:
+                            # Show palette 0 as dark gray instead of transparent
+                            pixels[x, y] = (64, 64, 64, MAX_BYTE_VALUE)
+                        else:
+                            pixels[x, y] = (gray_value, gray_value, gray_value, MAX_BYTE_VALUE)
 
             pixmap = self._pil_to_pixmap(rgba_image)
             self.preview.update_pixmap(pixmap)

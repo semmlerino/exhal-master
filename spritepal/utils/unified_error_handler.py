@@ -16,6 +16,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Protocol
 
+if TYPE_CHECKING:
+    from PyQt6.QtCore import QObject, pyqtSignal
+    from PyQt6.QtWidgets import QMessageBox, QWidget
+
 # Import core exceptions - these should always be available
 from core.managers.exceptions import (
     CacheError,
@@ -32,15 +36,18 @@ try:
     from PyQt6.QtCore import QObject as QtQObject
     from PyQt6.QtCore import pyqtSignal as QtPyqtSignal
     from PyQt6.QtWidgets import QMessageBox as QtQMessageBox
+    from PyQt6.QtWidgets import QWidget as QtQWidget
     QT_AVAILABLE = True
 
     # Use Qt classes directly
     QObject = QtQObject
     pyqtSignal = QtPyqtSignal
     QMessageBox = QtQMessageBox
+    QWidget = QtQWidget
 except ImportError:
     # Fallback for environments without Qt
     QT_AVAILABLE = False
+    # Create mock classes for runtime use only
 
     class QObject:
         def __init__(self, parent=None):

@@ -183,7 +183,10 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
             return
 
         current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
+        app_instance = QApplication.instance()
+        if app_instance is None:
+            return  # No Qt application running
+        main_thread = app_instance.thread()
 
         if current_thread != main_thread:
             raise RuntimeError(
@@ -290,7 +293,7 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
 
 # Convenience functions for common patterns
 
-def create_simple_singleton(instance_type: "type[T]") -> "type[ThreadSafeSingleton[T]]":
+def create_simple_singleton(instance_type: "type[TSingleton]") -> "type[ThreadSafeSingleton[TSingleton]]":
     """
     Create a simple thread-safe singleton class for a given type.
 
@@ -305,19 +308,19 @@ def create_simple_singleton(instance_type: "type[T]") -> "type[ThreadSafeSinglet
         MyManagerSingleton = create_simple_singleton(MyManager)
         manager = MyManagerSingleton.get()
     """
-    class SimpleSingleton(ThreadSafeSingleton[T]):
-        _instance: T | None = None
+    class SimpleSingleton(ThreadSafeSingleton[TSingleton]):
+        _instance: TSingleton | None = None
         _lock = threading.Lock()
 
         @classmethod
-        def _create_instance(cls, *args, **kwargs) -> T:
+        def _create_instance(cls, *args, **kwargs) -> TSingleton:
             return instance_type(*args, **kwargs)
 
     SimpleSingleton.__name__ = f"{instance_type.__name__}Singleton"
     return SimpleSingleton
 
 
-def create_qt_singleton(qt_type: "type[T]") -> "type[QtThreadSafeSingleton[T]]":
+def create_qt_singleton(qt_type: "type[TQt]") -> "type[QtThreadSafeSingleton[TQt]]":
     """
     Create a thread-safe Qt singleton class for a given Qt type.
 
@@ -332,12 +335,12 @@ def create_qt_singleton(qt_type: "type[T]") -> "type[QtThreadSafeSingleton[T]]":
         MyDialogSingleton = create_qt_singleton(MyDialog)
         dialog = MyDialogSingleton.get()
     """
-    class QtSingleton(QtThreadSafeSingleton[T]):
-        _instance: T | None = None
+    class QtSingleton(QtThreadSafeSingleton[TQt]):
+        _instance: TQt | None = None
         _lock = threading.Lock()
 
         @classmethod
-        def _create_instance(cls, *args, **kwargs) -> T:
+        def _create_instance(cls, *args, **kwargs) -> TQt:
             cls._ensure_main_thread()
             return qt_type(*args, **kwargs)
 

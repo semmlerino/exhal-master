@@ -12,6 +12,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 from core.visual_similarity_search import (
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+]
+
+
     SimilarityMatch,
     SpriteGroupFinder,
     SpriteHash,

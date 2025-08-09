@@ -9,6 +9,7 @@ from typing import Any
 from PyQt6.QtWidgets import QApplication
 
 from utils.logging_config import get_logger
+from utils.safe_logging import safe_debug, safe_info, safe_warning, suppress_logging_errors
 
 from .exceptions import ManagerError
 from .extraction_manager import ExtractionManager
@@ -158,44 +159,37 @@ class ManagerRegistry:
                 # Re-raise as ManagerError
                 raise ManagerError(f"Failed to initialize managers: {e}") from e
 
+    @suppress_logging_errors
     def cleanup_managers(self) -> None:
         """Cleanup all managers with enhanced memory leak prevention"""
-        self._logger.info("Cleaning up managers...")
+        safe_info(self._logger, "Cleaning up managers...")
 
         # Cleanup in reverse order
         for name in reversed(list(self._managers.keys())):
             try:
                 manager = self._managers[name]
                 manager.cleanup()
-                self._logger.debug(f"Cleaned up {name} manager")
+                safe_debug(self._logger, f"Cleaned up {name} manager")
             except (AttributeError, RuntimeError):
-                self._logger.exception(f"Error cleaning up {name} manager")
+                safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
             except Exception:
-                self._logger.exception(f"Error cleaning up {name} manager")
+                safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
 
         self._managers.clear()
         self._manager_refs.clear()  # Clear weak references
 
-        # Also cleanup HAL process pool if it exists
-        try:
-            from core.hal_compression import HALProcessPool  # noqa: PLC0415
-            hal_pool = HALProcessPool()
-            hal_pool.shutdown()
-            self._logger.debug("Cleaned up HAL process pool")
-        except ImportError:
-            pass  # HAL compression module not available
-        except Exception as e:
-            self._logger.debug(f"Error cleaning up HAL process pool: {e}")
-
         # Clear context references to break circular dependencies
         try:
             from .context import _context_manager
-            _context_manager.set_current_context(None)
-            self._logger.debug("Cleared context manager references")
+            if _context_manager is not None:
+                _context_manager.set_current_context(None)
+                safe_debug(self._logger, "Cleared context manager references")
+            else:
+                safe_debug(self._logger, "Context manager already cleaned up")
         except Exception as e:
-            self._logger.debug(f"Error clearing context references: {e}")
+            safe_debug(self._logger, f"Error clearing context references: {e}")
 
-        self._logger.info("All managers cleaned up")
+        safe_info(self._logger, "All managers cleaned up")
 
     def get_session_manager(self) -> SessionManager:
         """
@@ -285,7 +279,8 @@ class ManagerRegistry:
     def is_initialized(self) -> bool:
         """Check if managers are initialized"""
         # Check that all expected managers are present
-        expected_managers = {"session", "extraction", "injection", "navigation"}
+        # Note: NavigationManager is currently disabled due to threading issues in tests
+        expected_managers = {"session", "extraction", "injection"}
         return expected_managers.issubset(self._managers.keys())
 
     def get_all_managers(self) -> dict[str, Any]:
@@ -334,6 +329,7 @@ class ManagerRegistry:
 _registry = ManagerRegistry()
 
 # Register cleanup at module level to prevent memory leaks
+@suppress_logging_errors
 def _cleanup_global_registry():
     """Cleanup function for module-level registry"""
     global _registry

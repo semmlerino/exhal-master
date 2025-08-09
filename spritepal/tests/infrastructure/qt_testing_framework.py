@@ -211,7 +211,7 @@ class WidgetTestContext:
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit the widget test context with cleanup."""
-        if self.widget:
+        if self.widget is not None:
             try:
                 self.widget.close()
                 self.widget.setParent(None)
@@ -220,13 +220,13 @@ class WidgetTestContext:
 
     def show_and_wait(self, wait_ms: int = 100) -> None:
         """Show the widget and wait for it to be displayed."""
-        if self.widget:
+        if self.widget is not None:
             self.widget.show()
             self.framework.process_events(wait_ms)
 
     def validate_widget_state(self) -> dict[str, Any]:
         """Validate the widget's state."""
-        if not self.widget:
+        if self.widget is None:
             return {"error": "Widget not created"}
 
         return {

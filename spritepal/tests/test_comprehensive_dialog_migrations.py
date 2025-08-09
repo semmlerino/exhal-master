@@ -13,11 +13,24 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from spritepal.ui.components import BaseDialog, SplitterDialog, TabbedDialog
-from spritepal.ui.dialogs.user_error_dialog import UserErrorDialog
-from spritepal.ui.grid_arrangement_dialog import GridArrangementDialog
-from spritepal.ui.injection_dialog import InjectionDialog
-from spritepal.ui.row_arrangement_dialog import RowArrangementDialog
+from ui.components import BaseDialog, SplitterDialog, TabbedDialog
+from ui.dialogs.user_error_dialog import UserErrorDialog
+from ui.grid_arrangement_dialog import GridArrangementDialog
+from ui.injection_dialog import InjectionDialog
+from ui.row_arrangement_dialog import RowArrangementDialog
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+]
 
 
 class TestComprehensiveDialogMigrations:
@@ -63,7 +76,7 @@ class TestComprehensiveDialogMigrations:
             assert isinstance(row_dialog, BaseDialog)  # SplitterDialog inherits from BaseDialog
 
             # Test GridArrangementDialog inherits from SplitterDialog
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(grid_dialog)
             assert isinstance(grid_dialog, SplitterDialog)
@@ -91,7 +104,7 @@ class TestComprehensiveDialogMigrations:
             ]
             
             # Handle grid dialog with error patching
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 dialogs.append(GridArrangementDialog(test_sprite_image))
 
             for dialog in dialogs:
@@ -136,7 +149,7 @@ class TestComprehensiveDialogMigrations:
             assert hasattr(row_dialog, "export_btn")
 
             # GridArrangementDialog has Export button
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(grid_dialog)
             assert grid_dialog.button_box is not None
@@ -158,7 +171,7 @@ class TestComprehensiveDialogMigrations:
             ]
             
             # Handle grid dialog with error patching
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 status_dialogs.append(GridArrangementDialog(test_sprite_image))
 
             for dialog in status_dialogs:
@@ -227,7 +240,7 @@ class TestComprehensiveDialogMigrations:
             assert row_dialog.main_splitter.count() == 2  # Content and preview panels
 
             # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(grid_dialog)
             assert hasattr(grid_dialog, "main_splitter")
@@ -262,7 +275,7 @@ class TestComprehensiveDialogMigrations:
             assert hasattr(row_dialog.arrangement_manager, "arrangement_changed")
 
             # Test GridArrangementDialog signals
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(grid_dialog)
 
@@ -292,7 +305,7 @@ class TestComprehensiveDialogMigrations:
 
             # Test error state handling in other dialogs
             # Patch QMessageBox to prevent blocking dialogs during GridArrangementDialog initialization
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog("/non/existent/file.png")
             safe_qtbot.addWidget(grid_dialog)
 
@@ -311,7 +324,7 @@ class TestComprehensiveDialogMigrations:
         """Test that memory management is consistent across dialogs"""
         with manager_context_factory() as context:
             # Only GridArrangementDialog has _cleanup_resources method
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(grid_dialog)
 
@@ -379,7 +392,7 @@ class TestComprehensiveDialogMigrations:
             injection_dialog = InjectionDialog()
             row_dialog = RowArrangementDialog(test_sprite_image)
             
-            with patch("spritepal.ui.grid_arrangement_dialog.QMessageBox.critical"):
+            with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
 
             for dialog in [injection_dialog, row_dialog, grid_dialog]:

@@ -9,9 +9,21 @@ from unittest.mock import Mock
 import pytest
 from PIL import Image
 
-from spritepal.core.hal_compression import HALCompressionError
-from spritepal.core.rom_extractor import ROMExtractor
-from spritepal.utils.constants import BYTES_PER_TILE, TILE_HEIGHT, TILE_WIDTH
+from core.hal_compression import HALCompressionError
+from core.rom_extractor import ROMExtractor
+from utils.constants import BYTES_PER_TILE, TILE_HEIGHT, TILE_WIDTH
+
+
+# Systematic pytest markers applied based on test content analysis
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+]
 
 
 class TestROMExtractorInit:
@@ -29,11 +41,11 @@ class TestROMExtractorInit:
         assert extractor.sprite_config_loader is not None
 
         # Verify components are of expected types
-        from spritepal.core.default_palette_loader import DefaultPaletteLoader
-        from spritepal.core.hal_compression import HALCompressor
-        from spritepal.core.rom_injector import ROMInjector
-        from spritepal.core.rom_palette_extractor import ROMPaletteExtractor
-        from spritepal.core.sprite_config_loader import SpriteConfigLoader
+        from core.default_palette_loader import DefaultPaletteLoader
+        from core.hal_compression import HALCompressor
+        from core.rom_injector import ROMInjector
+        from core.rom_palette_extractor import ROMPaletteExtractor
+        from core.sprite_config_loader import SpriteConfigLoader
 
         assert isinstance(extractor.hal_compressor, HALCompressor)
         assert isinstance(extractor.rom_injector, ROMInjector)

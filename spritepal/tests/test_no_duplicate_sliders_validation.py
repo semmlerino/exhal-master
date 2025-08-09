@@ -14,8 +14,21 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtWidgets import QSlider, QSpinBox
 
-from spritepal.core.managers.extraction_manager import ExtractionManager
-from spritepal.ui.rom_extraction_panel import (
+from core.managers.extraction_manager import ExtractionManager
+from ui.rom_extraction_panel import (
+# Test characteristics: Singleton management
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.singleton,
+    pytest.mark.widget,
+]
+
+
     ManualOffsetDialogSingleton,
     ROMExtractionPanel,
 )
@@ -28,15 +41,24 @@ class TestNoDuplicateSlidersValidation:
     @pytest.fixture(autouse=True)
     def setup_singleton_cleanup(self):
         """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton._cleanup_instance()
+        # Clean up any existing instance before test
+        if ManualOffsetDialogSingleton._instance is not None:
+            instance = ManualOffsetDialogSingleton._instance
+            ManualOffsetDialogSingleton._cleanup_instance(instance)
+            ManualOffsetDialogSingleton._instance = None
+        ManualOffsetDialogSingleton._destroyed = False
         yield
+        # Clean up after test
         try:
             if ManualOffsetDialogSingleton._instance is not None:
                 ManualOffsetDialogSingleton._instance.close()
                 ManualOffsetDialogSingleton._instance.deleteLater()
+                instance = ManualOffsetDialogSingleton._instance
+                ManualOffsetDialogSingleton._cleanup_instance(instance)
+                ManualOffsetDialogSingleton._instance = None
         except Exception:
             pass
-        ManualOffsetDialogSingleton._cleanup_instance()
+        ManualOffsetDialogSingleton._destroyed = False
 
     @pytest.fixture
     def mock_rom_panel(self):
