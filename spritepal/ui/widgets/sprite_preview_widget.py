@@ -379,81 +379,86 @@ class SpritePreviewWidget(QWidget):
 
             # Convert to QPixmap
             logger.debug(f"[DEBUG_SPRITE] Converting PIL Image to QImage: {img_rgba.width}x{img_rgba.height}")
-        
-        # Get byte data and verify
-        img_bytes = img_rgba.tobytes()
-        logger.debug(f"[DEBUG_SPRITE] Image byte data: {len(img_bytes)} bytes")
-        logger.debug(f"[DEBUG_SPRITE] First 100 bytes (hex): {img_bytes[:100].hex() if len(img_bytes) > 0 else 'EMPTY'}")
-        
-        qimg = QImage(
-            img_bytes,
-            img_rgba.width,
-            img_rgba.height,
-            img_rgba.width * 4,
-            QImage.Format.Format_RGBA8888,
-        )
-        
-        logger.debug(f"[DEBUG_SPRITE] QImage created: {qimg.width()}x{qimg.height()}, null={qimg.isNull()}")
-        
-        pixmap = QPixmap.fromImage(qimg)
-        logger.debug(f"[DEBUG_SPRITE] QPixmap created: {pixmap.width()}x{pixmap.height()}, null={pixmap.isNull()}")
+            
+            # Get byte data and verify
+            img_bytes = img_rgba.tobytes()
+            logger.debug(f"[DEBUG_SPRITE] Image byte data: {len(img_bytes)} bytes")
+            logger.debug(f"[DEBUG_SPRITE] First 100 bytes (hex): {img_bytes[:100].hex() if len(img_bytes) > 0 else 'EMPTY'}")
+            
+            qimg = QImage(
+                img_bytes,
+                img_rgba.width,
+                img_rgba.height,
+                img_rgba.width * 4,
+                QImage.Format.Format_RGBA8888,
+            )
+            
+            logger.debug(f"[DEBUG_SPRITE] QImage created: {qimg.width()}x{qimg.height()}, null={qimg.isNull()}")
+            
+            pixmap = QPixmap.fromImage(qimg)
+            logger.debug(f"[DEBUG_SPRITE] QPixmap created: {pixmap.width()}x{pixmap.height()}, null={pixmap.isNull()}")
 
-        # Scale for preview - adaptive sizing for space efficiency
-        scaled = self._scale_pixmap_efficiently(pixmap)
-        logger.debug(f"[DEBUG_SPRITE] Scaled pixmap: {scaled.width()}x{scaled.height()}, null={scaled.isNull()}")
+            # Scale for preview - adaptive sizing for space efficiency
+            scaled = self._scale_pixmap_efficiently(pixmap)
+            logger.debug(f"[DEBUG_SPRITE] Scaled pixmap: {scaled.width()}x{scaled.height()}, null={scaled.isNull()}")
 
-        logger.info(f"[DEBUG_SPRITE] Setting pixmap on preview_label: original={pixmap.width()}x{pixmap.height()}, scaled={scaled.width()}x{scaled.height()}")
-        logger.info(f"[DEBUG_SPRITE] Widget visibility state: widget={self.isVisible()}, label={self.preview_label.isVisible()}")
-        
-        # Check label state before setting pixmap
-        logger.debug(f"[DEBUG_SPRITE] preview_label state BEFORE setPixmap:")
-        logger.debug(f"  - exists: {self.preview_label is not None}")
-        if self.preview_label:
-            logger.debug(f"  - visible: {self.preview_label.isVisible()}")
-            logger.debug(f"  - size: {self.preview_label.size()}")
-            logger.debug(f"  - enabled: {self.preview_label.isEnabled()}")
-            logger.debug(f"  - parent: {self.preview_label.parent()}")
-            logger.debug(f"  - current pixmap: {self.preview_label.pixmap()}")
-            logger.debug(f"  - current text: '{self.preview_label.text()}'")
+            logger.info(f"[DEBUG_SPRITE] Setting pixmap on preview_label: original={pixmap.width()}x{pixmap.height()}, scaled={scaled.width()}x{scaled.height()}")
+            logger.info(f"[DEBUG_SPRITE] Widget visibility state: widget={self.isVisible()}, label={self.preview_label.isVisible()}")
+            
+            # Check label state before setting pixmap
+            logger.debug(f"[DEBUG_SPRITE] preview_label state BEFORE setPixmap:")
+            logger.debug(f"  - exists: {self.preview_label is not None}")
+            if self.preview_label:
+                logger.debug(f"  - visible: {self.preview_label.isVisible()}")
+                logger.debug(f"  - size: {self.preview_label.size()}")
+                logger.debug(f"  - enabled: {self.preview_label.isEnabled()}")
+                logger.debug(f"  - parent: {self.preview_label.parent()}")
+                logger.debug(f"  - current pixmap: {self.preview_label.pixmap()}")
+                logger.debug(f"  - current text: '{self.preview_label.text()}'")
 
-        self.preview_label.setPixmap(scaled)
-        # SPACE EFFICIENCY: When content is loaded, use borderless style
-        self._apply_content_style()
-        self.sprite_pixmap = pixmap
+            self.preview_label.setPixmap(scaled)
+            # SPACE EFFICIENCY: When content is loaded, use borderless style
+            self._apply_content_style()
+            self.sprite_pixmap = pixmap
 
-        # Verify pixmap was actually set
-        actual_pixmap = self.preview_label.pixmap()
-        if actual_pixmap is None:
-            logger.error("[DEBUG_SPRITE] CRITICAL: Pixmap was NOT set on preview_label!")
-            logger.error(f"[DEBUG_SPRITE] Label text after failed setPixmap: '{self.preview_label.text()}'")
-            logger.error(f"[DEBUG_SPRITE] Label stylesheet: {self.preview_label.styleSheet()[:200]}..." if self.preview_label.styleSheet() else "[DEBUG_SPRITE] No stylesheet")
-            # Try to understand why
-            logger.error(f"[DEBUG_SPRITE] QApplication instance: {QApplication.instance()}")
-            logger.error(f"[DEBUG_SPRITE] Current thread: {QThread.currentThread()}")
-            logger.error(f"[DEBUG_SPRITE] Main thread: {QApplication.instance().thread() if QApplication.instance() else 'NO APP'}")
-        else:
-            logger.info(f"[DEBUG_SPRITE] Pixmap successfully set: {actual_pixmap.width()}x{actual_pixmap.height()}")
-            logger.info(f"[DEBUG_SPRITE] Label size after setting pixmap: {self.preview_label.size()}")
-            logger.debug(f"[DEBUG_SPRITE] Actual pixmap properties:")
-            logger.debug(f"  - size: {actual_pixmap.size()}")
-            logger.debug(f"  - depth: {actual_pixmap.depth()}")
-            logger.debug(f"  - has alpha: {actual_pixmap.hasAlpha()}")
+            # Verify pixmap was actually set
+            actual_pixmap = self.preview_label.pixmap()
+            if actual_pixmap is None:
+                logger.error("[DEBUG_SPRITE] CRITICAL: Pixmap was NOT set on preview_label!")
+                logger.error(f"[DEBUG_SPRITE] Label text after failed setPixmap: '{self.preview_label.text()}'")
+                logger.error(f"[DEBUG_SPRITE] Label stylesheet: {self.preview_label.styleSheet()[:200]}..." if self.preview_label.styleSheet() else "[DEBUG_SPRITE] No stylesheet")
+                # Try to understand why
+                logger.error(f"[DEBUG_SPRITE] QApplication instance: {QApplication.instance()}")
+                logger.error(f"[DEBUG_SPRITE] Current thread: {QThread.currentThread()}")
+                logger.error(f"[DEBUG_SPRITE] Main thread: {QApplication.instance().thread() if QApplication.instance() else 'NO APP'}")
+            else:
+                logger.info(f"[DEBUG_SPRITE] Pixmap successfully set: {actual_pixmap.width()}x{actual_pixmap.height()}")
+                logger.info(f"[DEBUG_SPRITE] Label size after setting pixmap: {self.preview_label.size()}")
+                logger.debug(f"[DEBUG_SPRITE] Actual pixmap properties:")
+                logger.debug(f"  - size: {actual_pixmap.size()}")
+                logger.debug(f"  - depth: {actual_pixmap.depth()}")
+                logger.debug(f"  - has alpha: {actual_pixmap.hasAlpha()}")
 
-        # Guarantee the pixmap is displayed with validation
-        logger.debug(f"[DEBUG_SPRITE] Calling _guarantee_pixmap_display_with_validation")
-        self._guarantee_pixmap_display_with_validation()
+            # Guarantee the pixmap is displayed with validation
+            logger.debug(f"[DEBUG_SPRITE] Calling _guarantee_pixmap_display_with_validation")
+            self._guarantee_pixmap_display_with_validation()
 
-        # Force visibility as last resort
-        logger.debug(f"[DEBUG_SPRITE] Calling _force_visibility as last resort")
-        self._force_visibility()
-        
-        # Final check
-        final_pixmap = self.preview_label.pixmap()
-        if final_pixmap and not final_pixmap.isNull():
-            logger.info(f"[DEBUG_SPRITE] SUCCESS: Final pixmap is displayed: {final_pixmap.width()}x{final_pixmap.height()}")
-        else:
-            logger.error(f"[DEBUG_SPRITE] FAILURE: No pixmap displayed after all attempts")
-            self.diagnose_display_issue()
+            # Force visibility as last resort
+            logger.debug(f"[DEBUG_SPRITE] Calling _force_visibility as last resort")
+            self._force_visibility()
+            
+            # Final check
+            final_pixmap = self.preview_label.pixmap()
+            if final_pixmap and not final_pixmap.isNull():
+                logger.info(f"[DEBUG_SPRITE] SUCCESS: Final pixmap is displayed: {final_pixmap.width()}x{final_pixmap.height()}")
+            else:
+                logger.error(f"[DEBUG_SPRITE] FAILURE: No pixmap displayed after all attempts")
+                self.diagnose_display_issue()
+                
+        finally:
+            # CRITICAL: Always clear the update flag to prevent deadlock
+            self._update_in_progress = False
+            logger.debug(f"[DEBUG_SPRITE] _update_preview_with_palette END - Thread {thread_id}")
 
     def _on_palette_changed(self, index: int) -> None:
         """Handle palette selection change"""
