@@ -631,7 +631,9 @@ class SpritePreviewWidget(QWidget):
 
             # Verify image has content before displaying
             if non_zero_pixels == 0:
-                logger.warning("[SPRITE_DISPLAY] Image appears to be completely black - no visible content")
+                logger.warning("[SPRITE_DISPLAY] Image appears to be completely black - showing no data pattern")
+                self._show_no_data_pattern(width, height)
+                return
 
             # Load as grayscale sprite with forced update and validation
             self._load_grayscale_sprite_with_validation_and_update(img, sprite_name)
@@ -821,7 +823,9 @@ class SpritePreviewWidget(QWidget):
 
             # Verify image has content before displaying
             if non_zero_pixels == 0:
-                logger.warning("[SPRITE_DISPLAY] Image appears to be completely black - no visible content")
+                logger.warning("[SPRITE_DISPLAY] Image appears to be completely black - showing no data pattern")
+                self._show_no_data_pattern(width, height)
+                return
 
             # Load as grayscale sprite with forced update and validation
             self._load_grayscale_sprite_with_validation_and_update(img, sprite_name or None)
@@ -1214,6 +1218,58 @@ class SpritePreviewWidget(QWidget):
         logger.info(f"  sprite_data exists: {self.sprite_data is not None}")
         logger.info("====================================")
 
+    def _show_no_data_pattern(self, width: int, height: int) -> None:
+        """Show a checkerboard pattern to indicate no sprite data at this offset."""
+        logger.debug(f"[SPRITE_DISPLAY] Showing no data pattern for {width}x{height}")
+        
+        # Create a checkerboard pattern to clearly indicate "no data"
+        img = Image.new('L', (width, height), 0)
+        
+        # Draw checkerboard pattern
+        square_size = 8
+        for y in range(0, height, square_size):
+            for x in range(0, width, square_size):
+                # Alternate between dark and light squares
+                if ((x // square_size) + (y // square_size)) % 2 == 0:
+                    for dy in range(min(square_size, height - y)):
+                        for dx in range(min(square_size, width - x)):
+                            img.putpixel((x + dx, y + dy), 64)  # Dark gray
+                else:
+                    for dy in range(min(square_size, height - y)):
+                        for dx in range(min(square_size, width - x)):
+                            img.putpixel((x + dx, y + dy), 128)  # Light gray
+        
+        # Convert to RGBA for display
+        img_rgba = img.convert("RGBA")
+        
+        # Convert to QPixmap
+        img_bytes = img_rgba.tobytes()
+        qimg = QImage(
+            img_bytes,
+            img_rgba.width,
+            img_rgba.height,
+            img_rgba.width * 4,
+            QImage.Format.Format_RGBA8888,
+        )
+        
+        pixmap = QPixmap.fromImage(qimg)
+        
+        # Scale for preview
+        scaled = self._scale_pixmap_efficiently(pixmap)
+        
+        # Update display
+        self.preview_label.setPixmap(scaled)
+        self.info_label.setText("No sprite data at this offset (all zeros)")
+        self.info_label.setVisible(True)
+        
+        # Ensure it's displayed
+        self._guarantee_pixmap_display()
+        
+        # Disable palette selection for empty data
+        self.palette_combo.setEnabled(False)
+        self.palette_combo.clear()
+        self.palette_combo.addItem("No Data")
+    
     def _force_visibility(self) -> None:
         """Force the preview widget and its contents to be visible."""
         if self.preview_label is None:

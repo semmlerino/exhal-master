@@ -868,10 +868,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.offset_changed.emit(offset)
 
         # CRITICAL FIX: Request preview when offset changes!
-        # The coordinator only auto-handles sliderMoved (drag), not valueChanged
+        # Use request_manual_preview for immediate response without debounce
         if self._smart_preview_coordinator is not None:
-            logger.debug(f"[DEBUG] Requesting preview for offset 0x{offset:06X}")
-            self._smart_preview_coordinator.request_preview(offset, priority=5)
+            logger.debug(f"[DEBUG] Requesting immediate preview for offset 0x{offset:06X}")
+            self._smart_preview_coordinator.request_manual_preview(offset)
         else:
             logger.error("[DEBUG] No smart preview coordinator available!")
 
@@ -997,8 +997,9 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _on_preview_error(self, error_msg: str):
         """Handle preview error."""
+        # Don't clear the preview widget on errors - keep the last valid preview visible
+        # This prevents black flashing when rapidly moving the slider
         if self.preview_widget is not None:
-            self.preview_widget.clear()
             self.preview_widget.info_label.setText("No sprite found")
 
         current_offset = self.get_current_offset()
@@ -1219,11 +1220,11 @@ class UnifiedManualOffsetDialog(DialogBase):
             return
             
         if self.preview_widget is not None:
-            logger.debug("[DEBUG] Clearing preview widget due to error")
-            self.preview_widget.clear()
+            logger.debug("[DEBUG] Updating status only, not clearing preview")
+            # Don't clear - keep last valid preview visible to prevent black flashing
             self.preview_widget.info_label.setText("No sprite found")
             
-            # Force widget updates after clearing
+            # Force widget updates
             self.preview_widget.update()
             self.preview_widget.repaint()
         else:

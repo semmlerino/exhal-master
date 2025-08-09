@@ -246,19 +246,25 @@ class SmartPreviewCoordinator(QObject):
     def request_manual_preview(self, offset: int) -> None:
         """
         Request preview for manual offset change (outside of slider dragging).
+        This bypasses debouncing for immediate response.
 
         Args:
             offset: ROM offset for preview
         """
-        # Force drag state to idle for immediate high-quality preview
-        old_state = self._drag_state
-        self._drag_state = DragState.IDLE
-
-        # Request with high priority
-        self.request_preview(offset, priority=10)
-
-        # Restore previous state
-        self._drag_state = old_state
+        logger.debug(f"[DEBUG] request_manual_preview called for offset 0x{offset:06X}")
+        
+        with QMutexLocker(self._mutex):
+            self._current_offset = offset
+            self._request_counter += 1
+        
+        # First check cache for immediate display
+        if self._try_show_cached_preview_dual_tier():
+            logger.debug("[DEBUG] Showed cached preview immediately")
+            return
+        
+        # If not cached, request worker preview with high priority
+        # Bypass all debouncing for immediate response
+        self._request_worker_preview(priority=10)
 
     def flush_rom_cache(self) -> None:
         """
@@ -284,8 +290,20 @@ class SmartPreviewCoordinator(QObject):
     def _on_drag_move(self, value: int) -> None:
         """Handle slider movement during dragging."""
         logger.debug(f"[DEBUG] _on_drag_move: value=0x{value:06X}")
-        # Request preview with drag priority
-        self.request_preview(value, priority=1)
+        
+        with QMutexLocker(self._mutex):
+            self._current_offset = value
+            self._request_counter += 1
+        
+        # Immediately check and show cached preview if available
+        if self._try_show_cached_preview_dual_tier():
+            logger.debug("[DEBUG] Showed cached preview during drag")
+            # Still request update in background for cache miss
+            self._drag_timer.stop()
+            self._drag_timer.start(self._drag_debounce_ms)
+        else:
+            # No cache hit, request preview with drag priority
+            self.request_preview(value, priority=1)
 
     def _on_drag_end(self) -> None:
         """Handle end of slider dragging."""
@@ -589,6 +607,14 @@ class SmartPreviewCoordinator(QObject):
         try:
             rom_path, extractor, rom_cache = self._rom_data_provider()
             logger.debug(f"[DEBUG] Got ROM data: path={bool(rom_path)}, extractor={bool(extractor)}, cache={bool(rom_cache)}")
+            
+            # Check if ROM data is actually valid before proceeding
+            if not rom_path or not rom_path.strip():
+                logger.debug("[DEBUG] ROM path not available, skipping preview request")
+                return
+            if not extractor:
+                logger.debug("[DEBUG] ROM extractor not available, skipping preview request")
+                return
             with QMutexLocker(self._mutex):
                 offset = self._current_offset
                 request_id = self._request_counter
