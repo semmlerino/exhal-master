@@ -29,29 +29,23 @@ if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QMutex,
     QMutexLocker,
     Qt,
     QThread,
     QTimer,
-    pyqtSignal,
+    Signal,
 )
 
-from utils.sprite_history_manager import SpriteHistoryManager
-
 if TYPE_CHECKING:
-    from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent
+    from PySide6.QtGui import QAction, QCloseEvent, QHideEvent, QKeyEvent
 else:
-    from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent
-from PyQt6.QtWidgets import (
+    from PySide6.QtGui import QAction, QCloseEvent, QHideEvent, QKeyEvent
+from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFrame,
-    QHBoxLayout,
     QInputDialog,
     QLabel,
     QListWidget,
@@ -60,8 +54,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressDialog,
     QPushButton,
-    QSlider,
-    QSpinBox,
+    QSizePolicy,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -73,573 +66,53 @@ from ui.common.collapsible_group_box import CollapsibleGroupBox
 
 # Use SimplePreviewCoordinator to avoid worker pool crashes
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator
-from ui.components import DialogBase
+# Smart DialogBase selection based on environment
+def _get_dialog_base_class():
+    """Get the appropriate DialogBase class based on environment settings."""
+    import os
+    from utils.logging_config import get_logger
+    logger = get_logger(__name__)
+    
+    flag_value = os.environ.get('SPRITEPAL_USE_COMPOSED_DIALOGS', '0').lower()
+    use_composed = flag_value in ('1', 'true', 'yes', 'on')
+    
+    logger.warning(f"DEBUGGING: Dialog selection - flag={flag_value}, use_composed={use_composed}")
+    
+    if use_composed:
+        try:
+            logger.warning("DEBUGGING: Attempting to import DialogBaseMigrationAdapter")
+            from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
+            logger.warning("DEBUGGING: Successfully imported DialogBaseMigrationAdapter")
+            return DialogBaseMigrationAdapter
+        except Exception as e:
+            # Fallback to legacy on any import error
+            logger.warning(f"DEBUGGING: Import failed ({e}), falling back to legacy")
+            from ui.components import DialogBase
+            return DialogBase
+    else:
+        logger.warning("DEBUGGING: Using legacy DialogBase by config")
+        from ui.components import DialogBase
+        return DialogBase
+
+DialogBase = _get_dialog_base_class()
 from ui.components.panels import StatusPanel
 from ui.components.visualization.rom_map_widget import ROMMapWidget
-from ui.dialogs.advanced_search_dialog import AdvancedSearchDialog
 from ui.dialogs.services import ViewStateManager
 from ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
-from utils.sprite_regions import SpriteRegion
 
 logger = get_logger(__name__)
 
+# Import tab widgets from the new module
+from ui.tabs.manual_offset import SimpleBrowseTab, SimpleHistoryTab, SimpleSmartTab
 
 # Using SimplePreviewCoordinator instead of SmartPreviewCoordinator to avoid worker pool crashes
 
 
-class SimpleBrowseTab(QWidget):
-    """Simple browse tab with essential navigation controls."""
-
-    offset_changed = pyqtSignal(int)
-    find_next_clicked = pyqtSignal()
-    find_prev_clicked = pyqtSignal()
-    advanced_search_requested = pyqtSignal()
-    find_sprites_requested = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # State
-        self._current_offset = 0x200000
-        self._rom_size = 0x400000
-        self._step_size = 0x1000
-        self._rom_path = ""
-        self._advanced_search_dialog = None
-
-        self._setup_ui()
-
-    def _setup_ui(self):
-        """Set up the space-efficient browse tab UI."""
-        layout = QVBoxLayout(self)
-        layout.setSpacing(6)  # Reduced from 10px
-        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
-
-        # Unified control section - consolidates all controls into one compact area
-        controls_frame = QFrame()
-        controls_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        controls_layout = QVBoxLayout(controls_frame)
-        controls_layout.setSpacing(6)  # Compact spacing
-        controls_layout.setContentsMargins(8, 8, 8, 8)  # Reduced margins
-
-        # Main title - single title for entire control area
-        title = QLabel("ROM Offset Control")
-        title_font = QFont()
-        title_font.setBold(True)
-        title_font.setPointSize(11)  # Slightly smaller
-        title.setFont(title_font)
-        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
-        controls_layout.addWidget(title)
-
-        # Slider with smart preview support
-        self.position_slider = QSlider(Qt.Orientation.Horizontal)
-        self.position_slider.setObjectName("manual_offset_rom_slider")  # Unique identifier
-        self.position_slider.setMinimum(0)
-        self.position_slider.setMaximum(self._rom_size)
-        self.position_slider.setValue(self._current_offset)
-        self.position_slider.setMinimumHeight(32)  # Reduced from 40px
-
-        # Connect to valueChanged for compatibility (used by smart coordinator)
-        self.position_slider.valueChanged.connect(self._on_slider_changed)
-
-        # Debug: Add direct connections to track what signals are firing
-        self.position_slider.sliderPressed.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider pressed"))
-        self.position_slider.sliderMoved.connect(lambda v: logger.debug(f"[TRACE_SIGNAL] Slider moved to 0x{v:06X}"))
-        self.position_slider.sliderReleased.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider released"))
-
-        # Smart preview coordinator will connect to pressed/moved/released signals
-        self._smart_preview_coordinator = None
-        # Apply distinct styling for ROM offset slider
-        self.position_slider.setStyleSheet("""
-            QSlider::groove:horizontal {
-                border: 2px solid #4488dd;
-                height: 8px;
-                background: #2b2b2b;
-                border-radius: 4px;
-            }
-            QSlider::handle:horizontal {
-                background: #4488dd;
-                border: 2px solid #5599ee;
-                width: 18px;
-                margin: -5px 0;
-                border-radius: 9px;
-            }
-            QSlider::handle:horizontal:hover {
-                background: #5599ee;
-                border: 2px solid #66aaff;
-            }
-            QSlider::sub-page:horizontal {
-                background: #3377cc;
-                border-radius: 4px;
-            }
-        """)
-        controls_layout.addWidget(self.position_slider)
-
-        # Position info row
-        info_row = QHBoxLayout()
-        info_row.setSpacing(8)
-
-        self.position_label = QLabel(self._format_position(self._current_offset))
-        position_font = QFont()
-        position_font.setBold(True)
-        position_font.setPointSize(9)  # Slightly smaller
-        self.position_label.setFont(position_font)
-        info_row.addWidget(self.position_label)
-
-        info_row.addStretch()
-
-        self.offset_label = QLabel(f"0x{self._current_offset:06X}")
-        self.offset_label.setStyleSheet("font-family: monospace; color: #666; font-size: 11px;")
-        info_row.addWidget(self.offset_label)
-
-        controls_layout.addLayout(info_row)
-
-        # Compact navigation row - combine navigation and manual input
-        nav_row = QHBoxLayout()
-        nav_row.setSpacing(6)
-
-        # Navigation buttons - smaller height
-        self.prev_button = QPushButton("◀ Prev")
-        self.prev_button.setMinimumHeight(28)  # Reduced from 36px
-        self.prev_button.setToolTip("Find previous sprite (skip empty areas)")
-        self.prev_button.clicked.connect(self.find_prev_clicked.emit)
-        nav_row.addWidget(self.prev_button)
-
-        self.next_button = QPushButton("Next ▶")
-        self.next_button.setMinimumHeight(28)  # Reduced from 36px
-        self.next_button.setToolTip("Find next sprite (skip empty areas)")
-        self.next_button.clicked.connect(self.find_next_clicked.emit)
-        nav_row.addWidget(self.next_button)
-
-        # Find Sprites button
-        self.find_sprites_button = QPushButton("🎮 Find Sprites")
-        self.find_sprites_button.setMinimumHeight(28)
-        self.find_sprites_button.setToolTip("Scan ROM for HAL-compressed sprites")
-        self.find_sprites_button.clicked.connect(self._on_find_sprites)
-        nav_row.addWidget(self.find_sprites_button)
-
-        # Advanced Search button
-        self.advanced_search_button = QPushButton("🔍 Advanced")
-        self.advanced_search_button.setMinimumHeight(28)
-        self.advanced_search_button.setToolTip("Open advanced search dialog with filtering and batch operations")
-        self.advanced_search_button.clicked.connect(self._open_advanced_search)
-        nav_row.addWidget(self.advanced_search_button)
-
-        # Separator
-        nav_row.addSpacing(12)
-
-        # Step size control - inline
-        nav_row.addWidget(QLabel("Step:"))
-        self.step_spinbox = QSpinBox()
-        self.step_spinbox.setMinimum(0x100)
-        self.step_spinbox.setMaximum(0x100000)
-        self.step_spinbox.setValue(self._step_size)
-        self.step_spinbox.setDisplayIntegerBase(16)
-        self.step_spinbox.setPrefix("0x")
-        self.step_spinbox.setMaximumWidth(80)
-        nav_row.addWidget(self.step_spinbox)
-
-        nav_row.addStretch()
-        controls_layout.addLayout(nav_row)
-
-        # Manual input row - compact horizontal layout
-        manual_row = QHBoxLayout()
-        manual_row.setSpacing(6)
-
-        manual_row.addWidget(QLabel("Go to:"))
-
-        self.manual_spinbox = QSpinBox()
-        self.manual_spinbox.setMinimum(0)
-        self.manual_spinbox.setMaximum(self._rom_size)
-        self.manual_spinbox.setValue(self._current_offset)
-        self.manual_spinbox.setDisplayIntegerBase(16)
-        self.manual_spinbox.setPrefix("0x")
-        self.manual_spinbox.valueChanged.connect(self._on_manual_changed)
-        manual_row.addWidget(self.manual_spinbox)
-
-        go_button = QPushButton("Go")
-        go_button.setMinimumHeight(28)  # Consistent with other buttons
-        go_button.clicked.connect(self._on_go_button_clicked)
-        manual_row.addWidget(go_button)
-
-        manual_row.addStretch()
-        controls_layout.addLayout(manual_row)
-
-        layout.addWidget(controls_frame)
-        layout.addStretch()
-
-    def _format_position(self, offset: int) -> str:
-        """Format position as human-readable text."""
-        if self._rom_size > 0:
-            mb_position = offset / (1024 * 1024)
-            percentage = (offset / self._rom_size) * 100
-            return f"{mb_position:.1f}MB through ROM ({percentage:.0f}%)"
-        return "Unknown position"
-
-    def _on_slider_changed(self, value: int):
-        """Handle slider changes - smart preview coordinator handles preview updates automatically."""
-        logger.debug(f"[TRACE_SIGNAL] _on_slider_changed (valueChanged) called with value: 0x{value:06X}")
-        self._current_offset = value
-        self._update_displays()
-
-        # Update manual spinbox without triggering signal
-        self.manual_spinbox.blockSignals(True)
-        self.manual_spinbox.setValue(value)
-        self.manual_spinbox.blockSignals(False)
-
-        # CRITICAL: Emit offset_changed signal so dialog can request preview
-        logger.debug(f"[DEBUG] Emitting offset_changed signal with value: 0x{value:06X}")
-        self.offset_changed.emit(value)
-
-        # Note: SmartPreviewCoordinator handles preview updates automatically via
-        # sliderMoved signal - no need to manually request here
-        logger.debug("[DEBUG] _on_slider_changed complete, offset_changed signal emitted")
-
-    def _on_manual_changed(self, value: int):
-        """Handle manual spinbox changes."""
-        self._current_offset = value
-        self._update_displays()
-
-        # Update slider without triggering signal
-        self.position_slider.blockSignals(True)
-        self.position_slider.setValue(value)
-        self.position_slider.blockSignals(False)
-
-        self.offset_changed.emit(value)
-
-        # Request immediate high-quality preview for manual changes
-        if self._smart_preview_coordinator is not None:
-            self._smart_preview_coordinator.request_manual_preview(value)
-
-    def _update_displays(self):
-        """Update position displays."""
-        self.position_label.setText(self._format_position(self._current_offset))
-        self.offset_label.setText(f"0x{self._current_offset:06X}")
-
-    def _on_go_button_clicked(self):
-        """Handle go button click without lambda."""
-        self.set_offset(self.manual_spinbox.value())
-
-    def get_current_offset(self) -> int:
-        """Get current offset."""
-        return self._current_offset
-
-    def set_offset(self, offset: int):
-        """Set current offset."""
-        if offset != self._current_offset:
-            self._current_offset = offset
-
-            # Update controls without triggering signals
-            self.position_slider.blockSignals(True)
-            self.manual_spinbox.blockSignals(True)
-
-            self.position_slider.setValue(offset)
-            self.manual_spinbox.setValue(offset)
-
-            self.position_slider.blockSignals(False)
-            self.manual_spinbox.blockSignals(False)
-
-            self._update_displays()
-
-            # Emit the offset_changed signal for programmatic changes
-            # This ensures the dialog gets notified
-            self.offset_changed.emit(offset)
-
-            # Note: Preview will be requested by the dialog's _on_offset_changed handler
-            # No need to request it here to avoid duplicates
-
-    def get_step_size(self) -> int:
-        """Get step size."""
-        return self.step_spinbox.value()
-
-    def set_rom_size(self, size: int):
-        """Set ROM size."""
-        self._rom_size = size
-        self.position_slider.setMaximum(size)
-        self.manual_spinbox.setMaximum(size)
-        self._update_displays()
-
-    def set_navigation_enabled(self, enabled: bool):
-        """Enable/disable navigation."""
-        self.prev_button.setEnabled(enabled)
-        self.next_button.setEnabled(enabled)
-
-    def connect_smart_preview_coordinator(self, coordinator):
-        """Connect smart preview coordinator for enhanced preview updates."""
-        self._smart_preview_coordinator = coordinator
-        if coordinator:
-            # Connect coordinator to slider for drag detection
-            coordinator.connect_slider(self.position_slider)
-
-            # Setup UI update callback for immediate feedback
-            coordinator.set_ui_update_callback(self._on_smart_ui_update)
-
-            logger.debug("Smart preview coordinator connected to browse tab")
-
-    def set_rom_path(self, rom_path: str):
-        """Set ROM path for advanced search."""
-        self._rom_path = rom_path
-
-    def _open_advanced_search(self):
-        """Open the advanced search dialog."""
-        if not self._rom_path:
-            logger.warning("No ROM path available for advanced search")
-            return
-
-        # Create or reuse advanced search dialog
-        if self._advanced_search_dialog is None:
-            self._advanced_search_dialog = AdvancedSearchDialog(self._rom_path, self)
-            # Connect sprite selection signal
-            self._advanced_search_dialog.sprite_selected.connect(self._on_advanced_search_sprite_selected)
-
-        # Show the dialog
-        self._advanced_search_dialog.show()
-        self._advanced_search_dialog.raise_()
-        self._advanced_search_dialog.activateWindow()
-
-    def _on_advanced_search_sprite_selected(self, offset: int):
-        """Handle sprite selection from advanced search dialog."""
-        # Update the manual offset dialog's position
-        self.set_offset(offset)
-
-        # Log the action
-        logger.debug(f"Advanced search selected sprite at offset 0x{offset:06X}")
-
-    def _on_find_sprites(self):
-        """Handle Find Sprites button click - emit signal for parent to handle."""
-        logger.debug("Find Sprites button clicked - emitting signal")
-        self.find_sprites_requested.emit()
-
-    def _on_smart_ui_update(self, offset: int):
-        """Handle immediate UI updates from smart coordinator."""
-        if offset != self._current_offset:
-            # Update displays without triggering signals
-            self._current_offset = offset
-
-            self.position_slider.blockSignals(True)
-            self.manual_spinbox.blockSignals(True)
-
-            self.position_slider.setValue(offset)
-            self.manual_spinbox.setValue(offset)
-            self._update_displays()
-
-            self.position_slider.blockSignals(False)
-            self.manual_spinbox.blockSignals(False)
-
-
-class SimpleSmartTab(QWidget):
-    """Simple smart tab with region-based navigation."""
-
-    smart_mode_changed = pyqtSignal(bool)
-    region_changed = pyqtSignal(int)
-    offset_requested = pyqtSignal(int)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # State
-        self._sprite_regions = []
-        self._current_region_index = 0
-
-        self._setup_ui()
-
-    def _setup_ui(self):
-        """Set up space-efficient smart tab UI."""
-        layout = QVBoxLayout(self)
-        layout.setSpacing(6)  # Reduced spacing
-        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
-
-        # Unified smart controls frame
-        smart_frame = QFrame()
-        smart_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        smart_layout = QVBoxLayout(smart_frame)
-        smart_layout.setSpacing(6)  # Compact spacing
-        smart_layout.setContentsMargins(8, 8, 8, 8)  # Reduced margins
-
-        # Single title for the entire smart tab
-        title = QLabel("Smart Navigation")
-        title_font = QFont()
-        title_font.setBold(True)
-        title_font.setPointSize(11)  # Slightly smaller
-        title.setFont(title_font)
-        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
-        smart_layout.addWidget(title)
-
-        # Smart mode checkbox
-        self.smart_checkbox = QCheckBox("Enable Smart Mode")
-        self.smart_checkbox.setToolTip("Navigate through detected sprite regions")
-        self.smart_checkbox.toggled.connect(self.smart_mode_changed.emit)
-        smart_layout.addWidget(self.smart_checkbox)
-
-        # Compact region selection row
-        region_row = QHBoxLayout()
-        region_row.setSpacing(6)
-
-        region_row.addWidget(QLabel("Region:"))
-
-        self.region_combo = QComboBox()
-        self.region_combo.currentIndexChanged.connect(self._on_region_changed)
-        region_row.addWidget(self.region_combo)
-
-        # Compact go button
-        go_region_button = QPushButton("Go")
-        go_region_button.setMinimumHeight(28)  # Consistent with browse tab
-        go_region_button.clicked.connect(self._go_to_current_region)
-        region_row.addWidget(go_region_button)
-
-        smart_layout.addLayout(region_row)
-        layout.addWidget(smart_frame)
-        layout.addStretch()
-
-    def _on_region_changed(self, index: int):
-        """Handle region selection change."""
-        self._current_region_index = index
-        self.region_changed.emit(index)
-
-    def _go_to_current_region(self):
-        """Go to the currently selected region."""
-        if 0 <= self._current_region_index < len(self._sprite_regions):
-            region = self._sprite_regions[self._current_region_index]
-            if hasattr(region, "offset"):
-                self.offset_requested.emit(region.offset)
-            elif isinstance(region, tuple) and len(region) >= 2:
-                self.offset_requested.emit(region[0])  # Assume (offset, quality) tuple
-
-    def set_sprite_regions(self, sprites: list[tuple[int, float]]):
-        """Set sprite regions from sprite data."""
-        self._sprite_regions = sprites
-
-        # Update combo box
-        self.region_combo.clear()
-        for i, (offset, quality) in enumerate(sprites):
-            self.region_combo.addItem(f"Region {i+1}: 0x{offset:06X} (Q: {quality:.2f})")
-
-    def get_sprite_regions(self) -> list[SpriteRegion]:
-        """Get sprite regions in expected format."""
-        regions = []
-        for i, (offset, quality) in enumerate(self._sprite_regions):
-            # Create a SpriteRegion with proper constructor parameters
-            region = SpriteRegion(
-                region_id=i,
-                start_offset=offset,
-                end_offset=offset + 0x1000,  # Assume 4KB regions
-                sprite_offsets=[offset],
-                sprite_qualities=[quality],
-                average_quality=quality,
-                sprite_count=1,
-                size_bytes=0x1000,
-                density=quality,
-                custom_name=f"Region {i+1}"
-            )
-            regions.append(region)
-        return regions
-
-    def is_smart_mode_enabled(self) -> bool:
-        """Check if smart mode is enabled."""
-        return self.smart_checkbox.isChecked()
-
-    def get_current_region_index(self) -> int:
-        """Get current region index."""
-        return self._current_region_index
-
-
-class SimpleHistoryTab(QWidget):
-    """Simple history tab for found sprites."""
-
-    sprite_selected = pyqtSignal(int)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # Use the sprite history manager
-        self._history_manager = SpriteHistoryManager()
-
-        self._setup_ui()
-
-    def _setup_ui(self):
-        """Set up space-efficient history tab UI."""
-        layout = QVBoxLayout(self)
-        layout.setSpacing(6)  # Reduced spacing
-        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
-
-        # Compact title
-        title = QLabel("Found Sprites")
-        title_font = QFont()
-        title_font.setBold(True)
-        title_font.setPointSize(11)  # Slightly smaller
-        title.setFont(title_font)
-        title.setStyleSheet("color: #4488dd; padding: 2px 4px; border-radius: 3px;")
-        layout.addWidget(title)
-
-        # Sprite list
-        self.sprite_list = QListWidget()
-        self.sprite_list.itemDoubleClicked.connect(self._on_sprite_double_clicked)
-        layout.addWidget(self.sprite_list)
-
-        # Compact controls row
-        controls_layout = QHBoxLayout()
-        controls_layout.setSpacing(6)
-
-        clear_button = QPushButton("Clear")
-        clear_button.setMinimumHeight(28)  # Consistent height
-        clear_button.clicked.connect(self.clear_history)
-        controls_layout.addWidget(clear_button)
-
-        go_button = QPushButton("Go to Selected")
-        go_button.setMinimumHeight(28)  # Consistent height
-        go_button.clicked.connect(self._go_to_selected)
-        controls_layout.addWidget(go_button)
-
-        controls_layout.addStretch()
-        layout.addLayout(controls_layout)
-
-    def _on_sprite_double_clicked(self, item: QListWidgetItem):
-        """Handle double-click on sprite item."""
-        try:
-            # Extract offset from item text
-            text = item.text()
-            if "0x" in text:
-                offset_str = text.split("0x")[1].split(" ")[0]
-                offset = int(offset_str, 16)
-                self.sprite_selected.emit(offset)
-        except (ValueError, IndexError) as e:
-            logger.warning(f"Failed to extract offset from item: {e}")
-
-    def _go_to_selected(self):
-        """Go to selected sprite."""
-        current_item = self.sprite_list.currentItem()
-        if current_item:
-            self._on_sprite_double_clicked(current_item)
-
-    def add_sprite(self, offset: int, quality: float = 1.0):
-        """Add a sprite to history."""
-        # Use manager to add sprite (handles duplicates and limits)
-        if self._history_manager.add_sprite(offset, quality):
-            # Only add to UI if successfully added to manager
-            item_text = f"0x{offset:06X} - Quality: {quality:.2f}"
-            self.sprite_list.addItem(item_text)
-
-    def clear_history(self):
-        """Clear sprite history."""
-        self._history_manager.clear_history()
-        self.sprite_list.clear()
-
-    def get_sprites(self) -> list[tuple[int, float]]:
-        """Get all sprites as (offset, quality) tuples."""
-        return self._history_manager.get_sprites()
-
-    def set_sprites(self, sprites: list[tuple[int, float]]):
-        """Set sprites from list."""
-        self.clear_history()
-        for offset, quality in sprites:
-            self.add_sprite(offset, quality)
-
-    def get_sprite_count(self) -> int:
-        """Get number of found sprites."""
-        return self._history_manager.get_sprite_count()
+# SimpleBrowseTab, SimpleSmartTab, SimpleHistoryTab removed - now imported from ui.tabs.manual_offset
 
 
 class UnifiedManualOffsetDialog(DialogBase):
@@ -650,13 +123,12 @@ class UnifiedManualOffsetDialog(DialogBase):
     providing a clean, working interface with proper signal coordination.
     """
 
-    # External signals for ROM extraction panel integration
-    offset_changed = pyqtSignal(int)
-    sprite_found = pyqtSignal(int, str)  # offset, name
-    validation_failed = pyqtSignal(str)
+    # External signals are now handled by DialogSignalManager component
+    # This avoids Qt metaclass issues with signals in complex inheritance hierarchies
 
     def __init__(self, parent: QWidget | None = None) -> None:
         # Debug logging for singleton tracking
+        logger.warning("DEBUGGING: UnifiedManualOffsetDialog.__init__ ENTRY - Starting initialization")
         logger.debug(f"Creating UnifiedManualOffsetDialog instance (parent: {parent.__class__.__name__ if parent else 'None'})")
 
         # UI Components - declare BEFORE super().__init__()
@@ -702,16 +174,49 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._debug_id = f"dialog_{int(time.time()*1000)}"
         logger.debug(f"Dialog debug ID: {self._debug_id}")
 
-        super().__init__(
-            parent=parent,
-            title="Manual Offset Control - SpritePal",
-            modal=False,
-            size=(900, 600),
-            min_size=(800, 500),
-            with_status_bar=False,
-            orientation=Qt.Orientation.Horizontal,
-            splitter_handle_width=4  # Slightly thinner splitter
-        )
+        # TEMPORARILY DISABLE LayoutManagerComponent to isolate the issue
+        logger.debug("DEBUGGING: Skipping LayoutManagerComponent creation")
+        
+        # Create minimal fallback object to prevent attribute errors
+        class MinimalLayoutManager:
+            MAX_MINI_MAP_HEIGHT = 60
+            MIN_MINI_MAP_HEIGHT = 40
+            def configure_splitter(self, *args): pass
+            def fix_empty_space_issue(self): pass
+            def apply_standard_layout(self, layout, spacing_type='normal'): 
+                layout.setSpacing(8)
+                layout.setContentsMargins(8, 8, 8, 8)
+            def remove_all_stretches(self, layout): pass
+            def create_section_title(self, title, subtitle=""): 
+                from PySide6.QtWidgets import QLabel
+                label = QLabel(title)
+                label.setStyleSheet("font-weight: bold; font-size: 12px; color: #333;")
+                return label
+            def on_dialog_show(self): pass
+            def update_for_tab(self, index, width): pass
+        
+        self.layout_manager = MinimalLayoutManager()
+        logger.debug("Using minimal layout manager for debugging")
+
+        logger.warning("DEBUGGING: About to call super().__init__ (DialogBaseMigrationAdapter)")
+        try:
+            super().__init__(
+                parent=parent,
+                title="Manual Offset Control - SpritePal",
+                modal=False,
+                size=(1000, 650),
+                min_size=(850, 550),
+                with_status_bar=False,
+                orientation=Qt.Orientation.Horizontal,
+                splitter_handle_width=12  # Enhanced layout uses 12px handle width
+            )
+            logger.warning("DEBUGGING: super().__init__ completed successfully")
+        except Exception as e:
+            logger.error(f"DEBUGGING: CAUGHT EXCEPTION in super().__init__: {e}")
+            logger.error(f"DEBUGGING: Exception type: {type(e)}")
+            import traceback
+            logger.error(f"DEBUGGING: Full traceback: {traceback.format_exc()}")
+            raise
 
         # Initialize view state manager
         self.view_state_manager = ViewStateManager(self, self)
@@ -720,6 +225,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._setup_smart_preview_coordinator()
         self._setup_preview_timer()
         self._connect_signals()
+        
+        # DialogSignalManager handles custom signals to avoid Qt metaclass issues
+        
+        logger.warning("DEBUGGING: UnifiedManualOffsetDialog.__init__ COMPLETED - Dialog should be fully created")
 
     def __del__(self):
         """Destructor for tracking dialog destruction."""
@@ -728,31 +237,53 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _setup_ui(self):
         """Set up the dialog UI."""
-        # Left panel with tabs
-        left_panel = self._create_left_panel()
-        self.add_panel(left_panel, stretch_factor=0)
+        try:
+            logger.debug("Starting _setup_ui")
+            
+            # Create left and right panels
+            left_panel = self._create_left_panel()
+            right_panel = self._create_right_panel()
 
-        # Right panel with preview
-        right_panel = self._create_right_panel()
-        self.add_panel(right_panel, stretch_factor=1)
+            # Use layout manager to configure splitter (if available)
+            if self.layout_manager and hasattr(self, 'main_splitter') and self.main_splitter:
+                self.layout_manager.configure_splitter(self.main_splitter, left_panel, right_panel)
+            else:
+                logger.debug("Main splitter not available during setup, panels will be added directly")
 
-        # Set initial panel sizes (30% left, 70% right)
-        total_width = self.width()
-        left_width = int(total_width * 0.30)
-        right_width = total_width - left_width
-        self.main_splitter.setSizes([left_width, right_width])
+            # Add panels to splitter (stretch factors handled by layout manager)
+            self.add_panel(left_panel, stretch_factor=1)
+            self.add_panel(right_panel, stretch_factor=3)
+            
+            logger.debug("_setup_ui completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Error in _setup_ui: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Don't re-raise - this might be causing the dialog deletion
+            logger.error("Continuing despite _setup_ui error to avoid dialog deletion")
 
         # Set up custom buttons
         self._setup_custom_buttons()
+
+        # Connect tab change signal for dynamic sizing
+        if self.tab_widget:
+            self.tab_widget.currentChanged.connect(self._on_tab_changed)
+
+        # Fix empty space issue after everything is set up
+        if self.layout_manager:
+            self.layout_manager.fix_empty_space_issue()
 
     def _create_left_panel(self) -> QWidget:
         """Create the left panel with tabs and collapsible status."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setSpacing(8)  # Reduced spacing
-        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Tab widget
+        # Use layout manager to apply standard layout configuration
+        if self.layout_manager:
+            self.layout_manager.apply_standard_layout(layout, spacing_type='compact')
+
+        # Tab widget - will be configured by layout manager
         self.tab_widget = QTabWidget()
 
         # Create and add tabs
@@ -766,7 +297,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.tab_widget.addTab(self.history_tab, "History")
         self.tab_widget.addTab(self.gallery_tab, "Gallery")
 
-        layout.addWidget(self.tab_widget)
+        # Add tab widget with stretch to fill available space
+        layout.addWidget(self.tab_widget, 1)  # Give it stretch value to expand
 
         # Collapsible status panel - defaults to collapsed to save space
         self.status_collapsible = CollapsibleGroupBox("Status", collapsed=True)
@@ -776,13 +308,18 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Add context menu for cache management
         self._setup_cache_context_menu()
 
-        layout.addWidget(self.status_collapsible)
+        layout.addWidget(self.status_collapsible, 0)  # No stretch - fixed size
 
-        # Mini ROM map for position context
+        # Mini ROM map for position context with flexible height
         self.mini_rom_map = ROMMapWidget()
-        self.mini_rom_map.setMaximumHeight(40)
-        self.mini_rom_map.setMinimumHeight(30)
-        layout.addWidget(self.mini_rom_map)
+        self.mini_rom_map.setMaximumHeight(self.layout_manager.MAX_MINI_MAP_HEIGHT)
+        self.mini_rom_map.setMinimumHeight(self.layout_manager.MIN_MINI_MAP_HEIGHT)
+        self.mini_rom_map.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(self.mini_rom_map, 0)  # No stretch - fixed height
+
+        # Use layout manager to ensure no unwanted stretches
+        self.layout_manager.remove_all_stretches(layout)
+        # The tab widget with stretch=1 will expand to fill available space
 
         return panel
 
@@ -790,22 +327,19 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Create the right panel with preview."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setSpacing(8)  # Reduced spacing
-        layout.setContentsMargins(5, 5, 5, 5)  # Reduced margins
 
-        # Compact title
-        title = QLabel("Sprite Preview")
-        title_font = QFont()
-        title_font.setBold(True)
-        title_font.setPointSize(12)  # Slightly smaller
-        title.setFont(title_font)
-        title.setStyleSheet("color: #4488dd; padding: 4px 6px; border-radius: 3px;")
-        layout.addWidget(title)
+        # Use layout manager to apply standard layout configuration
+        self.layout_manager.apply_standard_layout(layout, spacing_type='normal')
 
-        # Preview widget
+        # Compact title using layout manager method
+        title = self.layout_manager.create_section_title("Sprite Preview")
+        layout.addWidget(title, 0)  # No stretch for title
+
+        # Preview widget configured to expand
         self.preview_widget = SpritePreviewWidget()
+        self.preview_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_widget.similarity_search_requested.connect(self._on_similarity_search_requested)
-        layout.addWidget(self.preview_widget)
+        layout.addWidget(self.preview_widget, 1)  # Give it all the stretch
 
         return panel
 
@@ -918,9 +452,33 @@ class UnifiedManualOffsetDialog(DialogBase):
             self.preview_widget.set_current_offset(offset)
             logger.debug("[OFFSET_CHANGED] Updated preview widget offset")
 
-        # Emit signal immediately for external listeners
-        self.offset_changed.emit(offset)
-        logger.debug("[OFFSET_CHANGED] Emitted offset_changed signal")
+        # Emit signal immediately for external listeners (with safety check)
+        try:
+            # Debug the dialog state before emitting
+            logger.debug(f"[OFFSET_CHANGED] Dialog object: {self}")
+            logger.debug(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
+            logger.debug(f"[OFFSET_CHANGED] Signal object: {self.offset_changed}")
+            logger.debug(f"[OFFSET_CHANGED] About to emit offset_changed signal")
+            
+            # Use DialogSignalManager instead of direct signal emission
+            signal_manager = self.get_component("dialog_signals")
+            if signal_manager:
+                signal_manager.emit_offset_changed(offset)
+                logger.debug("[OFFSET_CHANGED] Successfully emitted via DialogSignalManager")
+            else:
+                logger.error("[OFFSET_CHANGED] DialogSignalManager not found!")
+        except RuntimeError as e:
+            if "Signal source has been deleted" in str(e):
+                logger.error(f"[OFFSET_CHANGED] CRITICAL: Signal source deleted during emit: {e}")
+                logger.error(f"[OFFSET_CHANGED] Dialog still exists: {self}")
+                logger.error(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
+                logger.error(f"[OFFSET_CHANGED] Dialog has signal attr: {hasattr(self, 'offset_changed')}")
+                
+                # This indicates a serious Qt lifecycle issue with composed architecture
+                # For now, skip the emit to prevent crashes
+                logger.warning("[OFFSET_CHANGED] Skipping signal emit to prevent crash")
+            else:
+                raise
 
         # CRITICAL FIX: Request preview when offset changes!
         # Use request_manual_preview for immediate response without debounce
@@ -1078,7 +636,10 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Apply current offset and close dialog."""
         offset = self.get_current_offset()
         sprite_name = f"manual_0x{offset:X}"
-        self.sprite_found.emit(offset, sprite_name)
+        # Use DialogSignalManager instead of direct signal emission
+        signal_manager = self.get_component("dialog_signals")
+        if signal_manager:
+            signal_manager.emit_sprite_found(offset, sprite_name)
         self.hide()
 
     def _update_status(self, message: str):
@@ -1783,10 +1344,39 @@ Cache Misses: {session_stats['misses']}"""
             super().hideEvent(event)
 
     def showEvent(self, event):
-        """Handle show event."""
+        """Handle show event - set up initial splitter sizes here."""
         logger.debug(f"Dialog {self._debug_id} showing")
         super().showEvent(event)
         self.view_state_manager.handle_show_event()
+
+        # Let layout manager handle all initial setup including splitter configuration
+        self.layout_manager.on_dialog_show()
+
+        # Set initial splitter sizes based on current tab
+        self._update_splitter_for_tab()
+
+    def _on_tab_changed(self, index: int):
+        """Handle tab change - adjust splitter ratio based on tab."""
+        self.layout_manager.update_for_tab(index, self.width())
+
+    def _update_splitter_for_tab(self, index: int | None = None):
+        """Update splitter sizes based on active tab - delegated to layout manager."""
+        if index is None and self.tab_widget:
+            index = self.tab_widget.currentIndex()
+        if index is not None:
+            self.layout_manager.update_for_tab(index, self.width())
+
+    def _create_section_title(self, text: str) -> QLabel:
+        """Create a styled section title label - delegated to layout manager."""
+        return self.layout_manager.create_section_title(text)
+
+    def resizeEvent(self, event):
+        """Handle resize event - adjust splitter proportionally."""
+        super().resizeEvent(event)
+
+        # Delegate all resize handling to layout manager
+        if self.isVisible():
+            self.layout_manager.handle_resize(event.size().width())
 
     def moveEvent(self, event):
         """Handle dialog move event - constrain to screen bounds"""
@@ -1796,7 +1386,7 @@ Cache Misses: {session_stats['misses']}"""
         if not self.isVisible():
             return
 
-        from PyQt6.QtGui import QGuiApplication  # noqa: PLC0415
+        from PySide6.QtGui import QGuiApplication  # noqa: PLC0415
 
         # Defensive check for test environments with mock objects
         try:
