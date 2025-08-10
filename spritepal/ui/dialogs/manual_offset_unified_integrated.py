@@ -125,8 +125,9 @@ class UnifiedManualOffsetDialog(DialogBase):
     providing a clean, working interface with proper signal coordination.
     """
 
-    # External signals are now handled by DialogSignalManager component
-    # This avoids Qt metaclass issues with signals in complex inheritance hierarchies
+    # Define signals directly on the dialog for compatibility
+    offset_changed = Signal(int)  # Emitted when offset changes
+    sprite_found = Signal(int, str)  # Emitted when sprite is found (offset, name)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         # Debug logging for singleton tracking
@@ -499,13 +500,9 @@ class UnifiedManualOffsetDialog(DialogBase):
             logger.debug(f"[OFFSET_CHANGED] Signal object: {self.offset_changed}")
             logger.debug(f"[OFFSET_CHANGED] About to emit offset_changed signal")
             
-            # Use DialogSignalManager instead of direct signal emission
-            signal_manager = self.get_component("dialog_signals")
-            if signal_manager:
-                signal_manager.emit_offset_changed(offset)
-                logger.debug("[OFFSET_CHANGED] Successfully emitted via DialogSignalManager")
-            else:
-                logger.error("[OFFSET_CHANGED] DialogSignalManager not found!")
+            # Emit signal directly
+            self.offset_changed.emit(offset)
+            logger.debug("[OFFSET_CHANGED] Successfully emitted offset_changed signal")
         except RuntimeError as e:
             if "Signal source has been deleted" in str(e):
                 logger.error(f"[OFFSET_CHANGED] CRITICAL: Signal source deleted during emit: {e}")
@@ -675,10 +672,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Apply current offset and close dialog."""
         offset = self.get_current_offset()
         sprite_name = f"manual_0x{offset:X}"
-        # Use DialogSignalManager instead of direct signal emission
-        signal_manager = self.get_component("dialog_signals")
-        if signal_manager:
-            signal_manager.emit_sprite_found(offset, sprite_name)
+        # Emit signal directly
+        self.sprite_found.emit(offset, sprite_name)
         self.hide()
 
     def _update_status(self, message: str):

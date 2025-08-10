@@ -629,16 +629,12 @@ class ROMExtractionPanel(QWidget):
             def _connect_custom_signals():
                 """Connect custom dialog signals after dialog is shown."""
                 try:
-                    logger.debug("Connecting custom dialog signals via DialogSignalManager...")
-                    # Connect to DialogSignalManager instead of dialog signals
-                    signal_manager = dialog.get_component("dialog_signals")
-                    if signal_manager:
-                        signal_manager.offset_changed.connect(self._on_dialog_offset_changed)
-                        signal_manager.sprite_found.connect(self._on_dialog_sprite_found)
-                        dialog._custom_signals_connected = True
-                        logger.debug("Custom dialog signals connected successfully via DialogSignalManager")
-                    else:
-                        logger.error("DialogSignalManager component not found - cannot connect custom signals")
+                    logger.debug("Connecting custom dialog signals...")
+                    # Connect directly to dialog signals
+                    dialog.offset_changed.connect(self._on_dialog_offset_changed)
+                    dialog.sprite_found.connect(self._on_dialog_sprite_found)
+                    dialog._custom_signals_connected = True
+                    logger.debug("Custom dialog signals connected successfully")
                 except Exception as e:
                     logger.error(f"Failed to connect custom dialog signals: {e}")
             
