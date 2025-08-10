@@ -32,11 +32,11 @@ class SpriteSelectorWidget(BaseExtractionWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Sprite location selection
+        # Sprite location selection with compact layout
         sprite_group = self._create_group_box("Sprite Selection")
         sprite_layout = QVBoxLayout()
-        sprite_layout.setSpacing(SPACING_MEDIUM)
-        sprite_layout.setContentsMargins(SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM, SPACING_MEDIUM)
+        sprite_layout.setSpacing(4)  # Reduce spacing
+        sprite_layout.setContentsMargins(8, 8, 8, 8)  # Reduce margins
 
         # Sprite selection row
         sprite_row = QHBoxLayout()

@@ -47,11 +47,11 @@ from ui.rom_extraction_panel import ROMExtractionPanel
 from ui.zoomable_preview import PreviewPanel
 
 # Layout constants for consistent sizing and spacing
-MAIN_WINDOW_MIN_SIZE = (1000, 700)
-DEFAULT_SPLITTER_RATIO = 0.35
-MIN_PANEL_WIDTH = 350
-LAYOUT_MARGINS = 8
-LAYOUT_SPACING = 6
+MAIN_WINDOW_MIN_SIZE = (1200, 750)  # More compact default size
+DEFAULT_SPLITTER_RATIO = 0.40  # Better balance between panels
+MIN_PANEL_WIDTH = 400  # Minimum width for panels
+LAYOUT_MARGINS = 12  # Better margins
+LAYOUT_SPACING = 8  # Better spacing
 
 
 class ExtractionParams(TypedDict):

@@ -9,7 +9,7 @@
     "extraction_mode": 0
   },
   "ui": {
-    "window_width": 1568,
+    "window_width": 1584,
     "window_height": 1066,
     "window_x": -3,
     "window_y": -30
@@ -65,10 +65,10 @@
     "max_recent": 10
   },
   "manual_offset_dialog": {
-    "x": 649,
-    "y": 360,
-    "width": 900,
-    "height": 600
+    "x": 157,
+    "y": 69,
+    "width": 1244,
+    "height": 700
   },
   "experimental": {
     "use_composed_dialogs": true

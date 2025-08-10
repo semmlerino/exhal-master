@@ -81,14 +81,14 @@ class PreviewCoordinator(QObject):
         palette_group.setLayout(palette_layout)
         right_splitter.addWidget(palette_group)
 
-        # Configure splitter
-        right_splitter.setSizes([400, 200])  # Initial sizes
-        right_splitter.setStretchFactor(0, 1)  # Preview panel stretches
-        right_splitter.setStretchFactor(1, 0)  # Palette panel doesn't stretch
+        # Configure splitter with better proportions
+        right_splitter.setSizes([450, 150])  # Better initial sizes
+        right_splitter.setStretchFactor(0, 3)  # Preview panel stretches more
+        right_splitter.setStretchFactor(1, 1)  # Palette panel stretches less
 
-        # Set minimum sizes
-        preview_group.setMinimumHeight(200)
-        palette_group.setMinimumHeight(150)
+        # Set minimum sizes - more compact
+        preview_group.setMinimumHeight(150)
+        palette_group.setMinimumHeight(100)
 
         return right_splitter
 
