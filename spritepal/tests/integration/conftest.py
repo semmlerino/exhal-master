@@ -1,0 +1,215 @@
+"""
+Integration test fixtures that use real components without mocking.
+"""
+
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+import pytest
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication
+
+# Add spritepal to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from core.managers.registry import cleanup_managers, initialize_managers
+from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
+from ui.rom_extraction_panel import ROMExtractionPanel
+
+
+@pytest.fixture(scope="session")
+def qt_app():
+    """Provide a QApplication instance for the entire test session."""
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    yield app
+    # Don't quit the app here as pytest-qt manages it
+
+
+@pytest.fixture(scope="function")
+def managers_initialized(qt_app):
+    """Initialize managers for integration tests."""
+    try:
+        initialize_managers()
+        yield
+    finally:
+        cleanup_managers()
+
+
+@pytest.fixture
+def temp_dir():
+    """Create a temporary directory for test files."""
+    temp_path = tempfile.mkdtemp(prefix="spritepal_integration_")
+    yield Path(temp_path)
+    # Cleanup
+    shutil.rmtree(temp_path, ignore_errors=True)
+
+
+@pytest.fixture
+def test_rom_data():
+    """Generate test ROM data with known content."""
+    # Create a 1MB test ROM
+    rom_size = 1024 * 1024
+    rom_data = bytearray(rom_size)
+
+    # Add some recognizable patterns at known offsets
+    # Pattern 1: Simple incrementing bytes at 0x1000
+    for i in range(256):
+        rom_data[0x1000 + i] = i % 256
+
+    # Pattern 2: Tile-like data at 0x2000 (32 bytes per tile)
+    for tile in range(16):
+        for byte_idx in range(32):
+            rom_data[0x2000 + tile * 32 + byte_idx] = (tile * 2 + byte_idx) % 256
+
+    # Pattern 3: Sprite-like data at 0x10000
+    for i in range(8192):  # 256 tiles
+        rom_data[0x10000 + i] = (i % 16) * 16 + (i // 16) % 16
+
+    return bytes(rom_data)
+
+
+@pytest.fixture
+def test_rom_with_sprites(temp_dir, test_rom_data):
+    """Create a test ROM with known sprite data at specific locations."""
+    rom_path = temp_dir / "test_rom.sfc"
+
+    # Use the real Kirby ROM if available, otherwise create test ROM
+    real_rom = Path("Kirby Super Star (USA).sfc")
+    if real_rom.exists():
+        # Use real ROM for testing
+        rom_data = real_rom.read_bytes()
+        rom_path.write_bytes(rom_data)
+
+        # Known sprite locations in Kirby ROM
+        return {
+            'path': rom_path,
+            'sprites': [
+                {
+                    'offset': 0x200000,
+                    'compressed_size': 65464,  # Approximate
+                    'decompressed_size': 7744,
+                    'tile_count': 242
+                },
+                {
+                    'offset': 0x206000,
+                    'compressed_size': 40888,  # Approximate
+                    'decompressed_size': 832,
+                    'tile_count': 26
+                }
+            ]
+        }
+    # Create simple test ROM
+    rom_path.write_bytes(test_rom_data)
+    return {
+        'path': rom_path,
+        'sprites': []  # No compressed sprites in test ROM
+    }
+
+
+@pytest.fixture
+def real_kirby_rom():
+    """Provide path to real Kirby ROM if available for integration testing."""
+    rom_path = Path("Kirby Super Star (USA).sfc")
+    if rom_path.exists():
+        return rom_path
+    return None
+
+
+@pytest.fixture
+def rom_extraction_panel(qtbot, managers_initialized):
+    """Create a real ROM extraction panel for testing."""
+    panel = ROMExtractionPanel()
+    qtbot.addWidget(panel)
+    panel.show()
+    return panel
+
+
+@pytest.fixture
+def manual_offset_dialog(qtbot, managers_initialized):
+    """Create a real manual offset dialog for testing."""
+    dialog = UnifiedManualOffsetDialog()
+    qtbot.addWidget(dialog)
+    return dialog
+
+
+@pytest.fixture
+def loaded_rom_panel(rom_extraction_panel, test_rom_with_sprites, qtbot):
+    """Provide a ROM extraction panel with a test ROM already loaded."""
+    rom_info = test_rom_with_sprites
+    rom_path = str(rom_info['path'])
+
+    # Load the ROM
+    rom_extraction_panel.load_rom(rom_path)
+
+    # Wait for loading to complete
+    qtbot.wait(100)
+
+    # Verify ROM is loaded
+    assert rom_extraction_panel.rom_path == rom_path
+    assert rom_extraction_panel.rom_size > 0
+
+    return rom_extraction_panel, rom_info
+
+
+def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition not met"):
+    """
+    Wait for a condition to become true.
+
+    Args:
+        qtbot: pytest-qt bot
+        condition_func: Function that returns True when condition is met
+        timeout: Maximum time to wait in milliseconds
+        message: Error message if timeout occurs
+    """
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(100)  # Check every 100ms
+
+    elapsed = 0
+    while elapsed < timeout:
+        if condition_func():
+            timer.stop()
+            return True
+        qtbot.wait(100)
+        elapsed += 100
+
+    timer.stop()
+    raise TimeoutError(f"Timeout waiting for condition: {message}")
+
+
+@pytest.fixture
+def wait_for(qtbot):
+    """Provide the wait_for_condition function as a fixture."""
+    def _wait_for(condition_func, timeout=5000, message="Condition not met"):
+        return wait_for_condition(qtbot, condition_func, timeout, message)
+    return _wait_for
+
+
+@pytest.fixture
+def process_events(qtbot):
+    """Process Qt events to ensure UI updates."""
+    def _process():
+        QApplication.processEvents()
+        qtbot.wait(10)
+    return _process
+
+
+# Markers for test organization
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test"
+    )
+    config.addinivalue_line(
+        "markers", "slow: mark test as slow running"
+    )
+    config.addinivalue_line(
+        "markers", "requires_rom: mark test as requiring real ROM file"
+    )
+    config.addinivalue_line(
+        "markers", "gui: mark test as requiring GUI"
+    )

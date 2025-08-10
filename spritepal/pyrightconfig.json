@@ -1,0 +1,40 @@
+{
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/venv",
+    "**/.venv",
+    "**/archive",
+    "**/archive_2025_07_19",
+    "**/tests",
+    "**/test_*.py",
+    "**/experimental",
+    "**/.git",
+    "**/build",
+    "**/dist",
+    "**/*.egg-info",
+    "**/docs",
+    "**/scripts",
+    "**/tools"
+  ],
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "venvPath": "..",
+  "venv": "venv",
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+  "reportPrivateImportUsage": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportUntypedFunctionDecorator": false,
+  "reportUntypedClassDecorator": false,
+  "reportOptionalMemberAccess": false,
+  "reportOptionalSubscript": false,
+  "reportPrivateUsage": false
+}

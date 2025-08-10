@@ -48,6 +48,8 @@ from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFrame,
     QHBoxLayout,
     QInputDialog,
@@ -56,6 +58,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QMessageBox,
+    QProgressDialog,
     QPushButton,
     QSlider,
     QSpinBox,
@@ -64,6 +67,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.sprite_finder import SpriteFinder
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 
@@ -75,6 +79,7 @@ from ui.components.visualization.rom_map_widget import ROMMapWidget
 from ui.dialogs.advanced_search_dialog import AdvancedSearchDialog
 from ui.dialogs.services import ViewStateManager
 from ui.rom_extraction.workers import SpritePreviewWorker, SpriteSearchWorker
+from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
@@ -93,6 +98,7 @@ class SimpleBrowseTab(QWidget):
     find_next_clicked = pyqtSignal()
     find_prev_clicked = pyqtSignal()
     advanced_search_requested = pyqtSignal()
+    find_sprites_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -207,6 +213,13 @@ class SimpleBrowseTab(QWidget):
         self.next_button.setToolTip("Find next sprite (skip empty areas)")
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
+
+        # Find Sprites button
+        self.find_sprites_button = QPushButton("🎮 Find Sprites")
+        self.find_sprites_button.setMinimumHeight(28)
+        self.find_sprites_button.setToolTip("Scan ROM for HAL-compressed sprites")
+        self.find_sprites_button.clicked.connect(self._on_find_sprites)
+        nav_row.addWidget(self.find_sprites_button)
 
         # Advanced Search button
         self.advanced_search_button = QPushButton("🔍 Advanced")
@@ -394,6 +407,11 @@ class SimpleBrowseTab(QWidget):
 
         # Log the action
         logger.debug(f"Advanced search selected sprite at offset 0x{offset:06X}")
+
+    def _on_find_sprites(self):
+        """Handle Find Sprites button click - emit signal for parent to handle."""
+        logger.debug("Find Sprites button clicked - emitting signal")
+        self.find_sprites_requested.emit()
 
     def _on_smart_ui_update(self, offset: int):
         """Handle immediate UI updates from smart coordinator."""
@@ -646,6 +664,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.browse_tab: SimpleBrowseTab | None = None
         self.smart_tab: SimpleSmartTab | None = None
         self.history_tab: SimpleHistoryTab | None = None
+        self.gallery_tab: SpriteGalleryTab | None = None
         self.preview_widget: SpritePreviewWidget | None = None
         self.status_panel: StatusPanel | None = None
         self.status_collapsible: CollapsibleGroupBox | None = None
@@ -740,10 +759,12 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.browse_tab = SimpleBrowseTab()
         self.smart_tab = SimpleSmartTab()
         self.history_tab = SimpleHistoryTab()
+        self.gallery_tab = SpriteGalleryTab()
 
         self.tab_widget.addTab(self.browse_tab, "Browse")
         self.tab_widget.addTab(self.smart_tab, "Smart")
         self.tab_widget.addTab(self.history_tab, "History")
+        self.tab_widget.addTab(self.gallery_tab, "Gallery")
 
         layout.addWidget(self.tab_widget)
 
@@ -848,13 +869,14 @@ class UnifiedManualOffsetDialog(DialogBase):
 
     def _connect_signals(self):
         """Connect internal signals."""
-        if self.browse_tab is None or self.smart_tab is None or self.history_tab is None:
+        if self.browse_tab is None or self.smart_tab is None or self.history_tab is None or self.gallery_tab is None:
             return
 
         # Browse tab signals
         self.browse_tab.offset_changed.connect(self._on_offset_changed)
         self.browse_tab.find_next_clicked.connect(self._find_next_sprite)
         self.browse_tab.find_prev_clicked.connect(self._find_prev_sprite)
+        self.browse_tab.find_sprites_requested.connect(self._scan_for_sprites)
 
         # Connect smart preview coordinator to browse tab
         if self._smart_preview_coordinator and self.browse_tab is not None:
@@ -867,6 +889,9 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # History tab signals
         self.history_tab.sprite_selected.connect(self._on_sprite_selected)
+
+        # Gallery tab signals
+        self.gallery_tab.sprite_selected.connect(self._on_gallery_sprite_selected)
 
     def _on_offset_changed(self, offset: int):
         """Handle offset changes from browse tab."""
@@ -924,6 +949,14 @@ class UnifiedManualOffsetDialog(DialogBase):
         if self.browse_tab is not None:
             self.browse_tab.set_offset(offset)
         # Switch to browse tab
+        if self.tab_widget is not None:
+            self.tab_widget.setCurrentIndex(0)
+
+    def _on_gallery_sprite_selected(self, offset: int):
+        """Handle sprite selection from gallery - navigate to selected sprite."""
+        if self.browse_tab is not None:
+            self.browse_tab.set_offset(offset)
+        # Switch to browse tab to show the selected sprite
         if self.tab_widget is not None:
             self.tab_widget.setCurrentIndex(0)
 
@@ -1152,6 +1185,10 @@ class UnifiedManualOffsetDialog(DialogBase):
             self.browse_tab.set_rom_size(rom_size)
             self.browse_tab.set_rom_path(rom_path)
 
+        # Update gallery tab with ROM data
+        if self.gallery_tab is not None:
+            self.gallery_tab.set_rom_data(rom_path, rom_size, self.rom_extractor)
+
         # Update mini ROM map
         if self.mini_rom_map is not None:
             self.mini_rom_map.set_rom_size(rom_size)
@@ -1169,6 +1206,127 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # Load any cached sprites for visualization
         self._load_cached_sprites_for_map()
+
+    def _scan_for_sprites(self):
+        """Scan ROM for HAL-compressed sprites and show results."""
+        logger.info(f"_scan_for_sprites called, rom_path={self.rom_path}")
+
+        if not self.rom_path:
+            logger.warning("No ROM loaded for sprite scanning")
+            QMessageBox.warning(self, "No ROM", "Please load a ROM first.")
+            return
+
+        logger.info(f"Starting sprite scan for ROM: {self.rom_path}")
+
+        # Create progress dialog
+        progress = QProgressDialog("Scanning ROM for sprites...", "Cancel", 0, 100, self)
+        progress.setWindowTitle("Sprite Scanner")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.show()
+
+        try:
+            # Create sprite finder
+            finder = SpriteFinder()
+
+            # Read ROM data
+            with open(self.rom_path, "rb") as f:
+                rom_data = f.read()
+
+            # Track found sprites
+            found_sprites = []
+
+            # Scan through ROM in chunks to show progress
+            rom_size = len(rom_data)
+            step = 0x1000  # 4KB steps
+
+            for offset in range(0, rom_size, step):
+                # Check for cancel
+                if progress.wasCanceled():
+                    break
+
+                # Update progress
+                progress_value = int((offset / rom_size) * 100)
+                progress.setValue(progress_value)
+                QApplication.processEvents()
+
+                # Try to find sprite at this offset
+                sprite_info = finder.find_sprite_at_offset(rom_data, offset)
+                if sprite_info:
+                    found_sprites.append(sprite_info)
+                    logger.info(f"Found sprite at 0x{offset:X}: {sprite_info['tile_count']} tiles")
+
+            progress.close()
+
+            # Show results
+            if found_sprites:
+                self._show_sprite_scan_results(found_sprites)
+            else:
+                QMessageBox.information(self, "No Sprites Found",
+                                       "No HAL-compressed sprites were found in the ROM.")
+
+        except Exception as e:
+            progress.close()
+            logger.error(f"Error scanning for sprites: {e}")
+            QMessageBox.critical(self, "Scan Error", f"Error scanning ROM: {e!s}")
+
+    def _show_sprite_scan_results(self, sprites):
+        """Show sprite scan results in a dialog."""
+        # Create results dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Found {len(sprites)} Sprites")
+        dialog.setMinimumSize(600, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Info label
+        info_label = QLabel(f"Found {len(sprites)} HAL-compressed sprites in the ROM:")
+        layout.addWidget(info_label)
+
+        # Create list widget for results
+        list_widget = QListWidget()
+
+        for sprite in sprites:
+            offset = sprite['offset']
+            tile_count = sprite['tile_count']
+            size = sprite['decompressed_size']
+            quality = sprite.get('quality', 0)
+
+            # Create item text
+            text = f"0x{offset:06X} - {tile_count} tiles ({size} bytes) - Quality: {quality:.1%}"
+            item = QListWidgetItem(text)
+            item.setData(Qt.ItemDataRole.UserRole, offset)
+            list_widget.addItem(item)
+
+        list_widget.itemDoubleClicked.connect(lambda item: self._jump_to_sprite(item.data(Qt.ItemDataRole.UserRole)))
+        layout.addWidget(list_widget)
+
+        # Buttons
+        button_box = QDialogButtonBox()
+
+        jump_button = QPushButton("Jump to Selected")
+        jump_button.clicked.connect(lambda: self._jump_to_selected_sprite(list_widget))
+        button_box.addButton(jump_button, QDialogButtonBox.ButtonRole.ActionRole)
+
+        close_button = button_box.addButton(QDialogButtonBox.StandardButton.Close)
+        close_button.clicked.connect(dialog.close)
+
+        layout.addWidget(button_box)
+
+        dialog.exec()
+
+    def _jump_to_sprite(self, offset):
+        """Jump to a specific sprite offset."""
+        if offset is not None:
+            logger.info(f"Jumping to sprite at 0x{offset:06X}")
+            self.set_offset(offset)
+
+    def _jump_to_selected_sprite(self, list_widget):
+        """Jump to the selected sprite in the list."""
+        item = list_widget.currentItem()
+        if item:
+            offset = item.data(Qt.ItemDataRole.UserRole)
+            self._jump_to_sprite(offset)
 
     def _get_rom_data_for_preview(self):
         """Provide ROM data with cache support for smart preview coordinator."""
