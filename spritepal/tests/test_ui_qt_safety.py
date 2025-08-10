@@ -20,11 +20,11 @@ pytestmark = [
 
 
 try:
-    from PyQt6.QtWidgets import (
+    from PySide6.QtWidgets import (
         QTabWidget, QVBoxLayout, QHBoxLayout, QListWidget, 
         QTreeWidget, QStackedWidget, QSplitter, QWidget, QApplication
     )
-    from PyQt6.QtCore import Qt
+    from PySide6.QtCore import Qt
     QT_AVAILABLE = True
 except ImportError:
     # Create mock classes for headless testing
@@ -66,14 +66,14 @@ class TestQtBooleanEvaluationFixes:
         empty_splitter = QSplitter()
         qtbot.addWidget(empty_splitter)
 
-        # These demonstrate the problem: empty containers are falsy (except QTreeWidget in PyQt6)
+        # These demonstrate the problem: empty containers are falsy (except QTreeWidget in PySide6)
         assert not bool(empty_tab_widget)  # This is the bug!
         assert not bool(empty_vbox_layout)
         assert not bool(empty_hbox_layout)  
         assert not bool(empty_list_widget)
-        # QTreeWidget behaves differently in PyQt6 - it's truthy even when empty
+        # QTreeWidget behaves differently in PySide6 - it's truthy even when empty
         # This is actually the correct behavior, but inconsistent with other containers
-        assert bool(empty_tree_widget)  # PyQt6 specific - truthy when empty
+        assert bool(empty_tree_widget)  # PySide6 specific - truthy when empty
         assert not bool(empty_stacked_widget)
         assert not bool(empty_splitter)
 

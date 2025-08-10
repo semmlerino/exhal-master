@@ -14,8 +14,8 @@ import threading
 from typing import Any, Optional
 from unittest.mock import MagicMock, Mock
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QDialog, QWidget
 
 
 class MockQDialog(QObject):
@@ -30,9 +30,9 @@ class MockQDialog(QObject):
     """
 
     # Define signals that QDialog would have
-    accepted = pyqtSignal()
-    rejected = pyqtSignal()
-    finished = pyqtSignal(int)
+    accepted = Signal()
+    rejected = Signal()
+    finished = Signal(int)
 
     def __init__(self, parent: Optional[QWidget] = None):
         # QObject doesn't require QApplication
@@ -105,9 +105,9 @@ class MockUnifiedManualOffsetDialog(MockQDialog):
     """
 
     # External signals for ROM extraction panel integration
-    offset_changed = pyqtSignal(int)
-    sprite_found = pyqtSignal(int, str)  # offset, name
-    validation_failed = pyqtSignal(str)
+    offset_changed = Signal(int)
+    sprite_found = Signal(int, str)  # offset, name
+    validation_failed = Signal(str)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -189,7 +189,7 @@ class MockUnifiedManualOffsetDialog(MockQDialog):
 class MockSettingsDialog(MockQDialog):
     """Mock implementation of SettingsDialog."""
 
-    settings_changed = pyqtSignal(dict)
+    settings_changed = Signal(dict)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -265,7 +265,7 @@ class MockSettingsDialog(MockQDialog):
 class MockGridArrangementDialog(MockQDialog):
     """Mock implementation of GridArrangementDialog."""
 
-    arrangement_changed = pyqtSignal(list)
+    arrangement_changed = Signal(list)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -292,7 +292,7 @@ class MockGridArrangementDialog(MockQDialog):
 class MockRowArrangementDialog(MockQDialog):
     """Mock implementation of RowArrangementDialog."""
 
-    arrangement_updated = pyqtSignal(list)
+    arrangement_updated = Signal(list)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -321,8 +321,8 @@ class MockRowArrangementDialog(MockQDialog):
 class MockAdvancedSearchDialog(MockQDialog):
     """Mock implementation of AdvancedSearchDialog."""
 
-    search_requested = pyqtSignal(dict)
-    result_selected = pyqtSignal(int)
+    search_requested = Signal(dict)
+    result_selected = Signal(int)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -345,8 +345,8 @@ class MockAdvancedSearchDialog(MockQDialog):
 class MockResumeScanDialog(MockQDialog):
     """Mock implementation of ResumeScanDialog."""
 
-    resume_requested = pyqtSignal(int)
-    skip_requested = pyqtSignal()
+    resume_requested = Signal(int)
+    skip_requested = Signal()
 
     # Dialog result constants
     RESUME = "RESUME"

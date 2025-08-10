@@ -6,7 +6,7 @@ Provides a state machine to manage extraction operations and prevent conflicts
 from enum import Enum, auto
 from typing import ClassVar
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class ExtractionState(Enum):
@@ -24,7 +24,7 @@ class ExtractionStateManager(QObject):
     """Manages extraction workflow state and transitions"""
 
     # Signals
-    state_changed = pyqtSignal(ExtractionState, ExtractionState)  # old_state, new_state
+    state_changed = Signal(ExtractionState, ExtractionState)  # old_state, new_state
 
     # Valid state transitions
     VALID_TRANSITIONS: ClassVar[dict[ExtractionState, set[ExtractionState]]] = {

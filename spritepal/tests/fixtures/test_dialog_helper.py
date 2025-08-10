@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QObject
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QApplication
 
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog

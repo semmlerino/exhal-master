@@ -6,9 +6,9 @@ import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
@@ -20,10 +20,10 @@ class SpritePreviewWorker(BaseWorker):
     """Worker thread for loading sprite previews"""
 
     # Custom signals (BaseWorker provides progress, error, warning, operation_finished)
-    preview_ready = pyqtSignal(
+    preview_ready = Signal(
         bytes, int, int, str
     )  # tile_data, width, height, sprite_name
-    preview_error = pyqtSignal(str)  # error message
+    preview_error = Signal(str)  # error message
 
     def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None, parent: QObject | None = None):
         super().__init__(parent)

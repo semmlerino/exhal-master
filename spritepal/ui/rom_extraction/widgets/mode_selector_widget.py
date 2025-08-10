@@ -1,7 +1,7 @@
 """Mode selector widget for ROM extraction"""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
 
 from .base_widget import BaseExtractionWidget
 
@@ -20,7 +20,7 @@ class ModeSelectorWidget(BaseExtractionWidget):
     """Widget for selecting extraction mode (preset vs manual)"""
 
     # Signals
-    mode_changed = pyqtSignal(int)  # Emitted when mode changes
+    mode_changed = Signal(int)  # Emitted when mode changes
 
     def __init__(self, parent=None):
         super().__init__(parent)

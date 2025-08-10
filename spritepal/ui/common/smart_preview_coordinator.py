@@ -31,8 +31,8 @@ from typing import TYPE_CHECKING, Any, Callable
 if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QSlider
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
+from PySide6.QtWidgets import QSlider
 
 from ui.common.preview_cache import PreviewCache
 from ui.common.preview_worker_pool import PreviewWorkerPool
@@ -93,9 +93,9 @@ class SmartPreviewCoordinator(QObject):
     """
 
     # Signals for preview updates
-    preview_ready = pyqtSignal(bytes, int, int, str)  # tile_data, width, height, name
-    preview_cached = pyqtSignal(bytes, int, int, str)  # Cached preview displayed
-    preview_error = pyqtSignal(str)  # Error message
+    preview_ready = Signal(bytes, int, int, str)  # tile_data, width, height, name
+    preview_cached = Signal(bytes, int, int, str)  # Cached preview displayed
+    preview_error = Signal(str)  # Error message
 
     def __init__(self, parent: QObject | None = None, rom_cache: ROMCache | None = None):
         super().__init__(parent)
@@ -700,7 +700,7 @@ class SmartPreviewCoordinator(QObject):
         # Emit preview ready with enhanced debugging
         logger.debug("[SIGNAL_FLOW] About to emit preview_ready signal")
         logger.debug(f"[SIGNAL_FLOW] Signal data: request_id={request_id}, data_len={len(tile_data) if tile_data else 0}, {width}x{height}, name={sprite_name}")
-        # Note: PyQt6 signals don't have receivers() method - removed debug line
+        # Note: PySide6 signals don't have receivers() method - removed debug line
 
         self.preview_ready.emit(tile_data, width, height, sprite_name)
 

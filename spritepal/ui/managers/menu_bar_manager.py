@@ -4,8 +4,8 @@ Menu bar management for MainWindow
 
 from typing import Protocol
 
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMainWindow, QMessageBox
 
 
 class MenuBarActionsProtocol(Protocol):

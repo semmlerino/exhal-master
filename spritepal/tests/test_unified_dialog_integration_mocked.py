@@ -17,8 +17,8 @@ import pytest
 
 # Ensure QApplication exists for Qt signal tests
 try:
-    from PyQt6.QtCore import QCoreApplication
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtCore import QCoreApplication
+    from PySide6.QtWidgets import QApplication
     if QCoreApplication.instance() is None:
         _app = QApplication([])
 except ImportError:

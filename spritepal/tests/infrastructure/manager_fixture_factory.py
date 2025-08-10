@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 # Add parent directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 if TYPE_CHECKING:
     from core.managers import ExtractionManager, InjectionManager, SessionManager

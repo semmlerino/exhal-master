@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 try:
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     QT_AVAILABLE = True
 except ImportError:
     QApplication = None  # type: ignore[misc]

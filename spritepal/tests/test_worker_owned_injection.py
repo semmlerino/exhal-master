@@ -15,9 +15,9 @@ import time
 
 import pytest
 from PIL import Image
-from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtTest import QSignalSpy
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtTest import QSignalSpy
+from PySide6.QtWidgets import QApplication
 
 from core.managers.factory import StandardManagerFactory
 from core.workers.injection import (
@@ -334,7 +334,7 @@ class TestWorkerOwnedInjectionPattern:
 @pytest.fixture
 def qtbot():
     """Provide qtbot for Qt testing."""
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     # Ensure QApplication exists and persists for the entire test
     app = QApplication.instance()

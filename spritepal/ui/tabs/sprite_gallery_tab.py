@@ -6,9 +6,9 @@ Provides grid display, filtering, sorting, and batch operations.
 from pathlib import Path
 from typing import Any, Optional
 
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QAction, QPixmap
+from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -27,13 +27,18 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Layout constants
+LAYOUT_SPACING = 4
+LAYOUT_MARGINS = 4
+BUTTON_HEIGHT = 32
+
 
 class SpriteGalleryTab(QWidget):
     """Tab widget for sprite gallery display and management."""
 
     # Signals
-    sprite_selected = pyqtSignal(int)  # Navigate to sprite
-    sprites_exported = pyqtSignal(list)  # Sprites exported
+    sprite_selected = Signal(int)  # Navigate to sprite
+    sprites_exported = Signal(list)  # Sprites exported
 
     def __init__(self, parent: Optional[QWidget] = None):
         """
@@ -64,19 +69,21 @@ class SpriteGalleryTab(QWidget):
     def _setup_ui(self):
         """Setup the tab UI."""
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS)
+        layout.setSpacing(LAYOUT_SPACING)
 
         # Toolbar
         self.toolbar = self._create_toolbar()
         layout.addWidget(self.toolbar)
 
-        # Gallery widget
+        # Gallery widget with proper size policy
         self.gallery_widget = SpriteGalleryWidget(self)
+        from PySide6.QtWidgets import QSizePolicy
+        self.gallery_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.gallery_widget.sprite_selected.connect(self._on_sprite_selected)
         self.gallery_widget.sprite_double_clicked.connect(self._on_sprite_double_clicked)
         self.gallery_widget.selection_changed.connect(self._on_selection_changed)
-        layout.addWidget(self.gallery_widget)
+        layout.addWidget(self.gallery_widget, 1)  # Give it stretch
 
         # Action bar
         action_bar = self._create_action_bar()
@@ -133,17 +140,22 @@ class SpriteGalleryTab(QWidget):
     def _create_action_bar(self) -> QWidget:
         """Create the bottom action bar."""
         widget = QWidget()
+        from PySide6.QtWidgets import QSizePolicy
         layout = QHBoxLayout()
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS)
 
-        # Quick actions
+        # Quick actions with responsive sizing
         self.compare_btn = QPushButton("Compare")
         self.compare_btn.setEnabled(False)
+        self.compare_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.compare_btn.setFixedHeight(BUTTON_HEIGHT)
         self.compare_btn.clicked.connect(self._compare_sprites)
         layout.addWidget(self.compare_btn)
 
         self.palette_btn = QPushButton("Apply Palette")
         self.palette_btn.setEnabled(False)
+        self.palette_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.palette_btn.setFixedHeight(BUTTON_HEIGHT)
         self.palette_btn.clicked.connect(self._apply_palette)
         layout.addWidget(self.palette_btn)
 
@@ -256,7 +268,7 @@ class SpriteGalleryTab(QWidget):
             self.info_label.setText(
                 f"Found {len(sprites)} sprites in {rom_name}"
             )
-            
+
             # Start generating thumbnails for found sprites
             if sprites:
                 logger.info(f"Starting thumbnail generation for {len(sprites)} sprites")
@@ -310,7 +322,7 @@ class SpriteGalleryTab(QWidget):
             pixmap: Generated thumbnail pixmap
         """
         logger.debug(f"Thumbnail ready for offset 0x{offset:06X}, pixmap null: {pixmap.isNull()}")
-        
+
         if offset in self.gallery_widget.thumbnails:
             thumbnail = self.gallery_widget.thumbnails[offset]
             # Find sprite info

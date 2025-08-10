@@ -10,12 +10,12 @@ from abc import abstractmethod
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, Optional, ParamSpec, TypeVar
 
-from PyQt6.QtCore import QMetaObject, QThread, pyqtSignal
+from PySide6.QtCore import QMetaObject, QThread, Signal
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 else:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
 if TYPE_CHECKING:
     from core.managers.factory import ManagerFactory
@@ -156,12 +156,12 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
     """
 
     # Standard signals all workers must have
-    progress = pyqtSignal(int, str)  # percent (0-100), message
-    error = pyqtSignal(str, Exception)  # message, exception
-    warning = pyqtSignal(str)  # warning message
+    progress = Signal(int, str)  # percent (0-100), message
+    error = Signal(str, Exception)  # message, exception
+    warning = Signal(str)  # warning message
 
     # Standard finished signal - use this instead of QThread.finished
-    operation_finished = pyqtSignal(bool, str)  # success, message
+    operation_finished = Signal(bool, str)  # success, message
 
     def __init__(self, parent: Optional['QObject'] = None) -> None:
         super().__init__(parent)
@@ -310,13 +310,13 @@ class ManagedWorker(BaseWorker):
     """
 
     # Additional signals for specialized worker operations
-    preview_ready = pyqtSignal(object, int)  # PIL Image, tile_count
-    preview_image_ready = pyqtSignal(object)  # PIL Image
-    injection_finished = pyqtSignal(bool)  # success
-    progress_percent = pyqtSignal(int)  # percentage (0-100)
-    compression_info = pyqtSignal(str)  # compression info string
-    palettes_ready = pyqtSignal(object)  # Palette data
-    active_palettes_ready = pyqtSignal(object)  # Active palette indices
+    preview_ready = Signal(object, int)  # PIL Image, tile_count
+    preview_image_ready = Signal(object)  # PIL Image
+    injection_finished = Signal(bool)  # success
+    progress_percent = Signal(int)  # percentage (0-100)
+    compression_info = Signal(str)  # compression info string
+    palettes_ready = Signal(object)  # Palette data
+    active_palettes_ready = Signal(object)  # Active palette indices
 
     def __init__(
         self,

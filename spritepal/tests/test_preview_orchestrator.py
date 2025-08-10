@@ -17,8 +17,8 @@ from unittest.mock import Mock, patch
 from dataclasses import dataclass
 
 import pytest
-from PyQt6.QtCore import QObject, QMutex, QMutexLocker, QTimer
-from PyQt6.QtGui import QPixmap
+from PySide6.QtCore import QObject, QMutex, QMutexLocker, QTimer
+from PySide6.QtGui import QPixmap
 
 from core.preview_orchestrator import (
 # Serial execution required: Real Qt components
@@ -48,10 +48,10 @@ class MockROMCache:
 
 class MockAsyncROMCache(QObject):
     """Mock AsyncROMCache for testing orchestrator integration"""
-    from PyQt6.QtCore import pyqtSignal
+    from PySide6.QtCore import Signal
     
-    cache_ready = pyqtSignal(str, bytes, dict)  # request_id, data, metadata  
-    cache_error = pyqtSignal(str, str)          # request_id, error
+    cache_ready = Signal(str, bytes, dict)  # request_id, data, metadata  
+    cache_error = Signal(str, str)          # request_id, error
     
     def __init__(self):
         super().__init__()
@@ -75,10 +75,10 @@ class MockAsyncROMCache(QObject):
 
 class MockWorkerPool(QObject):
     """Mock PreviewWorkerPool for testing"""
-    from PyQt6.QtCore import pyqtSignal
+    from PySide6.QtCore import Signal
     
-    preview_ready = pyqtSignal(str, object)  # request_id, PreviewData
-    preview_error = pyqtSignal(str, object)  # request_id, PreviewError
+    preview_ready = Signal(str, object)  # request_id, PreviewData
+    preview_error = Signal(str, object)  # request_id, PreviewError
     
     def __init__(self):
         super().__init__()

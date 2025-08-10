@@ -4,15 +4,15 @@ Palette colorization for sprite images with caching
 
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class PaletteColorizer(QObject):
     """Manages palette application to grayscale images with caching"""
 
     # Signals
-    palette_mode_changed = pyqtSignal(bool)  # Emitted when palette mode is toggled
-    palette_index_changed = pyqtSignal(int)  # Emitted when palette index changes
+    palette_mode_changed = Signal(bool)  # Emitted when palette mode is toggled
+    palette_index_changed = Signal(int)  # Emitted when palette index changes
 
     def __init__(self) -> None:
         super().__init__()

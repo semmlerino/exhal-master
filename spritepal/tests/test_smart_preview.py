@@ -21,15 +21,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 pytestmark = pytest.mark.no_manager_setup
 
 try:
-    from PyQt6.QtWidgets import QApplication, QSlider
-    from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+    from PySide6.QtWidgets import QApplication, QSlider
+    from PySide6.QtCore import QObject, QTimer, Signal
     QT_AVAILABLE = True
 except ImportError:
     QApplication = Mock
     QSlider = Mock
     QObject = Mock
     QTimer = Mock
-    pyqtSignal = Mock
+    Signal = Mock
     QT_AVAILABLE = False
 
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator

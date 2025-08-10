@@ -26,7 +26,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 # Add parent directory for imports
 # Systematic pytest markers applied based on test content analysis

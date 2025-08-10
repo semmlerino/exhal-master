@@ -1,0 +1,216 @@
+"""
+ComposedDialog base class for composition-based dialog architecture.
+
+This module provides the ComposedDialog class that serves as a base class for dialogs
+using the composition pattern. It automatically initializes and manages dialog
+components based on configuration, providing a flexible alternative to monolithic
+inheritance hierarchies.
+"""
+
+from typing import Any, Optional
+
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QWidget
+
+from .button_box_manager import ButtonBoxManager
+from .dialog_context import DialogContext
+from .message_dialog_manager import MessageDialogManager
+from .status_bar_manager import StatusBarManager
+
+
+class ComposedDialog(QDialog):
+    """
+    Base class for dialogs using composition pattern.
+
+    This class provides a dialog base that uses composition to add functionality
+    instead of relying on inheritance. Components are initialized based on
+    configuration parameters and managed through their lifecycle.
+
+    Configuration options:
+        - with_button_box: Include button box (default: True)
+        - with_status_bar: Include status bar (default: False)
+
+    Components are automatically registered in the dialog context and can be
+    accessed using get_component(name).
+
+    Example:
+        class MyDialog(ComposedDialog):
+            def setup_ui(self):
+                # Add custom UI elements to self.content_widget
+                pass
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None, **config: Any) -> None:
+        """
+        Initialize the composed dialog.
+
+        Args:
+            parent: Parent widget for the dialog
+            **config: Configuration options for component initialization
+        """
+        from utils.logging_config import get_logger
+        logger = get_logger(__name__)
+        
+        logger.debug("DEBUGGING: Starting ComposedDialog.__init__")
+        
+        try:
+            super().__init__(parent)
+            logger.debug("DEBUGGING: QDialog.__init__ completed")
+
+            # Store configuration
+            self.config = config
+            logger.debug("DEBUGGING: Configuration stored")
+
+            # Create main layout and content widget
+            self.main_layout = QVBoxLayout(self)
+            self.content_widget = QWidget()
+            self.main_layout.addWidget(self.content_widget)
+            logger.debug("DEBUGGING: Main layout and content widget created")
+
+            # Create dialog context for component communication
+            self.context = DialogContext(
+                dialog=self,
+                main_layout=self.main_layout,
+                content_widget=self.content_widget,
+                config=config
+            )
+            logger.debug("DEBUGGING: Dialog context created")
+
+            # List to track components for lifecycle management
+            self.components: list[QObject] = []
+            logger.debug("DEBUGGING: Components list initialized")
+
+            # Initialize components based on configuration
+            logger.debug("DEBUGGING: About to initialize components")
+            self._initialize_components()
+            logger.debug("DEBUGGING: Components initialized successfully")
+
+            # Allow subclasses to set up custom UI
+            if hasattr(self, 'setup_ui') and callable(self.setup_ui):
+                logger.debug("DEBUGGING: About to call setup_ui()")
+                self.setup_ui()
+                logger.debug("DEBUGGING: setup_ui() completed successfully")
+            else:
+                logger.debug("DEBUGGING: No setup_ui() method found")
+                
+            logger.debug("DEBUGGING: ComposedDialog.__init__ completed successfully")
+            
+        except Exception as e:
+            logger.error(f"DEBUGGING: ComposedDialog.__init__ failed: {e}")
+            import traceback
+            logger.error(f"DEBUGGING: Full traceback: {traceback.format_exc()}")
+            raise
+
+    def _initialize_components(self) -> None:
+        """
+        Initialize dialog components based on configuration.
+
+        This method creates and initializes components according to the
+        configuration passed to the constructor. Components are automatically
+        registered in the dialog context.
+        """
+        from utils.logging_config import get_logger
+        logger = get_logger(__name__)
+        
+        try:
+            # Always initialize message dialog manager
+            logger.debug("DEBUGGING: Creating MessageDialogManager")
+            message_manager = MessageDialogManager()
+            message_manager.initialize(self.context)
+            self._register_component("message_dialog", message_manager)
+            logger.debug("DEBUGGING: MessageDialogManager initialized successfully")
+
+            # Initialize button box manager if requested (default: True)
+            if self.config.get("with_button_box", True) is not False:
+                logger.debug("DEBUGGING: Creating ButtonBoxManager")
+                button_manager = ButtonBoxManager()
+                button_manager.initialize(self.context)
+                self._register_component("button_box", button_manager)
+                logger.debug("DEBUGGING: ButtonBoxManager initialized successfully")
+            else:
+                logger.debug("DEBUGGING: Skipping ButtonBoxManager (disabled in config)")
+
+            # Always initialize dialog signal manager for custom signals
+            logger.debug("DEBUGGING: Creating DialogSignalManager")
+            from .dialog_signal_manager import DialogSignalManager
+            signal_manager = DialogSignalManager()
+            signal_manager.initialize(self.context)
+            self._register_component("dialog_signals", signal_manager)
+            logger.debug("DEBUGGING: DialogSignalManager initialized successfully")
+
+            # Always initialize Qt dialog signal manager for standard Qt signals
+            logger.debug("DEBUGGING: Creating QtDialogSignalManager")
+            from .qt_dialog_signal_manager import QtDialogSignalManager
+            qt_signal_manager = QtDialogSignalManager()
+            qt_signal_manager.initialize(self.context)
+            self._register_component("qt_dialog_signals", qt_signal_manager)
+            logger.debug("DEBUGGING: QtDialogSignalManager initialized successfully")
+
+        except Exception as e:
+            logger.error(f"DEBUGGING: Component initialization failed: {e}")
+            import traceback
+            logger.error(f"DEBUGGING: Full traceback: {traceback.format_exc()}")
+            raise
+
+        # Initialize status bar manager if requested (default: False)
+        if self.config.get("with_status_bar", False) is True:
+            status_manager = StatusBarManager()
+            status_manager.initialize(self.context)
+            self._register_component("status_bar", status_manager)
+
+    def _register_component(self, name: str, component: QObject) -> None:
+        """
+        Register a component in the context and component list.
+
+        Args:
+            name: Unique name for the component
+            component: The component to register
+        """
+        self.context.register_component(name, component)
+        self.components.append(component)
+
+    def get_component(self, name: str) -> Optional[QObject]:
+        """
+        Get a registered component by name.
+
+        Args:
+            name: The name of the component to retrieve
+
+        Returns:
+            The registered component or None if not found
+        """
+        return self.context.get_component(name)
+
+    def setup_ui(self) -> None:
+        """
+        Set up the dialog UI.
+
+        This method should be overridden by subclasses to add custom UI elements.
+        The content_widget is available for adding custom widgets, and components
+        can be accessed using get_component().
+
+        Note:
+            This method is called automatically after component initialization
+            if it exists in the subclass.
+        """
+        pass
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """
+        Handle dialog close event.
+
+        This method ensures proper cleanup of all components when the dialog
+        is closed. Components that implement a cleanup() method will have it
+        called automatically.
+
+        Args:
+            event: The close event
+        """
+        # Call cleanup on all components that support it
+        for component in self.components:
+            if hasattr(component, 'cleanup') and callable(component.cleanup):
+                component.cleanup()
+
+        # Call parent close event
+        super().closeEvent(event)

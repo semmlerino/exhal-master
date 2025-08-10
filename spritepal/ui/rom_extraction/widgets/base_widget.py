@@ -1,6 +1,6 @@
 """Base widget class for ROM extraction widgets"""
 
-from PyQt6.QtWidgets import QGroupBox, QSizePolicy, QWidget
+from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
 
 
 class BaseExtractionWidget(QWidget):

@@ -2,8 +2,12 @@
 Dialog components for SpritePal UI
 """
 
+import os
+
 # Import dialog components
+# UnifiedManualOffsetDialog has smart selection built-in based on environment variable
 from .manual_offset_unified_integrated import UnifiedManualOffsetDialog
+
 from .resume_scan_dialog import ResumeScanDialog
 from .settings_dialog import SettingsDialog
 from .user_error_dialog import UserErrorDialog

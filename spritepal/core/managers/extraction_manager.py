@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
@@ -38,15 +38,15 @@ class ExtractionManager(BaseManager):
     """Manages all extraction workflows (VRAM and ROM)"""
 
     # Additional signals specific to extraction
-    extraction_progress = pyqtSignal(str)  # Progress message
-    preview_generated = pyqtSignal(object, int)  # PIL Image, tile count
-    palettes_extracted = pyqtSignal(dict)  # Palette data
-    active_palettes_found = pyqtSignal(list)  # Active palette indices
-    files_created = pyqtSignal(list)  # List of created files
-    cache_operation_started = pyqtSignal(str, str)  # Operation type, cache type
-    cache_hit = pyqtSignal(str, float)  # Cache type, time saved in seconds
-    cache_miss = pyqtSignal(str)  # Cache type
-    cache_saved = pyqtSignal(str, int)  # Cache type, number of items saved
+    extraction_progress = Signal(str)  # Progress message
+    preview_generated = Signal(object, int)  # PIL Image, tile count
+    palettes_extracted = Signal(dict)  # Palette data
+    active_palettes_found = Signal(list)  # Active palette indices
+    files_created = Signal(list)  # List of created files
+    cache_operation_started = Signal(str, str)  # Operation type, cache type
+    cache_hit = Signal(str, float)  # Cache type, time saved in seconds
+    cache_miss = Signal(str)  # Cache type
+    cache_saved = Signal(str, int)  # Cache type, number of items saved
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the extraction manager"""

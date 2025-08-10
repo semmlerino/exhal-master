@@ -4,8 +4,8 @@ Preview coordination for MainWindow sprite and palette previews
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QObject, Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
     QSizePolicy,

@@ -236,7 +236,7 @@ class TestInjectionManagerReal:
 
     def test_manager_signals_real(self, injection_manager, test_files):
         """Test manager signals with real operations."""
-        from PyQt6.QtTest import QSignalSpy
+        from PySide6.QtTest import QSignalSpy
         
         # Set up signal spy
         progress_spy = QSignalSpy(injection_manager.injection_progress)

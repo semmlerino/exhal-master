@@ -5,8 +5,8 @@ Provides options to resume from cached progress or start fresh
 
 from typing import Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ui.components import BaseDialog
+from ui.components.base import BaseDialog
 from ui.styles import get_bold_text_style, get_muted_text_style
 
 

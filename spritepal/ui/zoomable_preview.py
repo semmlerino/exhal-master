@@ -4,10 +4,10 @@ Zoomable sprite preview widget for SpritePal
 
 from typing import TYPE_CHECKING, Any, Optional
 
-from PyQt6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 
 if TYPE_CHECKING:
-    from PyQt6.QtGui import (
+    from PySide6.QtGui import (
         QColor,
         QMouseEvent,
         QPainter,
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         QWheelEvent,
     )
 else:
-    from PyQt6.QtGui import (
+    from PySide6.QtGui import (
         QColor,
         QMouseEvent,
         QPainter,
@@ -26,7 +26,7 @@ else:
         QTransform,
         QWheelEvent,
     )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,

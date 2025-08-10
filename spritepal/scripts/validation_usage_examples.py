@@ -85,13 +85,13 @@ def example_qt_validation():
     print("\n=== Qt Code Validation Example ===")
 
     qt_code = '''
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from PySide6.QtCore import Signal
 
 class MyWidget(QWidget):
     """Example Qt widget."""
 
-    data_changed = pyqtSignal(str)
+    data_changed = Signal(str)
 
     def __init__(self):
         super().__init__()

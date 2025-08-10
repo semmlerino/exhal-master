@@ -16,8 +16,8 @@ import time
 import tracemalloc
 from unittest.mock import Mock
 
-from PyQt6.QtCore import Qt, pyqtSignal, QObject
-from PyQt6.QtWidgets import QApplication, QDialog, QPushButton, QVBoxLayout, QLabel
+from PySide6.QtCore import Qt, Signal, QObject
+from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QVBoxLayout, QLabel
 
 # Import our testing infrastructure
 import sys
@@ -30,8 +30,8 @@ from infrastructure.qt_mocks import MockSignal
 class DemoDialog(QDialog):
     """Simple dialog for demonstration."""
     
-    data_changed = pyqtSignal(str)
-    action_triggered = pyqtSignal(int)
+    data_changed = Signal(str)
+    action_triggered = Signal(int)
     
     def __init__(self):
         super().__init__()

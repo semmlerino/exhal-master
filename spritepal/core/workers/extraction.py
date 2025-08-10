@@ -20,7 +20,7 @@ except ImportError:
     from typing_extensions import override
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
     from core.managers import ExtractionManager
     from core.managers.factory import ManagerFactory

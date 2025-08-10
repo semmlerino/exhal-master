@@ -10,7 +10,7 @@ from typing import Any, Generator
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 # Add parent directories to path
 # Serial execution required: Thread safety concerns

@@ -18,9 +18,9 @@ from .qt_mocks import (
 )
 
 if QT_AVAILABLE:
-    from PyQt6.QtCore import pyqtSignal
+    from PySide6.QtCore import Signal
 else:
-    pyqtSignal = MockSignal
+    Signal = MockSignal
 from .test_protocols import (
     MockExtractionManagerProtocol,
     MockExtractionWorkerProtocol,
@@ -274,10 +274,10 @@ class MockFactory:
         # Standard signals
         if QT_AVAILABLE:
             signal_holder = create_signal_holder(
-                injection_started=pyqtSignal(),
-                injection_progress=pyqtSignal(int),
-                injection_complete=pyqtSignal(object),
-                injection_failed=pyqtSignal(str)
+                injection_started=Signal(),
+                injection_progress=Signal(int),
+                injection_complete=Signal(object),
+                injection_failed=Signal(str)
             )
             manager.injection_started = signal_holder.injection_started
             manager.injection_progress = signal_holder.injection_progress
@@ -377,7 +377,7 @@ class MockFactory:
         """
         warnings.warn(
             "MockFactory.create_qimage() is deprecated. "
-            "Use real QImage objects from PyQt6.QtGui for accurate image testing.",
+            "Use real QImage objects from PySide6.QtGui for accurate image testing.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -464,8 +464,8 @@ class MockFactory:
         preview_generator.generate_preview = Mock()
         if QT_AVAILABLE:
             pg_signals = create_signal_holder(
-                preview_ready=pyqtSignal(bytes, int, int, str),
-                preview_error=pyqtSignal(str)
+                preview_ready=Signal(bytes, int, int, str),
+                preview_error=Signal(str)
             )
             preview_generator.preview_ready = pg_signals.preview_ready
             preview_generator.preview_error = pg_signals.preview_error
@@ -483,9 +483,9 @@ class MockFactory:
         offset_navigator = Mock()
         if QT_AVAILABLE:
             on_signals = create_signal_holder(
-                offset_changed=pyqtSignal(int),
-                navigation_bounds_changed=pyqtSignal(int, int),
-                step_size_changed=pyqtSignal(int)
+                offset_changed=Signal(int),
+                navigation_bounds_changed=Signal(int, int),
+                step_size_changed=Signal(int)
             )
             offset_navigator.offset_changed = on_signals.offset_changed
             offset_navigator.navigation_bounds_changed = on_signals.navigation_bounds_changed
@@ -507,10 +507,10 @@ class MockFactory:
         preview_coordinator = Mock()
         if QT_AVAILABLE:
             pc_signals = create_signal_holder(
-                preview_requested=pyqtSignal(int),
-                preview_ready=pyqtSignal(bytes, int, int, str),
-                preview_error=pyqtSignal(str),
-                preview_cleared=pyqtSignal()
+                preview_requested=Signal(int),
+                preview_ready=Signal(bytes, int, int, str),
+                preview_error=Signal(str),
+                preview_cleared=Signal()
             )
             preview_coordinator.preview_requested = pc_signals.preview_requested
             preview_coordinator.preview_ready = pc_signals.preview_ready
@@ -532,10 +532,10 @@ class MockFactory:
         sprites_registry = Mock()
         if QT_AVAILABLE:
             sr_signals = create_signal_holder(
-                sprite_added=pyqtSignal(int, object),
-                sprite_removed=pyqtSignal(int),
-                sprites_cleared=pyqtSignal(),
-                sprites_imported=pyqtSignal(int)
+                sprite_added=Signal(int, object),
+                sprite_removed=Signal(int),
+                sprites_cleared=Signal(),
+                sprites_imported=Signal(int)
             )
             sprites_registry.sprite_added = sr_signals.sprite_added
             sprites_registry.sprite_removed = sr_signals.sprite_removed
@@ -561,9 +561,9 @@ class MockFactory:
         worker_manager = Mock()
         if QT_AVAILABLE:
             wm_signals = create_signal_holder(
-                worker_started=pyqtSignal(str),
-                worker_finished=pyqtSignal(str),
-                worker_error=pyqtSignal(str, object)
+                worker_started=Signal(str),
+                worker_finished=Signal(str),
+                worker_error=Signal(str, object)
             )
             worker_manager.worker_started = wm_signals.worker_started
             worker_manager.worker_finished = wm_signals.worker_finished
@@ -611,11 +611,11 @@ class MockFactory:
         if QT_AVAILABLE:
             # External compatibility signals
             ext_signals = create_signal_holder(
-                offset_changed=pyqtSignal(int),
-                sprite_found=pyqtSignal(int, object),
-                preview_requested=pyqtSignal(int),
-                search_started=pyqtSignal(),
-                search_completed=pyqtSignal(int)
+                offset_changed=Signal(int),
+                sprite_found=Signal(int, object),
+                preview_requested=Signal(int),
+                search_started=Signal(),
+                search_completed=Signal(int)
             )
             coordinator.offset_changed = ext_signals.offset_changed
             coordinator.sprite_found = ext_signals.sprite_found
@@ -625,14 +625,14 @@ class MockFactory:
 
             # Internal coordination signals
             int_signals = create_signal_holder(
-                tab_switch_requested=pyqtSignal(int),
-                update_title_requested=pyqtSignal(str),
-                status_message=pyqtSignal(str),
-                navigation_enabled=pyqtSignal(bool),
-                step_size_synchronized=pyqtSignal(int),
-                preview_update_queued=pyqtSignal(int),
-                preview_generation_started=pyqtSignal(),
-                preview_generation_completed=pyqtSignal()
+                tab_switch_requested=Signal(int),
+                update_title_requested=Signal(str),
+                status_message=Signal(str),
+                navigation_enabled=Signal(bool),
+                step_size_synchronized=Signal(int),
+                preview_update_queued=Signal(int),
+                preview_generation_started=Signal(),
+                preview_generation_completed=Signal()
             )
             coordinator.tab_switch_requested = int_signals.tab_switch_requested
             coordinator.update_title_requested = int_signals.update_title_requested
@@ -694,9 +694,9 @@ class MockFactory:
         browse_tab = Mock()
         if QT_AVAILABLE:
             browse_signals = create_signal_holder(
-                offset_changed=pyqtSignal(int),
-                find_next_clicked=pyqtSignal(),
-                find_prev_clicked=pyqtSignal()
+                offset_changed=Signal(int),
+                find_next_clicked=Signal(),
+                find_prev_clicked=Signal()
             )
             browse_tab.offset_changed = browse_signals.offset_changed
             browse_tab.find_next_clicked = browse_signals.find_next_clicked
@@ -717,8 +717,8 @@ class MockFactory:
         smart_tab = Mock()
         if QT_AVAILABLE:
             smart_signals = create_signal_holder(
-                smart_mode_changed=pyqtSignal(bool),
-                offset_requested=pyqtSignal(int)
+                smart_mode_changed=Signal(bool),
+                offset_requested=Signal(int)
             )
             smart_tab.smart_mode_changed = smart_signals.smart_mode_changed
             smart_tab.offset_requested = smart_signals.offset_requested
@@ -736,8 +736,8 @@ class MockFactory:
         history_tab = Mock()
         if QT_AVAILABLE:
             history_signals = create_signal_holder(
-                sprite_selected=pyqtSignal(int),
-                clear_requested=pyqtSignal()
+                sprite_selected=Signal(int),
+                clear_requested=Signal()
             )
             history_tab.sprite_selected = history_signals.sprite_selected
             history_tab.clear_requested = history_signals.clear_requested

@@ -4,9 +4,9 @@ import threading
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import BaseWorker, handle_worker_errors
@@ -19,13 +19,13 @@ class SpriteScanWorker(BaseWorker):
     """Worker thread for scanning ROM for sprite offsets"""
 
     # Custom signals (BaseWorker provides progress, error, warning, operation_finished)
-    sprite_found = pyqtSignal(dict)  # sprite info
-    finished = pyqtSignal()  # Legacy compatibility - maps to operation_finished
-    cache_status = pyqtSignal(str)  # cache status message
-    cache_progress = pyqtSignal(int)  # cache save progress 0-100
+    sprite_found = Signal(dict)  # sprite info
+    finished = Signal()  # Legacy compatibility - maps to operation_finished
+    cache_status = Signal(str)  # cache status message
+    cache_progress = Signal(int)  # cache save progress 0-100
 
     # For compatibility with existing code that expects (current, total) progress
-    progress_detailed = pyqtSignal(int, int)  # current, total
+    progress_detailed = Signal(int, int)  # current, total
 
     def __init__(self, rom_path: str, extractor, use_cache: bool = True, parent: "QObject | None" = None):
         super().__init__(parent)

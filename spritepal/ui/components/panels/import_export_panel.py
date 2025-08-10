@@ -9,8 +9,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -28,8 +28,8 @@ class ImportExportPanel(QWidget):
     """Panel for importing and exporting sprite offset data"""
 
     # Signals
-    sprites_imported = pyqtSignal(list)  # List of (offset, quality) tuples
-    status_changed = pyqtSignal(str)  # Status message
+    sprites_imported = Signal(list)  # List of (offset, quality) tuples
+    status_changed = Signal(str)  # Status message
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

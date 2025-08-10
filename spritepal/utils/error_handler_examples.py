@@ -11,8 +11,8 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QApplication, QWidget
 
 from core.managers.exceptions import ExtractionError, ValidationError
 from utils.error_integration import (
@@ -35,10 +35,10 @@ class ExampleWorker(QObject):
     """
 
     # Standard worker signals
-    progress = pyqtSignal(int)
-    error = pyqtSignal(str, Exception)
-    finished = pyqtSignal(object)
-    operation_finished = pyqtSignal(bool, str)
+    progress = Signal(int)
+    error = Signal(str, Exception)
+    finished = Signal(object)
+    operation_finished = Signal(bool, str)
 
     def __init__(self):
         super().__init__()

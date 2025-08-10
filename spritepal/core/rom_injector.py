@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.injector import SpriteInjector
@@ -658,10 +658,10 @@ class ROMInjector(SpriteInjector):
 class ROMInjectionWorker(QThread):
     """Worker thread for ROM injection process with detailed progress"""
 
-    progress: pyqtSignal = pyqtSignal(str)  # Status message
-    progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
-    compression_info: pyqtSignal = pyqtSignal(dict)  # Compression statistics
-    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
+    progress: Signal = Signal(str)  # Status message
+    progress_percent: Signal = Signal(int)  # Progress percentage (0-100)
+    compression_info: Signal = Signal(dict)  # Compression statistics
+    injection_finished: Signal = Signal(bool, str)  # Success, message
 
     def __init__(
         self,

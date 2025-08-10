@@ -291,7 +291,7 @@ def session_managers() -> Generator[None, None, None]:
             pass
     """
     # Lazy import manager functions
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     from core.managers import cleanup_managers, initialize_managers
 
@@ -351,7 +351,7 @@ def setup_managers(request):
 
     # Lazy import manager functions to reduce startup overhead
     # Ensure Qt app exists before initializing managers
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     from core.managers import cleanup_managers, initialize_managers
     app = QApplication.instance()
@@ -924,7 +924,7 @@ def qt_app() -> Any:
         mock_app.instance = Mock(return_value=mock_app)
         return mock_app
     # Use real QApplication in GUI environments
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     # Get existing instance or create new one
     app = QApplication.instance()
@@ -1204,8 +1204,8 @@ def cleanup_workers(request):
 
     # Also check for any QThread instances that might be running
     if not IS_HEADLESS:
-        from PyQt6.QtCore import QThread
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QApplication
 
         # Process any pending events to allow threads to finish
         app = QApplication.instance()

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.managers.base_manager import BaseManager
 from core.managers.exceptions import NavigationError
@@ -34,10 +34,10 @@ class NavigationManager(BaseManager):
     """
 
     # Navigation-specific signals
-    navigation_hints_ready = pyqtSignal(list)  # List of NavigationHint objects
-    region_map_updated = pyqtSignal(dict)      # Region map statistics
-    pattern_learned = pyqtSignal(str, dict)   # Strategy name, pattern data
-    similarity_found = pyqtSignal(int, list)  # Offset, list of similar sprites
+    navigation_hints_ready = Signal(list)  # List of NavigationHint objects
+    region_map_updated = Signal(dict)      # Region map statistics
+    pattern_learned = Signal(str, dict)   # Strategy name, pattern data
+    similarity_found = Signal(int, list)  # Offset, list of similar sprites
 
     def __init__(self, parent=None) -> None:
         """Initialize navigation manager."""

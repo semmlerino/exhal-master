@@ -13,8 +13,8 @@ This module provides comprehensive testing of settings dialog integration with:
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox
 
 from core.managers import cleanup_managers, initialize_managers
 from ui.dialogs.settings_dialog import SettingsDialog
@@ -165,8 +165,8 @@ class TestSettingsDialogInitialization:
         assert dialog.dumps_dir_edit.text() == "/test/dumps"
         assert not dialog.cache_enabled_check.isChecked()
         assert dialog.cache_location_edit.text() == "/custom/cache"
-        assert dialog.cache_size_spin.value() == 250
-        assert dialog.cache_expiry_spin.value() == 14
+        assert dialog.cache_size_spin == 250
+        assert dialog.cache_expiry_spin == 14
         assert dialog.auto_cleanup_check.isChecked()
         assert not dialog.show_indicators_check.isChecked()
 
@@ -523,11 +523,11 @@ class TestSettingsValidationAndEdgeCases:
 
         # Test minimum limit
         dialog.cache_size_spin.setValue(5)  # Below minimum
-        assert dialog.cache_size_spin.value() == 10  # Should clamp to minimum
+        assert dialog.cache_size_spin == 10  # Should clamp to minimum
 
         # Test maximum limit
         dialog.cache_size_spin.setValue(15000)  # Above maximum
-        assert dialog.cache_size_spin.value() == 10000  # Should clamp to maximum
+        assert dialog.cache_size_spin == 10000  # Should clamp to maximum
 
     def test_invalid_cache_expiry_limits(self, settings_dialog):
         """Test cache expiry spin box limits."""
@@ -535,11 +535,11 @@ class TestSettingsValidationAndEdgeCases:
 
         # Test minimum limit
         dialog.cache_expiry_spin.setValue(0)  # Below minimum
-        assert dialog.cache_expiry_spin.value() == 1  # Should clamp to minimum
+        assert dialog.cache_expiry_spin == 1  # Should clamp to minimum
 
         # Test maximum limit
         dialog.cache_expiry_spin.setValue(400)  # Above maximum
-        assert dialog.cache_expiry_spin.value() == 365  # Should clamp to maximum
+        assert dialog.cache_expiry_spin == 365  # Should clamp to maximum
 
     def test_empty_paths_handling(self, qtbot, mock_settings_manager, rom_cache):
         """Test handling of empty directory paths."""

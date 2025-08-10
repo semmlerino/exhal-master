@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # Add parent directory for imports
 # Systematic pytest markers applied based on test content analysis
@@ -136,7 +136,7 @@ class TestRealDialogIntegration:
                 assert widget is not None, f"REAL BUG DISCOVERED: Widget {attr} is None after initialization"
 
                 # Validate it's actually a Qt widget, not a mock
-                from PyQt6.QtWidgets import QWidget
+                from PySide6.QtWidgets import QWidget
                 assert isinstance(widget, QWidget), f"REAL BUG: {attr} is {type(widget)}, not a QWidget"
 
             # Test real method calls that use these widgets
@@ -616,7 +616,7 @@ class TestBugDiscoveryRealVsMockedDialogs:
                     pytest.fail(f"REAL BUG: Widget {widget_name} is None - initialization order bug")
 
                 # Also test that widgets are actually Qt widgets, not placeholders
-                from PyQt6.QtWidgets import QWidget
+                from PySide6.QtWidgets import QWidget
                 if not isinstance(widget, QWidget):
                     pytest.fail(f"REAL BUG: {widget_name} is {type(widget)}, not a QWidget")
 

@@ -13,7 +13,7 @@ try:
 except ImportError:
     from typing_extensions import override
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 if TYPE_CHECKING:
     from core.injector import InjectionWorker
@@ -44,11 +44,11 @@ class InjectionManager(BaseManager):
     """Manages all injection workflows (VRAM and ROM)"""
 
     # Additional signals specific to injection
-    injection_progress: pyqtSignal = pyqtSignal(str)  # Progress message
-    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # Success, message
-    compression_info: pyqtSignal = pyqtSignal(dict)  # ROM compression statistics
-    progress_percent: pyqtSignal = pyqtSignal(int)  # Progress percentage (0-100)
-    cache_saved: pyqtSignal = pyqtSignal(str, int)  # Cache type, number of items saved
+    injection_progress: Signal = Signal(str)  # Progress message
+    injection_finished: Signal = Signal(bool, str)  # Success, message
+    compression_info: Signal = Signal(dict)  # ROM compression statistics
+    progress_percent: Signal = Signal(int)  # Progress percentage (0-100)
+    cache_saved: Signal = Signal(str, int)  # Cache type, number of items saved
 
     def __init__(self, parent: QObject | None = None) -> None:
         """Initialize the injection manager"""

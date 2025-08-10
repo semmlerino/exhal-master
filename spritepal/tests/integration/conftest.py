@@ -8,8 +8,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
 
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

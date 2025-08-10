@@ -5,8 +5,8 @@ This example demonstrates how to integrate all components for smooth 60 FPS
 preview updates during slider scrubbing.
 """
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QPushButton,

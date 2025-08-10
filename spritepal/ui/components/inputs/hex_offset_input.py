@@ -9,8 +9,8 @@ import builtins
 import contextlib
 from typing import Callable
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 from utils.logging_config import get_logger
 
@@ -32,8 +32,8 @@ class HexOffsetInput(QWidget):
     """
 
     # Signals
-    value_changed = pyqtSignal(object)  # Emits parsed int value or None
-    text_changed = pyqtSignal(str)      # Emits raw text
+    value_changed = Signal(object)  # Emits parsed int value or None
+    text_changed = Signal(str)      # Emits raw text
 
     def __init__(
         self,

@@ -7,9 +7,9 @@ import sys
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QKeyEvent, QMouseEvent
-from PyQt6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QKeyEvent, QMouseEvent
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
 
 from ui.grid_arrangement_dialog import GridGraphicsView, SelectionMode
 from ui.row_arrangement.grid_arrangement_manager import TilePosition

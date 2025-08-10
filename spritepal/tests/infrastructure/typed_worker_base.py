@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar, cast
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from core.managers.base_manager import BaseManager
 from ui.common.worker_manager import WorkerManager
@@ -33,11 +33,11 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
     """
 
     # Type-safe signals
-    started_signal = pyqtSignal()
-    progress_signal = pyqtSignal(int)
-    result_signal = pyqtSignal(object)  # Will contain R type
-    error_signal = pyqtSignal(str, Exception)
-    finished_signal = pyqtSignal()
+    started_signal = Signal()
+    progress_signal = Signal(int)
+    result_signal = Signal(object)  # Will contain R type
+    error_signal = Signal(str, Exception)
+    finished_signal = Signal()
 
     def __init__(self, manager: M, params: P, parent: QObject | None = None):
         """
@@ -136,8 +136,8 @@ class ExtractionWorkerBase(TypedWorkerBase[M, P, R]):
     """
 
     # Additional extraction-specific signals
-    sprite_found_signal = pyqtSignal(int, object)
-    preview_ready_signal = pyqtSignal(bytes)
+    sprite_found_signal = Signal(int, object)
+    preview_ready_signal = Signal(bytes)
 
     def emit_sprite_found(self, offset: int, sprite_data: Any) -> None:
         """
@@ -167,8 +167,8 @@ class InjectionWorkerBase(TypedWorkerBase[M, P, R]):
     """
 
     # Additional injection-specific signals
-    validation_complete_signal = pyqtSignal(bool, str)
-    compression_progress_signal = pyqtSignal(int)
+    validation_complete_signal = Signal(bool, str)
+    compression_progress_signal = Signal(int)
 
     def emit_validation_complete(self, valid: bool, message: str) -> None:
         """

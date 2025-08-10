@@ -8,7 +8,7 @@ depend on, enabling loose coupling and better testability through dependency inj
 from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 if TYPE_CHECKING:
     pass
@@ -19,11 +19,11 @@ class BaseManagerProtocol(Protocol):
     """Base protocol for all managers with common signals and methods."""
 
     # Common signals
-    error_occurred: pyqtSignal  # Error message
-    warning_occurred: pyqtSignal  # Warning message
-    operation_started: pyqtSignal  # Operation name
-    operation_finished: pyqtSignal  # Operation name
-    progress_updated: pyqtSignal  # Operation name, current, total
+    error_occurred: Signal  # Error message
+    warning_occurred: Signal  # Warning message
+    operation_started: Signal  # Operation name
+    operation_finished: Signal  # Operation name
+    progress_updated: Signal  # Operation name, current, total
 
     def cleanup(self) -> None:
         """Cleanup manager resources."""
@@ -35,15 +35,15 @@ class ExtractionManagerProtocol(BaseManagerProtocol, Protocol):
     """Protocol for extraction manager functionality."""
 
     # Extraction-specific signals
-    extraction_progress: pyqtSignal  # Progress message
-    preview_generated: pyqtSignal  # PIL Image, tile count
-    palettes_extracted: pyqtSignal  # Palette data
-    active_palettes_found: pyqtSignal  # Active palette indices
-    files_created: pyqtSignal  # List of created files
-    cache_operation_started: pyqtSignal  # Operation type, cache type
-    cache_hit: pyqtSignal  # Cache type, time saved in seconds
-    cache_miss: pyqtSignal  # Cache type
-    cache_saved: pyqtSignal  # Cache type, number of items saved
+    extraction_progress: Signal  # Progress message
+    preview_generated: Signal  # PIL Image, tile count
+    palettes_extracted: Signal  # Palette data
+    active_palettes_found: Signal  # Active palette indices
+    files_created: Signal  # List of created files
+    cache_operation_started: Signal  # Operation type, cache type
+    cache_hit: Signal  # Cache type, time saved in seconds
+    cache_miss: Signal  # Cache type
+    cache_saved: Signal  # Cache type, number of items saved
 
     def extract_from_vram(
         self,
@@ -117,11 +117,11 @@ class InjectionManagerProtocol(BaseManagerProtocol, Protocol):
     """Protocol for injection manager functionality."""
 
     # Injection-specific signals
-    injection_progress: pyqtSignal  # Progress message
-    injection_finished: pyqtSignal  # Success, message
-    compression_info: pyqtSignal  # ROM compression statistics
-    progress_percent: pyqtSignal  # Progress percentage (0-100)
-    cache_saved: pyqtSignal  # Cache type, number of items saved
+    injection_progress: Signal  # Progress message
+    injection_finished: Signal  # Success, message
+    compression_info: Signal  # ROM compression statistics
+    progress_percent: Signal  # Progress percentage (0-100)
+    cache_saved: Signal  # Cache type, number of items saved
 
     def start_injection(self, params: dict[str, Any]) -> bool:
         """Start injection operation."""
@@ -239,10 +239,10 @@ class SessionManagerProtocol(BaseManagerProtocol, Protocol):
     """Protocol for session manager functionality."""
 
     # Session-specific signals
-    session_changed: pyqtSignal  # Emitted when session state changes
-    files_updated: pyqtSignal  # Emitted when file paths change
-    settings_saved: pyqtSignal  # Emitted when settings are saved
-    session_restored: pyqtSignal  # Emitted when session is restored
+    session_changed: Signal  # Emitted when session state changes
+    files_updated: Signal  # Emitted when file paths change
+    settings_saved: Signal  # Emitted when settings are saved
+    session_restored: Signal  # Emitted when session is restored
 
     def save_session(self) -> None:
         """Save current session to file."""
@@ -313,11 +313,11 @@ class MainWindowProtocol(Protocol):
     """Protocol for main window functionality needed by controller."""
 
     # Signals the controller connects to
-    extract_requested: pyqtSignal
-    open_in_editor_requested: pyqtSignal
-    arrange_rows_requested: pyqtSignal
-    arrange_grid_requested: pyqtSignal
-    inject_requested: pyqtSignal
+    extract_requested: Signal
+    open_in_editor_requested: Signal
+    arrange_rows_requested: Signal
+    arrange_grid_requested: Signal
+    inject_requested: Signal
 
     # UI components accessed by controller
     status_bar: Any  # QStatusBar

@@ -3,9 +3,9 @@ Integration tests for manual offset dialog using real components.
 """
 
 import pytest
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QDialogButtonBox, QPushButton, QListWidget
-from PyQt6.QtTest import QTest
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QDialogButtonBox, QPushButton, QListWidget
+from PySide6.QtTest import QTest
 
 from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from core.managers import ExtractionManager
@@ -64,7 +64,7 @@ class TestManualOffsetDialog:
         
         # Verify offset changed
         assert dialog.current_offset == new_value
-        assert dialog.browse_tab.position_slider.value() == new_value
+        assert dialog.browse_tab.position_slider == new_value
         
         # Verify display updated
         offset_text = dialog.browse_tab.offset_label.text()
@@ -96,7 +96,7 @@ class TestManualOffsetDialog:
         
         # Verify offset changed
         assert dialog.current_offset == target_offset
-        assert dialog.browse_tab.position_slider.value() == target_offset
+        assert dialog.browse_tab.position_slider == target_offset
     
     def test_find_sprites_button_click(self, manual_offset_dialog, test_rom_with_sprites, qtbot, mocker):
         """Test that Find Sprites button triggers sprite scanning."""

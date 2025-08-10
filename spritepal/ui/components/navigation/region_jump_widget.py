@@ -10,9 +10,9 @@ Features:
 """
 
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -41,8 +41,8 @@ class RegionJumpWidget(QWidget):
     """
 
     # Signals
-    region_selected = pyqtSignal(int)  # Emitted when region is selected
-    offset_requested = pyqtSignal(int)  # Emitted for direct offset jump
+    region_selected = Signal(int)  # Emitted when region is selected
+    offset_requested = Signal(int)  # Emitted for direct offset jump
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -219,7 +219,7 @@ class RegionJumpWidget(QWidget):
     def _on_offset_jump(self):
         """Handle direct offset jump"""
         if self.offset_spinbox is not None:
-            offset = self.offset_spinbox.value()
+            offset = self.offset_spinbox
             self.offset_requested.emit(offset)
 
     def _update_stats_display(self):

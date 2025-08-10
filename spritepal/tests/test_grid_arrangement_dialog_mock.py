@@ -1,5 +1,5 @@
 """
-Mock-based tests for grid arrangement dialog logic (without actual PyQt6 imports)
+Mock-based tests for grid arrangement dialog logic (without actual PySide6 imports)
 """
 
 import os

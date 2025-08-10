@@ -135,7 +135,7 @@ class TestInfrastructureAnalyzer:
             })
 
         # Check for direct Qt imports in test files (should use conftest fixtures)
-        qt_imports = ["from PyQt6", "import PyQt6"]
+        qt_imports = ["from PySide6", "import PySide6"]
         for qt_import in qt_imports:
             if qt_import in content:
                 outdated.append({

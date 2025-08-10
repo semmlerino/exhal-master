@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 from PIL import Image
-from PyQt6.QtCore import QObject
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     from core.protocols.manager_protocols import (

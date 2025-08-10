@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from PIL import Image
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, Signal, Slot
 
 from core.managers import ExtractionManager, get_extraction_manager
 from core.visual_similarity_search import VisualSimilarityEngine
@@ -33,9 +33,9 @@ class SimilarityIndexingWorker(BaseWorker):
     """
 
     # Additional signals specific to similarity indexing
-    sprite_indexed = pyqtSignal(int)  # offset of indexed sprite
-    index_saved = pyqtSignal(str)  # path where index was saved
-    index_loaded = pyqtSignal(int)  # number of sprites loaded from index
+    sprite_indexed = Signal(int)  # offset of indexed sprite
+    index_saved = Signal(str)  # path where index was saved
+    index_loaded = Signal(int)  # number of sprites loaded from index
 
     def __init__(self, rom_path: str, parent: QObject | None = None):
         """
@@ -176,7 +176,7 @@ class SimilarityIndexingWorker(BaseWorker):
                 with contextlib.suppress(Exception):
                     temp_file.unlink()
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def on_sprite_found(self, sprite_info: dict[str, Any]) -> None:
         """
         Handle sprite_found signal by indexing the sprite.
@@ -205,7 +205,7 @@ class SimilarityIndexingWorker(BaseWorker):
         except Exception as e:
             logger.exception(f"Error handling sprite_found signal: {e}")
 
-    @pyqtSlot()
+    @Slot()
     def on_scan_finished(self) -> None:
         """Handle scan completion by starting background indexing."""
         if not self._pending_sprites:

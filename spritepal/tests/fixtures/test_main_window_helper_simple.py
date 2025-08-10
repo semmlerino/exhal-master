@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 # Systematic pytest markers applied based on test content analysis
@@ -27,11 +27,11 @@ class TestMainWindowHelperSimple(QObject):
     """Simplified helper for MainWindow testing without real Qt widgets"""
 
     # Define signals that MainWindow has
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)
-    arrange_rows_requested = pyqtSignal(str)
-    arrange_grid_requested = pyqtSignal(str)
-    inject_requested = pyqtSignal()
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)
+    arrange_rows_requested = Signal(str)
+    arrange_grid_requested = Signal(str)
+    inject_requested = Signal()
 
     def __init__(self, temp_dir: str | None = None):
         """Initialize helper with optional temporary directory"""

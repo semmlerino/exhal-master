@@ -18,9 +18,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from PyQt6.QtCore import QTimer, Qt, pyqtSignal, QObject
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QSlider
+from PySide6.QtCore import QTimer, Qt, Signal, QObject
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication, QSlider
 
 from tests.infrastructure.qt_testing_framework import QtTestingFramework
 
@@ -29,7 +29,7 @@ from tests.infrastructure.qt_testing_framework import QtTestingFramework
 class MockUnifiedManualOffsetDialog(QObject):
     """Mock dialog for testing without real Qt initialization"""
     
-    sprite_found = pyqtSignal(int)
+    sprite_found = Signal(int)
     
     def __init__(self):
         super().__init__()
@@ -227,7 +227,7 @@ class TestManualOffsetDialogSliderIntegration:
         # Slider should be properly configured
         assert slider.minimum() == 0
         assert slider.maximum() > 0
-        assert isinstance(slider.value(), int)
+        assert isinstance(slider, int)
     
     def test_slider_value_change_triggers_preview_request(self, qtbot):
         """Test slider value change triggers preview request"""
@@ -435,7 +435,7 @@ class TestManualOffsetDialogHistoryIntegration:
         # Mock sprite found
         sprite_offset = 0x200000
         
-        # Emit sprite found signal (this is a real pyqtSignal, so we just emit it)
+        # Emit sprite found signal (this is a real Signal, so we just emit it)
         if hasattr(self.dialog, 'sprite_found'):
             self.dialog.sprite_found.emit(sprite_offset)
             
@@ -498,7 +498,7 @@ class TestManualOffsetDialogSearchIntegration:
     def test_find_next_advances_offset(self, qtbot):
         """Test find next button advances offset"""
         browse_tab = self.dialog.browse_tab
-        initial_offset = browse_tab.position_slider.value()
+        initial_offset = browse_tab.position_slider
         
         # Mock find next functionality
         if hasattr(browse_tab, 'find_next_clicked'):
@@ -746,7 +746,7 @@ class TestManualOffsetDialogRealWorldScenarios:
                 history_tab.sprite_selected.emit(final_offset)
         
         # Workflow should complete without errors
-        # Note: slider.value() is mocked, so we just verify the call was made
+        # Note: slider is mocked, so we just verify the call was made
         slider.setValue.assert_called()
     
     def test_extended_browsing_session(self, qtbot):

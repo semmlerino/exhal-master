@@ -3,9 +3,9 @@
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
@@ -18,14 +18,14 @@ class RangeScanWorker(BaseWorker):
     """Worker thread for comprehensive scanning of ROM ranges to find all sprites"""
 
     # Custom signals (BaseWorker provides progress, error, warning, operation_finished)
-    sprite_found = pyqtSignal(int, float)  # offset, quality
-    progress_update = pyqtSignal(int, int)  # current_offset, progress_percentage
-    scan_complete = pyqtSignal(bool)  # success
-    scan_paused = pyqtSignal()  # scan was paused
-    scan_resumed = pyqtSignal()  # scan was resumed
-    scan_stopped = pyqtSignal()  # scan was stopped
-    cache_status = pyqtSignal(str)  # cache status message
-    cache_progress_saved = pyqtSignal(int, int, int)  # current_offset, total_sprites_found, progress_percentage
+    sprite_found = Signal(int, float)  # offset, quality
+    progress_update = Signal(int, int)  # current_offset, progress_percentage
+    scan_complete = Signal(bool)  # success
+    scan_paused = Signal()  # scan was paused
+    scan_resumed = Signal()  # scan was resumed
+    scan_stopped = Signal()  # scan was stopped
+    cache_status = Signal(str)  # cache status message
+    cache_progress_saved = Signal(int, int, int)  # current_offset, total_sprites_found, progress_percentage
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
                  step_size: int, extractor, parent: "QObject | None" = None):

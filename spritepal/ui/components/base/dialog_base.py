@@ -8,8 +8,8 @@ late instance variable declarations.
 
 from typing import Any, ClassVar
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QMessageBox,
@@ -30,40 +30,9 @@ class InitializationOrderError(Exception):
     """Raised when initialization order requirements are violated."""
 
 
-class DialogBaseMeta(type(QDialog)):
-    """Metaclass to enforce initialization order in dialogs."""
-
-    def __new__(mcs, name: str, bases: tuple, namespace: dict) -> type:
-        # Create the class
-        cls = super().__new__(mcs, name, bases, namespace)
-
-        # For DialogBase itself, don't add checks
-        if name == "DialogBase":
-            return cls
-
-        # Wrap __init__ to add initialization checks
-        original_init = cls.__init__
-
-        def checked_init(self, *args, **kwargs):
-            # Track initialization state
-            self._initialization_phase = "pre_init"
-            self._declared_variables: set[str] = set()
-            self._setup_called = False
-
-            # Call original init
-            original_init(self, *args, **kwargs)
-
-            # Verify initialization completed properly
-            if hasattr(self, "_setup_ui") and not self._setup_called:
-                raise InitializationOrderError(
-                    f"{cls.__name__} has _setup_ui method but didn't call super().__init__()"
-                )
-
-        cls.__init__ = checked_init
-        return cls
-
-
-class DialogBase(QDialog, metaclass=DialogBaseMeta):
+# In PySide6, we should not inherit from type(QDialog) directly
+# Instead, we'll use a simpler approach without metaclass
+class DialogBase(QDialog):
     """
     Base class for all SpritePal dialogs with enforced initialization patterns.
 
@@ -123,7 +92,10 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
             splitter_handle_width: Handle width for splitter dialogs (default: 8)
             **kwargs: Additional keyword arguments (ignored, for compatibility)
         """
-        # Initialize tracking before calling Qt's init
+        # Call Qt's init FIRST - required for PySide6
+        super().__init__(parent)
+
+        # Now initialize tracking after Qt init
         self._initialization_phase = "during_init"
         self._declared_variables: set[str] = set()
         self._setup_called = False
@@ -133,17 +105,14 @@ class DialogBase(QDialog, metaclass=DialogBaseMeta):
         self._orientation = orientation
         self._splitter_handle_width = splitter_handle_width
 
-        # Record all instance variables declared before super().__init__()
+        # Record all instance variables that exist now
         try:
             for attr_name in dir(self):
                 if not attr_name.startswith("_") and hasattr(self, attr_name):
                     self._declared_variables.add(attr_name)
         except RuntimeError:
-            # Can't access attributes before Qt init, that's ok
+            # Can't access attributes, that's ok
             pass
-
-        # Call Qt's init
-        super().__init__(parent)
 
         # Set standard dialog properties
         if modal:

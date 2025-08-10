@@ -8,8 +8,8 @@ exactly replicating the file selection patterns from InjectionDialog.
 from pathlib import Path
 from typing import Callable
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -37,8 +37,8 @@ class FileSelector(QWidget):
     """
 
     # Signals
-    file_selected = pyqtSignal(str)     # Emits selected file path
-    path_changed = pyqtSignal(str)      # Emits when path text changes
+    file_selected = Signal(str)     # Emits selected file path
+    path_changed = Signal(str)      # Emits when path text changes
 
     def __init__(
         self,

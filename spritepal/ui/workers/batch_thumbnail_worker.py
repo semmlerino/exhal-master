@@ -10,8 +10,8 @@ from queue import PriorityQueue
 from typing import Optional
 
 from PIL import Image
-from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal, Qt
-from PyQt6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QMutex, QMutexLocker, Qt, QThread, Signal
+from PySide6.QtGui import QImage, QPixmap
 
 from core.rom_extractor import ROMExtractor
 from core.tile_renderer import TileRenderer
@@ -36,9 +36,9 @@ class BatchThumbnailWorker(QThread):
     """Worker thread for batch thumbnail generation."""
 
     # Signals
-    thumbnail_ready = pyqtSignal(int, QPixmap)  # offset, pixmap
-    progress = pyqtSignal(int, int)  # current, total
-    error = pyqtSignal(str)
+    thumbnail_ready = Signal(int, QPixmap)  # offset, pixmap
+    progress = Signal(int, int)  # current, total
+    error = Signal(str)
 
     def __init__(
         self,
@@ -159,7 +159,7 @@ class BatchThumbnailWorker(QThread):
                         logger.debug(f"No more requests, processed {processed_count} thumbnails")
                     self.msleep(50)  # No requests, wait a bit
                     continue
-                
+
                 logger.debug(f"Processing thumbnail request: offset=0x{request.offset:06X}, size={request.size}")
 
                 # Check cache first

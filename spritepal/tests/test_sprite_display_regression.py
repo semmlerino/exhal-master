@@ -18,9 +18,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QPixmap
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QPixmap
 
 from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
@@ -107,13 +107,13 @@ class TestManualOffsetDialogRegression:
         slider = browse_tab.slider
         assert slider.minimum() == 0
         assert slider.maximum() > 0
-        assert isinstance(slider.value(), int)
+        assert isinstance(slider, int)
         
         # Should be able to change slider value
-        initial_value = slider.value()
+        initial_value = slider
         new_value = min(initial_value + 0x1000, slider.maximum())
         slider.setValue(new_value)
-        assert slider.value() == new_value
+        assert slider == new_value
     
     def test_signals_still_emit_correctly(self, qtbot):
         """Regression: Dialog signals still emit correctly"""
@@ -276,7 +276,7 @@ class TestROMExtractionPanelRegression:
     def test_file_selection_still_works(self):
         """Regression: File selection functionality preserved"""
         # Mock file dialog
-        with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName', 
+        with patch('PySide6.QtWidgets.QFileDialog.getOpenFileName', 
                   return_value=("/test/file.sfc", "SNES ROM (*.sfc)")):
             
             # Should handle file selection without errors

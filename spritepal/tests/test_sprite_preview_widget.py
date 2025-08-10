@@ -10,7 +10,7 @@ import tempfile
 
 import pytest
 from PIL import Image
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.managers import cleanup_managers, initialize_managers
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget

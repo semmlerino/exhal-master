@@ -8,8 +8,8 @@ exactly replicating the splitter patterns from existing dialogs.
 
 # No longer need Optional import for Python 3.10+
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QSplitter, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QSplitter, QWidget
 
 from ui.styles import get_splitter_style
 

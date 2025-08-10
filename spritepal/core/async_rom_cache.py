@@ -14,13 +14,14 @@ Key Features:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QMutex,
     QMutexLocker,
     QObject,
@@ -28,8 +29,8 @@ from PyQt6.QtCore import (
     Qt,
     QThread,
     QTimer,
-    pyqtSignal,
-    pyqtSlot,
+    Signal,
+    Slot,
 )
 
 if TYPE_CHECKING:
@@ -44,16 +45,16 @@ class CacheWorker(QObject):
     """Worker that performs cache I/O in background thread"""
 
     # Signals for async communication
-    data_loaded = pyqtSignal(str, bytes, dict)  # request_id, data, metadata
-    load_error = pyqtSignal(str, str)           # request_id, error
-    save_complete = pyqtSignal(str, bool)       # cache_key, success
+    data_loaded = Signal(str, bytes, dict)  # request_id, data, metadata
+    load_error = Signal(str, str)           # request_id, error
+    save_complete = Signal(str, bool)       # cache_key, success
 
     def __init__(self, cache_dir: Path):
         super().__init__()
         self.cache_dir = cache_dir
         self._stop_requested = threading.Event()
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def load_from_cache(self, request_id: str, cache_key: str) -> None:
         """Load data from cache file"""
         if self._stop_requested.is_set():
@@ -67,7 +68,7 @@ class CacheWorker(QObject):
                 return
 
             # Read cache file
-            with open(cache_file, "rb") as f:
+            with cache_file.open("rb") as f:
                 # Read metadata size (4 bytes)
                 meta_size_bytes = f.read(4)
                 if len(meta_size_bytes) < 4:
@@ -95,7 +96,7 @@ class CacheWorker(QObject):
             logger.debug(f"Cache load error for {cache_key}: {e}")
             self.load_error.emit(request_id, str(e))
 
-    @pyqtSlot(str, bytes, dict)
+    @Slot(str, bytes, dict)
     def save_to_cache(self, cache_key: str, data: bytes, metadata: dict) -> None:
         """Save data to cache file"""
         if self._stop_requested.is_set():
@@ -111,7 +112,7 @@ class CacheWorker(QObject):
             # Write atomically using temp file
             temp_file = cache_file.with_suffix(".tmp")
 
-            with open(temp_file, "wb") as f:
+            with temp_file.open("wb") as f:
                 # Write metadata size (4 bytes)
                 meta_json = json.dumps(metadata).encode()
                 f.write(len(meta_json).to_bytes(4, "little"))
@@ -149,12 +150,12 @@ class AsyncROMCache(QObject):
     """
 
     # Public signals
-    cache_ready = pyqtSignal(str, bytes, dict)  # request_id, data, metadata
-    cache_error = pyqtSignal(str, str)          # request_id, error
+    cache_ready = Signal(str, bytes, dict)  # request_id, data, metadata
+    cache_error = Signal(str, str)          # request_id, error
 
     # Internal signals for worker communication
-    _request_load = pyqtSignal(str, str)        # request_id, cache_key
-    _request_save = pyqtSignal(str, bytes, dict)  # cache_key, data, metadata
+    _request_load = Signal(str, str)        # request_id, cache_key
+    _request_save = Signal(str, bytes, dict)  # cache_key, data, metadata
 
     def __init__(self, rom_cache: ROMCache | None = None):
         """
@@ -341,7 +342,6 @@ class AsyncROMCache(QObject):
     @staticmethod
     def _generate_cache_key(rom_path: str, offset: int) -> str:
         """Generate cache key for preview"""
-        import hashlib
         rom_hash = hashlib.md5(rom_path.encode()).hexdigest()[:8]
         return f"preview_{rom_hash}_{offset:08x}"
 

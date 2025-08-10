@@ -10,8 +10,8 @@ from utils.image_utils import create_checkerboard_pattern, pil_to_qpixmap
 
 # Check if Qt is available without initializing
 try:
-    from PyQt6.QtCore import QCoreApplication
-    from PyQt6.QtGui import QPixmap
+    from PySide6.QtCore import QCoreApplication
+    from PySide6.QtGui import QPixmap
 
     QT_AVAILABLE = True
 except ImportError:

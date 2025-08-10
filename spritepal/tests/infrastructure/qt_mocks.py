@@ -9,26 +9,26 @@ from typing import Any, Callable
 from unittest.mock import Mock
 
 try:
-    from PyQt6.QtCore import QObject, pyqtSignal
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtCore import QObject, Signal
+    from PySide6.QtWidgets import QApplication
     QT_AVAILABLE = True
 except ImportError:
     # Fallback for environments where Qt is not available
     QT_AVAILABLE = False
     QObject = object
-    pyqtSignal = Mock
+    Signal = Mock
 
 
-# For backward compatibility, MockSignal is now an alias to pyqtSignal
+# For backward compatibility, MockSignal is now an alias to Signal
 if QT_AVAILABLE:
-    MockSignal = pyqtSignal
+    MockSignal = Signal
 else:
     # Minimal fallback implementation for non-Qt environments
     class MockSignal:
         """Fallback signal implementation when Qt is not available."""
 
         def __init__(self, *args):
-            """Initialize MockSignal, accepting any type arguments like real pyqtSignal."""
+            """Initialize MockSignal, accepting any type arguments like real Signal."""
             self._callbacks: list[Callable] = []
             self.emit = Mock(side_effect=self._emit)
             self.connect = Mock(side_effect=self._connect)
@@ -74,7 +74,7 @@ def create_signal_holder(**signals):
 
     Args:
         **signals: Keyword arguments where key is signal name and value is signal type
-                   e.g., extract_requested=pyqtSignal(), progress=pyqtSignal(int)
+                   e.g., extract_requested=Signal(), progress=Signal(int)
 
     Returns:
         SignalHolder instance with the specified signals
@@ -87,12 +87,12 @@ def create_signal_holder(**signals):
         return holder
 
     # For Qt environments, ensure QApplication exists before creating signal holder
-    from PyQt6.QtCore import QCoreApplication
+    from PySide6.QtCore import QCoreApplication
     if QCoreApplication.instance() is None:
         # Create QApplication if not exists
         import os
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         QApplication([])
 
     # Now create the pre-defined signal holder
@@ -110,74 +110,74 @@ class CommonSignalHolder(QObject):
     at class definition time.
     """
     # Main window signals
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)
-    arrange_rows_requested = pyqtSignal(str)
-    arrange_grid_requested = pyqtSignal(str)
-    inject_requested = pyqtSignal()
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)
+    arrange_rows_requested = Signal(str)
+    arrange_grid_requested = Signal(str)
+    inject_requested = Signal()
 
     # Worker/manager signals
-    progress = pyqtSignal(int)
-    preview_ready = pyqtSignal(bytes, int, int, str)
-    preview_image_ready = pyqtSignal(object)
-    preview_error = pyqtSignal(str)
-    palettes_ready = pyqtSignal(list)
-    active_palettes_ready = pyqtSignal(list)
-    extraction_complete = pyqtSignal(object)
-    extraction_failed = pyqtSignal(str)
-    extraction_finished = pyqtSignal(list)
-    error = pyqtSignal(str, object)
+    progress = Signal(int)
+    preview_ready = Signal(bytes, int, int, str)
+    preview_image_ready = Signal(object)
+    preview_error = Signal(str)
+    palettes_ready = Signal(list)
+    active_palettes_ready = Signal(list)
+    extraction_complete = Signal(object)
+    extraction_failed = Signal(str)
+    extraction_finished = Signal(list)
+    error = Signal(str, object)
 
     # Injection signals
-    injection_started = pyqtSignal()
-    injection_progress = pyqtSignal(int)
-    injection_complete = pyqtSignal(object)
-    injection_failed = pyqtSignal(str)
+    injection_started = Signal()
+    injection_progress = Signal(int)
+    injection_complete = Signal(object)
+    injection_failed = Signal(str)
 
     # Navigation signals
-    offset_changed = pyqtSignal(int)
-    navigation_bounds_changed = pyqtSignal(int, int)
-    step_size_changed = pyqtSignal(int)
+    offset_changed = Signal(int)
+    navigation_bounds_changed = Signal(int, int)
+    step_size_changed = Signal(int)
 
     # Coordinator signals
-    preview_requested = pyqtSignal(int)
-    preview_cleared = pyqtSignal()
-    sprite_found = pyqtSignal(int, object)
-    search_started = pyqtSignal()
-    search_completed = pyqtSignal(int)
+    preview_requested = Signal(int)
+    preview_cleared = Signal()
+    sprite_found = Signal(int, object)
+    search_started = Signal()
+    search_completed = Signal(int)
 
     # Tab signals
-    tab_switch_requested = pyqtSignal(int)
-    update_title_requested = pyqtSignal(str)
-    status_message = pyqtSignal(str)
-    navigation_enabled = pyqtSignal(bool)
-    step_size_synchronized = pyqtSignal(int)
-    preview_update_queued = pyqtSignal(int)
-    preview_generation_started = pyqtSignal()
-    preview_generation_completed = pyqtSignal()
+    tab_switch_requested = Signal(int)
+    update_title_requested = Signal(str)
+    status_message = Signal(str)
+    navigation_enabled = Signal(bool)
+    step_size_synchronized = Signal(int)
+    preview_update_queued = Signal(int)
+    preview_generation_started = Signal()
+    preview_generation_completed = Signal()
 
     # Registry signals
-    sprite_added = pyqtSignal(int, object)
-    sprite_removed = pyqtSignal(int)
-    sprites_cleared = pyqtSignal()
-    sprites_imported = pyqtSignal(int)
+    sprite_added = Signal(int, object)
+    sprite_removed = Signal(int)
+    sprites_cleared = Signal()
+    sprites_imported = Signal(int)
 
     # Worker manager signals
-    worker_started = pyqtSignal(str)
-    worker_finished = pyqtSignal(str)
-    worker_error = pyqtSignal(str, object)
+    worker_started = Signal(str)
+    worker_finished = Signal(str)
+    worker_error = Signal(str, object)
 
     # Dialog tab signals
-    find_next_clicked = pyqtSignal()
-    find_prev_clicked = pyqtSignal()
-    smart_mode_changed = pyqtSignal(bool)
-    offset_requested = pyqtSignal(int)
-    sprite_selected = pyqtSignal(int)
-    clear_requested = pyqtSignal()
+    find_next_clicked = Signal()
+    find_prev_clicked = Signal()
+    smart_mode_changed = Signal(bool)
+    offset_requested = Signal(int)
+    sprite_selected = Signal(int)
+    clear_requested = Signal()
 
     # Thread signals
-    started = pyqtSignal()
-    finished = pyqtSignal()
+    started = Signal()
+    finished = Signal()
 
 
 class TestMainWindow(QObject):
@@ -189,11 +189,11 @@ class TestMainWindow(QObject):
     """
 
     # Define signals as class attributes (required by Qt)
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)
-    arrange_rows_requested = pyqtSignal(str)
-    arrange_grid_requested = pyqtSignal(str)
-    inject_requested = pyqtSignal()
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)
+    arrange_rows_requested = Signal(str)
+    arrange_grid_requested = Signal(str)
+    inject_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -240,11 +240,11 @@ class TestExtractionPanel(QObject):
     """
 
     # Define signals as class attributes
-    file_dropped = pyqtSignal(str)
-    files_changed = pyqtSignal()
-    extraction_ready = pyqtSignal(bool)
-    offset_changed = pyqtSignal(int)
-    mode_changed = pyqtSignal(int)
+    file_dropped = Signal(str)
+    files_changed = Signal()
+    extraction_ready = Signal(bool)
+    offset_changed = Signal(int)
+    mode_changed = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -266,10 +266,10 @@ class TestROMExtractionPanel(QObject):
     """
 
     # Define signals as class attributes
-    files_changed = pyqtSignal()
-    extraction_ready = pyqtSignal(bool)
-    rom_extraction_requested = pyqtSignal(dict)
-    output_name_changed = pyqtSignal(str)
+    files_changed = Signal()
+    extraction_ready = Signal(bool)
+    rom_extraction_requested = Signal(dict)
+    output_name_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -365,8 +365,8 @@ class MockQThread:
         # Create a signal holder for thread signals
         if QT_AVAILABLE:
             signal_holder = create_signal_holder(
-                finished=pyqtSignal(),
-                started=pyqtSignal()
+                finished=Signal(),
+                started=Signal()
             )
             self.finished = signal_holder.finished
             self.started = signal_holder.started
@@ -399,19 +399,19 @@ def create_mock_signals() -> dict[str, Any]:
     if QT_AVAILABLE:
         # Create a signal holder with all the common signals
         signal_holder = create_signal_holder(
-            progress=pyqtSignal(int),
-            preview_ready=pyqtSignal(bytes, int, int, str),
-            preview_image_ready=pyqtSignal(object),
-            palettes_ready=pyqtSignal(list),
-            active_palettes_ready=pyqtSignal(list),
-            extraction_complete=pyqtSignal(object),
-            extraction_failed=pyqtSignal(str),
-            extraction_finished=pyqtSignal(list),
-            error=pyqtSignal(str, object),
-            injection_started=pyqtSignal(),
-            injection_progress=pyqtSignal(int),
-            injection_complete=pyqtSignal(object),
-            injection_failed=pyqtSignal(str),
+            progress=Signal(int),
+            preview_ready=Signal(bytes, int, int, str),
+            preview_image_ready=Signal(object),
+            palettes_ready=Signal(list),
+            active_palettes_ready=Signal(list),
+            extraction_complete=Signal(object),
+            extraction_failed=Signal(str),
+            extraction_finished=Signal(list),
+            error=Signal(str, object),
+            injection_started=Signal(),
+            injection_progress=Signal(int),
+            injection_complete=Signal(object),
+            injection_failed=Signal(str),
         )
 
         # Return a dictionary of the signals
@@ -456,27 +456,27 @@ def create_qt_mock_context():
         Dictionary of Qt module mocks for patching sys.modules
     """
     mock_modules = {
-        "PyQt6": Mock(),
-        "PyQt6.QtCore": Mock(),
-        "PyQt6.QtGui": Mock(),
-        "PyQt6.QtWidgets": Mock(),
-        "PyQt6.QtTest": Mock(),
+        "PySide6": Mock(),
+        "PySide6.QtCore": Mock(),
+        "PySide6.QtGui": Mock(),
+        "PySide6.QtWidgets": Mock(),
+        "PySide6.QtTest": Mock(),
     }
 
     # Configure QtCore
-    mock_modules["PyQt6.QtCore"].QObject = Mock
-    mock_modules["PyQt6.QtCore"].QThread = MockQThread
-    mock_modules["PyQt6.QtCore"].pyqtSignal = MockSignal
-    mock_modules["PyQt6.QtCore"].Qt = Mock()
+    mock_modules["PySide6.QtCore"].QObject = Mock
+    mock_modules["PySide6.QtCore"].QThread = MockQThread
+    mock_modules["PySide6.QtCore"].Signal = MockSignal
+    mock_modules["PySide6.QtCore"].Qt = Mock()
 
     # Configure QtWidgets
-    mock_modules["PyQt6.QtWidgets"].QApplication = MockQApplication
-    mock_modules["PyQt6.QtWidgets"].QWidget = MockQWidget
-    mock_modules["PyQt6.QtWidgets"].QDialog = MockQDialog
-    mock_modules["PyQt6.QtWidgets"].QLabel = MockQLabel
+    mock_modules["PySide6.QtWidgets"].QApplication = MockQApplication
+    mock_modules["PySide6.QtWidgets"].QWidget = MockQWidget
+    mock_modules["PySide6.QtWidgets"].QDialog = MockQDialog
+    mock_modules["PySide6.QtWidgets"].QLabel = MockQLabel
 
     # Configure QtGui
-    mock_modules["PyQt6.QtGui"].QPixmap = MockQPixmap
+    mock_modules["PySide6.QtGui"].QPixmap = MockQPixmap
 
     return mock_modules
 

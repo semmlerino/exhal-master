@@ -3,7 +3,7 @@
 import io
 
 from PIL import Image
-from PyQt6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap
 
 from utils.logging_config import get_logger
 

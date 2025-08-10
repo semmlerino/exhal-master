@@ -9,8 +9,8 @@ This refactored version demonstrates:
 """
 
 import time
-from PyQt6.QtCore import QThread, pyqtSignal, QObject
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtCore import QThread, Signal, QObject
+from PySide6.QtTest import QSignalSpy
 
 import pytest
 
@@ -39,9 +39,9 @@ class RealTestWorker(QThread):
     """Real test worker that performs actual work."""
     
     # Signals following SpritePal conventions
-    progress = pyqtSignal(int, str)
-    finished_work = pyqtSignal()
-    error = pyqtSignal(str, Exception)
+    progress = Signal(int, str)
+    finished_work = Signal()
+    error = Signal(str, Exception)
     
     def __init__(self):
         super().__init__()
@@ -84,7 +84,7 @@ class RealTestWorker(QThread):
 class SlowStoppingWorker(QThread):
     """Worker that takes time to stop, for testing timeouts."""
     
-    finished_work = pyqtSignal()
+    finished_work = Signal()
     
     def __init__(self, stop_delay_ms=100):
         super().__init__()
@@ -243,7 +243,7 @@ class TestWorkerManagerReal:
         """Test real error signal emission."""
         
         class ErrorWorker(QThread):
-            error = pyqtSignal(str, Exception)
+            error = Signal(str, Exception)
             
             def run(self):
                 try:
@@ -294,7 +294,7 @@ class TestWorkerManagerReal:
         """Test worker natural completion without interruption."""
         
         class QuickWorker(QThread):
-            finished_work = pyqtSignal()
+            finished_work = Signal()
             
             def run(self):
                 self.msleep(50)  # Quick work

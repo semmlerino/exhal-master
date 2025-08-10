@@ -15,7 +15,7 @@ import threading
 import time
 import weakref
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 from utils.logging_config import get_logger
@@ -34,8 +34,8 @@ class PooledPreviewWorker(SpritePreviewWorker):
     """
 
     # Enhanced signals with request ID
-    preview_ready = pyqtSignal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
-    preview_error = pyqtSignal(int, str)  # request_id, error_msg
+    preview_ready = Signal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
+    preview_error = Signal(int, str)  # request_id, error_msg
 
     def __init__(self, pool_ref: weakref.ReferenceType):
         # Initialize with dummy values - actual values set per request
@@ -234,8 +234,8 @@ class PreviewWorkerPool(QObject):
     """
 
     # Signals for completed previews
-    preview_ready = pyqtSignal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
-    preview_error = pyqtSignal(int, str)  # request_id, error_msg
+    preview_ready = Signal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
+    preview_error = Signal(int, str)  # request_id, error_msg
 
     def __init__(self, max_workers: int = 8, idle_timeout: int = 30000):
         super().__init__()

@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from PyQt6.QtCore import QSettings
+from PySide6.QtCore import QSettings
 
 import core.managers.registry
 import utils.rom_cache
@@ -106,7 +106,7 @@ class TestSettingsPersistenceAcrossRestarts:
         # Verify initial values to ensure they differ from what we'll set
         # Get current values first
         initial_enabled = dialog.cache_enabled_check.isChecked()
-        initial_size = dialog.cache_size_spin.value()
+        initial_size = dialog.cache_size_spin
         
         # Ensure the values we'll set are different from current values
         new_enabled = not initial_enabled  # Toggle the current state
@@ -178,8 +178,8 @@ class TestSettingsPersistenceAcrossRestarts:
 
         assert dialog2.cache_enabled_check.isChecked() == new_enabled
         assert dialog2.cache_location_edit.text() == str(cache_dir / "custom")
-        assert dialog2.cache_size_spin.value() == new_size
-        assert dialog2.cache_expiry_spin.value() == 14
+        assert dialog2.cache_size_spin == new_size
+        assert dialog2.cache_expiry_spin == 14
         assert not dialog2.auto_cleanup_check.isChecked()
         assert dialog2.show_indicators_check.isChecked()
 

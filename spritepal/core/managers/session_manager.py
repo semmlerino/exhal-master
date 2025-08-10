@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, TypeVar
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from .base_manager import BaseManager
 from .exceptions import SessionError, ValidationError
@@ -18,10 +18,10 @@ class SessionManager(BaseManager):
     """Manages session state and application settings"""
 
     # Signals for session events
-    session_changed: pyqtSignal = pyqtSignal()  # Emitted when session state changes
-    files_updated: pyqtSignal = pyqtSignal(dict)  # Emitted when file paths change
-    settings_saved: pyqtSignal = pyqtSignal()  # Emitted when settings are saved
-    session_restored: pyqtSignal = pyqtSignal(dict)  # Emitted when session is restored
+    session_changed: Signal = Signal()  # Emitted when session state changes
+    files_updated: Signal = Signal(dict)  # Emitted when file paths change
+    settings_saved: Signal = Signal()  # Emitted when settings are saved
+    session_restored: Signal = Signal(dict)  # Emitted when session is restored
 
     def __init__(self, app_name: str = "SpritePal", settings_path: Path | None = None) -> None:
         """

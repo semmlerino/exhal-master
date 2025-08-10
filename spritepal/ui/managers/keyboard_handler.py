@@ -4,8 +4,8 @@ Keyboard shortcut handling for MainWindow
 
 from typing import TYPE_CHECKING, Protocol
 
-from PyQt6.QtCore import QObject, Qt
-from PyQt6.QtGui import QKeyEvent
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtGui import QKeyEvent
 
 if TYPE_CHECKING:
     from ui.managers.output_settings_manager import OutputSettingsManager

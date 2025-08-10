@@ -13,8 +13,8 @@ Following Qt Testing Best Practices:
 from typing import Optional
 from unittest.mock import Mock
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QWidget
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QMainWindow, QWidget
 
 
 class MockMainWindow(QMainWindow):
@@ -26,13 +26,13 @@ class MockMainWindow(QMainWindow):
     """
 
     # Real Qt signals
-    extraction_started = pyqtSignal()
-    extraction_completed = pyqtSignal()
-    extraction_error = pyqtSignal(str)
-    injection_started = pyqtSignal()
-    injection_completed = pyqtSignal()
-    file_opened = pyqtSignal(str)
-    window_closing = pyqtSignal()
+    extraction_started = Signal()
+    extraction_completed = Signal()
+    extraction_error = Signal(str)
+    injection_started = Signal()
+    injection_completed = Signal()
+    file_opened = Signal(str)
+    window_closing = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -108,11 +108,11 @@ class MockWorkerBase(QThread):
     """
 
     # Standard worker signals
-    started = pyqtSignal()
-    finished = pyqtSignal()
-    progress = pyqtSignal(int, str)
-    error = pyqtSignal(str, object)
-    warning = pyqtSignal(str)
+    started = Signal()
+    finished = Signal()
+    progress = Signal(int, str)
+    error = Signal(str, object)
+    warning = Signal(str)
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -162,7 +162,7 @@ class MockWorkerBase(QThread):
 class MockExtractionWorker(MockWorkerBase):
     """Mock extraction worker for testing."""
 
-    extraction_completed = pyqtSignal(dict)
+    extraction_completed = Signal(dict)
 
     def __init__(self, params: dict, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -180,7 +180,7 @@ class MockExtractionWorker(MockWorkerBase):
 class MockInjectionWorker(MockWorkerBase):
     """Mock injection worker for testing."""
 
-    injection_completed = pyqtSignal(bool)
+    injection_completed = Signal(bool)
 
     def __init__(self, params: dict, parent: Optional[QObject] = None):
         super().__init__(parent)

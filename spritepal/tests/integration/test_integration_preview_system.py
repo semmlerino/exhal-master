@@ -4,7 +4,7 @@ Integration tests for preview system using real components.
 
 import pytest
 import time
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator, SimplePreviewWorker
 from core.managers import ExtractionManager

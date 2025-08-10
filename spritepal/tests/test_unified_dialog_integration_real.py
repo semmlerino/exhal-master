@@ -20,9 +20,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import pytest
-from PyQt6.QtCore import QThread, QTimer, Qt, pyqtSignal, QObject
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication, QDialog, QPushButton, QSlider, QTabWidget, QCheckBox, QListWidget
+from PySide6.QtCore import QThread, QTimer, Qt, Signal, QObject
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QSlider, QTabWidget, QCheckBox, QListWidget
 
 from tests.infrastructure.dialog_test_helpers import DialogTestHelper, DialogFactory
 from tests.infrastructure.qt_real_testing import QtTestCase, EventLoopHelper
@@ -407,7 +407,7 @@ class TestThreadSafetyIntegrationReal(QtTestCase):
         """Test concurrent signal emissions with real threads."""
         # Create a QObject with signals
         class SignalEmitter(QObject):
-            value_changed = pyqtSignal(int)
+            value_changed = Signal(int)
         
         emitter = SignalEmitter()
         signal_spy = SignalSpy(emitter.value_changed, "value_changed")
@@ -436,7 +436,7 @@ class TestThreadSafetyIntegrationReal(QtTestCase):
         result = {"received": []}
         
         class Worker(QObject):
-            data_ready = pyqtSignal(int)
+            data_ready = Signal(int)
             
             def process(self):
                 """Process in worker thread."""
@@ -528,7 +528,7 @@ class TestPerformanceIntegrationReal(QtTestCase):
     def test_signal_emission_performance(self):
         """Test signal emission performance with real signals."""
         class FastEmitter(QObject):
-            signal = pyqtSignal(int)
+            signal = Signal(int)
         
         emitter = FastEmitter()
         received = []

@@ -340,7 +340,7 @@ def validate_qt_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     extra_issues = []
 
     # Check for proper Qt imports
-    if 'PyQt6' in code or 'PySide6' in code:
+    if 'PySide6' in code or 'PySide6' in code:
         # Check for common Qt patterns
         lines = code.split('\n')
 

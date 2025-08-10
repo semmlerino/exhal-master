@@ -6,8 +6,8 @@ Provides user interface for configuring application preferences
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QFormLayout,
@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ui.components import BaseDialog
+from ui.components.base import BaseDialog
 from ui.styles import get_button_style, get_muted_text_style
 from utils.rom_cache import get_rom_cache
 from utils.settings_manager import get_settings_manager
@@ -33,8 +33,8 @@ class SettingsDialog(BaseDialog):
     """Dialog for configuring SpritePal settings"""
 
     # Signals
-    settings_changed = pyqtSignal()
-    cache_cleared = pyqtSignal()
+    settings_changed = Signal()
+    cache_cleared = Signal()
 
     def __init__(self, parent=None):
         # Initialize UI components - declare BEFORE super().__init__() to avoid overwriting
@@ -298,8 +298,8 @@ class SettingsDialog(BaseDialog):
         # Cache settings
         self.settings_manager.set_cache_enabled(self.cache_enabled_check.isChecked())
         self.settings_manager.set_cache_location(self.cache_location_edit.text())
-        self.settings_manager.set_cache_max_size_mb(self.cache_size_spin.value())
-        self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin.value())
+        self.settings_manager.set_cache_max_size_mb(self.cache_size_spin)
+        self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin)
         self.settings_manager.set("cache", "auto_cleanup", self.auto_cleanup_check.isChecked())
         self.settings_manager.set("cache", "show_indicators", self.show_indicators_check.isChecked())
 
@@ -451,8 +451,8 @@ class SettingsDialog(BaseDialog):
             "dumps_dir": self.dumps_dir_edit.text(),
             "cache_enabled": self.cache_enabled_check.isChecked(),
             "cache_location": self.cache_location_edit.text(),
-            "cache_max_size": self.cache_size_spin.value(),
-            "cache_expiry": self.cache_expiry_spin.value(),
+            "cache_max_size": self.cache_size_spin,
+            "cache_expiry": self.cache_expiry_spin,
             "auto_cleanup": self.auto_cleanup_check.isChecked(),
             "show_indicators": self.show_indicators_check.isChecked(),
         }

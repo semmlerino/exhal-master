@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QKeyEvent, QPixmap
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QKeyEvent, QPixmap
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget

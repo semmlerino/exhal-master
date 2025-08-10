@@ -8,11 +8,11 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QMessageBox
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QWidget
 
 from utils.logging_config import get_logger
 
@@ -26,9 +26,9 @@ class ErrorHandler(QObject):
     """
 
     # Signals for different error types
-    critical_error = pyqtSignal(str, str)  # title, message
-    warning_error = pyqtSignal(str, str)   # title, message
-    info_message = pyqtSignal(str, str)    # title, message
+    critical_error = Signal(str, str)  # title, message
+    warning_error = Signal(str, str)   # title, message
+    info_message = Signal(str, str)    # title, message
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the error handler"""

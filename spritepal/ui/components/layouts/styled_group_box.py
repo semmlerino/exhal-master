@@ -6,7 +6,7 @@ exactly replicating the group box patterns from existing dialogs.
 """
 
 
-from PyQt6.QtWidgets import QGroupBox, QHBoxLayout, QLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLayout, QVBoxLayout, QWidget
 
 from ui.styles import get_panel_style
 

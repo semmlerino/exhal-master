@@ -63,19 +63,18 @@ class TileRenderer:
             if palette_index not in self.default_palettes:
                 logger.debug(f"Palette index {palette_index} not found, using default 8")
                 palette_index = 8  # Default sprite palette
-            
+
             # Get the palette or use a fallback
             if palette_index in self.default_palettes:
                 palette = self.default_palettes[palette_index]
+            # Fallback to first available palette or create grayscale
+            elif self.default_palettes:
+                palette = next(iter(self.default_palettes.values()))
+                logger.debug(f"Using fallback palette instead of {palette_index}")
             else:
-                # Fallback to first available palette or create grayscale
-                if self.default_palettes:
-                    palette = next(iter(self.default_palettes.values()))
-                    logger.debug(f"Using fallback palette instead of {palette_index}")
-                else:
-                    palette = [[i * 16, i * 16, i * 16] for i in range(16)]
-                    logger.debug(f"Using grayscale fallback for palette {palette_index}")
-            
+                palette = [[i * 16, i * 16, i * 16] for i in range(16)]
+                logger.debug(f"Using grayscale fallback for palette {palette_index}")
+
             logger.debug(f"Using palette {palette_index} with {len(palette)} colors")
 
             # Create output image

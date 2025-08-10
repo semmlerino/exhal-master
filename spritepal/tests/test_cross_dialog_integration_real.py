@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 import pytest
 from core.controller import ExtractionController
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # Import real testing infrastructure
 from tests.infrastructure import (

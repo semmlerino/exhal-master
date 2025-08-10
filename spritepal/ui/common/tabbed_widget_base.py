@@ -10,8 +10,8 @@ try:
 except ImportError:
     from typing_extensions import override
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
     QSizePolicy,
     QTabWidget,
     QVBoxLayout,
@@ -43,7 +43,7 @@ class TabbedWidgetBase(QWidget):
     """
 
     # Signals
-    tab_changed = pyqtSignal(int)  # Emitted when active tab changes
+    tab_changed = Signal(int)  # Emitted when active tab changes
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

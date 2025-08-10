@@ -4,8 +4,8 @@ These tests ensure dialogs can be safely opened, closed, and reopened.
 """
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget
 from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 
@@ -76,7 +76,7 @@ class TestDialogLifecycle:
     @pytest.mark.gui
     def test_dialog_with_parent_lifecycle(self, qtbot):
         """Test dialog follows proper Qt parent-child lifecycle management"""
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
 
         # Create a parent widget
         parent = QWidget()

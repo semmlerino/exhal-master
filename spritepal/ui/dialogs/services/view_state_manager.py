@@ -10,10 +10,10 @@ import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QWidget
 
-from PyQt6.QtCore import QObject, QRect, Qt, pyqtSignal
-from PyQt6.QtGui import QGuiApplication
+from PySide6.QtCore import QObject, QRect, Qt, Signal
+from PySide6.QtGui import QGuiApplication
 
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
@@ -33,8 +33,8 @@ class ViewStateManager(QObject):
     """
 
     # Signals for state changes
-    fullscreen_toggled = pyqtSignal(bool)  # is_fullscreen
-    title_changed = pyqtSignal(str)  # new_title
+    fullscreen_toggled = Signal(bool)  # is_fullscreen
+    title_changed = Signal(str)  # new_title
 
     def __init__(self, dialog_widget: "QWidget", parent=None) -> None:
         super().__init__(parent)
@@ -237,9 +237,12 @@ class ViewStateManager(QObject):
 
             # Position is valid - restore it
             self.dialog_widget.move(x, y)
-            self.dialog_widget.resize(width, height)
-
-            logger.debug(f"Successfully restored window position: {x},{y} size: {width}x{height}")
+            # Don't restore size for manual offset dialog - use dialog's preferred size
+            if 'Manual Offset' not in self.dialog_widget.windowTitle():
+                self.dialog_widget.resize(width, height)
+                logger.debug(f"Successfully restored window position: {x},{y} size: {width}x{height}")
+            else:
+                logger.debug(f"Successfully restored window position: {x},{y} (keeping dialog's preferred size)")
             return True
 
         except Exception as e:

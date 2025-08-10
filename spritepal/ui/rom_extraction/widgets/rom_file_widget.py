@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
 
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
@@ -27,9 +27,9 @@ class ROMFileWidget(BaseExtractionWidget):
     """Widget for selecting and displaying ROM file information"""
 
     # Signals
-    browse_clicked = pyqtSignal()  # Emitted when browse button clicked
-    cache_status_changed = pyqtSignal(dict)  # Emitted when cache status changes
-    partial_scan_detected = pyqtSignal(dict)  # Emitted when partial scan cache found
+    browse_clicked = Signal()  # Emitted when browse button clicked
+    cache_status_changed = Signal(dict)  # Emitted when cache status changes
+    partial_scan_detected = Signal(dict)  # Emitted when partial scan cache found
 
     def __init__(self, parent=None):
         super().__init__(parent)

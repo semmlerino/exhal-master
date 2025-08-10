@@ -5,7 +5,7 @@ Session coordination for MainWindow save/restore functionality
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from core.managers import get_session_manager
 from utils.settings_manager import get_settings_manager

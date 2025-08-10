@@ -15,9 +15,9 @@ Key Features:
 import weakref
 from typing import Any, Callable, Optional, TypeVar
 
-from PyQt6.QtCore import QObject, QPoint, Qt, QTimer
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, QPoint, Qt, QTimer
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import (
     QAbstractButton,
     QApplication,
     QCheckBox,
@@ -224,7 +224,7 @@ class DialogTestHelper(QtTestCase):
         # Spin boxes
         for spin_box in dialog.findChildren(QSpinBox):
             if spin_box.objectName():
-                state[spin_box.objectName()] = spin_box.value()
+                state[spin_box.objectName()] = spin_box
 
         # Checkboxes
         for checkbox in dialog.findChildren(QCheckBox):
@@ -247,7 +247,7 @@ class DialogTestHelper(QtTestCase):
         # Sliders
         for slider in dialog.findChildren(QSlider):
             if slider.objectName():
-                state[slider.objectName()] = slider.value()
+                state[slider.objectName()] = slider
 
         # Tab widgets
         for tab_widget in dialog.findChildren(QTabWidget):
@@ -315,7 +315,7 @@ class DialogFactory:
         dialog = QDialog()
         dialog.setWindowTitle(title)
 
-        from PyQt6.QtWidgets import QVBoxLayout
+        from PySide6.QtWidgets import QVBoxLayout
         layout = QVBoxLayout(dialog)
 
         # Add button box
@@ -344,7 +344,7 @@ class DialogFactory:
         dialog = QDialog()
         dialog.setWindowTitle(title)
 
-        from PyQt6.QtWidgets import QFormLayout, QVBoxLayout
+        from PySide6.QtWidgets import QFormLayout, QVBoxLayout
 
         main_layout = QVBoxLayout(dialog)
         form_layout = QFormLayout()
@@ -396,7 +396,7 @@ class DialogFactory:
         dialog = QDialog()
         dialog.setWindowTitle(title)
 
-        from PyQt6.QtWidgets import QVBoxLayout
+        from PySide6.QtWidgets import QVBoxLayout
 
         layout = QVBoxLayout(dialog)
 

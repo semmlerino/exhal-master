@@ -6,7 +6,7 @@ which can occur when instance variables are assigned after super().__init__().
 """
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # Import mock dialog infrastructure
 from tests.infrastructure.mock_dialogs import (

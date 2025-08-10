@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
 from tests.infrastructure.real_component_factory import RealComponentFactory
@@ -440,7 +440,7 @@ class TestROMExtractionWorker:
 @pytest.fixture
 def qtbot():
     """Provide minimal qtbot functionality for signal testing."""
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     
     app = QApplication.instance()
     if app is None:

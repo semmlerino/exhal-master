@@ -11,8 +11,8 @@ import sys
 from contextlib import contextmanager
 from typing import Any
 
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication
 
 
 class TestApplicationFactory:

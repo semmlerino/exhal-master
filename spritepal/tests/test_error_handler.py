@@ -3,8 +3,8 @@ Test error handler functionality
 """
 
 import pytest
-from PyQt6.QtTest import QSignalSpy
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtTest import QSignalSpy
+from PySide6.QtWidgets import QWidget
 
 from ui.common import get_error_handler, reset_error_handler
 

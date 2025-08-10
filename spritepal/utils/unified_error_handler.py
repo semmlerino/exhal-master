@@ -17,8 +17,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
-    from PyQt6.QtCore import QObject, pyqtSignal
-    from PyQt6.QtWidgets import QMessageBox, QWidget
+    from PySide6.QtCore import QObject, Signal
+    from PySide6.QtWidgets import QMessageBox, QWidget
 
 # Import core exceptions - these should always be available
 from core.managers.exceptions import (
@@ -33,15 +33,15 @@ from core.managers.exceptions import (
 
 # Import Qt modules with fallbacks for headless environments
 try:
-    from PyQt6.QtCore import QObject as QtQObject
-    from PyQt6.QtCore import pyqtSignal as QtPyqtSignal
-    from PyQt6.QtWidgets import QMessageBox as QtQMessageBox
-    from PyQt6.QtWidgets import QWidget as QtQWidget
+    from PySide6.QtCore import QObject as QtQObject
+    from PySide6.QtCore import Signal as QtPyqtSignal
+    from PySide6.QtWidgets import QMessageBox as QtQMessageBox
+    from PySide6.QtWidgets import QWidget as QtQWidget
     QT_AVAILABLE = True
 
     # Use Qt classes directly
     QObject = QtQObject
-    pyqtSignal = QtPyqtSignal
+    Signal = QtPyqtSignal
     QMessageBox = QtQMessageBox
     QWidget = QtQWidget
 except ImportError:
@@ -53,7 +53,7 @@ except ImportError:
         def __init__(self, parent=None):
             self.parent = parent
 
-    def pyqtSignal(*args, **kwargs):
+    def Signal(*args, **kwargs):
         """Mock signal for non-Qt environments"""
         class MockSignal:
             def emit(self, *args, **kwargs): pass
@@ -72,7 +72,7 @@ except ImportError:
 if TYPE_CHECKING:
     from collections.abc import Generator
     try:
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
     except ImportError:
         QWidget = None  # type: ignore[misc,assignment]
 
@@ -163,8 +163,8 @@ class UnifiedErrorHandler(QObject):
     """
 
     # Signals for different error types (extends existing ErrorHandler)
-    error_processed = pyqtSignal(ErrorResult)
-    recovery_suggested = pyqtSignal(str, list)  # operation, suggestions
+    error_processed = Signal(ErrorResult)
+    recovery_suggested = Signal(str, list)  # operation, suggestions
 
     def __init__(self, parent: QWidget | None = None, error_display: IErrorDisplay | None = None):
         """Initialize the unified error handler

@@ -4,10 +4,9 @@ Dialog for displaying visual similarity search results.
 Shows similar sprites with thumbnails, similarity scores, and allows navigation.
 """
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
-    QDialog,
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -19,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.visual_similarity_search import SimilarityMatch
+from ui.components import BaseDialog
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 class SimilarityResultWidget(QFrame):
     """Widget displaying a single similarity search result."""
 
-    sprite_selected = pyqtSignal(int)  # Emitted when sprite is selected
+    sprite_selected = Signal(int)  # Emitted when sprite is selected
 
     def __init__(self, match: SimilarityMatch, thumbnail: QPixmap = None, parent=None):
         super().__init__(parent)
@@ -125,24 +125,27 @@ class SimilarityResultWidget(QFrame):
         super().mousePressEvent(event)
 
 
-class SimilarityResultsDialog(QDialog):
+class SimilarityResultsDialog(BaseDialog):
     """Dialog showing visual similarity search results."""
 
-    sprite_selected = pyqtSignal(int)  # Emitted when user selects a sprite
+    sprite_selected = Signal(int)  # Emitted when user selects a sprite
 
     def __init__(self, matches: list[SimilarityMatch], source_offset: int, parent=None):
-        super().__init__(parent)
+        # Declare instance variables before super().__init__()
         self.matches = matches
         self.source_offset = source_offset
 
-        self.setWindowTitle("Similar Sprites Found")
-        self.setMinimumSize(600, 400)
-        self.resize(800, 600)
-
-        self._setup_ui()
+        super().__init__(
+            parent=parent,
+            title="Similar Sprites Found",
+            modal=True,
+            min_size=(600, 400),
+            size=(800, 600),
+            with_button_box=False  # We'll create our own close button
+        )
 
     def _setup_ui(self):
-        """Setup the dialog UI."""
+        """Setup the dialog UI - called by BaseDialog."""
         layout = QVBoxLayout()
 
         # Header
@@ -197,7 +200,8 @@ class SimilarityResultsDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-        self.setLayout(layout)
+        # Set layout on content widget (BaseDialog pattern)
+        self.content_widget.setLayout(layout)
 
     def _on_sprite_selected(self, offset: int):
         """Handle sprite selection."""

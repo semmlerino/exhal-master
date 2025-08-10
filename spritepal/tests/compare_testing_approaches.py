@@ -17,7 +17,7 @@ if not os.environ.get('QT_QPA_PLATFORM'):
     if not os.environ.get("DISPLAY") or os.environ.get("CI"):
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 
 class TestingComparison:
@@ -127,7 +127,7 @@ class TestingComparison:
         tracemalloc.stop()
 
         # Count real Qt objects
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         widget_count = len([obj for obj in gc.get_objects() if isinstance(obj, QWidget)])
 
         return {
@@ -210,7 +210,7 @@ class TestingComparison:
         print("=" * 70)
 
         migration_steps = [
-            "1. Replace MockSignal with real pyqtSignal + SignalSpy",
+            "1. Replace MockSignal with real Signal + SignalSpy",
             "2. Use QtTestCase base class for QApplication management",
             "3. Replace Mock dialogs with DialogFactory patterns",
             "4. Use DialogTestHelper for widget interactions",

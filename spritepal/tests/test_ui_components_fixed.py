@@ -28,7 +28,7 @@ class TestROMMapWidgetFixed:
 
     def test_rom_map_widget_creation_fixed(self, qtbot):
         """Test ROMMapWidget can be created with qtbot"""
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         from ui.components.visualization.rom_map_widget import ROMMapWidget
 
         # Create widget with no parent first
@@ -47,7 +47,7 @@ class TestROMMapWidgetFixed:
 
     def test_add_sprite_data_fixed(self, qtbot):
         """Test adding sprite data to ROM map with qtbot"""
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         from ui.components.visualization.rom_map_widget import ROMMapWidget
         
         parent = QWidget()

@@ -21,15 +21,15 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any, Callable, TypeVar, cast
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QCoreApplication,
     QEventLoop,
     QObject,
     QThread,
     QTimer,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtWidgets import QApplication, QDialog, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 # Type variable for generic widget types
 W = TypeVar("W", bound=QWidget)
@@ -243,7 +243,7 @@ class EventLoopHelper:
     @staticmethod
     @contextmanager
     def wait_for_signal(
-        signal: pyqtSignal,
+        signal: Signal,
         timeout_ms: int = 1000
     ) -> Generator[list[Any], None, None]:
         """
@@ -345,9 +345,9 @@ class ThreadSafetyHelper:
             Thread instance
         """
         class Worker(QObject):
-            finished = pyqtSignal()
-            error = pyqtSignal(Exception)
-            result = pyqtSignal(object)
+            finished = Signal()
+            error = Signal(Exception)
+            result = Signal(object)
 
             def __init__(self, func, args, kwargs):
                 super().__init__()

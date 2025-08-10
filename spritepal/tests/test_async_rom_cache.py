@@ -19,8 +19,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QRecursiveMutex, QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QRecursiveMutex, QThread, QTimer, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.async_rom_cache import AsyncROMCache, CacheWorker
 from tests.infrastructure.real_component_factory import RealComponentFactory

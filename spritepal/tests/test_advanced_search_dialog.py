@@ -85,14 +85,14 @@ class TestSearchWorker:
     def test_search_worker_creation(self):
         """Test that SearchWorker can be created without hanging."""
         # Defer import to avoid collection-time hangs
-        from PyQt6.QtCore import QThread, pyqtSignal
+        from PySide6.QtCore import QThread, Signal
         
         # Create a mock SearchWorker class
         class MockSearchWorker(QThread):
-            progress = pyqtSignal(int, int)
-            result_found = pyqtSignal(object)
-            search_complete = pyqtSignal(list)
-            error = pyqtSignal(str)
+            progress = Signal(int, int)
+            result_found = Signal(object)
+            search_complete = Signal(list)
+            error = Signal(str)
             
             def __init__(self, search_type: str, params: dict):
                 super().__init__()

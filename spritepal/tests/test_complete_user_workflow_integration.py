@@ -658,7 +658,7 @@ class TestCompleteUserWorkflow:
         - Verifies real signal content and timing
         - Is more reliable and maintainable
         """
-        from PyQt6.QtTest import QSignalSpy
+        from PySide6.QtTest import QSignalSpy
 
         # Initialize managers for clean state
         initialize_managers_registry()

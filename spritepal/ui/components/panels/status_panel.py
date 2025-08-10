@@ -4,7 +4,7 @@ Status Panel for Manual Offset Dialog
 Displays detection status, progress information, scanning progress, and cache status.
 """
 
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from ui.styles import get_muted_text_style, get_panel_style
 
@@ -69,15 +69,19 @@ class StatusPanel(QWidget):
 
     def _setup_cache_status(self, layout: QVBoxLayout) -> None:
         """Set up cache status indicators"""
-        from utils.settings_manager import (
-            get_settings_manager,  # Delayed import to avoid circular dependency
-        )
+        try:
+            from utils.settings_manager import (
+                get_settings_manager,  # Delayed import to avoid circular dependency
+            )
+            settings_manager = get_settings_manager()
 
-        settings_manager = get_settings_manager()
-
-        # Only show cache indicators if enabled in settings
-        if not settings_manager.get("cache", "show_indicators", True):
-            return
+            # Only show cache indicators if enabled in settings
+            if not settings_manager.get("cache", "show_indicators", True):
+                return
+        except Exception:
+            # If settings manager isn't available, default to showing cache indicators
+            # This allows the dialog to work without full manager initialization
+            pass
 
         # Cache status widget - CRITICAL FIX: Set proper parent for all widgets
         self.cache_status_widget = QWidget(parent=self)
@@ -114,15 +118,19 @@ class StatusPanel(QWidget):
         if not hasattr(self, "cache_status_widget"):
             return
 
-        from utils.rom_cache import (
-            get_rom_cache,  # Delayed import to avoid circular dependency
-        )
-        from utils.settings_manager import (
-            get_settings_manager,  # Delayed import to avoid circular dependency
-        )
+        try:
+            from utils.rom_cache import (
+                get_rom_cache,  # Delayed import to avoid circular dependency
+            )
+            from utils.settings_manager import (
+                get_settings_manager,  # Delayed import to avoid circular dependency
+            )
 
-        settings_manager = get_settings_manager()
-        cache_enabled = settings_manager.get_cache_enabled()
+            settings_manager = get_settings_manager()
+            cache_enabled = settings_manager.get_cache_enabled()
+        except Exception:
+            # If settings manager isn't available, assume cache is enabled
+            cache_enabled = True
 
         if cache_enabled:
             try:

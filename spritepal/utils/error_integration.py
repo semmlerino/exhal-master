@@ -12,7 +12,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QWidget
 
 from utils.unified_error_handler import (
     ErrorContext,

@@ -15,7 +15,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
 # Serial execution required: QApplication management, Thread safety concerns
 pytestmark = [
     
@@ -31,9 +31,9 @@ pytestmark = [
     QObject,
     QThread,
     QTimer,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from ui.common.worker_manager import WorkerManager
@@ -106,9 +106,9 @@ class TestQThreadPatterns:
         """Test the recommended moveToThread pattern"""
         
         class Worker(QObject):
-            started = pyqtSignal()
-            progress = pyqtSignal(int)
-            finished = pyqtSignal()
+            started = Signal()
+            progress = Signal(int)
+            finished = Signal()
             
             def __init__(self):
                 super().__init__()
@@ -192,7 +192,7 @@ class TestQThreadPatterns:
         """Test the QThread subclassing pattern"""
         
         class WorkerThread(QThread):
-            progress = pyqtSignal(int)
+            progress = Signal(int)
             
             def run(self):
                 thread_capture.capture('subclass_run')
@@ -287,7 +287,7 @@ class TestSignalSlotAcrossThreads:
         """Test different Qt connection types"""
         
         class Emitter(QObject):
-            signal = pyqtSignal(str)
+            signal = Signal(str)
         
         class Receiver(QObject):
             def __init__(self):
@@ -355,7 +355,7 @@ class TestSignalSlotAcrossThreads:
                     return self.data.copy()
         
         class Worker(QObject):
-            data_ready = pyqtSignal(list)
+            data_ready = Signal(list)
             
             def __init__(self, data_holder):
                 super().__init__()
@@ -410,7 +410,7 @@ class TestEventLoopManagement:
         """Test event loop in worker thread"""
         
         class Worker(QObject):
-            work_done = pyqtSignal(str)
+            work_done = Signal(str)
             
             def __init__(self):
                 super().__init__()
@@ -457,7 +457,7 @@ class TestEventLoopManagement:
         """Test handling blocking operations with event loop"""
         
         class Worker(QObject):
-            result_ready = pyqtSignal(str)
+            result_ready = Signal(str)
             
             def process_with_event_loop(self):
                 # Create local event loop for synchronous-style code
@@ -517,7 +517,7 @@ class TestSynchronizationPatterns:
         """Test QMutex for thread-safe data access"""
         
         class SharedCounter(QObject):
-            count_changed = pyqtSignal(int)
+            count_changed = Signal(int)
             
             def __init__(self):
                 super().__init__()
@@ -571,9 +571,9 @@ class TestSynchronizationPatterns:
         """Test using signals for thread synchronization"""
         
         class Coordinator(QObject):
-            start_work = pyqtSignal(int)
-            work_done = pyqtSignal(int, str)
-            all_done = pyqtSignal()
+            start_work = Signal(int)
+            work_done = Signal(int, str)
+            all_done = Signal()
             
             def __init__(self, num_workers):
                 super().__init__()
@@ -660,8 +660,8 @@ class TestWorkerLifecycle:
         """Test proper worker cleanup pattern"""
         
         class TestWorker(BaseWorker):
-            progress = pyqtSignal(int)
-            finished = pyqtSignal()
+            progress = Signal(int)
+            finished = Signal()
             
             @handle_worker_errors
             def run(self):
@@ -701,7 +701,7 @@ class TestWorkerLifecycle:
         """Test worker error handling with decorator"""
         
         class ErrorWorker(BaseWorker):
-            error = pyqtSignal(str, object)
+            error = Signal(str, object)
             
             @handle_worker_errors
             def run(self):
@@ -740,7 +740,7 @@ class TestRealWorldScenarios:
         """Test safe GUI updates from worker thread"""
         
         class GUIUpdater(QObject):
-            update_gui = pyqtSignal(str)
+            update_gui = Signal(str)
             
             def __init__(self):
                 super().__init__()
@@ -789,7 +789,7 @@ class TestRealWorldScenarios:
         """Test concurrent operations with proper synchronization"""
         
         class DataProcessor(QObject):
-            processing_done = pyqtSignal(int, list)
+            processing_done = Signal(int, list)
             
             def __init__(self):
                 super().__init__()

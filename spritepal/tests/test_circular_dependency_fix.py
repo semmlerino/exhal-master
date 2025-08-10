@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from ui.main_window import MainWindow
 from core.controller import ExtractionController
@@ -11,14 +11,6 @@ from core.controller import ExtractionController
 
 class TestCircularDependencyFix:
     """Test suite for circular dependency fix."""
-
-# Serial execution required: QApplication management
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application
-]
-
 
     @pytest.fixture
     def app(self):

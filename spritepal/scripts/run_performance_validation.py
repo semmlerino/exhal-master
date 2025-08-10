@@ -41,7 +41,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 # Qt imports with proper handling
 try:
-    from PyQt6.QtWidgets import QApplication, QWidget
+    from PySide6.QtWidgets import QApplication, QWidget
     QT_AVAILABLE = True
 except ImportError:
     # Fallback for testing without Qt

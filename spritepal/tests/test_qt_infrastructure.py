@@ -23,7 +23,7 @@ pytestmark = [
 def test_qapplication_singleton(qapp_session):
     """Verify single QApplication instance across test session."""
     try:
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         
         # Get instances multiple times
         app1 = QApplication.instance()
@@ -44,7 +44,7 @@ def test_qapplication_singleton(qapp_session):
 def test_qtbot_widget_cleanup(qtbot):
     """Verify widgets are properly registered with qtbot for cleanup."""
     try:
-        from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
+        from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
         
         # Create a test widget
         widget = QWidget()
@@ -71,11 +71,11 @@ def test_qtbot_widget_cleanup(qtbot):
 def test_qt_gui_functionality(qtbot):
     """Test that requires full Qt GUI capabilities."""
     try:
-        from PyQt6.QtWidgets import QWidget, QPushButton
-        from PyQt6.QtCore import QTimer, pyqtSignal
+        from PySide6.QtWidgets import QWidget, QPushButton
+        from PySide6.QtCore import QTimer, Signal
         
         class TestWidget(QWidget):
-            clicked = pyqtSignal()
+            clicked = Signal()
             
             def __init__(self):
                 super().__init__()
@@ -128,7 +128,7 @@ def test_no_gui_marker():
 def test_qt_cleanup_integration(qtbot, qapp_session):
     """Test that Qt cleanup works properly between tests."""
     try:
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         import gc
         
         # Create widgets that will be cleaned up
@@ -198,7 +198,7 @@ def test_qt_markers_configuration():
 def test_multiple_qapplication_prevention():
     """Test that we prevent multiple QApplication instances."""
     try:
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         
         # Get the current instance
         app1 = QApplication.instance()

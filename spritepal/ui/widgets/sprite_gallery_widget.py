@@ -5,9 +5,9 @@ Provides grid layout with virtual scrolling and lazy loading.
 
 from typing import Any, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QGridLayout,
@@ -31,9 +31,9 @@ class SpriteGalleryWidget(QScrollArea):
     """Widget displaying a gallery of sprite thumbnails."""
 
     # Signals
-    sprite_selected = pyqtSignal(int)  # Emits offset when sprite selected
-    sprite_double_clicked = pyqtSignal(int)  # Emits offset on double-click
-    selection_changed = pyqtSignal(list)  # Emits list of selected offsets
+    sprite_selected = Signal(int)  # Emits offset when sprite selected
+    sprite_double_clicked = Signal(int)  # Emits offset on double-click
+    selection_changed = Signal(list)  # Emits list of selected offsets
 
     def __init__(self, parent: Optional[QWidget] = None):
         """

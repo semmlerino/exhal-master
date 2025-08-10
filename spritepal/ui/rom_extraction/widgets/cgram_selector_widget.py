@@ -1,7 +1,7 @@
 """CGRAM file selector widget for ROM extraction"""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
 
 from .base_widget import BaseExtractionWidget
 
@@ -20,7 +20,7 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
     """Widget for selecting optional CGRAM palette file"""
 
     # Signals
-    browse_clicked = pyqtSignal()  # Emitted when browse button clicked
+    browse_clicked = Signal()  # Emitted when browse button clicked
 
     def __init__(self, parent=None):
         super().__init__(parent)

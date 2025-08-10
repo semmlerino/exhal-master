@@ -10,16 +10,16 @@ This test suite validates all critical stability improvements implemented in Pha
 
 import subprocess
 import inspect
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 import subprocess
 import inspect
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 import subprocess
 import inspect
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 import subprocess
 import inspect
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 2. Circular Reference Fixes:
    - Tests weak reference patterns work correctly
    - Verifies dialogs can be garbage collected
@@ -300,7 +300,7 @@ class TestTOCTOURaceConditionStability:
         """Test manager initialization is safe under concurrent access."""
 
         # Skip this test in mock environment where Qt objects can't be created properly
-        from PyQt6.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         app = QApplication.instance()
         if app and "Mock" in app.__class__.__name__:
             pytest.skip("Skipping manager initialization test in mock environment")

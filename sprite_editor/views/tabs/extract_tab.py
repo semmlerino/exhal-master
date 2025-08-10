@@ -108,7 +108,8 @@ class ExtractTab(QWidget):
         # Extract button
         self.extract_btn = QPushButton("Extract Sprites")
         self.extract_btn.clicked.connect(self.extract_requested.emit)
-        self.extract_btn.setMinimumHeight(40)
+        # Use default height for button - no hardcoded size
+        # self.extract_btn.setMinimumHeight(40)
         layout.addWidget(self.extract_btn)
 
         # Output group
@@ -117,13 +118,16 @@ class ExtractTab(QWidget):
 
         self.extract_output_text = QTextEdit()
         self.extract_output_text.setReadOnly(True)
-        self.extract_output_text.setMaximumHeight(100)
+        # Allow text area to expand as needed
+        self.extract_output_text.setMinimumHeight(100)
+        # self.extract_output_text.setMaximumHeight(100)
         output_layout.addWidget(self.extract_output_text)
 
         output_group.setLayout(output_layout)
         layout.addWidget(output_group)
 
-        layout.addStretch()
+        # Remove stretch to eliminate empty space at bottom
+        # layout.addStretch()
 
     def get_extraction_params(self):
         """Get the current extraction parameters"""

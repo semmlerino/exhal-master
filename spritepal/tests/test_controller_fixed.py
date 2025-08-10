@@ -3,11 +3,6 @@
 import pytest
 from unittest.mock import Mock, patch
 
-
-@pytest.mark.no_manager_setup
-class TestControllerFixed:
-    """Controller tests with proper mocking to prevent hanging"""
-    
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -18,6 +13,10 @@ pytestmark = [
     pytest.mark.unit,
 ]
 
+
+@pytest.mark.no_manager_setup
+class TestControllerFixed:
+    """Controller tests with proper mocking to prevent hanging"""
 
     def test_controller_import(self):
         """Test that controller module can be imported"""

@@ -36,7 +36,7 @@ pytestmark = [
     @pytest.fixture
     def mock_qt_imports(self):
         """Mock Qt imports for headless testing"""
-        # Mock PyQt6 modules
+        # Mock PySide6 modules
         mock_qobject = MagicMock()
         mock_qthread = MagicMock()
         mock_signal = MagicMock()
@@ -48,16 +48,16 @@ pytestmark = [
         with patch.dict(
             "sys.modules",
             {
-                "PyQt6.QtCore": MagicMock(
-                    QObject=mock_qobject, QThread=mock_qthread, pyqtSignal=mock_signal
+                "PySide6.QtCore": MagicMock(
+                    QObject=mock_qobject, QThread=mock_qthread, Signal=mock_signal
                 ),
-                "PyQt6.QtGui": MagicMock(QPixmap=mock_qpixmap),
+                "PySide6.QtGui": MagicMock(QPixmap=mock_qpixmap),
             },
         ):
             yield {
                 "QObject": mock_qobject,
                 "QThread": mock_qthread,
-                "pyqtSignal": mock_signal,
+                "Signal": mock_signal,
                 "QPixmap": mock_qpixmap,
             }
 

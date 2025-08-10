@@ -12,7 +12,7 @@ successfully prevents duplicate slider creation.
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QSlider, QSpinBox
+from PySide6.QtWidgets import QSlider, QSpinBox
 
 from core.managers.extraction_manager import ExtractionManager
 from ui.rom_extraction_panel import (
@@ -167,7 +167,7 @@ class TestNoDuplicateSlidersValidation:
         dialog.set_offset(test_offset)
 
         slider = dialog.browse_tab.position_slider
-        initial_value = slider.value()
+        initial_value = slider
         assert initial_value == test_offset, f"Slider value {initial_value} should match set offset {test_offset}"
 
         # Multiple accesses - slider value should remain consistent
@@ -177,7 +177,7 @@ class TestNoDuplicateSlidersValidation:
 
             slider_ref = dialog_ref.browse_tab.position_slider
             assert slider_ref is slider, "Should be the same slider object"
-            assert slider_ref.value() == test_offset, f"Slider value should remain {test_offset}"
+            assert slider_ref == test_offset, f"Slider value should remain {test_offset}"
 
     @pytest.mark.unit
     def test_no_duplicate_ui_elements_comprehensive(self, qtbot, mock_rom_panel):
@@ -273,7 +273,7 @@ class TestNoDuplicateSlidersValidation:
 
 
 # Import necessary Qt widgets at module level to avoid import errors
-from PyQt6.QtWidgets import QLabel, QPushButton
+from PySide6.QtWidgets import QLabel, QPushButton
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

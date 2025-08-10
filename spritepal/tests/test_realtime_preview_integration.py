@@ -322,7 +322,7 @@ class TestZoomPanStatePreservation:
         preview_panel.clear_signal_tracking()
 
         # Simulate real-time update (should preserve state)
-        from PyQt6.QtGui import QPixmap
+        from PySide6.QtGui import QPixmap
         mock_pixmap = QPixmap(128, 128)
         preview_panel.update_preview(mock_pixmap, 50)
 
@@ -352,7 +352,7 @@ class TestZoomPanStatePreservation:
         preview_panel.clear_signal_tracking()
 
         # Simulate new preview (should reset state)
-        from PyQt6.QtGui import QPixmap
+        from PySide6.QtGui import QPixmap
         mock_pixmap = QPixmap(128, 128)
         preview_panel.set_preview(mock_pixmap, 50)
 
@@ -628,6 +628,6 @@ class TestPreviewSignalIntegration:
         preview_signals = preview_panel.get_signal_emissions()
         assert len(preview_signals["preview_updates"]) > 0
 
-        # Note: In real PyQt6, disconnection would require storing the connection
+        # Note: In real PySide6, disconnection would require storing the connection
         # object and calling disconnect() on it. Our test helpers automatically
         # handle connections internally, so we're verifying the signal flow works

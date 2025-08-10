@@ -57,7 +57,9 @@ class InjectTab(QWidget):
 
         self.validation_text = QTextEdit()
         self.validation_text.setReadOnly(True)
-        self.validation_text.setMaximumHeight(80)
+        # Allow validation text to expand as needed
+        self.validation_text.setMinimumHeight(80)
+        # self.validation_text.setMaximumHeight(80)
         validation_layout.addWidget(self.validation_text)
 
         validation_group.setLayout(validation_layout)
@@ -93,7 +95,8 @@ class InjectTab(QWidget):
         # Inject button
         self.inject_btn = QPushButton("Inject Sprites")
         self.inject_btn.clicked.connect(self.inject_requested.emit)
-        self.inject_btn.setMinimumHeight(40)
+        # Use default height for button
+        # self.inject_btn.setMinimumHeight(40)
         layout.addWidget(self.inject_btn)
 
         # Output group
@@ -102,13 +105,16 @@ class InjectTab(QWidget):
 
         self.inject_output_text = QTextEdit()
         self.inject_output_text.setReadOnly(True)
-        self.inject_output_text.setMaximumHeight(100)
+        # Allow output text to expand
+        self.inject_output_text.setMinimumHeight(100)
+        # self.inject_output_text.setMaximumHeight(100)
         output_layout.addWidget(self.inject_output_text)
 
         output_group.setLayout(output_layout)
         layout.addWidget(output_group)
 
-        layout.addStretch()
+        # Remove stretch to eliminate empty space
+        # layout.addStretch()
 
     def get_injection_params(self):
         """Get the current injection parameters"""

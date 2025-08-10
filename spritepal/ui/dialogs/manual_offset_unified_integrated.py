@@ -46,6 +46,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
+    QFrame,
+    QHBoxLayout,
     QInputDialog,
     QLabel,
     QListWidget,
@@ -204,11 +206,11 @@ class UnifiedManualOffsetDialog(DialogBase):
                 parent=parent,
                 title="Manual Offset Control - SpritePal",
                 modal=False,
-                size=(1000, 650),
-                min_size=(850, 550),
+                size=(900, 600),  # More compact size
+                min_size=(800, 500),  # Smaller minimum
                 with_status_bar=False,
                 orientation=Qt.Orientation.Horizontal,
-                splitter_handle_width=12  # Enhanced layout uses 12px handle width
+                splitter_handle_width=8  # Thinner splitter handle
             )
             logger.warning("DEBUGGING: super().__init__ completed successfully")
         except Exception as e:
@@ -250,9 +252,10 @@ class UnifiedManualOffsetDialog(DialogBase):
             else:
                 logger.debug("Main splitter not available during setup, panels will be added directly")
 
-            # Add panels to splitter (stretch factors handled by layout manager)
-            self.add_panel(left_panel, stretch_factor=1)
-            self.add_panel(right_panel, stretch_factor=3)
+            # Add panels to splitter with better proportions
+            # Left panel should be wider for controls, right panel narrower for preview
+            self.add_panel(left_panel, stretch_factor=3)
+            self.add_panel(right_panel, stretch_factor=2)
             
             logger.debug("_setup_ui completed successfully")
             
@@ -300,8 +303,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Add tab widget with stretch to fill available space
         layout.addWidget(self.tab_widget, 1)  # Give it stretch value to expand
 
-        # Collapsible status panel - defaults to collapsed to save space
-        self.status_collapsible = CollapsibleGroupBox("Status", collapsed=True)
+        # Status panel - expanded by default for better visibility
+        self.status_collapsible = CollapsibleGroupBox("Status", collapsed=False)
         self.status_panel = StatusPanel()
         self.status_collapsible.add_widget(self.status_panel)
 
@@ -327,45 +330,80 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Create the right panel with preview."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
+        layout.setSpacing(8)
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        # Use layout manager to apply standard layout configuration
-        self.layout_manager.apply_standard_layout(layout, spacing_type='normal')
-
-        # Compact title using layout manager method
-        title = self.layout_manager.create_section_title("Sprite Preview")
+        # Title with better styling
+        title = QLabel("Sprite Preview")
+        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4488dd;")
         layout.addWidget(title, 0)  # No stretch for title
 
-        # Preview widget configured to expand
+        # Preview widget with frame for better visibility
+        preview_frame = QFrame()
+        preview_frame.setFrameStyle(QFrame.Shape.StyledPanel)
+        preview_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2b2b2b;
+                border: 1px solid #3c3c3c;
+                border-radius: 6px;
+            }
+        """)
+        preview_layout = QVBoxLayout(preview_frame)
+        preview_layout.setContentsMargins(8, 8, 8, 8)
+        
+        # Preview widget configured to expand within frame
         self.preview_widget = SpritePreviewWidget()
         self.preview_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_widget.similarity_search_requested.connect(self._on_similarity_search_requested)
-        layout.addWidget(self.preview_widget, 1)  # Give it all the stretch
+        preview_layout.addWidget(self.preview_widget)
+        
+        layout.addWidget(preview_frame, 1)  # Give frame all the stretch
+        
+        # No controls section needed - preview widget handles its own controls
 
         return panel
 
     def _setup_custom_buttons(self):
-        """Set up custom dialog buttons."""
+        """Set up custom dialog buttons with improved layout."""
+        # Clear default buttons and create a more organized button layout
+        self.button_box.clear()
+        
+        # Primary action buttons (left side)
         self.apply_btn = QPushButton("Apply Offset")
+        self.apply_btn.setToolTip("Apply the current offset to the extraction")
         self.apply_btn.clicked.connect(self._apply_offset)
         self.button_box.addButton(self.apply_btn, self.button_box.ButtonRole.AcceptRole)
-
-        # Bookmark button
-        bookmark_btn = QPushButton("Bookmark")
+        
+        # Bookmark management buttons (center)
+        bookmark_btn = QPushButton("Add Bookmark")
         bookmark_btn.setToolTip("Save current offset to bookmarks (Ctrl+D)")
         bookmark_btn.clicked.connect(self._add_bookmark)
         self.button_box.addButton(bookmark_btn, self.button_box.ButtonRole.ActionRole)
-
-        # Bookmarks menu button
+        
         bookmarks_menu_btn = QPushButton("Bookmarks ▼")
         bookmarks_menu_btn.setToolTip("Show saved bookmarks (Ctrl+B)")
         self.bookmarks_menu = QMenu(self)
         self._update_bookmarks_menu()
         bookmarks_menu_btn.setMenu(self.bookmarks_menu)
         self.button_box.addButton(bookmarks_menu_btn, self.button_box.ButtonRole.ActionRole)
-
+        
+        # Standard dialog buttons (right side)
         close_btn = QPushButton("Close")
+        close_btn.setToolTip("Close this dialog")
         close_btn.clicked.connect(self.hide)
         self.button_box.addButton(close_btn, self.button_box.ButtonRole.RejectRole)
+        
+        # Apply consistent spacing to button box
+        self.button_box.setStyleSheet("""
+            QDialogButtonBox {
+                padding: 8px;
+                spacing: 8px;
+            }
+            QPushButton {
+                min-width: 90px;
+                padding: 4px 12px;
+            }
+        """)
 
     # _setup_signal_coordinator removed - SmartPreviewCoordinator handles all coordination
 

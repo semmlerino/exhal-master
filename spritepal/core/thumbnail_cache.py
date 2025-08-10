@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from PyQt6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap
 
 from utils.logging_config import get_logger
 

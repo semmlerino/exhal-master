@@ -20,9 +20,9 @@ from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 
 
 def is_headless_environment() -> bool:
@@ -172,7 +172,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         position_slider = browse_tab.position_slider
         
         # Verify slider is real Qt widget
-        from PyQt6.QtWidgets import QSlider
+        from PySide6.QtWidgets import QSlider
         assert isinstance(position_slider, QSlider)
 
         # Test real slider interaction
@@ -180,7 +180,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         assert isinstance(initial_offset, int)
         
         # Simulate user moving slider
-        new_slider_value = position_slider.value() + 100
+        new_slider_value = position_slider + 100
         position_slider.setValue(new_slider_value)
         qtbot.wait(wait_timeout // 20)  # Allow signal processing
         
@@ -414,7 +414,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         qtbot.addWidget(dialog)
         
         # Verify dialog is in main thread
-        from PyQt6.QtCore import QThread
+        from PySide6.QtCore import QThread
         assert dialog.thread() is QThread.currentThread()
         
         # Verify all components are in main thread

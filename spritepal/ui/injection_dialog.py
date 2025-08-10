@@ -6,11 +6,13 @@ Allows users to configure sprite injection parameters
 import os
 from typing import Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QDialogButtonBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -83,8 +85,8 @@ class InjectionDialog(TabbedDialog):
             parent=parent,
             title="Inject Sprite",
             modal=True,
-            size=(900, 600),
-            min_size=(900, 600),
+            size=(1400, 900),  # Increased default size for better layout
+            min_size=(1200, 800),  # Increased minimum size
             with_status_bar=False,
             default_tab=1,  # ROM injection tab as default
         )
@@ -99,6 +101,43 @@ class InjectionDialog(TabbedDialog):
         # Create shared preview widget
         self.preview_widget = SpritePreviewWidget("Sprite to Inject")
 
+        # Create shared sprite file selector at dialog level
+        self.sprite_file_selector = FileSelector(
+            label_text="Sprite File:",
+            placeholder="Select sprite file to inject...",
+            browse_text="Browse...",
+            mode="open",
+            file_filter="PNG Files (*.png);;All Files (*.*)",
+            read_only=False
+        )
+        self.sprite_file_selector.set_path(self.sprite_path)
+        self.sprite_file_selector.path_changed.connect(self._on_sprite_path_changed)
+        self.sprite_file_selector.setToolTip("Select the PNG sprite file to inject into VRAM or ROM")
+
+        # Add sprite selector above tabs by wrapping tab widget
+        # Get the tab widget that was created by parent
+        tab_widget = self._main_tab_widget
+
+        # Create container to hold sprite selector and tab widget
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(8)
+
+        # Add sprite selector at dialog level
+        sprite_group = QGroupBox("Sprite to Inject")
+        sprite_layout = QVBoxLayout()
+        sprite_layout.addWidget(self.sprite_file_selector)
+        sprite_group.setLayout(sprite_layout)
+        container_layout.addWidget(sprite_group)
+
+        # Add tab widget below sprite selector
+        container_layout.addWidget(tab_widget)
+
+        # Replace tab widget with container in main layout
+        self.main_layout.removeWidget(tab_widget)
+        self.main_layout.insertWidget(0, container)
+
         # Create VRAM injection tab
         vram_tab_widget = self._create_vram_tab()
         self.add_tab(vram_tab_widget, "VRAM Injection")
@@ -107,6 +146,9 @@ class InjectionDialog(TabbedDialog):
         rom_tab_widget = self._create_rom_tab()
         self.add_tab(rom_tab_widget, "ROM Injection")
 
+        # Setup keyboard shortcuts
+        self._setup_keyboard_shortcuts()
+
         # Load sprite preview and validate if available
         if self.sprite_path and os.path.exists(self.sprite_path):
             self._load_sprite_preview()
@@ -114,69 +156,109 @@ class InjectionDialog(TabbedDialog):
 
     def _create_vram_tab(self) -> QWidget:
         """Create VRAM injection tab with splitter layout"""
-        # Create splitter for this tab
+        # Create main container for tab
+        container = QWidget(self)
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Sprite selector is now at dialog level, not in tab
+
+        # Create splitter for controls and preview
         splitter = StyledSplitter(Qt.Orientation.Horizontal)
 
         # Create left panel for controls
         left_widget = QWidget(self)
         layout = QVBoxLayout(left_widget)
-
-        # Add sprite file selector
-        self._add_sprite_file_selector(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         # Add VRAM-specific controls
         self._add_vram_controls(layout)
 
-        # Add left panel to splitter
-        splitter.add_widget(left_widget, stretch_factor=1)
+        # Add left panel to splitter with 30% width
+        splitter.add_widget(left_widget, stretch_factor=30)
 
-        # Add shared preview widget to splitter
-        splitter.add_widget(self.preview_widget, stretch_factor=1)
+        # Add shared preview widget to splitter with 70% width
+        splitter.add_widget(self.preview_widget, stretch_factor=70)
 
-        return splitter
+        # Set initial splitter sizes (30/70 ratio)
+        splitter.setSizes([400, 1000])  # Proportional to 1400px total width
+
+        container_layout.addWidget(splitter)
+        return container
 
     def _create_rom_tab(self) -> QWidget:
         """Create ROM injection tab with splitter layout"""
-        # Create splitter for this tab
+        # Create main container for tab
+        container = QWidget(self)
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Sprite selector is now at dialog level, not in tab
+
+        # Create splitter for controls and preview
         splitter = StyledSplitter(Qt.Orientation.Horizontal)
 
         # Create left panel for controls
         left_widget = QWidget(self)
         layout = QVBoxLayout(left_widget)
-
-        # Add sprite file selector
-        self._add_sprite_file_selector(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         # Add ROM-specific controls
         self._add_rom_controls(layout)
 
-        # Add left panel to splitter
-        splitter.add_widget(left_widget, stretch_factor=1)
+        # Add left panel to splitter with 30% width
+        splitter.add_widget(left_widget, stretch_factor=30)
 
-        # Add shared preview widget to splitter
-        splitter.add_widget(self.preview_widget, stretch_factor=1)
+        # Add shared preview widget to splitter with 70% width
+        splitter.add_widget(self.preview_widget, stretch_factor=70)
 
-        return splitter
+        # Set initial splitter sizes (30/70 ratio)
+        splitter.setSizes([400, 1000])  # Proportional to 1400px total width
 
-    def _add_sprite_file_selector(self, layout: QVBoxLayout) -> None:
-        """Add sprite file selector to a tab layout"""
-        sprite_group = QGroupBox("Sprite File", self)
-        sprite_layout = QVBoxLayout()
+        container_layout.addWidget(splitter)
+        return container
 
-        self.sprite_file_selector = FileSelector(
-            label_text="Path:",
-            placeholder="Select sprite file...",
-            browse_text="Browse...",
-            mode="open",
-            file_filter="PNG Files (*.png);;All Files (*.*)",
-            read_only=False
-        )
-        self.sprite_file_selector.set_path(self.sprite_path)
-        self.sprite_file_selector.path_changed.connect(self._on_sprite_path_changed)
+    def _setup_keyboard_shortcuts(self) -> None:
+        """Setup keyboard shortcuts for the dialog"""
+        # Ctrl+S to apply/accept
+        apply_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        apply_shortcut.activated.connect(self.accept)
 
-        sprite_layout.addWidget(self.sprite_file_selector)
-        sprite_group.setLayout(sprite_layout)
-        layout.addWidget(sprite_group)
+        # Escape to cancel
+        escape_shortcut = QShortcut(QKeySequence("Escape"), self)
+        escape_shortcut.activated.connect(self.reject)
+
+        # Tab navigation shortcuts
+        next_tab_shortcut = QShortcut(QKeySequence("Ctrl+Tab"), self)
+        next_tab_shortcut.activated.connect(self._next_tab)
+
+        prev_tab_shortcut = QShortcut(QKeySequence("Ctrl+Shift+Tab"), self)
+        prev_tab_shortcut.activated.connect(self._prev_tab)
+
+        # Update button box if it exists
+        if hasattr(self, 'button_box') and self.button_box:
+            ok_button = self.button_box.button(QDialogButtonBox.StandardButton.Ok)
+            if ok_button:
+                ok_button.setText("&Apply")
+                ok_button.setToolTip("Apply injection settings (Ctrl+S)")
+
+            cancel_button = self.button_box.button(QDialogButtonBox.StandardButton.Cancel)
+            if cancel_button:
+                cancel_button.setToolTip("Cancel without applying changes (Escape)")
+
+    def _next_tab(self) -> None:
+        """Switch to next tab"""
+        if self._tab_widget:
+            current = self._tab_widget.currentIndex()
+            next_index = (current + 1) % self._tab_widget.count()
+            self._tab_widget.setCurrentIndex(next_index)
+
+    def _prev_tab(self) -> None:
+        """Switch to previous tab"""
+        if self._tab_widget:
+            current = self._tab_widget.currentIndex()
+            prev_index = (current - 1) % self._tab_widget.count()
+            self._tab_widget.setCurrentIndex(prev_index)
 
     def _add_vram_controls(self, layout: QVBoxLayout) -> None:
         """Add VRAM-specific controls to layout"""
@@ -187,6 +269,7 @@ class InjectionDialog(TabbedDialog):
         self.extraction_info = QTextEdit()
         self.extraction_info.setMaximumHeight(80)
         self.extraction_info.setReadOnly(True)
+        self.extraction_info.setToolTip("Information about the original sprite extraction")
         extraction_layout.addWidget(self.extraction_info)
 
         self.extraction_group.setLayout(extraction_layout)
@@ -205,6 +288,7 @@ class InjectionDialog(TabbedDialog):
             file_filter="VRAM Files (*.dmp *.bin);;All Files (*.*)"
         )
         self.input_vram_selector.path_changed.connect(self._on_input_vram_changed)
+        self.input_vram_selector.setToolTip("Select the VRAM dump file to inject the sprite into")
 
         vram_layout.addWidget(self.input_vram_selector)
 
@@ -217,6 +301,7 @@ class InjectionDialog(TabbedDialog):
             file_filter="VRAM Files (*.dmp);;All Files (*.*)"
         )
         self.output_vram_selector.path_changed.connect(self._on_output_vram_changed)
+        self.output_vram_selector.setToolTip("Specify where to save the modified VRAM with the injected sprite")
 
         vram_layout.addWidget(self.output_vram_selector)
 
@@ -234,6 +319,7 @@ class InjectionDialog(TabbedDialog):
             decimal_width=60
         )
         self.vram_offset_input.text_changed.connect(self._on_vram_offset_changed)
+        self.vram_offset_input.setToolTip("Memory offset in VRAM where the sprite will be injected (e.g., 0xC000)")
         offset_row.set_input_widget(self.vram_offset_input)
 
         vram_layout.addWidget(offset_row)
@@ -259,6 +345,7 @@ class InjectionDialog(TabbedDialog):
             file_filter="SNES ROM Files (*.sfc *.smc);;All Files (*.*)"
         )
         self.input_rom_selector.path_changed.connect(self._on_input_rom_changed)
+        self.input_rom_selector.setToolTip("Select the ROM file to inject the sprite into")
 
         rom_layout.addWidget(self.input_rom_selector)
 
@@ -271,6 +358,7 @@ class InjectionDialog(TabbedDialog):
             file_filter="SNES ROM Files (*.sfc *.smc);;All Files (*.*)"
         )
         self.output_rom_selector.path_changed.connect(self._on_output_rom_changed)
+        self.output_rom_selector.setToolTip("Specify where to save the modified ROM with the injected sprite")
 
         rom_layout.addWidget(self.output_rom_selector)
 
@@ -285,6 +373,7 @@ class InjectionDialog(TabbedDialog):
         self.sprite_location_combo.currentIndexChanged.connect(
             self._on_sprite_location_changed
         )
+        self.sprite_location_combo.setToolTip("Select a predefined sprite location in the ROM")
         location_layout.addWidget(self.sprite_location_combo)
 
         location_layout.addWidget(QLabel("or Custom Offset:", self))
@@ -295,6 +384,7 @@ class InjectionDialog(TabbedDialog):
             input_width=100
         )
         self.rom_offset_input.text_changed.connect(self._on_rom_offset_changed)
+        self.rom_offset_input.setToolTip("Enter a custom ROM offset for sprite injection (e.g., 0x8000)")
         location_layout.addWidget(self.rom_offset_input)
 
         location_layout.addStretch()
@@ -303,6 +393,7 @@ class InjectionDialog(TabbedDialog):
         # Compression options
         compression_layout = QHBoxLayout()
         self.fast_compression_check = QCheckBox("Fast compression (larger file size)", self)
+        self.fast_compression_check.setToolTip("Use faster compression algorithm that may result in larger file size")
         compression_layout.addWidget(self.fast_compression_check)
         compression_layout.addStretch()
         rom_layout.addLayout(compression_layout)
@@ -317,6 +408,7 @@ class InjectionDialog(TabbedDialog):
         self.rom_info_text = QTextEdit()
         self.rom_info_text.setMaximumHeight(100)
         self.rom_info_text.setReadOnly(True)
+        self.rom_info_text.setToolTip("Information about the selected ROM file")
         rom_info_layout.addWidget(self.rom_info_text)
 
         self.rom_info_group.setLayout(rom_info_layout)

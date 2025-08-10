@@ -5,9 +5,9 @@ Compact version of SpritePreviewWidget optimized for grid layouts.
 
 from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from utils.logging_config import get_logger
 
@@ -18,9 +18,9 @@ class SpriteThumbnailWidget(QWidget):
     """Compact sprite thumbnail for gallery display."""
 
     # Signals
-    clicked = pyqtSignal(int)  # Emits offset when clicked
-    double_clicked = pyqtSignal(int)  # Emits offset when double-clicked
-    selected = pyqtSignal(bool)  # Emits selection state
+    clicked = Signal(int)  # Emits offset when clicked
+    double_clicked = Signal(int)  # Emits offset when double-clicked
+    selected = Signal(bool)  # Emits selection state
 
     def __init__(
         self,

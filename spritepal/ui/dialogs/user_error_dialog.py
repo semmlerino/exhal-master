@@ -5,8 +5,8 @@ Provides clear error messages and recovery suggestions
 
 from typing import ClassVar
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ui.components import BaseDialog
+from ui.components.base import BaseDialog
 from ui.styles import (
     get_bold_text_style,
     get_dialog_button_box_style,

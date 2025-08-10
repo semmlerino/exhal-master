@@ -10,7 +10,7 @@ import tempfile
 from contextlib import contextmanager
 from typing import Any
 
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog
 
 
 # Systematic pytest markers applied based on test content analysis

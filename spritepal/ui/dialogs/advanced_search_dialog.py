@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from PyQt6.QtCore import QMutex, Qt, QThread, QWaitCondition, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QPixmap, QShortcut
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QMutex, Qt, QThread, QWaitCondition, Signal
+from PySide6.QtGui import QKeySequence, QPixmap, QShortcut
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -78,16 +78,16 @@ class SearchHistoryEntry:
 class SearchWorker(QThread):
     """Worker thread for background searching."""
 
-    progress = pyqtSignal(int, int)  # current, total
-    result_found = pyqtSignal(SearchResult)
-    search_complete = pyqtSignal(list)  # all results
-    error = pyqtSignal(str)
-    operation_finished = pyqtSignal(bool, str)  # success, message - for decorator compatibility
+    progress = Signal(int, int)  # current, total
+    result_found = Signal(SearchResult)
+    search_complete = Signal(list)  # all results
+    error = Signal(str)
+    operation_finished = Signal(bool, str)  # success, message - for decorator compatibility
 
     # Thread-safe user interaction signals
-    input_requested = pyqtSignal(str, str)  # title, prompt
-    question_requested = pyqtSignal(str, str)  # title, question
-    info_requested = pyqtSignal(str, str)  # title, message
+    input_requested = Signal(str, str)  # title, prompt
+    question_requested = Signal(str, str)  # title, question
+    info_requested = Signal(str, str)  # title, message
 
     def __init__(self, search_type: str, params: dict):
         super().__init__()
@@ -859,9 +859,9 @@ class AdvancedSearchDialog(QDialog):
     """
 
     # Signals
-    sprite_selected = pyqtSignal(int)  # Offset of selected sprite
-    search_started = pyqtSignal()
-    search_completed = pyqtSignal(int)  # Number of results
+    sprite_selected = Signal(int)  # Offset of selected sprite
+    search_started = Signal()
+    search_completed = Signal(int)  # Number of results
 
     def __init__(self, rom_path: str, parent=None):
         super().__init__(parent)
@@ -1288,10 +1288,10 @@ class AdvancedSearchDialog(QDialog):
 
         # Create filters
         filters = SearchFilter(
-            min_size=self.min_size_spin.value(),
-            max_size=self.max_size_spin.value(),
-            min_tiles=self.min_tiles_spin.value(),
-            max_tiles=self.max_tiles_spin.value(),
+            min_size=self.min_size_spin,
+            max_size=self.max_size_spin,
+            min_tiles=self.min_tiles_spin,
+            max_tiles=self.max_tiles_spin,
             alignment=self._get_alignment_value(),
             include_compressed=self.compressed_check.isChecked(),
             include_uncompressed=self.uncompressed_check.isChecked(),
@@ -1303,8 +1303,8 @@ class AdvancedSearchDialog(QDialog):
             "rom_path": self.rom_path,
             "start_offset": start,
             "end_offset": end,
-            "num_workers": self.workers_spin.value(),
-            "step_size": self.step_size_spin.value(),
+            "num_workers": self.workers_spin,
+            "step_size": self.step_size_spin,
             "filters": filters
         }
 
@@ -1353,7 +1353,7 @@ class AdvancedSearchDialog(QDialog):
             return
 
         # Get similarity threshold
-        similarity_threshold = self.similarity_slider.value()  # Already a percentage
+        similarity_threshold = self.similarity_slider  # Already a percentage
 
         # Get search scope
         search_scope = self.visual_scope_combo.currentText()
@@ -1436,8 +1436,8 @@ class AdvancedSearchDialog(QDialog):
             "pattern_type": pattern_type,
             "case_sensitive": case_sensitive,
             "alignment": alignment,
-            "context_bytes": self.context_size_spin.value(),
-            "max_results": self.max_results_spin.value(),
+            "context_bytes": self.context_size_spin,
+            "max_results": self.max_results_spin,
             "whole_word": self.whole_word_check.isChecked(),
             "operation": self.pattern_operation_combo.currentText()
         }
@@ -1622,7 +1622,7 @@ class AdvancedSearchDialog(QDialog):
 
     def _handle_worker_input_request(self, title: str, prompt: str):
         """Handle input request from worker thread (runs in main thread)."""
-        from PyQt6.QtWidgets import QInputDialog
+        from PySide6.QtWidgets import QInputDialog
 
         try:
             text, ok = QInputDialog.getText(self, title, prompt, text="0x")
@@ -1635,7 +1635,7 @@ class AdvancedSearchDialog(QDialog):
 
     def _handle_worker_question_request(self, title: str, question: str):
         """Handle question request from worker thread (runs in main thread)."""
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         try:
             reply = QMessageBox.question(
@@ -1653,7 +1653,7 @@ class AdvancedSearchDialog(QDialog):
 
     def _handle_worker_info_request(self, title: str, message: str):
         """Handle info request from worker thread (runs in main thread)."""
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         try:
             QMessageBox.information(self, title, message)
@@ -1686,8 +1686,8 @@ class AdvancedSearchDialog(QDialog):
         """Browse for reference sprite (thread-safe)."""
         # For now, use a simple dialog to input an offset
         # In a full implementation, this could open a sprite browser
-        from PyQt6.QtCore import QThread
-        from PyQt6.QtWidgets import QInputDialog
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QInputDialog
 
         # Check if we're in the main thread
         if QThread.currentThread() != self.thread():
@@ -1810,8 +1810,8 @@ class AdvancedSearchDialog(QDialog):
 
     def _offer_to_build_similarity_index(self):
         """Offer to build similarity index if it doesn't exist (thread-safe)."""
-        from PyQt6.QtCore import QThread
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QMessageBox
 
         # Check if we're in the main thread
         if QThread.currentThread() != self.thread():
@@ -1840,8 +1840,8 @@ class AdvancedSearchDialog(QDialog):
         """Build similarity index for the current ROM (thread-safe)."""
         # This would be implemented to scan the ROM and build the index
         # For now, show a placeholder message
-        from PyQt6.QtCore import QThread
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QMessageBox
 
         # Check if we're in the main thread
         if QThread.currentThread() != self.thread():

@@ -19,13 +19,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QEventLoop,
     QObject,
     QThread,
     QTimer,
+    Signal,
     pyqtBoundSignal,
-    pyqtSignal,
 )
 
 from .qt_real_testing import EventLoopHelper
@@ -53,7 +53,7 @@ class SignalSpy:
     Replaces MockSignal with real signal monitoring capabilities.
     """
 
-    def __init__(self, signal: pyqtSignal | pyqtBoundSignal, signal_name: str = "signal"):
+    def __init__(self, signal: Signal | pyqtBoundSignal, signal_name: str = "signal"):
         """
         Initialize signal spy.
 
@@ -222,7 +222,7 @@ class MultiSignalSpy:
         self.spies: dict[str, SignalSpy] = {}
         self.all_emissions: list[SignalEmission] = []
 
-    def add_signal(self, signal: pyqtSignal | pyqtBoundSignal, name: str) -> SignalSpy:
+    def add_signal(self, signal: Signal | pyqtBoundSignal, name: str) -> SignalSpy:
         """
         Add a signal to monitor.
 
@@ -336,7 +336,7 @@ class AsyncSignalTester:
     @staticmethod
     @contextmanager
     def wait_for_signal(
-        signal: pyqtSignal | pyqtBoundSignal,
+        signal: Signal | pyqtBoundSignal,
         timeout_ms: int = 1000
     ) -> Generator[list[Any], None, None]:
         """
@@ -373,7 +373,7 @@ class AsyncSignalTester:
 
     @staticmethod
     def emit_delayed(
-        signal: pyqtSignal | pyqtBoundSignal,
+        signal: Signal | pyqtBoundSignal,
         delay_ms: int,
         *args
     ) -> QTimer:
@@ -396,7 +396,7 @@ class AsyncSignalTester:
 
     @staticmethod
     def emit_sequence(
-        signals: list[tuple[pyqtSignal | pyqtBoundSignal, tuple[Any, ...]]],
+        signals: list[tuple[Signal | pyqtBoundSignal, tuple[Any, ...]]],
         interval_ms: int = 100
     ) -> list[QTimer]:
         """
@@ -424,7 +424,7 @@ class CrossThreadSignalTester:
 
     @staticmethod
     def verify_thread_safety(
-        signal: pyqtSignal | pyqtBoundSignal,
+        signal: Signal | pyqtBoundSignal,
         emit_in_thread: bool = True,
         connect_in_thread: bool = False
     ) -> bool:
@@ -442,7 +442,7 @@ class CrossThreadSignalTester:
         result = {"success": False, "emissions": 0}
 
         class Worker(QObject):
-            test_signal = pyqtSignal(int)
+            test_signal = Signal(int)
 
             def __init__(self):
                 super().__init__()
@@ -484,7 +484,7 @@ class CrossThreadSignalTester:
         Create an object that emits signals from a worker thread.
 
         Args:
-            signal_type: Signal type to use (default: pyqtSignal(int))
+            signal_type: Signal type to use (default: Signal(int))
 
         Returns:
             Tuple of (emitter object, thread)
@@ -493,7 +493,7 @@ class CrossThreadSignalTester:
             if signal_type:
                 signal = signal_type
             else:
-                signal = pyqtSignal(int)
+                signal = Signal(int)
 
             def emit_value(self, value):
                 self.signal.emit(value)

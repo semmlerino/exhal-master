@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PIL import Image
-from PyQt6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap
 from utils.preview_generator import (
 # Test characteristics: Timer usage
 pytestmark = [

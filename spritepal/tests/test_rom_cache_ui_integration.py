@@ -10,8 +10,8 @@ import time
 from unittest.mock import patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel
 
 # Managers are handled by conftest.py
 from core.rom_extractor import ROMExtractor

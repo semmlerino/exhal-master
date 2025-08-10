@@ -147,7 +147,7 @@ class TestRowArrangementDialogMigration:
         qtbot.addWidget(dialog)
 
         # Main splitter should be vertical
-        from PyQt6.QtCore import Qt
+        from PySide6.QtCore import Qt
         assert dialog.main_splitter.orientation() == Qt.Orientation.Vertical
 
         # Handle width should be set correctly

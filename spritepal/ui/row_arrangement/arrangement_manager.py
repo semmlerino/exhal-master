@@ -2,17 +2,17 @@
 Row arrangement state management
 """
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class ArrangementManager(QObject):
     """Manages the state of arranged sprite rows"""
 
     # Signals
-    arrangement_changed = pyqtSignal()  # Emitted when arrangement changes
-    row_added = pyqtSignal(int)  # Emitted when a row is added
-    row_removed = pyqtSignal(int)  # Emitted when a row is removed
-    arrangement_cleared = pyqtSignal()  # Emitted when arrangement is cleared
+    arrangement_changed = Signal()  # Emitted when arrangement changes
+    row_added = Signal(int)  # Emitted when a row is added
+    row_removed = Signal(int)  # Emitted when a row is removed
+    arrangement_cleared = Signal()  # Emitted when arrangement is cleared
 
     def __init__(self) -> None:
         super().__init__()

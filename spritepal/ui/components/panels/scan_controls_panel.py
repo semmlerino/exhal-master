@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
 
-from PyQt6.QtCore import QMutex, QMutexLocker, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QMutex, QMutexLocker, Signal
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -37,13 +37,13 @@ class ScanControlsPanel(QWidget):
     """Panel for controlling ROM scanning operations"""
 
     # Signals
-    sprite_found = pyqtSignal(int, float)  # offset, quality
-    scan_status_changed = pyqtSignal(str)  # status message
-    progress_update = pyqtSignal(int, int)  # current_offset, progress_percentage
-    scan_started = pyqtSignal()
-    scan_finished = pyqtSignal()
-    partial_scan_detected = pyqtSignal(dict)  # cache info for resume dialog
-    sprites_detected = pyqtSignal(list)  # List of (offset, quality) tuples for region detection
+    sprite_found = Signal(int, float)  # offset, quality
+    scan_status_changed = Signal(str)  # status message
+    progress_update = Signal(int, int)  # current_offset, progress_percentage
+    scan_started = Signal()
+    scan_finished = Signal()
+    partial_scan_detected = Signal(dict)  # cache info for resume dialog
+    sprites_detected = Signal(list)  # List of (offset, quality) tuples for region detection
 
     def __init__(self, parent: QWidget | None = None):
         # Step 1: Declare all instance variables with type hints

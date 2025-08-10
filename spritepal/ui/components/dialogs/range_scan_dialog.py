@@ -4,7 +4,7 @@ Range Scan Configuration Dialog
 Dialog for selecting range scanning parameters for ROM sprite exploration.
 """
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,

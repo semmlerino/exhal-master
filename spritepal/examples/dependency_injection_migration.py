@@ -9,7 +9,7 @@ The migration can be done gradually without breaking existing code.
 
 from unittest.mock import Mock
 
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtWidgets import QDialog, QWidget
 
 from core.managers import (  # This now supports contexts!
     get_extraction_manager,

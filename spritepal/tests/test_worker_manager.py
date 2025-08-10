@@ -2,7 +2,7 @@
 Test the WorkerManager utility class.
 """
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 from ui.common import WorkerManager
 from ui.common.timing_constants import (
 # Test characteristics: Real GUI components requiring display, Thread safety concerns
@@ -27,7 +27,7 @@ pytestmark = [
 class DummyWorker(QThread):
     """Simple test worker that can be controlled"""
 
-    finished_work = pyqtSignal()
+    finished_work = Signal()
 
     def __init__(self):
         super().__init__()

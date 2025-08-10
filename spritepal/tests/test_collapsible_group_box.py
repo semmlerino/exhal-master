@@ -9,9 +9,9 @@ and Qt object deletion error handling.
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import QPropertyAnimation
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QLabel, QVBoxLayout
+from PySide6.QtCore import QPropertyAnimation
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QLabel, QVBoxLayout
 
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 

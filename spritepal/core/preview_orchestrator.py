@@ -22,10 +22,10 @@ from enum import Enum, auto
 from queue import Empty, PriorityQueue
 from typing import TYPE_CHECKING, Any, Callable
 
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 
 if TYPE_CHECKING:
-    from PyQt6.QtGui import QPixmap
+    from PySide6.QtGui import QPixmap
 
     from core.async_rom_cache import AsyncROMCache
     from core.preview_worker_pool import PreviewWorkerPool
@@ -153,10 +153,10 @@ class PreviewOrchestrator(QObject):
     """
 
     # Public signals
-    preview_ready = pyqtSignal(str, object)  # request_id, PreviewData
-    preview_loading = pyqtSignal(str, str)   # request_id, message
-    preview_error = pyqtSignal(str, object)  # request_id, PreviewError
-    metrics_updated = pyqtSignal(object)     # PreviewMetrics
+    preview_ready = Signal(str, object)  # request_id, PreviewData
+    preview_loading = Signal(str, str)   # request_id, message
+    preview_error = Signal(str, object)  # request_id, PreviewError
+    metrics_updated = Signal(object)     # PreviewMetrics
 
     def __init__(self, parent: QObject | None = None):
         """Initialize the preview orchestrator"""

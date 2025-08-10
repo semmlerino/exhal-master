@@ -10,9 +10,9 @@ try:
 except ImportError:
     from typing_extensions import override
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtSignal
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Signal
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -46,7 +46,7 @@ class CollapsibleGroupBox(QFrame):
     """
 
     # Signals
-    collapsed: pyqtSignal = pyqtSignal(bool)  # Emitted when collapse state changes
+    collapsed: Signal = Signal(bool)  # Emitted when collapse state changes
 
     def __init__(
         self,

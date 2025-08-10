@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
 
 from utils.logging_config import get_logger
 
@@ -23,8 +23,8 @@ logger = get_logger(__name__)
 class SimplePreviewWorker(QThread):
     """Simple one-shot preview worker that generates a preview and exits."""
 
-    preview_ready = pyqtSignal(bytes, int, int, str)  # tile_data, width, height, name
-    preview_error = pyqtSignal(str)
+    preview_ready = Signal(bytes, int, int, str)  # tile_data, width, height, name
+    preview_error = Signal(str)
 
     def __init__(self, rom_path: str, offset: int, extractor, parent=None):
         super().__init__(parent)
@@ -109,9 +109,9 @@ class SimplePreviewCoordinator(QObject):
     """
 
     # Signals for preview updates
-    preview_ready = pyqtSignal(bytes, int, int, str)  # tile_data, width, height, name
-    preview_cached = pyqtSignal(bytes, int, int, str)  # For compatibility
-    preview_error = pyqtSignal(str)
+    preview_ready = Signal(bytes, int, int, str)  # tile_data, width, height, name
+    preview_cached = Signal(bytes, int, int, str)  # For compatibility
+    preview_error = Signal(str)
 
     def __init__(self, parent: QObject | None = None, rom_cache: ROMCache | None = None):
         super().__init__(parent)

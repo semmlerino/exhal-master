@@ -10,9 +10,9 @@ import time
 from contextlib import contextmanager, suppress
 from typing import Any, Callable
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from PyQt6.QtTest import QSignalSpy
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtTest import QSignalSpy
+from PySide6.QtWidgets import QDialog, QWidget
 
 from .qt_application_factory import TestApplicationFactory
 
@@ -100,7 +100,7 @@ class QtTestingFramework:
             "child_id": id(child),
         }
 
-    def validate_signal_behavior(self, signal: pyqtSignal, expected_connections: int | None = None) -> dict[str, Any]:
+    def validate_signal_behavior(self, signal: Signal, expected_connections: int | None = None) -> dict[str, Any]:
         """
         Validate Qt signal behavior.
 
@@ -111,7 +111,7 @@ class QtTestingFramework:
         Returns:
             Dictionary with validation results
         """
-        # Note: PyQt6 doesn't expose connection count directly,
+        # Note: PySide6 doesn't expose connection count directly,
         # so we validate what we can
         return {
             "signal_type": type(signal).__name__,
@@ -120,7 +120,7 @@ class QtTestingFramework:
             "can_emit": True,     # We'll test this by emitting
         }
 
-    def wait_for_signal(self, signal: pyqtSignal, timeout_ms: int = 5000) -> bool:
+    def wait_for_signal(self, signal: Signal, timeout_ms: int = 5000) -> bool:
         """
         Wait for a signal to be emitted.
 
@@ -202,7 +202,7 @@ class WidgetTestContext:
 
         # Set Qt application as parent if no parent specified
         # Note: QMainWindow should not have a parent (it's a top-level window)
-        from PyQt6.QtWidgets import QMainWindow
+        from PySide6.QtWidgets import QMainWindow
         if self.widget.parent() is None and not isinstance(self.widget, QMainWindow):
             self.widget.setParent(self.framework.qt_app)
 
@@ -335,13 +335,13 @@ class WorkerTestContext:
                 del spy
         self._signal_spies.clear()
 
-    def create_signal_spy(self, signal: pyqtSignal) -> QSignalSpy:
+    def create_signal_spy(self, signal: Signal) -> QSignalSpy:
         """Create a signal spy for the worker."""
         spy = QSignalSpy(signal)
         self._signal_spies.append(spy)
         return spy
 
-    def wait_for_worker_signal(self, signal: pyqtSignal, timeout_ms: int = 5000) -> bool:
+    def wait_for_worker_signal(self, signal: Signal, timeout_ms: int = 5000) -> bool:
         """Wait for a worker signal to be emitted."""
         spy = self.create_signal_spy(signal)
         return spy.wait(timeout_ms)

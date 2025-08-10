@@ -12,7 +12,7 @@ except ImportError:
     from typing_extensions import override
 
 from PIL import Image
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,
@@ -266,8 +266,8 @@ class SpriteInjector:
 class InjectionWorker(QThread):
     """Worker thread for sprite injection process"""
 
-    progress: pyqtSignal = pyqtSignal(str)  # status message
-    injection_finished: pyqtSignal = pyqtSignal(bool, str)  # success, message
+    progress: Signal = Signal(str)  # status message
+    injection_finished: Signal = Signal(bool, str)  # success, message
 
     def __init__(
         self,

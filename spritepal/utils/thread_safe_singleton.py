@@ -8,8 +8,8 @@ Ensures proper synchronization and Qt thread affinity checking.
 import threading
 from typing import Callable, Generic, TypeVar
 
-from PyQt6.QtCore import QObject, QThread
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread
+from PySide6.QtWidgets import QApplication
 
 try:
     from utils.logging_config import get_logger
@@ -151,7 +151,7 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
     3. Proper cleanup of Qt objects
 
     Example:
-        from PyQt6.QtWidgets import QDialog
+        from PySide6.QtWidgets import QDialog
 
         class MyDialog(QDialog):
             def __init__(self, parent=None):

@@ -4,7 +4,7 @@ Status bar management for MainWindow
 
 import logging
 
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
 
 from ui.styles import get_muted_text_style
 from utils.rom_cache import get_rom_cache

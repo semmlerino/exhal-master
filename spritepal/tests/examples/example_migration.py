@@ -11,8 +11,8 @@ Run with: pytest tests/examples/example_migration.py -v
 from unittest.mock import Mock, cast
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QSignalSpy
 
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager

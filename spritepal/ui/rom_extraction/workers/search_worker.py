@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import handle_worker_errors
@@ -18,10 +18,10 @@ logger = get_logger(__name__)
 class SpriteSearchWorker(QThread):
     """Worker thread for searching next/previous valid sprite"""
 
-    sprite_found = pyqtSignal(int, float)  # offset, quality
-    search_complete = pyqtSignal(bool)  # found
-    error = pyqtSignal(str, Exception)  # error message, exception
-    progress = pyqtSignal(int, int)  # current, total
+    sprite_found = Signal(int, float)  # offset, quality
+    search_complete = Signal(bool)  # found
+    error = Signal(str, Exception)  # error message, exception
+    progress = Signal(int, int)  # current, total
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
                  direction: int, extractor: "ROMExtractor", parent=None):

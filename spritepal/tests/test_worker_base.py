@@ -10,7 +10,7 @@ emission, cancellation/pause mechanisms, and error handling.
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from core.managers.base_manager import BaseManager
 from core.workers.base import BaseWorker, ManagedWorker
@@ -348,7 +348,7 @@ class TestManagedWorker:
 @pytest.fixture
 def qtbot():
     """Provide qtbot for Qt testing."""
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if app is None:

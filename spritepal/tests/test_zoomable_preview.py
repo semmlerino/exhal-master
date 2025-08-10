@@ -8,8 +8,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PIL import Image
-from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QKeyEvent, QMouseEvent, QPixmap
 
 # Add parent directories to path
 # Systematic pytest markers applied based on test content analysis

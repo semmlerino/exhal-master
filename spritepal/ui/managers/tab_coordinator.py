@@ -4,8 +4,8 @@ Tab coordination and switching logic for MainWindow
 
 from typing import TYPE_CHECKING, Protocol
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QTabWidget
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QTabWidget
 
 if TYPE_CHECKING:
     from ui.extraction_panel import ExtractionPanel
@@ -38,7 +38,7 @@ class TabCoordinator(QObject):
     """Coordinates tab switching and state synchronization"""
 
     # Signals
-    tab_changed = pyqtSignal(int)  # tab index
+    tab_changed = Signal(int)  # tab index
 
     def __init__(
         self,

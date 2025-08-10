@@ -9,9 +9,9 @@ from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
@@ -106,16 +106,53 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         cls._destroyed = False
 
         # Create new instance with None as parent to avoid widget hierarchy contamination
-        instance = UnifiedManualOffsetDialog(None)
-        cls._creator_panel = creator_panel
+        try:
+            logger.debug("Creating UnifiedManualOffsetDialog instance...")
+            instance = UnifiedManualOffsetDialog(None)
+            cls._creator_panel = creator_panel
 
-        logger.debug(f"New dialog created with ID: {getattr(instance, '_debug_id', 'Unknown')}")
-
-        # Connect cleanup signals
-        instance.finished.connect(cls._on_dialog_closed)
-        instance.rejected.connect(cls._on_dialog_closed)
-        # Also connect destroyed signal for ultimate cleanup
-        instance.destroyed.connect(cls._on_dialog_destroyed)
+            logger.debug(f"New dialog created with ID: {getattr(instance, '_debug_id', 'Unknown')}")
+            
+            # Test if the dialog object is still valid
+            logger.warning(f"DEBUGGING: Dialog object type: {type(instance)}")
+            logger.warning(f"DEBUGGING: Dialog isVisible(): {instance.isVisible()}")
+            logger.warning(f"DEBUGGING: Dialog windowTitle(): {instance.windowTitle()}")
+            
+            # Try to access the finished signal to see if it exists
+            logger.warning("DEBUGGING: About to test signal access...")
+            try:
+                signal_obj = instance.finished
+                logger.warning(f"DEBUGGING: Successfully accessed finished signal: {signal_obj}")
+            except Exception as e:
+                logger.error(f"DEBUGGING: Cannot access finished signal: {e}")
+            
+            # Defer signal connection until dialog is shown to avoid Qt race condition
+            logger.debug("Deferring signal connection until dialog is shown...")
+            
+            def _connect_signals_when_shown():
+                """Connect signals after dialog is fully shown and ready."""
+                try:
+                    logger.debug("Connecting Qt dialog signals via QtDialogSignalManager...")
+                    # Connect to QtDialogSignalManager instead of corrupted inherited signals
+                    qt_signal_manager = instance.get_component("qt_dialog_signals")
+                    if qt_signal_manager:
+                        qt_signal_manager.finished.connect(cls._on_dialog_closed)
+                        qt_signal_manager.rejected.connect(cls._on_dialog_closed)
+                        qt_signal_manager.destroyed.connect(cls._on_dialog_destroyed)
+                        logger.debug("All Qt dialog signals connected successfully via QtDialogSignalManager")
+                    else:
+                        logger.error("QtDialogSignalManager component not found - cannot connect Qt dialog signals")
+                except Exception as e:
+                    logger.error(f"Failed to connect signals after show: {e}")
+            
+            # Store the connection function to call after show
+            instance._deferred_signal_connection = _connect_signals_when_shown
+            
+        except Exception as e:
+            logger.error(f"Error during dialog creation or signal connection: {e}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise
 
         return instance
 
@@ -212,12 +249,12 @@ class ROMExtractionPanel(QWidget):
     """Panel for ROM-based sprite extraction"""
 
     # Signals
-    files_changed = pyqtSignal()
-    extraction_ready = pyqtSignal(bool)
-    rom_extraction_requested = pyqtSignal(
+    files_changed = Signal()
+    extraction_ready = Signal(bool)
+    rom_extraction_requested = Signal(
         str, int, str, str
     )  # rom_path, offset, output_base, sprite_name
-    output_name_changed = pyqtSignal(str)  # Emit when output name changes in ROM panel
+    output_name_changed = Signal(str)  # Emit when output name changes in ROM panel
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -579,12 +616,34 @@ class ROMExtractionPanel(QWidget):
         dialog = ManualOffsetDialogSingleton.get_dialog(self)
         logger.warning(f"[DEBUG] Got dialog: {dialog} (ID: {getattr(dialog, '_debug_id', 'Unknown')})")
 
-        # Connect signals if not already connected (singleton may be reused)
-        if not hasattr(dialog, "_signals_connected"):
-            dialog.offset_changed.connect(self._on_dialog_offset_changed)
-            dialog.sprite_found.connect(self._on_dialog_sprite_found)
-            dialog._signals_connected = True
-            logger.debug("Connected signals to ManualOffsetDialog singleton instance")
+        # Defer custom signal connections to avoid Qt timing issues
+        if not hasattr(dialog, "_custom_signals_connected"):
+            def _connect_custom_signals():
+                """Connect custom dialog signals after dialog is shown."""
+                try:
+                    logger.debug("Connecting custom dialog signals via DialogSignalManager...")
+                    # Connect to DialogSignalManager instead of dialog signals
+                    signal_manager = dialog.get_component("dialog_signals")
+                    if signal_manager:
+                        signal_manager.offset_changed.connect(self._on_dialog_offset_changed)
+                        signal_manager.sprite_found.connect(self._on_dialog_sprite_found)
+                        dialog._custom_signals_connected = True
+                        logger.debug("Custom dialog signals connected successfully via DialogSignalManager")
+                    else:
+                        logger.error("DialogSignalManager component not found - cannot connect custom signals")
+                except Exception as e:
+                    logger.error(f"Failed to connect custom dialog signals: {e}")
+            
+            # Add to existing deferred signal connection or create new one
+            existing_deferred = getattr(dialog, '_deferred_signal_connection', None)
+            if existing_deferred:
+                # Chain the custom signal connection with existing deferred connection
+                def _combined_deferred():
+                    existing_deferred()
+                    _connect_custom_signals()
+                dialog._deferred_signal_connection = _combined_deferred
+            else:
+                dialog._deferred_signal_connection = _connect_custom_signals
 
         # Update dialog with current ROM data every time it's opened
         dialog.set_rom_data(
@@ -602,6 +661,13 @@ class ROMExtractionPanel(QWidget):
             dialog.activateWindow()  # And activate to ensure focus
             # Process events to ensure the show takes effect immediately
             QApplication.processEvents()
+            
+            # Connect deferred signals now that dialog is fully shown
+            if hasattr(dialog, '_deferred_signal_connection'):
+                logger.warning("[DEBUG] Calling deferred signal connection...")
+                dialog._deferred_signal_connection()
+                delattr(dialog, '_deferred_signal_connection')  # Clean up
+            
             logger.warning("[DEBUG] Showed and raised ManualOffsetDialog singleton")
         else:
             # Bring to front if already visible

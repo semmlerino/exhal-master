@@ -208,6 +208,6 @@ class TestInitializationOrder:
             widget = getattr(dialog, attr, None)
             assert widget is not None, f"Widget {attr} is None after initialization"
             # Should be a QWidget subclass, not None
-            from PyQt6.QtWidgets import QWidget
+            from PySide6.QtWidgets import QWidget
             assert isinstance(widget, QWidget), \
                 f"Widget {attr} is {type(widget)}, not a QWidget"

@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.managers import ExtractionManager
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QKeyEvent, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QKeyEvent, QPixmap
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -52,7 +52,7 @@ NAVIGATION_STEP_LARGE = 0x10000
 class SpriteThumbnail(QWidget):
     """A small preview widget for nearby sprites"""
 
-    clicked = pyqtSignal(int)  # Emitted when thumbnail is clicked
+    clicked = Signal(int)  # Emitted when thumbnail is clicked
 
     def __init__(self, offset: int = 0, parent: QWidget | None = None):
         super().__init__(parent)
@@ -149,10 +149,10 @@ class SpriteNavigator(QWidget):
     """
 
     # Signals
-    offset_changed = pyqtSignal(int)  # Emitted when navigation changes offset
-    sprite_selected = pyqtSignal(int, str)  # offset, name when sprite is selected
-    region_changed = pyqtSignal(int)  # Emitted when region selection changes
-    navigation_mode_changed = pyqtSignal(str)  # "manual" or "smart"
+    offset_changed = Signal(int)  # Emitted when navigation changes offset
+    sprite_selected = Signal(int, str)  # offset, name when sprite is selected
+    region_changed = Signal(int)  # Emitted when region selection changes
+    navigation_mode_changed = Signal(str)  # "manual" or "smart"
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

@@ -85,7 +85,7 @@ class TestInfrastructureVerification:
     @pytest.mark.gui
     def test_05_qt_infrastructure(self, qtbot):
         """Verify Qt test infrastructure works"""
-        from PyQt6.QtWidgets import QWidget, QApplication
+        from PySide6.QtWidgets import QWidget, QApplication
         
         # Should have single QApplication
         app = QApplication.instance()

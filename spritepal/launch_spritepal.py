@@ -4,15 +4,44 @@ SpritePal - Modern Sprite Extraction Tool
 Simplifies sprite extraction with automatic palette association
 """
 
+import os
 import sys
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPalette
-from PyQt6.QtWidgets import QApplication
+def _configure_composed_dialogs_early():
+    """Configure composed dialogs VERY EARLY - before any UI imports."""
+    try:
+        import json
+        settings_file = Path(__file__).parent / ".spritepal_settings.json"
+        
+        if settings_file.exists():
+            with settings_file.open("r") as f:
+                settings = json.load(f)
+                
+            # Check experimental settings for composed dialogs
+            use_composed = settings.get("experimental", {}).get("use_composed_dialogs", False)
+            
+            if use_composed:
+                os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "1" 
+            else:
+                os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
+        else:
+            # Default to legacy if no settings file
+            os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
+            
+    except Exception:
+        # Fallback to legacy on any error
+        os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
+
+# Configure composed dialogs VERY EARLY - before any UI imports
+_configure_composed_dialogs_early()
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPalette
+from PySide6.QtWidgets import QApplication
 
 from core.managers import (
     cleanup_managers,
@@ -245,6 +274,8 @@ def main():
     logger = setup_logging()
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Platform: {sys.platform}")
+
+    # Composed dialogs already configured early
 
     # Install global exception handler to catch unhandled crashes
     sys.excepthook = handle_exception

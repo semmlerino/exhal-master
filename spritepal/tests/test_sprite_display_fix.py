@@ -18,9 +18,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QPixmap, QImage, QAction
-from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QMenu
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QPixmap, QImage, QAction
+from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QMenu
 
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from core.default_palette_loader import DefaultPaletteLoader

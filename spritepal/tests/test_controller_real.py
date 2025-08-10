@@ -20,8 +20,8 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtTest import QSignalSpy
 
 from core.controller import ExtractionController
 from tests.infrastructure.real_component_factory import RealComponentFactory
@@ -43,19 +43,19 @@ class MockMainWindow(QObject):
     """
     
     # Define all required signals - these are real Qt signals
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)  # sprite_file
-    arrange_rows_requested = pyqtSignal(str)    # sprite_file  
-    arrange_grid_requested = pyqtSignal(str)    # sprite_file
-    inject_requested = pyqtSignal()
-    offset_changed = pyqtSignal(int)  # For extraction panel offset changes
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)  # sprite_file
+    arrange_rows_requested = Signal(str)    # sprite_file  
+    arrange_grid_requested = Signal(str)    # sprite_file
+    inject_requested = Signal()
+    offset_changed = Signal(int)  # For extraction panel offset changes
     
     def __init__(self):
         super().__init__()
         
         # Create mock extraction panel with the same signal
         class MockExtractionPanel(QObject):
-            offset_changed = pyqtSignal(int)
+            offset_changed = Signal(int)
             
             def __init__(self, parent_signal):
                 super().__init__()

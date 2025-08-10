@@ -11,9 +11,9 @@ try:
 except ImportError:
     from typing_extensions import override
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from utils.logging_config import get_logger
 from utils.sprite_regions import SpriteRegion
@@ -29,7 +29,7 @@ SPRITE_CLEANUP_TARGET = 8000  # Clean down to this many sprites
 class ROMMapWidget(QWidget):
     """Visual representation of ROM with sprite locations"""
 
-    offset_clicked: pyqtSignal = pyqtSignal(int)  # Emitted when user clicks on the ROM map
+    offset_clicked: Signal = Signal(int)  # Emitted when user clicks on the ROM map
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

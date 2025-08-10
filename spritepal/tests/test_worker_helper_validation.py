@@ -4,7 +4,7 @@ Validation tests for worker creation and behavior
 
 import pytest
 from unittest.mock import Mock, patch
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 
 # Test characteristics: Thread safety concerns

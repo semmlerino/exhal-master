@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from core.managers import ExtractionManager, InjectionManager
     from core.managers.factory import ManagerFactory
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from core.managers.base_manager import BaseManager
 from utils.logging_config import get_logger
@@ -239,11 +239,11 @@ class ExtractionWorkerBase(ManagedWorker):
     """
 
     # Extraction-specific signals
-    preview_ready = pyqtSignal(object, int)  # pixmap/image, tile_count
-    preview_image_ready = pyqtSignal(object)  # PIL image for palette application
-    palettes_ready = pyqtSignal(dict)  # palette data
-    active_palettes_ready = pyqtSignal(list)  # active palette indices
-    extraction_finished = pyqtSignal(list)  # list of extracted files
+    preview_ready = Signal(object, int)  # pixmap/image, tile_count
+    preview_image_ready = Signal(object)  # PIL image for palette application
+    palettes_ready = Signal(dict)  # palette data
+    active_palettes_ready = Signal(list)  # active palette indices
+    extraction_finished = Signal(list)  # list of extracted files
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
@@ -259,9 +259,9 @@ class InjectionWorkerBase(ManagedWorker):
     """
 
     # Injection-specific signals
-    progress_percent = pyqtSignal(int)  # Progress percentage (0-100)
-    compression_info = pyqtSignal(dict)  # Compression statistics
-    injection_finished = pyqtSignal(bool, str)  # success, message
+    progress_percent = Signal(int)  # Progress percentage (0-100)
+    compression_info = Signal(dict)  # Compression statistics
+    injection_finished = Signal(bool, str)  # success, message
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
@@ -278,14 +278,14 @@ class ScanWorkerBase(BaseWorker):
     """
 
     # Scan-specific signals
-    item_found = pyqtSignal(dict)  # Found item information
-    scan_stats = pyqtSignal(dict)  # Scan statistics and metadata
-    scan_progress = pyqtSignal(int, int)  # current, total
-    scan_finished = pyqtSignal(bool)  # success
+    item_found = Signal(dict)  # Found item information
+    scan_stats = Signal(dict)  # Scan statistics and metadata
+    scan_progress = Signal(int, int)  # current, total
+    scan_finished = Signal(bool)  # success
 
     # Cache-related signals (for ROM scanning)
-    cache_status = pyqtSignal(str)  # Cache status message
-    cache_progress = pyqtSignal(int)  # Cache save progress 0-100
+    cache_status = Signal(str)  # Cache status message
+    cache_progress = Signal(int)  # Cache save progress 0-100
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -325,8 +325,8 @@ class PreviewWorkerBase(BaseWorker):
     """
 
     # Preview-specific signals
-    preview_ready = pyqtSignal(object)  # Generated preview (QPixmap, PIL Image, etc.)
-    preview_failed = pyqtSignal(str)  # Preview generation failed
+    preview_ready = Signal(object)  # Generated preview (QPixmap, PIL Image, etc.)
+    preview_failed = Signal(str)  # Preview generation failed
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)

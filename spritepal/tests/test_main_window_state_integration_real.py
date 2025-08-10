@@ -24,9 +24,9 @@ import sys
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtTest import QSignalSpy, QTest
-from PyQt6.QtWidgets import QCheckBox, QLineEdit, QPushButton
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtWidgets import QCheckBox, QLineEdit, QPushButton
 
 # Add parent directory for imports
 # Serial execution required: Thread safety concerns

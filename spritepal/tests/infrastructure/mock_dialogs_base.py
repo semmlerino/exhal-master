@@ -7,8 +7,8 @@ while maintaining realistic Qt signal behavior.
 
 from typing import Any, Optional
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtWidgets import QDialog
 
 
 class MockDialogBase(QObject):
@@ -23,9 +23,9 @@ class MockDialogBase(QObject):
     """
 
     # Standard dialog signals
-    accepted = pyqtSignal()
-    rejected = pyqtSignal()
-    finished = pyqtSignal(int)
+    accepted = Signal()
+    rejected = Signal()
+    finished = Signal(int)
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -153,7 +153,7 @@ class MockProgressDialog(MockDialogBase):
     """Mock QProgressDialog for testing."""
 
     # Progress dialog specific signals
-    canceled = pyqtSignal()
+    canceled = Signal()
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -211,7 +211,7 @@ def patch_all_dialogs(monkeypatch):
     Args:
         monkeypatch: pytest monkeypatch fixture
     """
-    import PyQt6.QtWidgets as widgets
+    import PySide6.QtWidgets as widgets
 
     monkeypatch.setattr(widgets, 'QMessageBox', MockMessageBox)
     monkeypatch.setattr(widgets, 'QFileDialog', MockFileDialog)

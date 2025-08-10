@@ -8,9 +8,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication
 
 
 # Ensure headless Qt environment
@@ -36,7 +36,7 @@ class TestExtractionPanelHelper(QObject):
     """Helper for real ExtractionPanel functionality without Qt widgets"""
 
     # Define real signals
-    offset_changed = pyqtSignal(int)
+    offset_changed = Signal(int)
 
     def __init__(self, vram_path: str, temp_dir: str | None = None):
         super().__init__()
@@ -96,8 +96,8 @@ class TestPreviewPanelHelper(QObject):
     """Helper for real PreviewPanel functionality without Qt widgets"""
 
     # Define real signals
-    palette_mode_changed = pyqtSignal(bool)
-    palette_index_changed = pyqtSignal(int)
+    palette_mode_changed = Signal(bool)
+    palette_index_changed = Signal(int)
 
     def __init__(self, temp_dir: str | None = None):
         super().__init__()

@@ -11,8 +11,8 @@ import time
 from typing import Generator
 
 import pytest
-from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QApplication
 
 
 # Serial execution required: QApplication management, Manager registry manipulation, HAL process pool, Thread safety concerns

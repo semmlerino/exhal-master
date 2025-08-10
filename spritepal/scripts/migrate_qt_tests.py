@@ -36,7 +36,7 @@ class QtTestAnalyzer(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node):
         """Track Qt imports."""
-        if node.module and ('PyQt6' in node.module or 'PySide6' in node.module):
+        if node.module and ('PySide6' in node.module or 'PySide6' in node.module):
             self.has_qt_imports = True
         self.generic_visit(node)
 
@@ -281,12 +281,12 @@ class QtTestMigrator:
                     if not any(f'qtbot.addWidget({widget_var})' in future_line for future_line in lines[i+1:i+5]):
                         modified_line += f'\n        qtbot.addWidget({widget_var})'
 
-            # Pattern 3: Add PyQt6.QtWidgets import if creating widgets inline
-            if (i < 10 and 'from PyQt6.QtWidgets import QWidget' not in content and
+            # Pattern 3: Add PySide6.QtWidgets import if creating widgets inline
+            if (i < 10 and 'from PySide6.QtWidgets import QWidget' not in content and
                 'QWidget()' in modified_line and 'import' not in modified_line):
                 # Add import before widget creation
-                if 'from PyQt6.QtWidgets import' not in '\n'.join(lines[:i+5]):
-                    modified_line = '        from PyQt6.QtWidgets import QWidget\n        \n' + modified_line
+                if 'from PySide6.QtWidgets import' not in '\n'.join(lines[:i+5]):
+                    modified_line = '        from PySide6.QtWidgets import QWidget\n        \n' + modified_line
 
             modified_lines.append(modified_line)
 

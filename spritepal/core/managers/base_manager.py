@@ -7,7 +7,7 @@ import os
 import threading
 from typing import Any, Callable
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 try:
     from utils.logging_config import get_logger
@@ -28,11 +28,11 @@ class BaseManager(QObject):
     """Abstract base class for all manager classes"""
 
     # Common signals that all managers can emit
-    error_occurred = pyqtSignal(str)  # Error message
-    warning_occurred = pyqtSignal(str)  # Warning message
-    operation_started = pyqtSignal(str)  # Operation name
-    operation_finished = pyqtSignal(str)  # Operation name
-    progress_updated = pyqtSignal(str, int, int)  # Operation name, current, total
+    error_occurred = Signal(str)  # Error message
+    warning_occurred = Signal(str)  # Warning message
+    operation_started = Signal(str)  # Operation name
+    operation_finished = Signal(str)  # Operation name
+    progress_updated = Signal(str, int, int)  # Operation name, current, total
 
     def __init__(self, name: str | None = None, parent: QObject | None = None) -> None:
         """

@@ -10,7 +10,7 @@ dependency injection.
 
 from typing import Any, Protocol, TypeVar
 
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtWidgets import QDialog, QWidget
 
 from utils.logging_config import get_logger
 

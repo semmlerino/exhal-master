@@ -1,0 +1,1583 @@
+================================================================================
+PyQt6 to PySide6 Migration Report
+Generated: 2025-08-10 11:10:55
+================================================================================
+
+Root directory: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal
+Backup directory: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/backup_pyqt6_migration
+
+SUMMARY:
+- Files successfully migrated: 214
+- Files with failures: 21
+- Total changes made: 645
+
+SUCCESSFUL MIGRATIONS:
+----------------------------------------
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/launch_spritepal.py
+Time: 2025-08-10T11:10:53.173475
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtGui import QColor, QPalette' -> 'from PySide6.QtGui import QColor, QPalette'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/migrate_to_pyside6.py
+Time: 2025-08-10T11:10:53.185364
+Changes (38):
+  - Import: 'PyQt6 to PySide6 Migration Script' -> 'PySide6 to PySide6 Migration Script'
+  - Import: 'This script systematically migrates all PyQt6 imports to PySide6 across the codebase.' -> 'This script systematically migrates all PySide6 imports to PySide6 across the codebase.'
+  - Import: '- All PyQt6 imports -> PySide6 imports' -> '- All PySide6 imports -> PySide6 imports'
+  - Import: 'class PyQt6ToPySide6Migrator:' -> 'class PySide6ToPySide6Migrator:'
+  - Import: '"""Handles comprehensive PyQt6 to PySide6 migration"""' -> '"""Handles comprehensive PySide6 to PySide6 migration"""'
+  - Import: '# Import mapping from PyQt6 to PySide6' -> '# Import mapping from PySide6 to PySide6'
+  - Import: ''PyQt6': 'PySide6',' -> ''PySide6': 'PySide6','
+  - Import: ''from PyQt6': 'from PySide6',' -> ''from PySide6': 'from PySide6','
+  - Import: ''import PyQt6': 'import PySide6',' -> ''import PySide6': 'import PySide6','
+  - Import: ''from PyQt6.QtCore import pyqtSignal': 'from PySide6.QtCore import Signal',' -> ''from PySide6.QtCore import pyqtSignal': 'from PySide6.QtCore import Signal','
+  - Import: ''from PyQt6.QtCore import pyqtSlot': 'from PySide6.QtCore import Slot',' -> ''from PySide6.QtCore import pyqtSlot': 'from PySide6.QtCore import Slot','
+  - Import: ''from PyQt6.QtCore import pyqtProperty': 'from PySide6.QtCore import Property',' -> ''from PySide6.QtCore import pyqtProperty': 'from PySide6.QtCore import Property','
+  - Import: '(r'from PyQt6\.QtCore import.*?QVariant[,\s]*', ''),  # Remove QVariant imports' -> '(r'from PySide6\.QtCore import.*?QVariant[,\s]*', ''),  # Remove QVariant imports'
+  - Import: '"""Find all Python files containing PyQt6 imports"""' -> '"""Find all Python files containing PySide6 imports"""'
+  - Import: 'logger.info(f"Scanning {len(python_files)} Python files for PyQt6 usage...")' -> 'logger.info(f"Scanning {len(python_files)} Python files for PySide6 usage...")'
+  - Import: 'if 'PyQt6' in content:' -> 'if 'PySide6' in content:'
+  - Import: 'logger.debug(f"Found PyQt6 usage in: {py_file}")' -> 'logger.debug(f"Found PySide6 usage in: {py_file}")'
+  - Import: 'logger.info(f"Found {len(pyqt6_files)} files with PyQt6 usage")' -> 'logger.info(f"Found {len(pyqt6_files)} files with PySide6 usage")'
+  - Import: '"""Migrate PyQt6 imports to PySide6"""' -> '"""Migrate PySide6 imports to PySide6"""'
+  - Import: '"""Migrate PyQt6 API calls to PySide6 equivalents"""' -> '"""Migrate PySide6 API calls to PySide6 equivalents"""'
+  - Import: '# Handle TYPE_CHECKING blocks that might have PyQt6 imports' -> '# Handle TYPE_CHECKING blocks that might have PySide6 imports'
+  - Import: 'if 'TYPE_CHECKING' in content and 'PyQt6' in content:' -> 'if 'TYPE_CHECKING' in content and 'PySide6' in content:'
+  - Import: 'elif in_type_checking and 'PyQt6' in line:' -> 'elif in_type_checking and 'PySide6' in line:'
+  - Import: 'new_line = line.replace('PyQt6', 'PySide6')' -> 'new_line = line.replace('PySide6', 'PySide6')'
+  - Import: '"""Migrate a single file from PyQt6 to PySide6"""' -> '"""Migrate a single file from PySide6 to PySide6"""'
+  - Import: '"PyQt6 to PySide6 Migration Report",' -> '"PySide6 to PySide6 Migration Report",'
+  - Import: 'logger.info("Starting PyQt6 to PySide6 migration...")' -> 'logger.info("Starting PySide6 to PySide6 migration...")'
+  - Import: 'logger.info("No PyQt6 files found. Migration complete.")' -> 'logger.info("No PySide6 files found. Migration complete.")'
+  - Import: 'description='Migrate PyQt6 codebase to PySide6',' -> 'description='Migrate PySide6 codebase to PySide6','
+  - Import: 'migrator = PyQt6ToPySide6Migrator(root_path)' -> 'migrator = PySide6ToPySide6Migrator(root_path)'
+  - Import: 'print(f"\nFound {len(files_to_migrate)} files with PyQt6 imports.")' -> 'print(f"\nFound {len(files_to_migrate)} files with PySide6 imports.")'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+  - API: 'pyqtSlot' -> 'Slot' (3 occurrences)
+  - API: 'pyqtProperty' -> 'Property' (3 occurrences)
+  - API: '.exec_()' -> '.exec()' (1 occurrences)
+  - QVariant: Removed 1 QVariant usage patterns
+  - QVariant: Removed 1 QVariant usage patterns
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_black_boxes.py
+Time: 2025-08-10T11:10:53.205508
+Changes (2):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout' -> 'from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout'
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_manual_offset_debug.py
+Time: 2025-08-10T11:10:53.213989
+Changes (2):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QFileDialog' -> 'from PySide6.QtWidgets import QApplication, QFileDialog'
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_manual_offset_tabs.py
+Time: 2025-08-10T11:10:53.219099
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget' -> 'from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QVBoxLayout, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_navigation.py
+Time: 2025-08-10T11:10:53.229731
+Changes (2):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_simple_preview.py
+Time: 2025-08-10T11:10:53.236828
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+  - QVariant: Removed 1 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/test_slider_crash.py
+Time: 2025-08-10T11:10:53.243443
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/async_rom_cache.py
+Time: 2025-08-10T11:10:53.250327
+Changes (3):
+  - Import: 'from PyQt6.QtCore import (' -> 'from PySide6.QtCore import ('
+  - API: 'pyqtSignal' -> 'Signal' (8 occurrences)
+  - API: 'pyqtSlot' -> 'Slot' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/controller.py
+Time: 2025-08-10T11:10:53.264535
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/hal_compression.py
+Time: 2025-08-10T11:10:53.271732
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/injector.py
+Time: 2025-08-10T11:10:53.277539
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal' -> 'from PySide6.QtCore import QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/preview_orchestrator.py
+Time: 2025-08-10T11:10:53.295808
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/rom_injector.py
+Time: 2025-08-10T11:10:53.302390
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal' -> 'from PySide6.QtCore import QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (9 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/thumbnail_cache.py
+Time: 2025-08-10T11:10:53.307727
+Changes (1):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/docs/smart_preview_implementation_example.py
+Time: 2025-08-10T11:10:53.311928
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt, QTimer' -> 'from PySide6.QtCore import Qt, QTimer'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/examples/dependency_injection_migration.py
+Time: 2025-08-10T11:10:53.316198
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QDialog, QWidget' -> 'from PySide6.QtWidgets import QDialog, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/code_validation.py
+Time: 2025-08-10T11:10:53.323891
+Changes (1):
+  - Import: 'if 'PyQt6' in code or 'PySide6' in code:' -> 'if 'PySide6' in code or 'PySide6' in code:'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/mark_serial_tests.py
+Time: 2025-08-10T11:10:53.330443
+Changes (1):
+  - Import: ''PyQt6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog',' -> ''PySide6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog','
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/migrate_qt_tests.py
+Time: 2025-08-10T11:10:53.349816
+Changes (5):
+  - Import: 'if node.module and ('PyQt6' in node.module or 'PySide6' in node.module):' -> 'if node.module and ('PySide6' in node.module or 'PySide6' in node.module):'
+  - Import: '# Pattern 3: Add PyQt6.QtWidgets import if creating widgets inline' -> '# Pattern 3: Add PySide6.QtWidgets import if creating widgets inline'
+  - Import: 'if (i < 10 and 'from PyQt6.QtWidgets import QWidget' not in content and' -> 'if (i < 10 and 'from PySide6.QtWidgets import QWidget' not in content and'
+  - Import: 'if 'from PyQt6.QtWidgets import' not in '\n'.join(lines[:i+5]):' -> 'if 'from PySide6.QtWidgets import' not in '\n'.join(lines[:i+5]):'
+  - Import: 'modified_line = '        from PyQt6.QtWidgets import QWidget\n        \n' + modified_line' -> 'modified_line = '        from PySide6.QtWidgets import QWidget\n        \n' + modified_line'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/profile_dialog_leaks.py
+Time: 2025-08-10T11:10:53.356845
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QDialog' -> 'from PySide6.QtWidgets import QApplication, QDialog'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/run_memory_leak_tests.py
+Time: 2025-08-10T11:10:53.376318
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/run_performance_validation.py
+Time: 2025-08-10T11:10:53.389234
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget' -> 'from PySide6.QtWidgets import QApplication, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/scripts/validation_usage_examples.py
+Time: 2025-08-10T11:10:53.400974
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton' -> 'from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/compare_testing_approaches.py
+Time: 2025-08-10T11:10:53.409055
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (1 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/conftest.py
+Time: 2025-08-10T11:10:53.416020
+Changes (5):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/demo_real_qt_testing.py
+Time: 2025-08-10T11:10:53.423412
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal, QObject' -> 'from PySide6.QtCore import Qt, pyqtSignal, QObject'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QDialog, QPushButton, QVBoxLayout, QLabel' -> 'from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QVBoxLayout, QLabel'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_advanced_search_dialog.py
+Time: 2025-08-10T11:10:53.429470
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal' -> 'from PySide6.QtCore import QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_async_rom_cache.py
+Time: 2025-08-10T11:10:53.437604
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QRecursiveMutex, QThread, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QRecursiveMutex, QThread, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - API: 'pyqtSignal' -> 'Signal' (1 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_base_manager.py
+Time: 2025-08-10T11:10:53.444268
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_circular_dependency_fix.py
+Time: 2025-08-10T11:10:53.448195
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_collapsible_group_box.py
+Time: 2025-08-10T11:10:53.461868
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QPropertyAnimation' -> 'from PySide6.QtCore import QPropertyAnimation'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QLabel, QVBoxLayout' -> 'from PySide6.QtWidgets import QLabel, QVBoxLayout'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_complete_user_workflow_integration.py
+Time: 2025-08-10T11:10:53.467140
+Changes (1):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_concurrent_operations.py
+Time: 2025-08-10T11:10:53.480962
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QThread, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QThread, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - API: 'pyqtSignal' -> 'Signal' (13 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_controller.py
+Time: 2025-08-10T11:10:53.490887
+Changes (1):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_controller_real.py
+Time: 2025-08-10T11:10:53.498970
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - API: 'pyqtSignal' -> 'Signal' (8 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_controller_real_manager_integration.py
+Time: 2025-08-10T11:10:53.506278
+Changes (1):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_cross_dialog_integration_real.py
+Time: 2025-08-10T11:10:53.513263
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dependency_injection.py
+Time: 2025-08-10T11:10:53.522530
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_initialization.py
+Time: 2025-08-10T11:10:53.530373
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_instantiation.py
+Time: 2025-08-10T11:10:53.540345
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_lifecycle.py
+Time: 2025-08-10T11:10:53.549897
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_real_integration.py
+Time: 2025-08-10T11:10:53.558948
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_error_handler.py
+Time: 2025-08-10T11:10:53.566684
+Changes (2):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_error_handler_thread_safety.py
+Time: 2025-08-10T11:10:53.573396
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_grid_arrangement_dialog_migration.py
+Time: 2025-08-10T11:10:53.581059
+Changes (1):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_grid_arrangement_dialog_mock.py
+Time: 2025-08-10T11:10:53.588001
+Changes (1):
+  - Import: 'Mock-based tests for grid arrangement dialog logic (without actual PyQt6 imports)' -> 'Mock-based tests for grid arrangement dialog logic (without actual PySide6 imports)'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_grid_arrangement_zoom.py
+Time: 2025-08-10T11:10:53.595742
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QPointF, Qt' -> 'from PySide6.QtCore import QPointF, Qt'
+  - Import: 'from PyQt6.QtGui import QKeyEvent, QMouseEvent' -> 'from PySide6.QtGui import QKeyEvent, QMouseEvent'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene' -> 'from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_image_utils.py
+Time: 2025-08-10T11:10:53.601727
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QCoreApplication' -> 'from PySide6.QtCore import QCoreApplication'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_infrastructure_cleanup.py
+Time: 2025-08-10T11:10:53.608849
+Changes (1):
+  - Import: 'qt_imports = ["from PyQt6", "import PyQt6"]' -> 'qt_imports = ["from PySide6", "import PySide6"]'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_infrastructure_verification.py
+Time: 2025-08-10T11:10:53.615665
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QWidget, QApplication' -> 'from PySide6.QtWidgets import QWidget, QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_injection_manager_refactored.py
+Time: 2025-08-10T11:10:53.629299
+Changes (1):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_integration_headless.py
+Time: 2025-08-10T11:10:53.643520
+Changes (4):
+  - Import: '# Mock PyQt6 modules' -> '# Mock PySide6 modules'
+  - Import: '"PyQt6.QtCore": MagicMock(' -> '"PySide6.QtCore": MagicMock('
+  - Import: '"PyQt6.QtGui": MagicMock(QPixmap=mock_qpixmap),' -> '"PySide6.QtGui": MagicMock(QPixmap=mock_qpixmap),'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_main_window_state_integration_real.py
+Time: 2025-08-10T11:10:53.649870
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtTest import QSignalSpy, QTest' -> 'from PySide6.QtTest import QSignalSpy, QTest'
+  - Import: 'from PyQt6.QtWidgets import QCheckBox, QLineEdit, QPushButton' -> 'from PySide6.QtWidgets import QCheckBox, QLineEdit, QPushButton'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_manual_offset_integration.py
+Time: 2025-08-10T11:10:53.655497
+Changes (5):
+  - Import: 'from PyQt6.QtCore import QTimer, Qt, pyqtSignal, QObject' -> 'from PySide6.QtCore import QTimer, Qt, pyqtSignal, QObject'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QSlider' -> 'from PySide6.QtWidgets import QApplication, QSlider'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+  - QVariant: Removed 3 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_manual_offset_integration_real.py
+Time: 2025-08-10T11:10:53.662916
+Changes (6):
+  - Import: 'from PyQt6.QtCore import QTimer, Qt' -> 'from PySide6.QtCore import QTimer, Qt'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QSlider' -> 'from PySide6.QtWidgets import QSlider'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - QVariant: Removed 1 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_manual_offset_layout.py
+Time: 2025-08-10T11:10:53.671311
+Changes (5):
+  - Import: 'from PyQt6.QtCore import QSize, Qt, QTimer' -> 'from PySide6.QtCore import QSize, Qt, QTimer'
+  - Import: 'from PyQt6.QtGui import QResizeEvent' -> 'from PySide6.QtGui import QResizeEvent'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QSplitter, QTabWidget, QWidget' -> 'from PySide6.QtWidgets import QApplication, QSplitter, QTabWidget, QWidget'
+  - Import: 'from PyQt6.QtCore import QEventLoop, QTimer' -> 'from PySide6.QtCore import QEventLoop, QTimer'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_no_duplicate_sliders_validation.py
+Time: 2025-08-10T11:10:53.678786
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QSlider, QSpinBox' -> 'from PySide6.QtWidgets import QSlider, QSpinBox'
+  - Import: 'from PyQt6.QtWidgets import QLabel, QPushButton' -> 'from PySide6.QtWidgets import QLabel, QPushButton'
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_phase1_stability_fixes.py
+Time: 2025-08-10T11:10:53.685886
+Changes (5):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_preview_generator.py
+Time: 2025-08-10T11:10:53.693297
+Changes (1):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_preview_orchestrator.py
+Time: 2025-08-10T11:10:53.700834
+Changes (5):
+  - Import: 'from PyQt6.QtCore import QObject, QMutex, QMutexLocker, QTimer' -> 'from PySide6.QtCore import QObject, QMutex, QMutexLocker, QTimer'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_qt_infrastructure.py
+Time: 2025-08-10T11:10:53.708176
+Changes (7):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout' -> 'from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout'
+  - Import: 'from PyQt6.QtWidgets import QWidget, QPushButton' -> 'from PySide6.QtWidgets import QWidget, QPushButton'
+  - Import: 'from PyQt6.QtCore import QTimer, pyqtSignal' -> 'from PySide6.QtCore import QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_qt_signal_architecture.py
+Time: 2025-08-10T11:10:53.715100
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_qt_threading_patterns.py
+Time: 2025-08-10T11:10:53.721558
+Changes (3):
+  - Import: 'from PyQt6.QtCore import (' -> 'from PySide6.QtCore import ('
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - API: 'pyqtSignal' -> 'Signal' (18 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_realtime_preview_integration.py
+Time: 2025-08-10T11:10:53.729215
+Changes (3):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: '# Note: In real PyQt6, disconnection would require storing the connection' -> '# Note: In real PySide6, disconnection would require storing the connection'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_rom_cache_ui_integration.py
+Time: 2025-08-10T11:10:53.738159
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QLabel' -> 'from PySide6.QtWidgets import QLabel'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_rom_extraction_crash_fixes.py
+Time: 2025-08-10T11:10:53.745073
+Changes (4):
+  - Import: 'with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:' -> 'with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:'
+  - Import: 'with patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_critical:' -> 'with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:'
+  - Import: 'with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:' -> 'with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:'
+  - Import: 'with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:' -> 'with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_row_arrangement_dialog_migration.py
+Time: 2025-08-10T11:10:53.752295
+Changes (1):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_settings_dialog_integration.py
+Time: 2025-08-10T11:10:53.759166
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - QVariant: Removed 6 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_settings_persistence_across_restarts.py
+Time: 2025-08-10T11:10:53.765492
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QSettings' -> 'from PySide6.QtCore import QSettings'
+  - QVariant: Removed 3 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_smart_preview.py
+Time: 2025-08-10T11:10:53.773046
+Changes (3):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QSlider' -> 'from PySide6.QtWidgets import QApplication, QSlider'
+  - Import: 'from PyQt6.QtCore import QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QObject, QTimer, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_smart_preview_coordinator.py
+Time: 2025-08-10T11:10:53.780518
+Changes (5):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer'
+  - Import: 'from PyQt6.QtWidgets import QSlider' -> 'from PySide6.QtWidgets import QSlider'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QSlider' -> 'from PySide6.QtWidgets import QApplication, QSlider'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_sprite_display_fix.py
+Time: 2025-08-10T11:10:53.787493
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QTimer, Qt' -> 'from PySide6.QtCore import QTimer, Qt'
+  - Import: 'from PyQt6.QtGui import QPixmap, QImage, QAction' -> 'from PySide6.QtGui import QPixmap, QImage, QAction'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QMenu' -> 'from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QMenu'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_sprite_display_regression.py
+Time: 2025-08-10T11:10:53.795083
+Changes (5):
+  - Import: 'from PyQt6.QtCore import Qt, QTimer' -> 'from PySide6.QtCore import Qt, QTimer'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'with patch('PyQt6.QtWidgets.QFileDialog.getOpenFileName',' -> 'with patch('PySide6.QtWidgets.QFileDialog.getOpenFileName','
+  - QVariant: Removed 3 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_sprite_preview_widget.py
+Time: 2025-08-10T11:10:53.801284
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_status_panel_cache_integration.py
+Time: 2025-08-10T11:10:53.808813
+Changes (2):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - QVariant: Removed 1 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_thread_safe_singleton.py
+Time: 2025-08-10T11:10:53.825499
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget' -> 'from PySide6.QtWidgets import QApplication, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_ui_components.py
+Time: 2025-08-10T11:10:53.837826
+Changes (14):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - QVariant: Removed 5 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_ui_components_fixed.py
+Time: 2025-08-10T11:10:53.844038
+Changes (2):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_ui_components_mock.py
+Time: 2025-08-10T11:10:53.861652
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QPointF, Qt' -> 'from PySide6.QtCore import QPointF, Qt'
+  - Import: 'from PyQt6.QtGui import QKeyEvent, QPixmap' -> 'from PySide6.QtGui import QKeyEvent, QPixmap'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_ui_qt_safety.py
+Time: 2025-08-10T11:10:53.872740
+Changes (5):
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: '# These demonstrate the problem: empty containers are falsy (except QTreeWidget in PyQt6)' -> '# These demonstrate the problem: empty containers are falsy (except QTreeWidget in PySide6)'
+  - Import: '# QTreeWidget behaves differently in PyQt6 - it's truthy even when empty' -> '# QTreeWidget behaves differently in PySide6 - it's truthy even when empty'
+  - Import: 'assert bool(empty_tree_widget)  # PyQt6 specific - truthy when empty' -> 'assert bool(empty_tree_widget)  # PySide6 specific - truthy when empty'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_unified_dialog_integration_mocked.py
+Time: 2025-08-10T11:10:53.882213
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QCoreApplication' -> 'from PySide6.QtCore import QCoreApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_unified_dialog_integration_real.py
+Time: 2025-08-10T11:10:53.894199
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QThread, QTimer, Qt, pyqtSignal, QObject' -> 'from PySide6.QtCore import QThread, QTimer, Qt, pyqtSignal, QObject'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QDialog, QPushButton, QSlider, QTabWidget, QCheckBox, QListWidget' -> 'from PySide6.QtWidgets import QApplication, QDialog, QPushButton, QSlider, QTabWidget, QCheckBox, QListWidget'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_unified_dialog_real.py
+Time: 2025-08-10T11:10:53.905607
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QPoint, Qt, QTimer' -> 'from PySide6.QtCore import QPoint, Qt, QTimer'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QSlider, QTabWidget, QPushButton, QSpinBox' -> 'from PySide6.QtWidgets import QApplication, QSlider, QTabWidget, QPushButton, QSpinBox'
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_base.py
+Time: 2025-08-10T11:10:53.915856
+Changes (2):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_extraction.py
+Time: 2025-08-10T11:10:53.927209
+Changes (2):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_extraction_refactored.py
+Time: 2025-08-10T11:10:53.935960
+Changes (2):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_helper_validation.py
+Time: 2025-08-10T11:10:53.942950
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_manager.py
+Time: 2025-08-10T11:10:53.950737
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal' -> 'from PySide6.QtCore import QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_manager_refactored.py
+Time: 2025-08-10T11:10:53.958602
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal, QObject' -> 'from PySide6.QtCore import QThread, pyqtSignal, QObject'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - API: 'pyqtSignal' -> 'Signal' (7 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_owned_injection.py
+Time: 2025-08-10T11:10:53.965729
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QCoreApplication' -> 'from PySide6.QtCore import QCoreApplication'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_specialized.py
+Time: 2025-08-10T11:10:53.974284
+Changes (2):
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_zoomable_preview.py
+Time: 2025-08-10T11:10:53.981811
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QPointF, Qt' -> 'from PySide6.QtCore import QPointF, Qt'
+  - Import: 'from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPixmap' -> 'from PySide6.QtGui import QKeyEvent, QMouseEvent, QPixmap'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/extraction_panel.py
+Time: 2025-08-10T11:10:53.991006
+Changes (6):
+  - Import: 'from PyQt6.QtCore import Qt, QTimer, pyqtSignal' -> 'from PySide6.QtCore import Qt, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import (' -> 'from PySide6.QtGui import ('
+  - Import: 'from PyQt6.QtGui import (' -> 'from PySide6.QtGui import ('
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+  - QVariant: Removed 3 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/grid_arrangement_dialog.py
+Time: 2025-08-10T11:10:53.997707
+Changes (5):
+  - Import: 'from PyQt6.QtCore import QPointF, Qt, pyqtSignal' -> 'from PySide6.QtCore import QPointF, Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import (' -> 'from PySide6.QtGui import ('
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+  - QVariant: Removed 4 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/injection_dialog.py
+Time: 2025-08-10T11:10:54.004877
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtGui import QKeySequence, QShortcut' -> 'from PySide6.QtGui import QKeySequence, QShortcut'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/main_window.py
+Time: 2025-08-10T11:10:54.011020
+Changes (7):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QCloseEvent, QKeyEvent' -> 'from PySide6.QtGui import QCloseEvent, QKeyEvent'
+  - Import: 'from PyQt6.QtGui import QCloseEvent, QKeyEvent' -> 'from PySide6.QtGui import QCloseEvent, QKeyEvent'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy' -> 'from PySide6.QtWidgets import QSizePolicy'
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy' -> 'from PySide6.QtWidgets import QSizePolicy'
+  - API: 'pyqtSignal' -> 'Signal' (8 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/palette_preview.py
+Time: 2025-08-10T11:10:54.016454
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QSize, Qt, pyqtSignal' -> 'from PySide6.QtCore import QSize, Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen' -> 'from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen'
+  - Import: 'from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget' -> 'from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction_panel.py
+Time: 2025-08-10T11:10:54.024328
+Changes (4):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QCloseEvent' -> 'from PySide6.QtGui import QCloseEvent'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/row_arrangement_dialog.py
+Time: 2025-08-10T11:10:54.030143
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtGui import QImage, QPixmap' -> 'from PySide6.QtGui import QImage, QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/zoomable_preview.py
+Time: 2025-08-10T11:10:54.035267
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QPointF, QRectF, QSize, Qt' -> 'from PySide6.QtCore import QPointF, QRectF, QSize, Qt'
+  - Import: 'from PyQt6.QtGui import (' -> 'from PySide6.QtGui import ('
+  - Import: 'from PyQt6.QtGui import (' -> 'from PySide6.QtGui import ('
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/error_handler_examples.py
+Time: 2025-08-10T11:10:54.041097
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget' -> 'from PySide6.QtWidgets import QApplication, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/error_integration.py
+Time: 2025-08-10T11:10:54.047714
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/image_utils.py
+Time: 2025-08-10T11:10:54.056907
+Changes (1):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/preview_generator.py
+Time: 2025-08-10T11:10:54.062613
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/thread_safe_singleton.py
+Time: 2025-08-10T11:10:54.069196
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, QThread' -> 'from PySide6.QtCore import QObject, QThread'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtWidgets import QDialog' -> 'from PySide6.QtWidgets import QDialog'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/type_aliases.py
+Time: 2025-08-10T11:10:54.075494
+Changes (2):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/utils/unified_error_handler.py
+Time: 2025-08-10T11:10:54.084638
+Changes (8):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox, QWidget' -> 'from PySide6.QtWidgets import QMessageBox, QWidget'
+  - Import: 'from PyQt6.QtCore import QObject as QtQObject' -> 'from PySide6.QtCore import QObject as QtQObject'
+  - Import: 'from PyQt6.QtCore import pyqtSignal as QtPyqtSignal' -> 'from PySide6.QtCore import pyqtSignal as QtPyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox as QtQMessageBox' -> 'from PySide6.QtWidgets import QMessageBox as QtQMessageBox'
+  - Import: 'from PyQt6.QtWidgets import QWidget as QtQWidget' -> 'from PySide6.QtWidgets import QWidget as QtQWidget'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/base_manager.py
+Time: 2025-08-10T11:10:54.090495
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/extraction_manager.py
+Time: 2025-08-10T11:10:54.100064
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (10 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/factory.py
+Time: 2025-08-10T11:10:54.118643
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/injectable.py
+Time: 2025-08-10T11:10:54.127039
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QDialog, QWidget' -> 'from PySide6.QtWidgets import QDialog, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/injection_manager.py
+Time: 2025-08-10T11:10:54.135524
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (11 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/registry.py
+Time: 2025-08-10T11:10:54.141161
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/managers/session_manager.py
+Time: 2025-08-10T11:10:54.149659
+Changes (2):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (9 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/navigation/manager.py
+Time: 2025-08-10T11:10:54.159640
+Changes (2):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/protocols/manager_protocols.py
+Time: 2025-08-10T11:10:54.169019
+Changes (2):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (29 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/base.py
+Time: 2025-08-10T11:10:54.176001
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QMetaObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QMetaObject, QThread, pyqtSignal'
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - API: 'pyqtSignal' -> 'Signal' (12 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/extraction.py
+Time: 2025-08-10T11:10:54.184912
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/injection.py
+Time: 2025-08-10T11:10:54.197919
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/core/workers/specialized.py
+Time: 2025-08-10T11:10:54.213581
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (17 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/examples/example_migration.py
+Time: 2025-08-10T11:10:54.219500
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/examples/example_real_component_test.py
+Time: 2025-08-10T11:10:54.223977
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QWidget, QPushButton' -> 'from PySide6.QtWidgets import QWidget, QPushButton'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/qt_test_helpers.py
+Time: 2025-08-10T11:10:54.237852
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget' -> 'from PySide6.QtWidgets import QApplication, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_dialog_helper.py
+Time: 2025-08-10T11:10:54.243809
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_file_dialog_helper.py
+Time: 2025-08-10T11:10:54.248457
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QFileDialog' -> 'from PySide6.QtWidgets import QFileDialog'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_isolation.py
+Time: 2025-08-10T11:10:54.252425
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QCoreApplication' -> 'from PySide6.QtCore import QCoreApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_main_window_helper.py
+Time: 2025-08-10T11:10:54.263620
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QLabel, QStatusBar' -> 'from PySide6.QtWidgets import QLabel, QStatusBar'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_main_window_helper_simple.py
+Time: 2025-08-10T11:10:54.269775
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_preview_helper.py
+Time: 2025-08-10T11:10:54.276188
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/fixtures/test_worker_helper.py
+Time: 2025-08-10T11:10:54.281703
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/dialog_test_helpers.py
+Time: 2025-08-10T11:10:54.287189
+Changes (7):
+  - Import: 'from PyQt6.QtCore import QObject, QPoint, Qt, QTimer' -> 'from PySide6.QtCore import QObject, QPoint, Qt, QTimer'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtWidgets import QVBoxLayout' -> 'from PySide6.QtWidgets import QVBoxLayout'
+  - Import: 'from PyQt6.QtWidgets import QFormLayout, QVBoxLayout' -> 'from PySide6.QtWidgets import QFormLayout, QVBoxLayout'
+  - Import: 'from PyQt6.QtWidgets import QVBoxLayout' -> 'from PySide6.QtWidgets import QVBoxLayout'
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/manager_fixture_factory.py
+Time: 2025-08-10T11:10:54.304949
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/manager_test_context.py
+Time: 2025-08-10T11:10:54.318954
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/mock_dialogs.py
+Time: 2025-08-10T11:10:54.326922
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QDialog, QWidget' -> 'from PySide6.QtWidgets import QDialog, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (14 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/mock_dialogs_base.py
+Time: 2025-08-10T11:10:54.334221
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QObject, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QDialog' -> 'from PySide6.QtWidgets import QDialog'
+  - Import: 'import PyQt6.QtWidgets as widgets' -> 'import PySide6.QtWidgets as widgets'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/mock_factory.py
+Time: 2025-08-10T11:10:54.341623
+Changes (3):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: '"Use real QImage objects from PyQt6.QtGui for accurate image testing.",' -> '"Use real QImage objects from PySide6.QtGui for accurate image testing.",'
+  - API: 'pyqtSignal' -> 'Signal' (42 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/mock_windows.py
+Time: 2025-08-10T11:10:54.348457
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QMainWindow, QWidget' -> 'from PySide6.QtWidgets import QMainWindow, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (15 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/qt_application_factory.py
+Time: 2025-08-10T11:10:54.353878
+Changes (2):
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/qt_mocks.py
+Time: 2025-08-10T11:10:54.359706
+Changes (19):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: 'from PyQt6.QtCore import QCoreApplication' -> 'from PySide6.QtCore import QCoreApplication'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+  - Import: '"PyQt6": Mock(),' -> '"PySide6": Mock(),'
+  - Import: '"PyQt6.QtCore": Mock(),' -> '"PySide6.QtCore": Mock(),'
+  - Import: '"PyQt6.QtGui": Mock(),' -> '"PySide6.QtGui": Mock(),'
+  - Import: '"PyQt6.QtWidgets": Mock(),' -> '"PySide6.QtWidgets": Mock(),'
+  - Import: '"PyQt6.QtTest": Mock(),' -> '"PySide6.QtTest": Mock(),'
+  - Import: 'mock_modules["PyQt6.QtCore"].QObject = Mock' -> 'mock_modules["PySide6.QtCore"].QObject = Mock'
+  - Import: 'mock_modules["PyQt6.QtCore"].QThread = MockQThread' -> 'mock_modules["PySide6.QtCore"].QThread = MockQThread'
+  - Import: 'mock_modules["PyQt6.QtCore"].pyqtSignal = MockSignal' -> 'mock_modules["PySide6.QtCore"].pyqtSignal = MockSignal'
+  - Import: 'mock_modules["PyQt6.QtCore"].Qt = Mock()' -> 'mock_modules["PySide6.QtCore"].Qt = Mock()'
+  - Import: 'mock_modules["PyQt6.QtWidgets"].QApplication = MockQApplication' -> 'mock_modules["PySide6.QtWidgets"].QApplication = MockQApplication'
+  - Import: 'mock_modules["PyQt6.QtWidgets"].QWidget = MockQWidget' -> 'mock_modules["PySide6.QtWidgets"].QWidget = MockQWidget'
+  - Import: 'mock_modules["PyQt6.QtWidgets"].QDialog = MockQDialog' -> 'mock_modules["PySide6.QtWidgets"].QDialog = MockQDialog'
+  - Import: 'mock_modules["PyQt6.QtWidgets"].QLabel = MockQLabel' -> 'mock_modules["PySide6.QtWidgets"].QLabel = MockQLabel'
+  - Import: 'mock_modules["PyQt6.QtGui"].QPixmap = MockQPixmap' -> 'mock_modules["PySide6.QtGui"].QPixmap = MockQPixmap'
+  - API: 'pyqtSignal' -> 'Signal' (87 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/qt_real_testing.py
+Time: 2025-08-10T11:10:54.365279
+Changes (3):
+  - Import: 'from PyQt6.QtCore import (' -> 'from PySide6.QtCore import ('
+  - Import: 'from PyQt6.QtWidgets import QApplication, QDialog, QWidget' -> 'from PySide6.QtWidgets import QApplication, QDialog, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/qt_testing_framework.py
+Time: 2025-08-10T11:10:54.381043
+Changes (6):
+  - Import: 'from PyQt6.QtCore import QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QObject, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtTest import QSignalSpy' -> 'from PySide6.QtTest import QSignalSpy'
+  - Import: 'from PyQt6.QtWidgets import QDialog, QWidget' -> 'from PySide6.QtWidgets import QDialog, QWidget'
+  - Import: '# Note: PyQt6 doesn't expose connection count directly,' -> '# Note: PySide6 doesn't expose connection count directly,'
+  - Import: 'from PyQt6.QtWidgets import QMainWindow' -> 'from PySide6.QtWidgets import QMainWindow'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/real_component_factory.py
+Time: 2025-08-10T11:10:54.391797
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, QThread' -> 'from PySide6.QtCore import QObject, QThread'
+  - Import: 'from PyQt6.QtWidgets import QApplication, QWidget' -> 'from PySide6.QtWidgets import QApplication, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/signal_testing_utils.py
+Time: 2025-08-10T11:10:54.400108
+Changes (2):
+  - Import: 'from PyQt6.QtCore import (' -> 'from PySide6.QtCore import ('
+  - API: 'pyqtSignal' -> 'Signal' (10 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/infrastructure/typed_worker_base.py
+Time: 2025-08-10T11:10:54.406745
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (10 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/integration/conftest.py
+Time: 2025-08-10T11:10:54.417291
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QTimer' -> 'from PySide6.QtCore import QTimer'
+  - Import: 'from PyQt6.QtWidgets import QApplication' -> 'from PySide6.QtWidgets import QApplication'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/integration/test_integration_manual_offset.py
+Time: 2025-08-10T11:10:54.425780
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, QTimer' -> 'from PySide6.QtCore import Qt, QTimer'
+  - Import: 'from PyQt6.QtWidgets import QDialogButtonBox, QPushButton, QListWidget' -> 'from PySide6.QtWidgets import QDialogButtonBox, QPushButton, QListWidget'
+  - Import: 'from PyQt6.QtTest import QTest' -> 'from PySide6.QtTest import QTest'
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/integration/test_integration_preview_system.py
+Time: 2025-08-10T11:10:54.436526
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (1 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/scripts/test_health_dashboard.py
+Time: 2025-08-10T11:10:54.446111
+Changes (1):
+  - Import: 'r'PyQt6',' -> 'r'PySide6','
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/collapsible_group_box.py
+Time: 2025-08-10T11:10:54.455480
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtSignal' -> 'from PySide6.QtCore import QEasingCurve, QPropertyAnimation, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/error_handler.py
+Time: 2025-08-10T11:10:54.465433
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/file_dialogs.py
+Time: 2025-08-10T11:10:54.472448
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QFileDialog, QWidget' -> 'from PySide6.QtWidgets import QFileDialog, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/layout_manager.py
+Time: 2025-08-10T11:10:54.485254
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/preview_worker_pool.py
+Time: 2025-08-10T11:10:54.491415
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/simple_preview_coordinator.py
+Time: 2025-08-10T11:10:54.507698
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QObject, QThread, QTimer, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/smart_preview_coordinator.py
+Time: 2025-08-10T11:10:54.513875
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QSlider' -> 'from PySide6.QtWidgets import QSlider'
+  - Import: '# Note: PyQt6 signals don't have receivers() method - removed debug line' -> '# Note: PySide6 signals don't have receivers() method - removed debug line'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/tabbed_widget_base.py
+Time: 2025-08-10T11:10:54.518452
+Changes (3):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/widget_factory.py
+Time: 2025-08-10T11:10:54.523154
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/common/worker_manager.py
+Time: 2025-08-10T11:10:54.531709
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/__init__.py
+Time: 2025-08-10T11:10:54.552079
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QSplitter, QTabWidget, QWidget' -> 'from PySide6.QtWidgets import QSplitter, QTabWidget, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/advanced_search_dialog.py
+Time: 2025-08-10T11:10:54.566612
+Changes (14):
+  - Import: 'from PyQt6.QtCore import QMutex, Qt, QThread, QWaitCondition, pyqtSignal' -> 'from PySide6.QtCore import QMutex, Qt, QThread, QWaitCondition, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QKeySequence, QPixmap, QShortcut' -> 'from PySide6.QtGui import QKeySequence, QPixmap, QShortcut'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtWidgets import QInputDialog' -> 'from PySide6.QtWidgets import QInputDialog'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtWidgets import QInputDialog' -> 'from PySide6.QtWidgets import QInputDialog'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - Import: 'from PyQt6.QtCore import QThread' -> 'from PySide6.QtCore import QThread'
+  - Import: 'from PyQt6.QtWidgets import QMessageBox' -> 'from PySide6.QtWidgets import QMessageBox'
+  - API: 'pyqtSignal' -> 'Signal' (12 occurrences)
+  - QVariant: Removed 9 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/layout_manager.py
+Time: 2025-08-10T11:10:54.592165
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy, QSplitter, QWidget, QVBoxLayout, QLabel' -> 'from PySide6.QtWidgets import QSizePolicy, QSplitter, QWidget, QVBoxLayout, QLabel'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/manual_offset_unified_integrated.py
+Time: 2025-08-10T11:10:54.597904
+Changes (6):
+  - Import: 'from PyQt6.QtCore import (' -> 'from PySide6.QtCore import ('
+  - Import: 'from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent' -> 'from PySide6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent'
+  - Import: 'from PyQt6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent' -> 'from PySide6.QtGui import QAction, QCloseEvent, QFont, QHideEvent, QKeyEvent'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtGui import QGuiApplication  # noqa: PLC0415' -> 'from PySide6.QtGui import QGuiApplication  # noqa: PLC0415'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/resume_scan_dialog.py
+Time: 2025-08-10T11:10:54.602377
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/settings_dialog.py
+Time: 2025-08-10T11:10:54.615380
+Changes (4):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+  - QVariant: Removed 4 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/similarity_results_dialog.py
+Time: 2025-08-10T11:10:54.622568
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/user_error_dialog.py
+Time: 2025-08-10T11:10:54.627741
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/keyboard_handler.py
+Time: 2025-08-10T11:10:54.632816
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, Qt' -> 'from PySide6.QtCore import QObject, Qt'
+  - Import: 'from PyQt6.QtGui import QKeyEvent' -> 'from PySide6.QtGui import QKeyEvent'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/menu_bar_manager.py
+Time: 2025-08-10T11:10:54.642021
+Changes (2):
+  - Import: 'from PyQt6.QtGui import QAction' -> 'from PySide6.QtGui import QAction'
+  - Import: 'from PyQt6.QtWidgets import QMainWindow, QMessageBox' -> 'from PySide6.QtWidgets import QMainWindow, QMessageBox'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/output_settings_manager.py
+Time: 2025-08-10T11:10:54.646916
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/preview_coordinator.py
+Time: 2025-08-10T11:10:54.655111
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, Qt' -> 'from PySide6.QtCore import QObject, Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/session_coordinator.py
+Time: 2025-08-10T11:10:54.659608
+Changes (1):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/status_bar_manager.py
+Time: 2025-08-10T11:10:54.664266
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/tab_coordinator.py
+Time: 2025-08-10T11:10:54.672307
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QTabWidget' -> 'from PySide6.QtWidgets import QTabWidget'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/managers/toolbar_manager.py
+Time: 2025-08-10T11:10:54.676776
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QKeySequence' -> 'from PySide6.QtGui import QKeySequence'
+  - Import: 'from PyQt6.QtWidgets import QGridLayout, QPushButton, QWidget' -> 'from PySide6.QtWidgets import QGridLayout, QPushButton, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/state_manager.py
+Time: 2025-08-10T11:10:54.681278
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/row_arrangement/arrangement_manager.py
+Time: 2025-08-10T11:10:54.690879
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/row_arrangement/grid_arrangement_manager.py
+Time: 2025-08-10T11:10:54.695931
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (7 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/row_arrangement/palette_colorizer.py
+Time: 2025-08-10T11:10:54.702317
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal' -> 'from PySide6.QtCore import QObject, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/tabs/sprite_gallery_tab.py
+Time: 2025-08-10T11:10:54.708342
+Changes (6):
+  - Import: 'from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal' -> 'from PySide6.QtCore import Qt, QThread, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QAction, QPixmap' -> 'from PySide6.QtGui import QAction, QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy' -> 'from PySide6.QtWidgets import QSizePolicy'
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy' -> 'from PySide6.QtWidgets import QSizePolicy'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/widgets/row_widgets.py
+Time: 2025-08-10T11:10:54.712994
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QMimeData, Qt, pyqtSignal' -> 'from PySide6.QtCore import QMimeData, Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QColor, QDrag, QPainter, QPen' -> 'from PySide6.QtGui import QColor, QDrag, QPainter, QPen'
+  - Import: 'from PyQt6.QtWidgets import QListWidget, QWidget' -> 'from PySide6.QtWidgets import QListWidget, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/widgets/sprite_gallery_widget.py
+Time: 2025-08-10T11:10:54.732149
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, QTimer, pyqtSignal' -> 'from PySide6.QtCore import Qt, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QPixmap' -> 'from PySide6.QtGui import QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/widgets/sprite_preview_widget.py
+Time: 2025-08-10T11:10:54.738582
+Changes (4):
+  - Import: 'from PyQt6.QtCore import QSize, Qt, QThread, QTimer, pyqtSignal' -> 'from PySide6.QtCore import QSize, Qt, QThread, QTimer, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QAction, QImage, QPixmap' -> 'from PySide6.QtGui import QAction, QImage, QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/widgets/sprite_thumbnail_widget.py
+Time: 2025-08-10T11:10:54.743416
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QColor, QFont, QPainter, QPen, QPixmap' -> 'from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap'
+  - Import: 'from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget' -> 'from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/workers/batch_thumbnail_worker.py
+Time: 2025-08-10T11:10:54.755994
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal, Qt' -> 'from PySide6.QtCore import QMutex, QMutexLocker, QThread, pyqtSignal, Qt'
+  - Import: 'from PyQt6.QtGui import QImage, QPixmap' -> 'from PySide6.QtGui import QImage, QPixmap'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/base/dialog_base.py
+Time: 2025-08-10T11:10:54.764785
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/dialogs/range_scan_dialog.py
+Time: 2025-08-10T11:10:54.776690
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/inputs/file_selector.py
+Time: 2025-08-10T11:10:54.784742
+Changes (3):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/inputs/form_row.py
+Time: 2025-08-10T11:10:54.789236
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/inputs/hex_offset_input.py
+Time: 2025-08-10T11:10:54.795524
+Changes (3):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/layouts/styled_group_box.py
+Time: 2025-08-10T11:10:54.811622
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QGroupBox, QHBoxLayout, QLayout, QVBoxLayout, QWidget' -> 'from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLayout, QVBoxLayout, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/layouts/styled_splitter.py
+Time: 2025-08-10T11:10:54.817720
+Changes (2):
+  - Import: 'from PyQt6.QtCore import Qt' -> 'from PySide6.QtCore import Qt'
+  - Import: 'from PyQt6.QtWidgets import QSplitter, QWidget' -> 'from PySide6.QtWidgets import QSplitter, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/navigation/region_jump_widget.py
+Time: 2025-08-10T11:10:54.825671
+Changes (5):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+  - QVariant: Removed 1 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/navigation/sprite_navigator.py
+Time: 2025-08-10T11:10:54.831250
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont, QKeyEvent, QPixmap' -> 'from PySide6.QtGui import QFont, QKeyEvent, QPixmap'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/panels/import_export_panel.py
+Time: 2025-08-10T11:10:54.837236
+Changes (3):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/panels/scan_controls_panel.py
+Time: 2025-08-10T11:10:54.847860
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QMutex, QMutexLocker, pyqtSignal' -> 'from PySide6.QtCore import QMutex, QMutexLocker, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (8 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/panels/status_panel.py
+Time: 2025-08-10T11:10:54.870315
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/components/visualization/rom_map_widget.py
+Time: 2025-08-10T11:10:54.875291
+Changes (4):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen' -> 'from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen'
+  - Import: 'from PyQt6.QtWidgets import QSizePolicy, QWidget' -> 'from PySide6.QtWidgets import QSizePolicy, QWidget'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/dialogs/services/view_state_manager.py
+Time: 2025-08-10T11:10:54.879737
+Changes (4):
+  - Import: 'from PyQt6.QtWidgets import QWidget' -> 'from PySide6.QtWidgets import QWidget'
+  - Import: 'from PyQt6.QtCore import QObject, QRect, Qt, pyqtSignal' -> 'from PySide6.QtCore import QObject, QRect, Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QGuiApplication' -> 'from PySide6.QtGui import QGuiApplication'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/base_widget.py
+Time: 2025-08-10T11:10:54.885850
+Changes (1):
+  - Import: 'from PyQt6.QtWidgets import QGroupBox, QSizePolicy, QWidget' -> 'from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget'
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/cgram_selector_widget.py
+Time: 2025-08-10T11:10:54.896024
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/mode_selector_widget.py
+Time: 2025-08-10T11:10:54.909394
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout' -> 'from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/output_name_widget.py
+Time: 2025-08-10T11:10:54.916963
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout'
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/rom_file_widget.py
+Time: 2025-08-10T11:10:54.927482
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout' -> 'from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/widgets/sprite_selector_widget.py
+Time: 2025-08-10T11:10:54.935557
+Changes (3):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout' -> 'from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/preview_worker.py
+Time: 2025-08-10T11:10:54.949443
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/range_scan_worker.py
+Time: 2025-08-10T11:10:54.967069
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (9 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/scan_worker.py
+Time: 2025-08-10T11:10:54.976314
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject' -> 'from PySide6.QtCore import QObject'
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/search_worker.py
+Time: 2025-08-10T11:10:54.982710
+Changes (2):
+  - Import: 'from PyQt6.QtCore import QThread, pyqtSignal' -> 'from PySide6.QtCore import QThread, pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (5 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/similarity_indexing_worker.py
+Time: 2025-08-10T11:10:55.002645
+Changes (3):
+  - Import: 'from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot' -> 'from PySide6.QtCore import QObject, pyqtSignal, pyqtSlot'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+  - API: 'pyqtSlot' -> 'Slot' (3 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/rom_extraction/workers/sprite_search_worker.py
+Time: 2025-08-10T11:10:55.007362
+Changes (2):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/tabs/manual_offset/browse_tab.py
+Time: 2025-08-10T11:10:55.025870
+Changes (5):
+  - Import: 'from PyQt6.QtCore import Qt, pyqtSignal' -> 'from PySide6.QtCore import Qt, pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (6 occurrences)
+  - QVariant: Removed 2 QVariant usage patterns
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/tabs/manual_offset/history_tab.py
+Time: 2025-08-10T11:10:55.043607
+Changes (4):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (2 occurrences)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/ui/tabs/manual_offset/smart_tab.py
+Time: 2025-08-10T11:10:55.064526
+Changes (4):
+  - Import: 'from PyQt6.QtCore import pyqtSignal' -> 'from PySide6.QtCore import pyqtSignal'
+  - Import: 'from PyQt6.QtGui import QFont' -> 'from PySide6.QtGui import QFont'
+  - Import: 'from PyQt6.QtWidgets import (' -> 'from PySide6.QtWidgets import ('
+  - API: 'pyqtSignal' -> 'Signal' (4 occurrences)
+
+FAILED MIGRATIONS:
+----------------------------------------
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_circular_dependency_fix.py
+Error: Syntax error: unexpected indent (<unknown>, line 23)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_cross_dialog_integration_real.py
+Error: Syntax error: invalid syntax (<unknown>, line 25)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dependency_injection.py
+Error: Syntax error: invalid syntax (<unknown>, line 15)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_initialization.py
+Error: Syntax error: invalid syntax (<unknown>, line 14)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_dialog_instantiation.py
+Error: Syntax error: invalid syntax (<unknown>, line 19)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_grid_arrangement_dialog_mock.py
+Error: Syntax error: invalid syntax (<unknown>, line 14)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_image_utils.py
+Error: Syntax error: unexpected indent (<unknown>, line 33)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_integration_headless.py
+Error: Syntax error: unexpected indent (<unknown>, line 36)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_no_duplicate_sliders_validation.py
+Error: Syntax error: invalid syntax (<unknown>, line 20)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_preview_generator.py
+Error: Syntax error: invalid syntax (<unknown>, line 16)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_preview_orchestrator.py
+Error: Syntax error: invalid syntax (<unknown>, line 25)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_qt_signal_architecture.py
+Error: Syntax error: invalid syntax (<unknown>, line 24)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_qt_threading_patterns.py
+Error: Syntax error: invalid syntax (<unknown>, line 20)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_rom_cache_ui_integration.py
+Error: Syntax error: invalid syntax (<unknown>, line 23)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_settings_persistence_across_restarts.py
+Error: Syntax error: invalid syntax (<unknown>, line 27)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_smart_preview_coordinator.py
+Error: Syntax error: invalid syntax (<unknown>, line 26)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_thread_safe_singleton.py
+Error: Syntax error: invalid syntax (<unknown>, line 16)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_manager.py
+Error: Syntax error: invalid syntax (<unknown>, line 9)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_manager_refactored.py
+Error: Syntax error: invalid syntax (<unknown>, line 20)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_owned_injection.py
+Error: Syntax error: invalid syntax (<unknown>, line 25)
+
+File: /mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests/test_worker_specialized.py
+Error: Syntax error: invalid syntax (<unknown>, line 18)
+
+MIGRATION COMPLETE
+================================================================================

@@ -160,7 +160,7 @@ class TestGridArrangementDialogMigration:
         qtbot.addWidget(dialog)
 
         # Main splitter should be horizontal
-        from PyQt6.QtCore import Qt
+        from PySide6.QtCore import Qt
         assert dialog.main_splitter.orientation() == Qt.Orientation.Horizontal
 
         # Handle width should be set correctly

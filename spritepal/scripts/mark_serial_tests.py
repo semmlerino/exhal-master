@@ -28,7 +28,7 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
 
     # Execution Environment Analysis
     has_qt_imports = any(qt_term in content for qt_term in [
-        'PyQt6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog',
+        'PySide6', 'PyQt5', 'PySide6', 'PySide2', 'QWidget', 'QDialog',
         'QApplication', 'QMainWindow', 'qtbot'
     ])
 

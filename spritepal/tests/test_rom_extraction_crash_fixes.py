@@ -165,7 +165,7 @@ class TestOffsetParsingFixes:
             dialog.setResult(dialog.DialogCode.Accepted)
 
             # Should return None due to invalid offset
-            with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
+            with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:
                 result = dialog.get_parameters()
                 assert result is None
                 mock_warning.assert_called_once()
@@ -187,7 +187,7 @@ class TestROMLoadingSafety:
         """Test ROM loading with non-existent file"""
         dialog = injection_dialog
 
-        with patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_critical:
+        with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
             dialog._load_rom_info("/nonexistent/file.sfc")
 
             # Verify error dialog was shown
@@ -209,7 +209,7 @@ class TestROMLoadingSafety:
             tmp_file.flush()
 
             try:
-                with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
+                with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:
                     dialog._load_rom_info(tmp_file.name)
 
                     # Verify error dialog was shown
@@ -369,7 +369,7 @@ class TestInputValidation:
              patch.object(dialog.input_rom_selector, "get_path", return_value=""), \
              patch.object(dialog.output_rom_selector, "get_path", return_value=""):
 
-            with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warning:
+            with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warning:
                 result = dialog.get_parameters()
                 assert result is None
                 mock_warning.assert_called_once()

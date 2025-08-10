@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PIL import Image
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from core.managers.base_manager import BaseManager
 from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
@@ -420,7 +420,7 @@ class TestROMExtractionWorker:
 @pytest.fixture
 def qtbot():
     """Provide qtbot for Qt testing."""
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if app is None:

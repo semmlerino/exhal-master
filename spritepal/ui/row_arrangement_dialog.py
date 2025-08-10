@@ -6,9 +6,9 @@ Intuitive drag-and-drop interface for arranging sprite rows
 import os
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,

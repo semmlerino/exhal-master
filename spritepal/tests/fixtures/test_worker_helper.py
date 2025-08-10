@@ -178,7 +178,7 @@ class TestWorkerHelper:
         # Create mock worker that looks like real one
         from unittest.mock import Mock
 
-        from PyQt6.QtCore import QThread
+        from PySide6.QtCore import QThread
 
         worker = Mock(spec=QThread)
         worker.sprite_path = str(self.sprite_file)
@@ -201,7 +201,7 @@ class TestWorkerHelper:
         """Create ROM injection worker"""
         from unittest.mock import Mock
 
-        from PyQt6.QtCore import QThread
+        from PySide6.QtCore import QThread
 
         worker = Mock(spec=QThread)
         worker.sprite_path = str(self.sprite_file)

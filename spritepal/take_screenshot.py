@@ -96,11 +96,24 @@ def take_screenshot():
             # Find the manual offset dialog window
             for widget in app.allWidgets():
                 if hasattr(widget, 'windowTitle') and 'Manual Offset' in str(widget.windowTitle()):
-                    # Take screenshot
+                    # Take screenshot with incrementing number
                     pixmap = widget.grab()
-                    screenshot_path = Path(__file__).parent / "manual_offset_current_screenshot.png"
+                    
+                    # Find the next available screenshot number
+                    screenshot_num = 1
+                    while True:
+                        screenshot_path = Path(__file__).parent / f"manual_offset_screenshot_{screenshot_num}.png"
+                        if not screenshot_path.exists():
+                            break
+                        screenshot_num += 1
+                    
                     pixmap.save(str(screenshot_path))
                     print(f"Screenshot saved to: {screenshot_path}")
+                    
+                    # Also save as "current" for easy access
+                    current_path = Path(__file__).parent / "manual_offset_current_screenshot.png"
+                    pixmap.save(str(current_path))
+                    print(f"Also saved as current: {current_path}")
                     break
             else:
                 print("Manual offset dialog not found among open widgets")

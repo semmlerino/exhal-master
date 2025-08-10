@@ -5,9 +5,9 @@ Shows visual preview of sprites with optional palette support
 
 
 from PIL import Image
-from PyQt6.QtCore import QSize, Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QAction, QImage, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtGui import QAction, QImage, QPixmap
+from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QHBoxLayout,
@@ -38,8 +38,8 @@ logger = get_logger(__name__)
 class SpritePreviewWidget(QWidget):
     """Widget for displaying sprite previews with palette selection"""
 
-    palette_changed = pyqtSignal(int)  # Emitted when palette selection changes
-    similarity_search_requested = pyqtSignal(int)  # Emitted when user wants to search for similar sprites
+    palette_changed = Signal(int)  # Emitted when palette selection changes
+    similarity_search_requested = Signal(int)  # Emitted when user wants to search for similar sprites
 
     def __init__(self, title: str = "Sprite Preview", parent: QWidget | None = None) -> None:
         # Step 1: Declare instance variables with type hints

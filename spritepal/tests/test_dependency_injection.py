@@ -256,7 +256,7 @@ class TestInjectableClasses:
     
     def test_injection_mixin(self, manager_context_factory):
         """Test InjectionMixin functionality."""
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         class TestWidget(QWidget, InjectionMixin):
             def __init__(self):

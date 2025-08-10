@@ -8,10 +8,10 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PySide6.QtCore import Qt, QTimer, Signal
 
 if TYPE_CHECKING:
-    from PyQt6.QtGui import (
+    from PySide6.QtGui import (
         QColor,
         QDragEnterEvent,
         QDragLeaveEvent,
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
         QPen,
     )
 else:
-    from PyQt6.QtGui import (
+    from PySide6.QtGui import (
         QColor,
         QDragEnterEvent,
         QDragLeaveEvent,
@@ -30,7 +30,7 @@ else:
         QPainter,
         QPen,
     )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QGroupBox,
@@ -74,7 +74,7 @@ logger = get_logger(__name__)
 class DropZone(QWidget):
     """Drag and drop zone for file input"""
 
-    file_dropped = pyqtSignal(str)
+    file_dropped = Signal(str)
 
     def __init__(self, file_type, parent=None):
         super().__init__(parent)
@@ -226,10 +226,10 @@ class DropZone(QWidget):
 class ExtractionPanel(QGroupBox):
     """Panel for managing extraction inputs"""
 
-    files_changed = pyqtSignal()
-    extraction_ready = pyqtSignal(bool)
-    offset_changed = pyqtSignal(int)  # Emitted when VRAM offset changes
-    mode_changed = pyqtSignal(int)  # Emitted when extraction mode changes
+    files_changed = Signal()
+    extraction_ready = Signal(bool)
+    offset_changed = Signal(int)  # Emitted when VRAM offset changes
+    mode_changed = Signal(int)  # Emitted when extraction mode changes
 
     def __init__(self):
         super().__init__("Input Files")
@@ -531,7 +531,7 @@ class ExtractionPanel(QGroupBox):
                 logger.debug("Offset widget made visible")
 
                 # Update display with current values
-                current_offset = self.offset_spinbox.value()
+                current_offset = self.offset_spinbox
                 self._update_offset_display(current_offset)
 
                 # Trigger preview update if files are loaded
@@ -745,7 +745,7 @@ class ExtractionPanel(QGroupBox):
         if self.preset_combo.currentIndex() == 0:  # Kirby Sprites
             return VRAM_SPRITE_OFFSET
         # Custom Range
-        return self.offset_spinbox.value()
+        return self.offset_spinbox
 
     def restore_session_files(self, file_paths):
         """Restore file paths from session data"""
@@ -808,7 +808,7 @@ class ExtractionPanel(QGroupBox):
             super().keyPressEvent(event)
             return
 
-        current = self.offset_spinbox.value()
+        current = self.offset_spinbox
         step = self.offset_spinbox.singleStep()
 
         # Ctrl + Arrow keys for fine stepping

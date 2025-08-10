@@ -125,7 +125,7 @@ class FailureCategorizer:
             r'QSignal',
             r'QTimer',
             r'PySide6',
-            r'PyQt6',
+            r'PySide6',
         ],
         'mock_related': [
             r'Mock.*object',

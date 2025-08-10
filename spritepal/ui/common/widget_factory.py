@@ -8,8 +8,8 @@ styling and behavior throughout the SpritePal application.
 import os
 from typing import Callable
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,

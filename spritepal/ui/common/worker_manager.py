@@ -12,7 +12,7 @@ used throughout the SpritePal codebase:
 
 import contextlib
 
-from PyQt6.QtCore import QThread
+from PySide6.QtCore import QThread
 
 from utils.logging_config import get_logger
 

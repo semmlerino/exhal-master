@@ -10,8 +10,8 @@ from enum import Enum
 from typing import Any
 
 from PIL import Image
-from PyQt6.QtCore import QPointF, Qt, pyqtSignal
-from PyQt6.QtGui import (
+from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QImage,
@@ -19,7 +19,7 @@ from PyQt6.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QButtonGroup,
     QGraphicsLineItem,
     QGraphicsRectItem,
@@ -61,10 +61,10 @@ class GridGraphicsView(QGraphicsView):
     """Custom graphics view for grid-based sprite selection"""
 
     # Signals
-    tile_clicked = pyqtSignal(object)  # TilePosition
-    tiles_selected = pyqtSignal(list)  # List of TilePosition
-    selection_completed = pyqtSignal()
-    zoom_changed = pyqtSignal(float)  # Zoom level changed
+    tile_clicked = Signal(object)  # TilePosition
+    tiles_selected = Signal(list)  # List of TilePosition
+    selection_completed = Signal()
+    zoom_changed = Signal(float)  # Zoom level changed
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -187,9 +187,9 @@ class GridGraphicsView(QGraphicsView):
             h_bar = self.horizontalScrollBar()
             v_bar = self.verticalScrollBar()
             if h_bar:
-                h_bar.setValue(h_bar.value() - delta.x())
+                h_bar.setValue(h_bar - delta.x())
             if v_bar:
-                v_bar.setValue(v_bar.value() - delta.y())
+                v_bar.setValue(v_bar - delta.y())
             self.last_pan_point = event.pos()
         elif event:
             pos = self.mapToScene(event.pos())
@@ -266,9 +266,9 @@ class GridGraphicsView(QGraphicsView):
             h_bar = self.horizontalScrollBar()
             v_bar = self.verticalScrollBar()
             if h_bar:
-                h_bar.setValue(h_bar.value() - delta.x())
+                h_bar.setValue(h_bar - delta.x())
             if v_bar:
-                v_bar.setValue(v_bar.value() - delta.y())
+                v_bar.setValue(v_bar - delta.y())
 
             # Emit zoom change signal
             self.zoom_changed.emit(self.zoom_level)

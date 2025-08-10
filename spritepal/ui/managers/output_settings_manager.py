@@ -5,8 +5,8 @@ Output settings management for MainWindow
 from pathlib import Path
 from typing import Protocol
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QGroupBox,
@@ -33,9 +33,9 @@ class OutputSettingsManager(QObject):
     """Manages output settings section for MainWindow"""
 
     # Signals
-    output_name_changed = pyqtSignal(str)
-    grayscale_toggled = pyqtSignal(bool)
-    metadata_toggled = pyqtSignal(bool)
+    output_name_changed = Signal(str)
+    grayscale_toggled = Signal(bool)
+    metadata_toggled = Signal(bool)
 
     def __init__(self, parent: QWidget, actions_handler: OutputSettingsActionsProtocol) -> None:
         """Initialize output settings manager

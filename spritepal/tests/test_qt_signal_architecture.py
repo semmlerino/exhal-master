@@ -15,8 +15,8 @@ from typing import Any, cast
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 
 from core.controller import ExtractionController
 from core.managers import (
@@ -173,7 +173,7 @@ class TestQtSignalArchitecture:
         for signal_name in protocol_signals:
             assert hasattr(injection_mgr, signal_name)
             signal = getattr(injection_mgr, signal_name)
-            assert isinstance(signal, pyqtSignal)
+            assert isinstance(signal, Signal)
     
     def test_thread_safety_signal_emission(self, app, signal_capture):
         """Test that signals work correctly across thread boundaries"""
@@ -382,8 +382,8 @@ class TestQtSignalArchitecture:
         """Test the worker thread pattern with proper signal handling"""
         
         class TestWorker(QThread):
-            progress = pyqtSignal(str)
-            finished = pyqtSignal(bool)
+            progress = Signal(str)
+            finished = Signal(bool)
             
             def run(self):
                 # Simulate work with progress updates
@@ -468,7 +468,7 @@ class TestMemoryManagement:
         import weakref
         
         class Worker(QThread):
-            signal = pyqtSignal(str)
+            signal = Signal(str)
             
             def run(self):
                 self.signal.emit("Working")

@@ -19,7 +19,7 @@ import utils.rom_cache as rom_cache_module
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from core.managers import cleanup_managers, initialize_managers
 from ui.components.panels.status_panel import StatusPanel
@@ -349,7 +349,7 @@ class TestStatusPanelIntegration:
 
         # Update progress
         panel.update_progress(50)
-        assert panel.scan_progress.value() == 50
+        assert panel.scan_progress == 50
 
         # Hide progress
         panel.hide_progress()

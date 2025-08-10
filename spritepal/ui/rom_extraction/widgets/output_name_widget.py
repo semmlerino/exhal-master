@@ -1,7 +1,7 @@
 """Output name widget for ROM extraction"""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
 
 from .base_widget import BaseExtractionWidget
 
@@ -20,7 +20,7 @@ class OutputNameWidget(BaseExtractionWidget):
     """Widget for managing output file naming"""
 
     # Signals
-    text_changed = pyqtSignal(str)  # Emitted when output name changes
+    text_changed = Signal(str)  # Emitted when output name changes
 
     def __init__(self, parent=None):
         super().__init__(parent)

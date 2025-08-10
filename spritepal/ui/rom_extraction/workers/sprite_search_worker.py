@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
@@ -35,10 +35,10 @@ class SpriteSearchWorker(BaseWorker):
     """
 
     # Signals
-    sprite_found = pyqtSignal(int, float)  # offset, quality
-    search_complete = pyqtSignal(bool)  # True if sprite found
+    sprite_found = Signal(int, float)  # offset, quality
+    search_complete = Signal(bool)  # True if sprite found
 
-    # Note: progress signal is already defined in BaseWorker as pyqtSignal(int, str)
+    # Note: progress signal is already defined in BaseWorker as Signal(int, str)
     # We'll override emit_progress to convert our (current, total) to (percent, message)
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,

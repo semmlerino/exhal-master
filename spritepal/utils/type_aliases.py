@@ -47,8 +47,8 @@ except ImportError:
         __all__ = ["ImageMode", "ImageSize", "PILImage"]
 
 from PIL import Image
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QWidget
 
 # External library types for better type checking
 # Use concrete PIL Image type to avoid forward reference issues

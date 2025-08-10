@@ -4,9 +4,9 @@ Palette preview widget for SpritePal
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
-from PyQt6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen
+from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
 
 from ui.common.spacing_constants import BORDER_THIN, PALETTE_PREVIEW_SIZE
 
@@ -14,7 +14,7 @@ from ui.common.spacing_constants import BORDER_THIN, PALETTE_PREVIEW_SIZE
 class PaletteColorWidget(QWidget):
     """Widget for displaying a single palette color"""
 
-    clicked = pyqtSignal(int)  # color index
+    clicked = Signal(int)  # color index
 
     def __init__(self, index, color=(0, 0, 0)):
         super().__init__()

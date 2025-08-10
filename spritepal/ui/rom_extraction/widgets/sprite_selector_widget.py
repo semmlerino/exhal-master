@@ -1,7 +1,7 @@
 """Sprite selector widget for ROM extraction"""
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from .base_widget import BaseExtractionWidget
 
@@ -20,8 +20,8 @@ class SpriteSelectorWidget(BaseExtractionWidget):
     """Widget for selecting sprites from ROM"""
 
     # Signals
-    sprite_changed = pyqtSignal(int)  # Emitted when sprite selection changes
-    find_sprites_clicked = pyqtSignal()  # Emitted when find sprites button clicked
+    sprite_changed = Signal(int)  # Emitted when sprite selection changes
+    find_sprites_clicked = Signal()  # Emitted when find sprites button clicked
 
     def __init__(self, parent=None):
         super().__init__(parent)

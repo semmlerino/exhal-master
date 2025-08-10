@@ -18,8 +18,8 @@ from enum import Enum
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer
-from PyQt6.QtWidgets import QSlider
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer
+from PySide6.QtWidgets import QSlider
 
 from ui.common.smart_preview_coordinator import (
 # Serial execution required: QApplication management, Real Qt components
@@ -71,10 +71,10 @@ class MockPreviewCache:
 
 class MockPreviewWorkerPool(QObject):
     """Mock PreviewWorkerPool for testing"""
-    from PyQt6.QtCore import pyqtSignal
+    from PySide6.QtCore import Signal
     
-    preview_ready = pyqtSignal(str, bytes, int, int, str)  # request_id, data, width, height, name
-    preview_error = pyqtSignal(str, str)                   # request_id, error
+    preview_ready = Signal(str, bytes, int, int, str)  # request_id, data, width, height, name
+    preview_error = Signal(str, str)                   # request_id, error
     
     def __init__(self):
         super().__init__()
@@ -555,7 +555,7 @@ class TestSmartPreviewCoordinatorIntegration:
     
     def test_real_slider_integration(self, qtbot):
         """Test integration with real QSlider widget"""
-        from PyQt6.QtWidgets import QApplication, QSlider
+        from PySide6.QtWidgets import QApplication, QSlider
         
         # Ensure QApplication exists
         if not QApplication.instance():

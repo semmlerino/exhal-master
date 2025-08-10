@@ -3,7 +3,7 @@ Tests for BaseManager abstract class
 """
 
 import pytest
-from PyQt6.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 from core.managers import BaseManager, ValidationError
 

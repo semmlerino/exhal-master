@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 class ArrangementType(Enum):
@@ -51,12 +51,12 @@ class GridArrangementManager(QObject):
     """Manages grid-based sprite tile arrangements with support for rows, columns, and custom groups"""
 
     # Signals
-    arrangement_changed = pyqtSignal()
-    tile_added = pyqtSignal(object)  # TilePosition
-    tile_removed = pyqtSignal(object)  # TilePosition
-    group_added = pyqtSignal(str)  # Group ID
-    group_removed = pyqtSignal(str)  # Group ID
-    arrangement_cleared = pyqtSignal()
+    arrangement_changed = Signal()
+    tile_added = Signal(object)  # TilePosition
+    tile_removed = Signal(object)  # TilePosition
+    group_added = Signal(str)  # Group ID
+    group_removed = Signal(str)  # Group ID
+    arrangement_cleared = Signal()
 
     def __init__(self, total_rows: int, total_cols: int):
         super().__init__()

@@ -4,9 +4,9 @@ Row-related widgets for SpritePal row arrangement dialog
 
 
 from PIL import Image
-from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QDrag, QPainter, QPen
-from PyQt6.QtWidgets import QListWidget, QWidget
+from PySide6.QtCore import QMimeData, Qt, Signal
+from PySide6.QtGui import QColor, QDrag, QPainter, QPen
+from PySide6.QtWidgets import QListWidget, QWidget
 
 from utils.image_utils import pil_to_qpixmap
 
@@ -160,8 +160,8 @@ class RowPreviewWidget(QWidget):
 class DragDropListWidget(QListWidget):
     """List widget with enhanced drag-and-drop support"""
 
-    item_dropped = pyqtSignal(int, int)  # from_index, to_index
-    external_drop = pyqtSignal(object)  # dropped item data
+    item_dropped = Signal(int, int)  # from_index, to_index
+    external_drop = Signal(object)  # dropped item data
 
     def __init__(self, accept_external_drops: bool = False):
         super().__init__()

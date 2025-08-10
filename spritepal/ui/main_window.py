@@ -11,13 +11,13 @@ if TYPE_CHECKING:
     from core.controller import ExtractionController
     from core.managers.session_manager import SessionManager
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PySide6.QtCore import Qt, Signal
 
 if TYPE_CHECKING:
-    from PyQt6.QtGui import QCloseEvent, QKeyEvent
+    from PySide6.QtGui import QCloseEvent, QKeyEvent
 else:
-    from PyQt6.QtGui import QCloseEvent, QKeyEvent
-from PyQt6.QtWidgets import (
+    from PySide6.QtGui import QCloseEvent, QKeyEvent
+from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QMainWindow,
@@ -46,6 +46,13 @@ from ui.palette_preview import PalettePreviewWidget
 from ui.rom_extraction_panel import ROMExtractionPanel
 from ui.zoomable_preview import PreviewPanel
 
+# Layout constants for consistent sizing and spacing
+MAIN_WINDOW_MIN_SIZE = (1000, 700)
+DEFAULT_SPLITTER_RATIO = 0.35
+MIN_PANEL_WIDTH = 350
+LAYOUT_MARGINS = 8
+LAYOUT_SPACING = 6
+
 
 class ExtractionParams(TypedDict):
     """Type definition for extraction parameters"""
@@ -63,15 +70,15 @@ class MainWindow(QMainWindow):
     """Main application window for SpritePal"""
 
     # Signals
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)  # sprite file path
-    arrange_rows_requested = pyqtSignal(str)  # sprite file path for arrangement
-    arrange_grid_requested = pyqtSignal(str)  # sprite file path for grid arrangement
-    inject_requested = pyqtSignal()  # inject sprite to VRAM
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)  # sprite file path
+    arrange_rows_requested = Signal(str)  # sprite file path for arrangement
+    arrange_grid_requested = Signal(str)  # sprite file path for grid arrangement
+    inject_requested = Signal()  # inject sprite to VRAM
 
     # Completion signals for controller communication
-    extraction_completed = pyqtSignal(list)  # list of extracted files
-    extraction_error_occurred = pyqtSignal(str)     # error message
+    extraction_completed = Signal(list)  # list of extracted files
+    extraction_error_occurred = Signal(str)     # error message
 
     def __init__(self) -> None:
         super().__init__()
@@ -118,7 +125,7 @@ class MainWindow(QMainWindow):
     def _setup_ui(self) -> None:
         """Initialize the user interface"""
         self.setWindowTitle("SpritePal - Sprite Extraction Tool")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(*MAIN_WINDOW_MIN_SIZE)
 
         # Create central widget
         central_widget = QWidget(self)
@@ -127,7 +134,8 @@ class MainWindow(QMainWindow):
         # Main horizontal splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS)
+        main_layout.setSpacing(0)  # Splitter handles spacing
         main_layout.addWidget(main_splitter)
 
         # Left panel - Input and controls
@@ -141,13 +149,17 @@ class MainWindow(QMainWindow):
         main_splitter.addWidget(self.left_panel)
         # Right panel will be added by PreviewCoordinator
 
-        # Configure main splitter
-        main_splitter.setSizes([400, 500])  # Initial sizes
-        main_splitter.setStretchFactor(0, 0)  # Left panel doesn't stretch
-        main_splitter.setStretchFactor(1, 1)  # Right panel stretches
+        # Configure main splitter with proper stretch factors
+        # Calculate initial sizes based on DEFAULT_SPLITTER_RATIO
+        total_width = MAIN_WINDOW_MIN_SIZE[0] - (2 * LAYOUT_MARGINS)
+        left_width = int(total_width * DEFAULT_SPLITTER_RATIO)
+        right_width = total_width - left_width
+        main_splitter.setSizes([left_width, right_width])
+        main_splitter.setStretchFactor(0, 1)  # Left panel stretches proportionally
+        main_splitter.setStretchFactor(1, 2)  # Right panel stretches more
 
         # Set minimum sizes for panels
-        self.left_panel.setMinimumWidth(300)
+        self.left_panel.setMinimumWidth(MIN_PANEL_WIDTH)
 
         # Status bar
         self.status_bar = QStatusBar()
@@ -158,10 +170,13 @@ class MainWindow(QMainWindow):
         """Create the left panel with tabs, output settings, and buttons"""
         left_panel = QWidget(self)
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setContentsMargins(LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS)
+        left_layout.setSpacing(LAYOUT_SPACING)
 
-        # Create tab widget for extraction methods
+        # Create tab widget for extraction methods with proper size policy
         self.extraction_tabs = QTabWidget(self)
+        from PySide6.QtWidgets import QSizePolicy
+        self.extraction_tabs.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         # ROM extraction tab (first tab, selected by default)
         self.rom_extraction_panel = ROMExtractionPanel()
@@ -179,7 +194,7 @@ class MainWindow(QMainWindow):
         # Output settings will be added by OutputSettingsManager
         # Action buttons will be added by ToolbarManager
 
-        left_layout.addStretch()
+        # Remove addStretch() to eliminate empty space at bottom
         return left_panel
 
     def _setup_managers(self) -> None:
@@ -221,23 +236,26 @@ class MainWindow(QMainWindow):
         # Add output settings to left panel
         left_layout = self.left_panel.layout()
         if left_layout is not None:
-            # Insert output settings group before the stretch
+            # Add output settings group to left panel
             output_group = self.output_settings_manager.create_output_settings_group()
-            left_layout.insertWidget(left_layout.count() - 1, output_group)
+            left_layout.addWidget(output_group)
 
             # Add toolbar buttons
             button_layout = QGridLayout()
-            button_layout.setContentsMargins(0, 10, 0, 0)
-            button_layout.setSpacing(5)
+            button_layout.setContentsMargins(0, LAYOUT_SPACING * 2, 0, 0)
+            button_layout.setSpacing(LAYOUT_SPACING)
             self.toolbar_manager.create_action_buttons(button_layout)
-            left_layout.insertLayout(left_layout.count() - 1, button_layout)
+            left_layout.addLayout(button_layout)
 
         # Add preview panel to main splitter
         main_splitter = self.centralWidget().findChild(QSplitter)
         if main_splitter:
             right_panel = self.preview_coordinator.create_preview_panel(self)
             main_splitter.addWidget(right_panel)
-            right_panel.setMinimumWidth(300)
+            right_panel.setMinimumWidth(MIN_PANEL_WIDTH)
+            # Ensure right panel has proper size policy
+            from PySide6.QtWidgets import QSizePolicy
+            right_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def _update_initial_ui_state(self) -> None:
         """Update initial UI state after setup"""

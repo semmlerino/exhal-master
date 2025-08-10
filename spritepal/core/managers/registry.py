@@ -6,7 +6,7 @@ import threading
 import weakref
 from typing import Any
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from utils.logging_config import get_logger
 from utils.safe_logging import (

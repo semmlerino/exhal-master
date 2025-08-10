@@ -45,8 +45,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
-from PyQt6.QtCore import QObject, QThread
-from PyQt6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QObject, QThread
+from PySide6.QtWidgets import QApplication, QWidget
 
 from core.managers.base_manager import BaseManager
 from core.managers.extraction_manager import ExtractionManager

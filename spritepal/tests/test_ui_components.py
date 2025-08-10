@@ -43,7 +43,7 @@ class TestROMMapWidget:
     def test_rom_map_widget_creation(self, qtbot):
         """Test ROMMapWidget can be created with proper Qt parent"""
         # Test component creation with real Qt parent
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -61,7 +61,7 @@ class TestROMMapWidget:
     def test_add_sprite_data(self, qtbot):
         """Test adding sprite data to ROM map"""
         from ui.components.visualization.rom_map_widget import ROMMapWidget
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -86,7 +86,7 @@ class TestROMMapWidget:
             SPRITE_CLEANUP_THRESHOLD,
             ROMMapWidget,
         )
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -106,7 +106,7 @@ class TestROMMapWidget:
     def test_cleanup_method(self, qtbot):
         """Test cleanup method clears resources"""
         from ui.components.visualization.rom_map_widget import ROMMapWidget
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -141,7 +141,7 @@ class TestScanControlsPanel:
     def test_scan_controls_creation(self, qtbot):
         """Test ScanControlsPanel creation"""
         from ui.components.panels.scan_controls_panel import ScanControlsPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -159,7 +159,7 @@ class TestScanControlsPanel:
     def test_scan_parameters_validation(self, qtbot):
         """Test scan parameter validation"""
         from ui.components.panels.scan_controls_panel import ScanControlsPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -193,7 +193,7 @@ class TestImportExportPanel:
     def test_import_export_creation(self, qtbot):
         """Test ImportExportPanel creation"""
         from ui.components.panels.import_export_panel import ImportExportPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -208,7 +208,7 @@ class TestImportExportPanel:
     def test_file_operations(self, qtbot):
         """Test file import/export operations"""
         from ui.components.panels.import_export_panel import ImportExportPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -247,7 +247,7 @@ class TestStatusPanel:
     def test_status_panel_creation(self, qtbot):
         """Test StatusPanel creation"""
         from ui.components.panels.status_panel import StatusPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -263,7 +263,7 @@ class TestStatusPanel:
     def test_status_updates(self, qtbot):
         """Test status message updates"""
         from ui.components.panels.status_panel import StatusPanel
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -285,26 +285,26 @@ class TestStatusPanel:
         # Test the actual progress bar state directly
         assert panel.scan_progress.minimum() == 0
         assert panel.scan_progress.maximum() == 100
-        assert panel.scan_progress.value() == 0  # setValue(minimum) in show_progress
+        assert panel.scan_progress == 0  # setValue(minimum) in show_progress
         
         # Test update_progress method - should work since show_progress makes it visible
         # and the parent hierarchy is shown
         panel.update_progress(50)
-        assert panel.scan_progress.value() == 50
+        assert panel.scan_progress == 50
         
         # Test hide functionality
         panel.hide_progress()
         # Progress bar should still have the value even when hidden
-        assert panel.scan_progress.value() == 50
+        assert panel.scan_progress == 50
         
         # Test update_progress when progress bar is hidden (should not update)
         panel.update_progress(25)  # Should not change value since bar is hidden
-        assert panel.scan_progress.value() == 50  # Should still be 50
+        assert panel.scan_progress == 50  # Should still be 50
         
         # Show again and test update works
         panel.show_progress(0, 100)
         panel.update_progress(75)
-        assert panel.scan_progress.value() == 75
+        assert panel.scan_progress == 75
         
         # Test progress bar methods exist
         assert hasattr(panel, "show_progress")
@@ -327,7 +327,7 @@ class TestRangeScanDialog:
     def test_range_scan_dialog_creation(self, qtbot):
         """Test RangeScanDialog creation"""
         from ui.components.dialogs.range_scan_dialog import RangeScanDialog
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -348,7 +348,7 @@ class TestRangeScanDialog:
     def test_scan_parameters(self, qtbot):
         """Test scan parameter collection"""
         from ui.components.dialogs.range_scan_dialog import RangeScanDialog
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)
@@ -369,7 +369,7 @@ class TestRangeScanDialog:
     def test_validation_with_large_range(self, qtbot):
         """Test dialog can handle large range selection"""
         from ui.components.dialogs.range_scan_dialog import RangeScanDialog
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         
         parent_widget = QWidget()
         qtbot.addWidget(parent_widget)

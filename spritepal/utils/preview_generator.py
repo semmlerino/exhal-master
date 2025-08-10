@@ -22,10 +22,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
 from PIL import Image
-from PyQt6.QtCore import QMutex, QMutexLocker, QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 
 if TYPE_CHECKING:
-    from PyQt6.QtGui import QPixmap
+    from PySide6.QtGui import QPixmap
 
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
@@ -192,10 +192,10 @@ class PreviewGenerator(QObject):
     """
 
     # Signals for preview events
-    preview_ready = pyqtSignal(object)  # PreviewResult
-    preview_error = pyqtSignal(str, object)  # error_message, request
-    preview_progress = pyqtSignal(int, str)  # progress_percent, status_message
-    cache_stats_changed = pyqtSignal(object)  # cache statistics
+    preview_ready = Signal(object)  # PreviewResult
+    preview_error = Signal(str, object)  # error_message, request
+    preview_progress = Signal(int, str)  # progress_percent, status_message
+    cache_stats_changed = Signal(object)  # cache statistics
 
     def __init__(self,
                  cache_size: int = 100,

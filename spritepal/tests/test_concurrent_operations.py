@@ -16,8 +16,8 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
-from PyQt6.QtCore import QThread, QTimer, pyqtSignal
-from PyQt6.QtTest import QTest
+from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtTest import QTest
 
 from core.managers import cleanup_managers, initialize_managers
 from core.rom_extractor import ROMExtractor
@@ -267,8 +267,8 @@ class TestConcurrentROMScanning:
             results = {"reads": 0, "writes": 0, "errors": []}
 
             class CacheReader(QThread):
-                finished = pyqtSignal()
-                error = pyqtSignal(str)
+                finished = Signal()
+                error = Signal(str)
 
                 def __init__(self, cache, rom_path):
                     super().__init__()
@@ -289,8 +289,8 @@ class TestConcurrentROMScanning:
                         results["errors"].append(str(e))
 
             class CacheWriter(QThread):
-                finished = pyqtSignal()
-                error = pyqtSignal(str)
+                finished = Signal()
+                error = Signal(str)
 
                 def __init__(self, cache, rom_path, worker_id):
                     super().__init__()
@@ -562,8 +562,8 @@ class TestSettingsChangeDuringOperations:
                 results = {"write_done": False, "error": None}
 
                 class CacheWriteWorker(QThread):
-                    finished = pyqtSignal()
-                    error = pyqtSignal(str)
+                    finished = Signal()
+                    error = Signal(str)
 
                     def run(self):
                         try:
@@ -663,8 +663,8 @@ class TestManagerThreadSafety:
             results = {"previews": 0, "errors": []}
 
             class PreviewWorker(QThread):
-                finished = pyqtSignal()
-                error = pyqtSignal(str)
+                finished = Signal()
+                error = Signal(str)
 
                 def __init__(self, worker_id, manager):
                     super().__init__()
@@ -778,8 +778,8 @@ class TestManagerContextIsolation:
         results = {"context1_ops": 0, "context2_ops": 0, "errors": []}
         
         class ContextWorker(QThread):
-            finished = pyqtSignal()
-            error = pyqtSignal(str)
+            finished = Signal()
+            error = Signal(str)
             
             def __init__(self, context_name, context_factory):
                 super().__init__()
@@ -832,8 +832,8 @@ class TestManagerContextIsolation:
         results = {"operations_completed": 0, "errors": []}
         
         class LongRunningWorker(QThread):
-            finished = pyqtSignal()
-            error = pyqtSignal(str)
+            finished = Signal()
+            error = Signal(str)
             
             def __init__(self, context_factory):
                 super().__init__()

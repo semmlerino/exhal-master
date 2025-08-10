@@ -4,9 +4,9 @@ Toolbar and action button management for MainWindow
 
 from typing import Protocol
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QGridLayout, QPushButton, QWidget
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QGridLayout, QPushButton, QWidget
 
 from ui.styles import get_button_style
 
@@ -39,11 +39,11 @@ class ToolbarManager(QObject):
     """Manages action buttons and toolbar for MainWindow"""
 
     # Signals - forward button clicks to main window
-    extract_clicked = pyqtSignal()
-    open_editor_clicked = pyqtSignal()
-    arrange_rows_clicked = pyqtSignal()
-    arrange_grid_clicked = pyqtSignal()
-    inject_clicked = pyqtSignal()
+    extract_clicked = Signal()
+    open_editor_clicked = Signal()
+    arrange_rows_clicked = Signal()
+    arrange_grid_clicked = Signal()
+    inject_clicked = Signal()
 
     def __init__(self, parent: QWidget, actions_handler: ToolbarActionsProtocol) -> None:
         """Initialize toolbar manager

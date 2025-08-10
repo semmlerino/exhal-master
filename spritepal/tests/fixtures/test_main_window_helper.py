@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QLabel, QStatusBar
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QLabel, QStatusBar
 
 from ui.palette_preview import PalettePreviewWidget
 from ui.zoomable_preview import PreviewPanel
@@ -28,11 +28,11 @@ class TestMainWindowHelper(QObject):
     """Helper for managing real MainWindow components in tests"""
 
     # Define signals that MainWindow has
-    extract_requested = pyqtSignal()
-    open_in_editor_requested = pyqtSignal(str)
-    arrange_rows_requested = pyqtSignal(str)
-    arrange_grid_requested = pyqtSignal(str)
-    inject_requested = pyqtSignal()
+    extract_requested = Signal()
+    open_in_editor_requested = Signal(str)
+    arrange_rows_requested = Signal(str)
+    arrange_grid_requested = Signal(str)
+    inject_requested = Signal()
 
     def __init__(self, temp_dir: str | None = None):
         """Initialize helper with optional temporary directory"""

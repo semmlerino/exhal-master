@@ -10,9 +10,9 @@ Run with: pytest tests/examples/example_real_component_test.py -v
 
 import pytest
 from pathlib import Path
-from PyQt6.QtCore import Qt
-from PyQt6.QtTest import QSignalSpy
-from PyQt6.QtWidgets import QWidget, QPushButton
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QSignalSpy
+from PySide6.QtWidgets import QWidget, QPushButton
 
 from tests.infrastructure.real_component_factory import (
     RealComponentFactory,

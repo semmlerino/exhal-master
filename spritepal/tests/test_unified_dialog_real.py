@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
-from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication, QSlider, QTabWidget, QPushButton, QSpinBox
+from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QSlider, QTabWidget, QPushButton, QSpinBox
 
 # Ensure Qt environment is configured
 # Test characteristics: Real GUI components requiring display, Timer usage
@@ -153,7 +153,7 @@ class TestUnifiedDialogReal(QtTestCase):
         spy = SignalSpy(browse_tab.offset_changed, "offset_changed")
         
         # Test slider interaction
-        initial_value = slider.value()
+        initial_value = slider
         new_value = initial_value + 0x1000
         
         # Simulate user dragging slider
@@ -164,7 +164,7 @@ class TestUnifiedDialogReal(QtTestCase):
         assert spy.get_args()[0] == new_value
         
         # Verify slider value changed
-        assert slider.value() == new_value
+        assert slider == new_value
     
     def test_smart_tab_auto_detection(self):
         """Test smart tab auto-detection with real components."""
