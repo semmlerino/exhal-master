@@ -83,8 +83,8 @@ class ZoomablePreviewWidget(QWidget):
         self.setStyleSheet(
             """
             ZoomablePreviewWidget {
-                background-color: #f0f0f0;
-                border: 1px solid #999;
+                background-color: #1e1e1e;
+                border: 1px solid #555;
             }
         """
         )
@@ -92,8 +92,8 @@ class ZoomablePreviewWidget(QWidget):
     def paintEvent(self, a0: Any) -> None:
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
-        # Use a light gray background for better contrast with dark sprites
-        painter.fillRect(self.rect(), QColor(240, 240, 240))
+        # Use a dark background for better contrast with sprites in dark theme
+        painter.fillRect(self.rect(), QColor(30, 30, 30))
 
         if self._pixmap is not None:
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -123,8 +123,8 @@ class ZoomablePreviewWidget(QWidget):
             painter.resetTransform()
 
             # Draw zoom level indicator
-            # Dark gray text for visibility on light background
-            painter.setPen(QPen(QColor(60, 60, 60), BORDER_THIN))
+            # Light gray text for visibility on dark background
+            painter.setPen(QPen(QColor(200, 200, 200), BORDER_THIN))
             painter.setFont(painter.font())
             zoom_text = f"Zoom: {self._zoom:.1f}x"
             painter.drawText(10, 20, zoom_text)
@@ -135,8 +135,8 @@ class ZoomablePreviewWidget(QWidget):
 
         else:
             # Draw placeholder
-            # Dark gray text for visibility on light background
-            painter.setPen(QPen(QColor(100, 100, 100), PREVIEW_SCALE_FACTOR))
+            # Light gray text for visibility on dark background
+            painter.setPen(QPen(QColor(150, 150, 150), PREVIEW_SCALE_FACTOR))
             painter.drawText(
                 self.rect(),
                 Qt.AlignmentFlag.AlignCenter,
@@ -188,8 +188,8 @@ class ZoomablePreviewWidget(QWidget):
         top = max(0, int(visible_rect.top()))
         bottom = min(self._pixmap.height(), int(visible_rect.bottom()) + 1)
 
-        # Draw grid - use darker color for better visibility on light background
-        painter.setPen(QPen(QColor(100, 100, 100), TILE_GRID_THICKNESS))
+        # Draw grid - use lighter color for better visibility on dark background
+        painter.setPen(QPen(QColor(120, 120, 120), TILE_GRID_THICKNESS))
 
         # Vertical lines
         for x in range(left, right + 1):
@@ -434,7 +434,7 @@ class PreviewPanel(QWidget):
         help_label = QLabel(
             "Scroll: Zoom | Drag/MMB: Pan | Right-click: Reset | G: Grid | C: Palette | Ctrl+0: 4x | Ctrl+Shift+0: Fit"
         )
-        help_label.setStyleSheet("color: #888; font-size: 10px;")
+        help_label.setStyleSheet("color: #ccc; font-size: 10px;")
 
         controls.addWidget(self.palette_toggle)
         controls.addWidget(self.palette_selector)

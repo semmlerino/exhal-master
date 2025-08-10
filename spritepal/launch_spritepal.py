@@ -140,35 +140,56 @@ class SpritePalApp(QApplication):
 
         self.setPalette(dark_palette)
 
-        # Set application-wide stylesheet for additional styling
+        # Set comprehensive dark theme stylesheet
         self.setStyleSheet(
             """
+            /* Main application styling */
+            QMainWindow {
+                background-color: #2d2d30;
+                color: white;
+            }
+            
+            QWidget {
+                background-color: #2d2d30;
+                color: white;
+            }
+
+            /* Tooltips */
             QToolTip {
                 color: white;
                 background-color: #2b2b2b;
                 border: 1px solid #555;
                 padding: 4px;
+                border-radius: 4px;
             }
 
+            /* Group Boxes and Panels */
             QGroupBox {
                 border: 1px solid #555;
                 border-radius: 4px;
                 margin-top: 8px;
-                padding-top: 8px;
+                padding-top: 12px;
                 font-weight: bold;
+                background-color: #383838;
+                color: white;
             }
 
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
-                padding: 0 5px 0 5px;
+                padding: 0 8px 0 8px;
+                color: white;
             }
 
+            /* Buttons */
             QPushButton {
-                padding: 6px 12px;
+                padding: 8px 16px;
                 border-radius: 4px;
                 border: 1px solid #555;
                 min-width: 80px;
+                background-color: #55555a;
+                color: white;
+                font-weight: bold;
             }
 
             QPushButton:hover {
@@ -183,24 +204,36 @@ class SpritePalApp(QApplication):
             QPushButton:disabled {
                 background-color: #2d2d2d;
                 color: #666;
+                border-color: #444;
             }
 
+            /* Input Fields */
             QLineEdit {
-                padding: 4px;
+                padding: 6px;
                 border: 1px solid #555;
                 border-radius: 4px;
                 background-color: #2b2b2b;
+                color: white;
+                selection-background-color: #0078d4;
             }
 
             QLineEdit:focus {
                 border-color: #0078d4;
+                outline: none;
             }
 
+            QLineEdit:disabled {
+                background-color: #1e1e1e;
+                color: #666;
+            }
+
+            /* Combo Boxes */
             QComboBox {
-                padding: 4px;
+                padding: 6px;
                 border: 1px solid #555;
                 border-radius: 4px;
                 background-color: #2b2b2b;
+                color: white;
                 min-width: 100px;
             }
 
@@ -208,24 +241,52 @@ class SpritePalApp(QApplication):
                 border-color: #0078d4;
             }
 
+            QComboBox:disabled {
+                background-color: #1e1e1e;
+                color: #666;
+            }
+
             QComboBox::drop-down {
                 border: none;
                 width: 20px;
+                background-color: #383838;
             }
 
             QComboBox::down-arrow {
                 image: none;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
-                border-top: 5px solid #999;
+                border-top: 5px solid #ccc;
                 margin-right: 5px;
             }
 
+            QComboBox QAbstractItemView {
+                background-color: #2b2b2b;
+                color: white;
+                border: 1px solid #555;
+                selection-background-color: #0078d4;
+            }
+
+            /* Spin Boxes */
+            QSpinBox, QDoubleSpinBox {
+                padding: 6px;
+                border: 1px solid #555;
+                border-radius: 4px;
+                background-color: #2b2b2b;
+                color: white;
+            }
+
+            QSpinBox:focus, QDoubleSpinBox:focus {
+                border-color: #0078d4;
+            }
+
+            /* Progress Bars */
             QProgressBar {
                 border: 1px solid #555;
                 border-radius: 4px;
                 text-align: center;
                 background-color: #2b2b2b;
+                color: white;
             }
 
             QProgressBar::chunk {
@@ -233,6 +294,7 @@ class SpritePalApp(QApplication):
                 border-radius: 3px;
             }
 
+            /* Tabs */
             QTabWidget::pane {
                 border: 1px solid #555;
                 background-color: #2d2d30;
@@ -241,10 +303,12 @@ class SpritePalApp(QApplication):
             QTabBar::tab {
                 background-color: #383838;
                 color: white;
-                padding: 8px 16px;
+                padding: 10px 16px;
                 margin-right: 2px;
                 border-top-left-radius: 4px;
                 border-top-right-radius: 4px;
+                border: 1px solid #555;
+                border-bottom: none;
             }
 
             QTabBar::tab:selected {
@@ -256,9 +320,110 @@ class SpritePalApp(QApplication):
                 background-color: #484848;
             }
 
+            /* Scroll Areas */
+            QScrollArea {
+                background-color: #1e1e1e;
+                border: 1px solid #555;
+                border-radius: 4px;
+            }
+
+            QScrollBar:vertical {
+                background-color: #383838;
+                width: 12px;
+                border-radius: 6px;
+                margin: 0;
+            }
+
+            QScrollBar::handle:vertical {
+                background-color: #666;
+                min-height: 20px;
+                border-radius: 6px;
+                margin: 2px;
+            }
+
+            QScrollBar::handle:vertical:hover {
+                background-color: #777;
+            }
+
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+
+            /* Sliders */
+            QSlider::groove:horizontal {
+                border: 1px solid #555;
+                height: 8px;
+                background: #2b2b2b;
+                border-radius: 4px;
+            }
+
+            QSlider::handle:horizontal {
+                background: #0078d4;
+                border: 1px solid #0078d4;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+
+            QSlider::handle:horizontal:hover {
+                background: #106ebe;
+                border-color: #106ebe;
+            }
+
+            /* Splitters */
+            QSplitter::handle {
+                background-color: #555;
+                border: 1px solid #666;
+                width: 8px;
+                height: 8px;
+            }
+
+            QSplitter::handle:hover {
+                background-color: #666;
+            }
+
+            /* Labels for previews */
+            QLabel[preview="true"] {
+                background-color: #1e1e1e;
+                border: 1px solid #555;
+                border-radius: 4px;
+            }
+
+            /* Status Bar */
             QStatusBar {
                 background-color: #007acc;
                 color: white;
+                border-top: 1px solid #555;
+            }
+
+            /* Menu Bar */
+            QMenuBar {
+                background-color: #383838;
+                color: white;
+                border-bottom: 1px solid #555;
+            }
+
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 6px 12px;
+            }
+
+            QMenuBar::item:selected {
+                background-color: #484848;
+            }
+
+            QMenu {
+                background-color: #2b2b2b;
+                color: white;
+                border: 1px solid #555;
+            }
+
+            QMenu::item {
+                padding: 6px 20px;
+            }
+
+            QMenu::item:selected {
+                background-color: #0078d4;
             }
         """
         )

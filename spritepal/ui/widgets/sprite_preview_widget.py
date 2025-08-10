@@ -685,12 +685,12 @@ class SpritePreviewWidget(QWidget):
             self.palettes = []
 
     def _apply_empty_state_style(self) -> None:
-        """Apply styling for empty state that's clearly visible"""
+        """Apply dark theme styling for empty state that's clearly visible"""
         self.preview_label.setStyleSheet("""
             QLabel {
-                border: 2px dashed #999;
-                background-color: #f8f9fa;
-                color: #6c757d;
+                border: 2px dashed #666;
+                background-color: #1e1e1e;
+                color: #ccc;
                 margin: 0px;
                 padding: 20px;
                 border-radius: 8px;
@@ -701,11 +701,11 @@ class SpritePreviewWidget(QWidget):
 
     def _apply_content_style(self) -> None:
         """Apply style for actual content display with checkerboard background"""
-        # Use a checkerboard pattern background for better sprite visibility
+        # Use dark background for better sprite visibility on dark theme
         self.preview_label.setStyleSheet("""
             QLabel {
-                background-color: #ffffff;
-                border: 1px solid #ddd;
+                background-color: #1e1e1e;
+                border: 1px solid #555;
                 border-radius: 4px;
                 padding: 4px;
             }
@@ -1111,9 +1111,9 @@ class SpritePreviewWidget(QWidget):
             self.preview_label.setText("Loading...")
             self.preview_label.setStyleSheet("""
                 QLabel {
-                    border: 1px solid #007acc;
-                    background-color: #f0f8ff;
-                    color: #007acc;
+                    border: 1px solid #87ceeb;
+                    background-color: #2d2d30;
+                    color: #87ceeb;
                     margin: 0px;
                     padding: 10px;
                     border-radius: 4px;
@@ -1130,9 +1130,9 @@ class SpritePreviewWidget(QWidget):
             self.preview_label.setText(f"Error: {error_type}")
             self.preview_label.setStyleSheet("""
                 QLabel {
-                    border: 1px solid #dc3545;
-                    background-color: #ffeaea;
-                    color: #dc3545;
+                    border: 1px solid #ff6347;
+                    background-color: #2d2d30;
+                    color: #ff6347;
                     margin: 0px;
                     padding: 10px;
                     border-radius: 4px;

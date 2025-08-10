@@ -497,16 +497,17 @@ def get_slider_style(color: str = "extract") -> str:
 
 def get_preview_panel_style() -> str:
     """
-    Get preview panel styling CSS for image displays
+    Get dark preview panel styling CSS for image displays
 
     Returns:
-        CSS string for preview panel styling
+        CSS string for dark preview panel styling
     """
     return f"""
     QLabel {{
         border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
-        background-color: {COLORS["background"]};
+        background-color: {COLORS["preview_background"]};
         border-radius: {DIMENSIONS["border_radius_small"]}px;
+        color: {COLORS["text_primary"]};
     }}
     """
 
@@ -634,5 +635,65 @@ def get_scroll_area_style(background_color: str = "background") -> str:
     }}
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
         height: 0px;
+    }}
+    """
+
+
+def get_dark_preview_style() -> str:
+    """
+    Get comprehensive dark theme styling for sprite preview areas
+    
+    Returns:
+        CSS string for dark sprite preview styling
+    """
+    return f"""
+    QLabel {{
+        background-color: {COLORS["preview_background"]};
+        border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
+        border-radius: {DIMENSIONS["border_radius"]}px;
+        color: {COLORS["text_primary"]};
+        padding: {DIMENSIONS["spacing_sm"]}px;
+    }}
+    
+    QScrollArea {{
+        background-color: {COLORS["preview_background"]};
+        border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
+        border-radius: {DIMENSIONS["border_radius"]}px;
+    }}
+    
+    QScrollArea QWidget {{
+        background-color: {COLORS["preview_background"]};
+    }}
+    """
+
+
+def get_dark_panel_style() -> str:
+    """
+    Get comprehensive dark theme styling for panels and group boxes
+    
+    Returns:
+        CSS string for dark panel styling  
+    """
+    return f"""
+    QGroupBox {{
+        background-color: {COLORS["panel_background"]};
+        border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
+        border-radius: {DIMENSIONS["border_radius"]}px;
+        margin-top: {DIMENSIONS["spacing_md"]}px;
+        padding-top: {DIMENSIONS["spacing_lg"]}px;
+        color: {COLORS["text_primary"]};
+        font-weight: {FONTS["bold_weight"]};
+    }}
+    
+    QGroupBox::title {{
+        subcontrol-origin: margin;
+        left: {DIMENSIONS["spacing_md"]}px;
+        padding: 0 {DIMENSIONS["spacing_sm"]}px 0 {DIMENSIONS["spacing_sm"]}px;
+        color: {COLORS["text_primary"]};
+    }}
+    
+    QWidget {{
+        background-color: {COLORS["background"]};
+        color: {COLORS["text_primary"]};
     }}
     """
