@@ -335,6 +335,8 @@ class ROMExtractionPanel(QWidget):
         self.sprite_navigator = SpriteNavigator()
         self.sprite_navigator.offset_changed.connect(self._on_navigator_offset_changed)
         self.sprite_navigator.sprite_selected.connect(self._on_navigator_sprite_selected)
+        self.sprite_navigator.setMaximumHeight(120)  # Drastically limit height
+        self.sprite_navigator.setVisible(False)  # Hide by default in manual mode
         layout.addWidget(self.sprite_navigator)
 
     def _add_mode_controls(self, layout: QVBoxLayout):
@@ -380,7 +382,7 @@ class ROMExtractionPanel(QWidget):
             QPushButton: The configured button
         """
         button = QPushButton("Open Manual Offset Control")
-        button.setMinimumHeight(BUTTON_MIN_HEIGHT * 2)  # Make it prominent
+        button.setMinimumHeight(40)  # Reasonable height
         _ = button.clicked.connect(self._open_manual_offset_dialog)
         button.setVisible(True)  # Show by default (manual mode)
         button.setToolTip("Open advanced manual offset control window (Ctrl+M)")
@@ -395,18 +397,24 @@ class ROMExtractionPanel(QWidget):
         """
         return """
             QPushButton {
-                background-color: #4488dd;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #5a9fd4, stop:1 #306998);
                 color: white;
                 font-weight: bold;
-                font-size: 14px;
+                font-size: 13px;
                 border-radius: 6px;
-                padding: 10px;
+                padding: 8px 16px;
+                border: 1px solid #2e5a84;
+                min-height: 36px;
             }
             QPushButton:hover {
-                background-color: #5599ee;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #6aafea, stop:1 #4079a8);
+                border: 1px solid #4488dd;
             }
             QPushButton:pressed {
-                background-color: #3377cc;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #306998, stop:1 #204060);
             }
         """
 

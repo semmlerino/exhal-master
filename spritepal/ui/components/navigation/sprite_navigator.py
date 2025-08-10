@@ -261,8 +261,8 @@ class SpriteNavigator(QWidget):
         map_layout = QVBoxLayout(map_container)
 
         self.rom_map = ROMMapWidget()
-        self.rom_map.setMinimumHeight(80)
-        self.rom_map.setMaximumHeight(100)
+        self.rom_map.setMinimumHeight(40)  # Much smaller
+        self.rom_map.setMaximumHeight(50)  # Compact height
         map_layout.addWidget(self.rom_map)
 
         # Map controls
