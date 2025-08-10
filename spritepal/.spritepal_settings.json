@@ -15,7 +15,7 @@
     "window_y": -30
   },
   "paths": {
-    "last_used_dir": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\spritepal",
+    "last_used_dir": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal",
     "default_dumps_dir": "C:\\Users\\gabri\\Documents\\Mesen2\\Debugger"
   },
   "test": {
@@ -24,7 +24,7 @@
     "new_data": "new_value"
   },
   "rom_injection": {
-    "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby's Fun Pak (Europe).sfc",
+    "last_input_rom": "/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
     "last_sprite_location": "Kirby Sprite (0x123456)",
     "last_custom_offset": "0x123456",
     "fast_compression": true,
@@ -65,8 +65,8 @@
     "max_recent": 10
   },
   "manual_offset_dialog": {
-    "x": 652,
-    "y": 390,
+    "x": 649,
+    "y": 360,
     "width": 900,
     "height": 600
   },

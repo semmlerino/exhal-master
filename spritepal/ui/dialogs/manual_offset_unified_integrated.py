@@ -196,6 +196,7 @@ class UnifiedManualOffsetDialog(DialogBase):
                 return label
             def on_dialog_show(self): pass
             def update_for_tab(self, index, width): pass
+            def handle_resize(self, event): pass  # Add missing method
         
         self.layout_manager = MinimalLayoutManager()
         logger.debug("Using minimal layout manager for debugging")
