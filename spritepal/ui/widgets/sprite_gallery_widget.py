@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -25,6 +26,13 @@ from ui.widgets.sprite_thumbnail_widget import SpriteThumbnailWidget
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Gallery layout constants
+VIEWPORT_MARGIN = 20
+PARENT_FALLBACK_MARGIN = 40
+MIN_FALLBACK_WIDTH = 400
+DEFAULT_FALLBACK_WIDTH = 800
+SCROLL_BAR_WIDTH = 20  # Approximate scroll bar width
 
 
 class SpriteGalleryWidget(QScrollArea):
@@ -51,7 +59,7 @@ class SpriteGalleryWidget(QScrollArea):
 
         # Display settings
         self.thumbnail_size = 256  # Default to actually visible size
-        self.columns = 3  # Fewer columns for larger sprites
+        self.columns = 4  # Default columns for better visibility
         self.spacing = 16  # Proper visual separation
 
         # Filtering
@@ -74,13 +82,15 @@ class SpriteGalleryWidget(QScrollArea):
 
     def _setup_ui(self):
         """Setup the gallery UI."""
-        # Configure scroll area
-        self.setWidgetResizable(True)
+        # Configure scroll area - disable auto-resizing to control vertical expansion
+        self.setWidgetResizable(False)  # Critical: False prevents forced vertical expansion
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Main container
         main_widget = QWidget()
+        # With setWidgetResizable(False), we control sizing manually
+        main_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(4, 4, 4, 4)
 
@@ -88,24 +98,137 @@ class SpriteGalleryWidget(QScrollArea):
         self.controls_widget = self._create_controls()
         main_layout.addWidget(self.controls_widget)
 
-        # Gallery container
+        # Gallery container with optimal size policy for scroll area
         self.container_widget = QWidget()
+        # Use Expanding horizontally to fill width, Minimum vertically for content-based height
+        self.container_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
         self.grid_layout = QGridLayout()
         self.grid_layout.setSpacing(self.spacing)
         self.grid_layout.setContentsMargins(4, 4, 4, 4)
         self.container_widget.setLayout(self.grid_layout)
 
         main_layout.addWidget(self.container_widget)
-        main_layout.addStretch()
+        # No stretch added - container should expand to show all content
 
         main_widget.setLayout(main_layout)
         self.setWidget(main_widget)
 
-        # Style
+        # Style with proper dark theme colors
         self.setStyleSheet("""
             QScrollArea {
                 background-color: #1e1e1e;
                 border: 1px solid #333;
+                color: #ffffff;
+            }
+            
+            /* Controls styling */
+            QWidget {
+                background-color: #1e1e1e;
+                color: #ffffff;
+            }
+            
+            QLabel {
+                color: #ffffff;
+                background-color: transparent;
+            }
+            
+            QLineEdit {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #444444;
+                border-radius: 3px;
+                padding: 4px;
+            }
+            
+            QLineEdit:focus {
+                border-color: #0078d4;
+            }
+            
+            QComboBox {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #444444;
+                border-radius: 3px;
+                padding: 4px;
+                min-width: 80px;
+            }
+            
+            QComboBox:hover {
+                background-color: #404040;
+            }
+            
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #ffffff;
+                margin-right: 5px;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #444444;
+                selection-background-color: #404040;
+            }
+            
+            QCheckBox {
+                color: #ffffff;
+                background-color: transparent;
+            }
+            
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                background-color: #2d2d2d;
+                border: 1px solid #444444;
+                border-radius: 2px;
+            }
+            
+            QCheckBox::indicator:checked {
+                background-color: #0078d4;
+                border-color: #0078d4;
+            }
+            
+            QSlider::groove:horizontal {
+                background-color: #404040;
+                height: 4px;
+                border-radius: 2px;
+            }
+            
+            QSlider::handle:horizontal {
+                background-color: #0078d4;
+                border: 1px solid #0078d4;
+                width: 16px;
+                height: 16px;
+                margin: -6px 0;
+                border-radius: 8px;
+            }
+            
+            QSlider::handle:horizontal:hover {
+                background-color: #106ebe;
+            }
+            
+            QPushButton {
+                background-color: #404040;
+                color: #ffffff;
+                border: 1px solid #555555;
+                border-radius: 3px;
+                padding: 6px 12px;
+            }
+            
+            QPushButton:hover {
+                background-color: #505050;
+            }
+            
+            QPushButton:pressed {
+                background-color: #353535;
             }
         """)
 
@@ -197,6 +320,9 @@ class SpriteGalleryWidget(QScrollArea):
         # Create thumbnails
         self._create_thumbnails()
 
+        # Ensure proper column layout after thumbnails are created
+        self._update_columns()
+
         # Update status
         self._update_status()
 
@@ -251,6 +377,25 @@ class SpriteGalleryWidget(QScrollArea):
                 col = 0
                 row += 1
 
+        # After creating all thumbnails, update widget size to fit content
+        self._update_widget_height()
+
+    def _update_widget_height(self):
+        """Update the main widget height to fit content exactly."""
+        if not self.widget() or not self.container_widget or not self.controls_widget:
+            return
+
+        # Calculate required height
+        controls_height = self.controls_widget.sizeHint().height()
+        content_height = self.container_widget.sizeHint().height()
+        margins = 16  # Total vertical margins
+
+        total_height = controls_height + content_height + margins
+        current_width = self.widget().width() or self.viewport().width()
+
+        # Update widget size - width from viewport, height from content
+        self.widget().resize(current_width, total_height)
+
     def _load_visible_thumbnails(self):
         """Load pixmaps for visible thumbnails (lazy loading)."""
         # Get visible area
@@ -296,11 +441,31 @@ class SpriteGalleryWidget(QScrollArea):
         # Adjust columns based on new size
         self._update_columns()
 
+        # Update widget height to accommodate new thumbnail sizes
+        self._update_widget_height()
+
     def _update_columns(self):
         """Update the number of columns based on widget width and thumbnail size."""
-        if self.width() > 0:
-            available_width = self.viewport().width() - 20
-            self.columns = max(1, available_width // (self.thumbnail_size + self.spacing))
+        # Get available width, accounting for margins and potential scroll bar
+        viewport_width = self.viewport().width()
+        scroll_bar_visible = self.verticalScrollBar().isVisible()
+        scroll_bar_width = SCROLL_BAR_WIDTH if scroll_bar_visible else 0
+
+        available_width = viewport_width - VIEWPORT_MARGIN - scroll_bar_width
+
+        if available_width <= 0:
+            # Use parent width as fallback or a reasonable default
+            parent_width = self.parent().width() if self.parent() else DEFAULT_FALLBACK_WIDTH
+            available_width = max(MIN_FALLBACK_WIDTH, parent_width - PARENT_FALLBACK_MARGIN)
+
+        # Calculate columns based on thumbnail size plus spacing
+        item_width = self.thumbnail_size + self.spacing
+        new_columns = max(1, available_width // item_width)
+
+        # Only reorganize if column count actually changed
+        if new_columns != self.columns:
+            logger.debug(f"Updating columns from {self.columns} to {new_columns} (available_width={available_width})")
+            self.columns = new_columns
             self._reorganize_grid()
 
     def _reorganize_grid(self):
@@ -323,6 +488,9 @@ class SpriteGalleryWidget(QScrollArea):
                 if col >= self.columns:
                     col = 0
                     row += 1
+
+        # Update widget height after reorganizing
+        self._update_widget_height()
 
     def _apply_filters(self):
         """Apply current filters to the gallery."""
@@ -407,19 +575,50 @@ class SpriteGalleryWidget(QScrollArea):
 
     def _update_status(self):
         """Update the status label."""
+        # Count total sprites, not just visible ones (filter visibility is different)
+        total_count = len(self.thumbnails)
         visible_count = sum(1 for t in self.thumbnails.values() if t.isVisible())
         selected_count = len(self.selected_offsets)
 
-        status = f"{visible_count} sprites"
+        # Show total count, with filtered count if different
+        if visible_count < total_count:
+            status = f"{visible_count}/{total_count} sprites"
+        else:
+            status = f"{total_count} sprites"
+
         if selected_count > 0:
             status += f" ({selected_count} selected)"
 
         self.status_label.setText(status)
 
-    def resizeEvent(self, a0):
-        """Handle resize event to adjust columns."""
-        super().resizeEvent(a0)
+    def resizeEvent(self, event):
+        """Handle resize event to adjust columns and manage widget sizing."""
+        super().resizeEvent(event)
+
+        # With setWidgetResizable(False), we need to manually handle horizontal resizing
+        if self.widget():
+            viewport_size = self.viewport().size()
+            widget_size = self.widget().size()
+
+            # Update width to match viewport, but keep height as content-based
+            new_width = viewport_size.width()
+            current_height = widget_size.height()
+
+            # Only resize if width actually changed to avoid unnecessary updates
+            if widget_size.width() != new_width:
+                self.widget().resize(new_width, current_height)
+
+        # Update column layout after resize
         self._update_columns()
+
+    def showEvent(self, event):
+        """Handle show event to ensure proper initial layout."""
+        super().showEvent(event)
+        # Ensure columns are calculated when widget becomes visible
+        self._update_columns()
+        # Force a layout update
+        if self.container_widget:
+            self.container_widget.updateGeometry()
 
     def get_selected_sprites(self) -> list[dict[str, Any]]:
         """Get information for all selected sprites."""
@@ -433,3 +632,37 @@ class SpriteGalleryWidget(QScrollArea):
                     selected.append(sprite_info)
                     break
         return selected
+    def force_layout_update(self):
+        """Force the gallery to recalculate its layout and size."""
+        if not self.container_widget or not self.grid_layout:
+            logger.warning("Cannot force layout update: container or layout not initialized")
+            return
+
+        # Ensure we have valid geometry before calculating columns
+        if self.isVisible() and self.viewport().width() > 0:
+            # Update columns based on current size
+            self._update_columns()
+
+            # Force layout recalculation in proper order
+            self.grid_layout.invalidate()
+            self.container_widget.adjustSize()
+            self.container_widget.updateGeometry()
+
+            # With setWidgetResizable(False), manually adjust the widget size
+            if self.widget():
+                viewport_size = self.viewport().size()
+                content_height = self.container_widget.sizeHint().height()
+                controls_height = self.controls_widget.sizeHint().height() if self.controls_widget else 0
+
+                # Calculate total needed height (controls + content + margins)
+                total_height = controls_height + content_height + 16  # 16 for margins
+
+                # Set width to viewport, height to content
+                self.widget().resize(viewport_size.width(), total_height)
+
+            # Update scroll area last
+            self.updateGeometry()
+
+            logger.debug(f"Forced layout update: {self.columns} columns, container size: {self.container_widget.size()}")
+        else:
+            logger.debug("Deferring layout update - widget not visible or no valid geometry")
