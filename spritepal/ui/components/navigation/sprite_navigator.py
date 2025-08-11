@@ -62,7 +62,8 @@ class SpriteThumbnail(QWidget):
         # UI components
         self.preview_label = QLabel()
         self.preview_label.setFixedSize(THUMBNAIL_SIZE, THUMBNAIL_SIZE)
-        self.preview_label.setScaledContents(True)
+        # Don't use setScaledContents - preserve aspect ratio
+        self.preview_label.setScaledContents(False)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet("""
             QLabel {
@@ -96,7 +97,16 @@ class SpriteThumbnail(QWidget):
         """Update thumbnail with sprite data"""
         self.offset = offset
         self.quality = quality
-        self.preview_label.setPixmap(pixmap)
+        # Scale pixmap to fit while preserving aspect ratio
+        if pixmap and not pixmap.isNull():
+            scaled = pixmap.scaled(
+                self.preview_label.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.preview_label.setPixmap(scaled)
+        else:
+            self.preview_label.setPixmap(pixmap)
         self.offset_label.setText(f"0x{offset:06X}")
 
         # Update border color based on quality

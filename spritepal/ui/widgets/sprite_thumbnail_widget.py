@@ -82,7 +82,9 @@ class SpriteThumbnailWidget(QWidget):
                 border-radius: 4px;
             }
         """)
-        self.thumbnail_label.setScaledContents(True)
+        # Don't use setScaledContents - it stretches and distorts sprites
+        # We'll scale properly in set_sprite_data() with aspect ratio preserved
+        self.thumbnail_label.setScaledContents(False)
         layout.addWidget(self.thumbnail_label)
 
         # Offset label - bigger font for larger thumbnails
