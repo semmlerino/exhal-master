@@ -3,6 +3,7 @@ Sprite gallery tab for visual overview of all sprites in ROM.
 Provides grid display, filtering, sorting, and batch operations.
 """
 
+import json
 from pathlib import Path
 from typing import Any, Optional
 
@@ -65,6 +66,9 @@ class SpriteGalleryTab(QWidget):
         self.progress_dialog: Optional[QProgressDialog] = None
 
         self._setup_ui()
+        
+        # Try to load cached scan results
+        self._load_scan_cache()
 
     def _setup_ui(self):
         """Setup the tab UI."""
@@ -259,6 +263,9 @@ class SpriteGalleryTab(QWidget):
 
             # Store results
             self.sprites_data = sprites
+            
+            # Save to cache for later use (e.g., screenshots)
+            self._save_scan_cache()
 
             # Update gallery
             self.gallery_widget.set_sprites(sprites)
@@ -468,3 +475,84 @@ class SpriteGalleryTab(QWidget):
             self.thumbnail_worker.stop()
             self.thumbnail_worker.wait()
             self.thumbnail_worker = None
+    
+    def _save_scan_cache(self):
+        """Save scan results to a cache file for later use."""
+        if not self.sprites_data:
+            return
+        
+        cache_path = Path.home() / ".spritepal" / "gallery_scan_cache.json"
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            cache_data = {
+                'version': 1,
+                'rom_path': str(self.rom_path) if self.rom_path else None,
+                'rom_size': self.rom_size,
+                'sprite_count': len(self.sprites_data),
+                'sprites': self.sprites_data
+            }
+            
+            with open(cache_path, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            logger.info(f"Saved {len(self.sprites_data)} sprites to cache")
+        except Exception as e:
+            logger.error(f"Failed to save scan cache: {e}")
+    
+    def _load_scan_cache(self):
+        """Load previously saved scan results from cache."""
+        cache_path = Path.home() / ".spritepal" / "gallery_scan_cache.json"
+        
+        if not cache_path.exists():
+            return
+        
+        try:
+            with open(cache_path, 'r') as f:
+                cache_data = json.load(f)
+            
+            # Load the cached data
+            self.sprites_data = cache_data.get('sprites', [])
+            cached_rom_path = cache_data.get('rom_path')
+            
+            if self.sprites_data:
+                logger.info(f"Loaded {len(self.sprites_data)} sprites from cache")
+                
+                # Update gallery widget if it exists
+                if self.gallery_widget:
+                    self.gallery_widget.set_sprites(self.sprites_data)
+                    
+                    # Generate mock thumbnails for cached sprites
+                    self._generate_mock_thumbnails()
+                
+                # Update info label if we have one
+                if hasattr(self, 'info_label'):
+                    rom_name = Path(cached_rom_path).name if cached_rom_path else "Cached"
+                    self.info_label.setText(
+                        f"Loaded {len(self.sprites_data)} cached sprites from {rom_name}"
+                    )
+        except Exception as e:
+            logger.error(f"Failed to load scan cache: {e}")
+    
+    def _generate_mock_thumbnails(self):
+        """Generate mock thumbnails for sprites when no real thumbnails are available."""
+        try:
+            from generate_mock_thumbnails import generate_mock_sprite_thumbnail
+            
+            for sprite_info in self.sprites_data:
+                offset = sprite_info.get('offset', 0)
+                if isinstance(offset, str):
+                    offset = int(offset, 16) if offset.startswith('0x') else int(offset)
+                
+                # Generate mock thumbnail
+                thumbnail_size = self.gallery_widget.thumbnail_size
+                pixmap = generate_mock_sprite_thumbnail(sprite_info, thumbnail_size)
+                
+                # Find the thumbnail widget and set its pixmap
+                if offset in self.gallery_widget.thumbnails:
+                    thumbnail_widget = self.gallery_widget.thumbnails[offset]
+                    thumbnail_widget.set_sprite_data(pixmap, sprite_info)
+                    
+            logger.info(f"Generated mock thumbnails for {len(self.sprites_data)} sprites")
+        except Exception as e:
+            logger.error(f"Failed to generate mock thumbnails: {e}")

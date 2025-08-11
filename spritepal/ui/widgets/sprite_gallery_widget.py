@@ -50,9 +50,9 @@ class SpriteGalleryWidget(QScrollArea):
         self.selected_offsets: list[int] = []
 
         # Display settings
-        self.thumbnail_size = 128
-        self.columns = 6
-        self.spacing = 8
+        self.thumbnail_size = 256  # Default to actually visible size
+        self.columns = 3  # Fewer columns for larger sprites
+        self.spacing = 16  # Proper visual separation
 
         # Filtering
         self.filter_text = ""
@@ -120,11 +120,11 @@ class SpriteGalleryWidget(QScrollArea):
         layout.addWidget(size_label)
 
         self.size_slider = QSlider(Qt.Orientation.Horizontal)
-        self.size_slider.setRange(64, 256)
+        self.size_slider.setRange(128, 768)  # Actually useful range
         self.size_slider.setValue(self.thumbnail_size)
-        self.size_slider.setTickInterval(32)
+        self.size_slider.setTickInterval(64)  # Bigger steps for bigger range
         self.size_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.size_slider.setFixedWidth(150)
+        self.size_slider.setFixedWidth(200)  # Slightly wider for bigger range
         self.size_slider.valueChanged.connect(self._on_size_changed)
         layout.addWidget(self.size_slider)
 

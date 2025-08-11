@@ -50,6 +50,7 @@ class SpriteThumbnailWidget(QWidget):
 
         # Info text
         self.offset_text = f"0x{offset:06X}"
+        self.sprite_name = ""  # User-friendly name
         self.size_text = ""
         self.compression_text = ""
 
@@ -57,39 +58,46 @@ class SpriteThumbnailWidget(QWidget):
 
     def _setup_ui(self):
         """Setup the thumbnail UI."""
-        # Fixed size for consistent grid
-        self.setFixedSize(self.thumbnail_size, self.thumbnail_size + 20)
+        # Adjust label height based on thumbnail size
+        label_height = 40 if self.thumbnail_size >= 256 else 30
+        self.setFixedSize(self.thumbnail_size, self.thumbnail_size + label_height)
 
-        # Main layout
+        # Main layout with better spacing for larger thumbnails
         layout = QVBoxLayout()
-        layout.setContentsMargins(2, 2, 2, 2)
-        layout.setSpacing(2)
+        margin = 4 if self.thumbnail_size >= 256 else 2
+        layout.setContentsMargins(margin, margin, margin, margin)
+        layout.setSpacing(4)
 
-        # Thumbnail display
+        # Thumbnail display - leave room for label
         self.thumbnail_label = QLabel()
-        self.thumbnail_label.setFixedSize(self.thumbnail_size - 4, self.thumbnail_size - 24)
+        self.thumbnail_label.setFixedSize(
+            self.thumbnail_size - (margin * 2), 
+            self.thumbnail_size - label_height - 4
+        )
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.thumbnail_label.setStyleSheet("""
             QLabel {
                 background-color: #2b2b2b;
-                border: 1px solid #444;
-                border-radius: 2px;
+                border: 2px solid #444;
+                border-radius: 4px;
             }
         """)
         self.thumbnail_label.setScaledContents(True)
         layout.addWidget(self.thumbnail_label)
 
-        # Offset label
+        # Offset label - bigger font for larger thumbnails
         self.info_label = QLabel(self.offset_text)
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.info_label.setStyleSheet("""
-            QLabel {
-                color: #888;
-                font-size: 10px;
+        font_size = "12px" if self.thumbnail_size >= 256 else "10px"
+        self.info_label.setStyleSheet(f"""
+            QLabel {{
+                color: #aaa;
+                font-size: {font_size};
                 font-family: monospace;
-            }
+                font-weight: bold;
+            }}
         """)
-        self.info_label.setFixedHeight(16)
+        self.info_label.setFixedHeight(label_height - 8)
         layout.addWidget(self.info_label)
 
         self.setLayout(layout)
@@ -134,15 +142,43 @@ class SpriteThumbnailWidget(QWidget):
     def _show_placeholder(self):
         """Show a placeholder when no sprite is loaded."""
         placeholder = QPixmap(self.thumbnail_label.size())
-        placeholder.fill(QColor(40, 40, 40))
+        placeholder.fill(QColor(35, 35, 35))
 
         painter = QPainter(placeholder)
+        
+        # Draw a sprite icon pattern instead of "Loading..."
+        center_x = placeholder.width() // 2
+        center_y = placeholder.height() // 2
+        
+        # Draw pixel art style grid pattern
+        grid_size = 8
+        grid_color = QColor(50, 50, 50)
+        painter.setPen(QPen(grid_color, 1))
+        
+        # Draw grid lines
+        for i in range(0, placeholder.width(), grid_size):
+            painter.drawLine(i, 0, i, placeholder.height())
+        for i in range(0, placeholder.height(), grid_size):
+            painter.drawLine(0, i, placeholder.width(), i)
+        
+        # Draw sprite icon in center
+        icon_size = min(placeholder.width(), placeholder.height()) // 3
+        painter.setPen(QPen(QColor(80, 80, 80), 2))
+        painter.drawRect(
+            center_x - icon_size // 2,
+            center_y - icon_size // 2,
+            icon_size,
+            icon_size
+        )
+        
+        # Draw "SPRITE" text
         painter.setPen(QPen(QColor(100, 100, 100)))
-        painter.setFont(QFont("Arial", 10))
+        font_size = max(8, min(14, placeholder.height() // 20))
+        painter.setFont(QFont("Arial", font_size))
         painter.drawText(
             placeholder.rect(),
             Qt.AlignmentFlag.AlignCenter,
-            "Loading..."
+            "SPRITE"
         )
         painter.end()
 
@@ -153,10 +189,27 @@ class SpriteThumbnailWidget(QWidget):
         if not self.sprite_info:
             return
 
+        # Get sprite name if available
+        if 'name' in self.sprite_info:
+            self.sprite_name = self.sprite_info['name']
+            # Show name as primary label with offset as secondary
+            display_text = f"{self.sprite_name}\n{self.offset_text}"
+        else:
+            # Fall back to just offset
+            display_text = self.offset_text
+        
+        self.info_label.setText(display_text)
+
         # Update size text
         if 'decompressed_size' in self.sprite_info:
             size_kb = self.sprite_info['decompressed_size'] / 1024
             self.size_text = f"{size_kb:.1f}KB"
+        elif 'size' in self.sprite_info:
+            size_bytes = self.sprite_info['size']
+            if size_bytes > 1024:
+                self.size_text = f"{size_bytes / 1024:.1f}KB"
+            else:
+                self.size_text = f"{size_bytes}B"
 
         # Update compression status
         if self.sprite_info.get('compressed', False):
@@ -166,6 +219,7 @@ class SpriteThumbnailWidget(QWidget):
 
         # Update tooltip with more details
         tooltip_parts = [
+            f"Name: {self.sprite_name}" if self.sprite_name else "",
             f"Offset: {self.offset_text}",
             f"Size: {self.size_text}" if self.size_text else "",
             f"Type: {self.compression_text}" if self.compression_text else "",
@@ -173,6 +227,9 @@ class SpriteThumbnailWidget(QWidget):
 
         if 'tile_count' in self.sprite_info:
             tooltip_parts.append(f"Tiles: {self.sprite_info['tile_count']}")
+        
+        if 'width' in self.sprite_info and 'height' in self.sprite_info:
+            tooltip_parts.append(f"Dimensions: {self.sprite_info['width']}x{self.sprite_info['height']}")
 
         self.setToolTip("\n".join(filter(None, tooltip_parts)))
 

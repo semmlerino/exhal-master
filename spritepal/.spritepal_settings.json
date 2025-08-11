@@ -65,10 +65,10 @@
     "max_recent": 10
   },
   "manual_offset_dialog": {
-    "x": 157,
+    "x": 161,
     "y": 69,
-    "width": 900,
-    "height": 600
+    "width": 1494,
+    "height": 858
   },
   "experimental": {
     "use_composed_dialogs": true
