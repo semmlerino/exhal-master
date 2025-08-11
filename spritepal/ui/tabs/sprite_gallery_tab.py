@@ -4,6 +4,7 @@ Provides grid display, filtering, sorting, and batch operations.
 """
 
 import json
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -66,9 +67,6 @@ class SpriteGalleryTab(QWidget):
         self.progress_dialog: Optional[QProgressDialog] = None
 
         self._setup_ui()
-        
-        # Try to load cached scan results
-        self._load_scan_cache()
 
     def _setup_ui(self):
         """Setup the tab UI."""
@@ -188,10 +186,22 @@ class SpriteGalleryTab(QWidget):
         # Update info
         rom_name = Path(rom_path).name
         self.info_label.setText(f"ROM: {rom_name} ({rom_size / 1024 / 1024:.1f}MB)")
-
-        # Auto-scan if enabled
-        if self._should_auto_scan():
-            QTimer.singleShot(100, self._scan_for_sprites)
+        
+        # Try to load cached scan results for this ROM
+        cache_loaded = self._load_scan_cache(rom_path)
+        
+        if cache_loaded:
+            logger.info(f"Successfully loaded cached scan results for {rom_name}")
+            # Cache loaded successfully, thumbnails will be generated
+        else:
+            logger.info(f"No valid cache found for {rom_name}")
+            # Clear any old sprites from previous ROM
+            self.sprites_data = []
+            self.gallery_widget.set_sprites([])
+            
+            # Auto-scan if enabled and no cache was loaded
+            if self._should_auto_scan():
+                QTimer.singleShot(100, self._scan_for_sprites)
 
     def _should_auto_scan(self) -> bool:
         """Check if auto-scan is enabled in settings."""
@@ -203,6 +213,26 @@ class SpriteGalleryTab(QWidget):
         if not self.rom_path:
             QMessageBox.warning(self, "No ROM", "Please load a ROM first")
             return
+        
+        # Ask user for scan type
+        msgBox = QMessageBox(self)
+        msgBox.setWindowTitle("Scan Type")
+        msgBox.setText("Choose scan type:")
+        msgBox.setInformativeText(
+            "Quick Scan: Faster, finds fewer sprites (~20-50)\n"
+            "Thorough Scan: Slower, finds more sprites (up to 200)"
+        )
+        quick_btn = msgBox.addButton("Quick Scan", QMessageBox.ButtonRole.ActionRole)
+        thorough_btn = msgBox.addButton("Thorough Scan", QMessageBox.ButtonRole.ActionRole)
+        msgBox.addButton(QMessageBox.StandardButton.Cancel)
+        msgBox.exec()
+        
+        if msgBox.clickedButton() == quick_btn:
+            self.scan_mode = "quick"
+        elif msgBox.clickedButton() == thorough_btn:
+            self.scan_mode = "thorough"
+        else:
+            return  # Cancelled
 
         # Show progress dialog
         self.progress_dialog = QProgressDialog(
@@ -233,14 +263,26 @@ class SpriteGalleryTab(QWidget):
 
             sprites = []
 
-            # Scan common sprite areas
-            scan_ranges = [
-                (0x200000, 0x300000, 0x1000),  # Main sprite area
-                (0x100000, 0x200000, 0x2000),  # Secondary area
-            ]
+            # Choose scan ranges based on scan mode
+            if hasattr(self, 'scan_mode') and self.scan_mode == "thorough":
+                # Thorough scan - smaller step sizes, more areas
+                scan_ranges = [
+                    (0x200000, 0x280000, 0x100),  # Main sprite area - scan every 256 bytes
+                    (0x280000, 0x300000, 0x200),  # Extended main area - scan every 512 bytes
+                    (0x100000, 0x180000, 0x200),  # Secondary area - scan every 512 bytes
+                    (0x180000, 0x200000, 0x400),  # Extended secondary - scan every 1024 bytes
+                    (0x300000, 0x380000, 0x400),  # Additional area - scan every 1024 bytes
+                ]
+            else:
+                # Quick scan - larger step sizes, fewer areas
+                scan_ranges = [
+                    (0x200000, 0x280000, 0x800),  # Main sprite area - scan every 2048 bytes
+                    (0x100000, 0x180000, 0x1000),  # Secondary area - scan every 4096 bytes
+                ]
 
             total_steps = sum((end - start) // step for start, end, step in scan_ranges)
             current_step = 0
+            max_sprites = 200  # Limit to prevent overwhelming the gallery
 
             for start, end, step in scan_ranges:
                 for offset in range(start, min(end, len(rom_data)), step):
@@ -248,17 +290,28 @@ class SpriteGalleryTab(QWidget):
                     current_step += 1
                     progress = int((current_step / total_steps) * 100)
                     self.progress_dialog.setValue(progress)
+                    
+                    # Update progress text with found sprites count
+                    self.progress_dialog.setLabelText(
+                        f"Scanning ROM for sprites... Found: {len(sprites)}"
+                    )
 
                     # Check for cancel
                     if self.progress_dialog.wasCanceled():
+                        break
+                    
+                    # Stop if we've found enough sprites
+                    if len(sprites) >= max_sprites:
+                        logger.info(f"Reached maximum sprite limit of {max_sprites}")
                         break
 
                     # Try to find sprite
                     sprite_info = finder.find_sprite_at_offset(rom_data, offset)
                     if sprite_info:
                         sprites.append(sprite_info)
+                        logger.debug(f"Found sprite #{len(sprites)} at 0x{offset:06X}")
 
-                if self.progress_dialog.wasCanceled():
+                if self.progress_dialog.wasCanceled() or len(sprites) >= max_sprites:
                     break
 
             # Store results
@@ -476,63 +529,110 @@ class SpriteGalleryTab(QWidget):
             self.thumbnail_worker.wait()
             self.thumbnail_worker = None
     
+    def _get_cache_path(self, rom_path: str = None) -> Path:
+        """Get the cache file path for a specific ROM."""
+        # Use local cache directory in the project
+        cache_dir = Path(__file__).parent.parent.parent / ".cache" / "gallery_scans"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create ROM-specific cache filename
+        if rom_path:
+            rom_name = Path(rom_path).stem
+            # Add a hash of the full path to handle multiple ROMs with same name
+            import hashlib
+            path_hash = hashlib.md5(str(rom_path).encode()).hexdigest()[:8]
+            cache_filename = f"scan_cache_{rom_name}_{path_hash}.json"
+        else:
+            cache_filename = "scan_cache_default.json"
+        
+        return cache_dir / cache_filename
+    
     def _save_scan_cache(self):
         """Save scan results to a cache file for later use."""
-        if not self.sprites_data:
+        if not self.sprites_data or not self.rom_path:
             return
         
-        cache_path = Path.home() / ".spritepal" / "gallery_scan_cache.json"
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path = self._get_cache_path(self.rom_path)
         
         try:
             cache_data = {
-                'version': 1,
-                'rom_path': str(self.rom_path) if self.rom_path else None,
+                'version': 2,
+                'rom_path': str(self.rom_path),
                 'rom_size': self.rom_size,
                 'sprite_count': len(self.sprites_data),
-                'sprites': self.sprites_data
+                'sprites': self.sprites_data,
+                'scan_mode': getattr(self, 'scan_mode', 'quick'),
+                'timestamp': time.time()
             }
             
             with open(cache_path, 'w') as f:
                 json.dump(cache_data, f, indent=2)
             
-            logger.info(f"Saved {len(self.sprites_data)} sprites to cache")
+            logger.info(f"Saved {len(self.sprites_data)} sprites to cache: {cache_path.name}")
         except Exception as e:
             logger.error(f"Failed to save scan cache: {e}")
     
-    def _load_scan_cache(self):
+    def _load_scan_cache(self, rom_path: str = None):
         """Load previously saved scan results from cache."""
-        cache_path = Path.home() / ".spritepal" / "gallery_scan_cache.json"
+        if not rom_path:
+            rom_path = self.rom_path
+        
+        if not rom_path:
+            logger.debug("No ROM path specified, skipping cache load")
+            return False
+        
+        cache_path = self._get_cache_path(rom_path)
         
         if not cache_path.exists():
-            return
+            logger.debug(f"No cache file found at: {cache_path.name}")
+            return False
         
         try:
             with open(cache_path, 'r') as f:
                 cache_data = json.load(f)
             
+            # Verify cache is for the same ROM
+            cached_rom_path = cache_data.get('rom_path')
+            if str(cached_rom_path) != str(rom_path):
+                logger.warning(f"Cache ROM path mismatch: {cached_rom_path} != {rom_path}")
+                return False
+            
+            # Check cache version
+            if cache_data.get('version', 1) < 2:
+                logger.info("Cache version too old, ignoring")
+                return False
+            
             # Load the cached data
             self.sprites_data = cache_data.get('sprites', [])
-            cached_rom_path = cache_data.get('rom_path')
+            scan_mode = cache_data.get('scan_mode', 'unknown')
+            timestamp = cache_data.get('timestamp', 0)
             
             if self.sprites_data:
-                logger.info(f"Loaded {len(self.sprites_data)} sprites from cache")
+                # Calculate cache age
+                import time
+                cache_age_hours = (time.time() - timestamp) / 3600 if timestamp else -1
+                
+                logger.info(f"Loaded {len(self.sprites_data)} sprites from cache ({scan_mode} scan, {cache_age_hours:.1f} hours old)")
                 
                 # Update gallery widget if it exists
                 if self.gallery_widget:
                     self.gallery_widget.set_sprites(self.sprites_data)
                     
-                    # Generate mock thumbnails for cached sprites
-                    self._generate_mock_thumbnails()
+                    # Start generating real thumbnails for cached sprites
+                    self._refresh_thumbnails()
                 
-                # Update info label if we have one
+                # Update info label
                 if hasattr(self, 'info_label'):
-                    rom_name = Path(cached_rom_path).name if cached_rom_path else "Cached"
+                    rom_name = Path(rom_path).name
+                    age_str = f" ({cache_age_hours:.1f}h old)" if cache_age_hours >= 0 else ""
                     self.info_label.setText(
-                        f"Loaded {len(self.sprites_data)} cached sprites from {rom_name}"
+                        f"Loaded {len(self.sprites_data)} cached sprites from {rom_name}{age_str}"
                     )
+                
+                return True
         except Exception as e:
             logger.error(f"Failed to load scan cache: {e}")
+            return False
     
     def _generate_mock_thumbnails(self):
         """Generate mock thumbnails for sprites when no real thumbnails are available."""
