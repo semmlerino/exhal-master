@@ -5,9 +5,14 @@ This module provides a single, comprehensive factory for creating all types of m
 used across the test suite, eliminating duplication and inconsistencies.
 """
 
+from __future__ import annotations
+
 import warnings
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
+
+if TYPE_CHECKING:
+    pass
 
 from .qt_mocks import (
     QT_AVAILABLE,
@@ -392,7 +397,7 @@ class MockFactory:
         return qimage
 
     @staticmethod
-    def create_drag_drop_event(file_paths: Optional[list[str | None]] = None) -> Mock:
+    def create_drag_drop_event(file_paths: list[str | None] | None = None) -> Mock:
         """
         Create a mock drag and drop event.
 
@@ -587,7 +592,7 @@ class MockFactory:
         }
 
     @staticmethod
-    def create_signal_coordinator(services: Optional[dict[str, Mock | None]] = None) -> MockSignalCoordinatorProtocol:
+    def create_signal_coordinator(services: dict[str, Mock | None] | None = None) -> MockSignalCoordinatorProtocol:
         """
         Create a mock signal coordinator for dialog testing.
 

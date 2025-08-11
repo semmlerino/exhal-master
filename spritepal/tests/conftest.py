@@ -1,3 +1,10 @@
+# pyright: recommended  # Use recommended mode for test files with enhanced basedpyright features
+# pyright: reportPrivateUsage=false  # Allow testing private methods
+# pyright: reportUnknownMemberType=warning  # Mock attributes are dynamic
+# pyright: reportUnknownArgumentType=warning  # Test data may be dynamic
+# pyright: reportUntypedFunctionDecorator=error  # Type all decorators
+# pyright: reportUnnecessaryTypeIgnoreComment=error  # Clean up unused ignores
+
 """
 Unified pytest configuration for SpritePal tests.
 
@@ -37,18 +44,31 @@ mechanisms to ensure test isolation:
 All optimized fixtures maintain backward compatibility and proper cleanup.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import tempfile
-from collections.abc import Generator
+from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ContextManager, Optional
+from typing import TYPE_CHECKING, Any
+from unittest.mock import Mock, patch
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+
+    from pytest import FixtureRequest
+
     from core.managers.extraction_manager import ExtractionManager
     from core.managers.injection_manager import InjectionManager
     from core.managers.session_manager import SessionManager
-from unittest.mock import Mock, patch
+    from tests.infrastructure.test_protocols import (
+        MockExtractionManagerProtocol,
+        MockInjectionManagerProtocol,
+        MockMainWindowProtocol,
+        MockQtBotProtocol,
+        MockSessionManagerProtocol,
+    )
 
 import pytest
 
@@ -100,7 +120,7 @@ DEFAULT_WAIT_TIMEOUT = 3000 if (os.environ.get("CI") or IS_HEADLESS) else 1000
 DEFAULT_WORKER_TIMEOUT = 10000 if (os.environ.get("CI") or IS_HEADLESS) else 5000
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Any) -> None:
     """Add custom command line options for HAL testing."""
     parser.addoption(
         "--use-real-hal",
@@ -110,7 +130,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """Configure pytest with unified markers for SpritePal tests."""
     markers = [
         # Execution Environment Markers (Primary Categories)
@@ -208,7 +228,7 @@ def pytest_configure(config):
         configure_hal_mocking(use_mocks=True, deterministic=True)
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """
     Modify test collection based on environment capabilities and marker logic.
 
@@ -259,7 +279,7 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def qt_environment_setup() -> Generator[None, None, None]:
+def qt_environment_setup() -> Iterator[None]:
     """
     Setup Qt environment automatically based on capabilities.
 
@@ -277,7 +297,7 @@ def qt_environment_setup() -> Generator[None, None, None]:
 
 
 @pytest.fixture(scope="session")
-def session_managers() -> Generator[None, None, None]:
+def session_managers() -> Iterator[None]:
     """
     Session-scoped managers for performance optimization.
 
@@ -310,7 +330,7 @@ def session_managers() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def fast_managers(session_managers):
+def fast_managers(session_managers: None) -> Iterator[None]:
     """
     Fast manager access using session-scoped managers.
 
@@ -328,7 +348,7 @@ def fast_managers(session_managers):
 
 
 @pytest.fixture(autouse=True)
-def setup_managers(request):
+def setup_managers(request: FixtureRequest) -> Iterator[None]:
     """
     Setup managers for all tests (per-test isolation).
 
@@ -436,7 +456,7 @@ def test_data_factory() -> Callable[..., bytearray]:
 
 
 @pytest.fixture
-def temp_files() -> Generator[Callable[[bytes, str], str], None, None]:
+def temp_files() -> Iterator[Callable[[bytes, str], str]]:
     """
     Factory for creating temporary test files with automatic cleanup.
 
@@ -466,7 +486,7 @@ def temp_files() -> Generator[Callable[[bytes, str], str], None, None]:
 @pytest.fixture
 def standard_test_params(
     test_data_factory: Callable[..., bytearray],
-    temp_files: Callable[[bytes, str], str]
+    temp_files: Callable[[bytes, str], str],
 ) -> dict[str, Any]:
     """
     Create standard test parameters used across integration tests.
@@ -499,7 +519,7 @@ def standard_test_params(
 
 @pytest.fixture
 def minimal_sprite_data(
-    test_data_factory: Callable[..., bytearray]
+    test_data_factory: Callable[..., bytearray],
 ) -> dict[str, Any]:
     """
     Create minimal but valid sprite data for quick tests.
@@ -518,19 +538,19 @@ def minimal_sprite_data(
 
 # Consolidated mock fixtures using MockFactory
 @pytest.fixture
-def mock_main_window() -> Any:  # MockMainWindowProtocol but avoid import issues
+def mock_main_window() -> MockMainWindowProtocol:
     """Provide a fully configured mock main window."""
     return MockFactory.create_main_window()
 
 
 @pytest.fixture
-def mock_extraction_worker() -> Any:  # MockExtractionWorkerProtocol
+def mock_extraction_worker() -> Mock:  # Would be MockExtractionWorkerProtocol if it existed
     """Provide a fully configured mock extraction worker."""
     return MockFactory.create_extraction_worker()
 
 
 @pytest.fixture(scope="class")
-def mock_extraction_manager() -> Any:  # MockExtractionManagerProtocol
+def mock_extraction_manager() -> MockExtractionManagerProtocol:
     """Class-scoped mock extraction manager for performance optimization.
 
     Used 51 times across tests. Class scope reduces instantiations
@@ -542,13 +562,13 @@ def mock_extraction_manager() -> Any:  # MockExtractionManagerProtocol
 
 
 @pytest.fixture
-def mock_injection_manager() -> Any:  # MockInjectionManagerProtocol
+def mock_injection_manager() -> MockInjectionManagerProtocol:
     """Provide a fully configured mock injection manager."""
     return MockFactory.create_injection_manager()
 
 
 @pytest.fixture(scope="class")
-def mock_session_manager() -> Any:  # MockSessionManagerProtocol
+def mock_session_manager() -> MockSessionManagerProtocol:
     """Class-scoped mock session manager for performance optimization.
 
     Used 26 times across tests. Class scope reduces instantiations
@@ -746,7 +766,7 @@ def mock_rom_cache() -> Mock:
 
 # Dependency Injection fixtures
 @pytest.fixture
-def manager_context_factory() -> Callable[..., ContextManager[Any]]:
+def manager_context_factory() -> Callable[[dict[str, Any] | list[str] | None, str], AbstractContextManager[Any]]:
     """
     Factory for creating manager contexts for dependency injection tests.
 
@@ -764,7 +784,7 @@ def manager_context_factory() -> Callable[..., ContextManager[Any]]:
     from tests.infrastructure.test_manager_factory import TestManagerFactory
 
     def _create_context(
-        managers: Optional[dict[str, Any]] = None,
+        managers: dict[str, Any] | list[str] | None = None,
         name: str = "test_context"
     ) -> ContextManager[Any]:
         """
@@ -845,7 +865,7 @@ def minimal_injection_context() -> Any:  # ManagerContext type
 # - real_*_manager: Real managers with only I/O mocked
 
 @pytest.fixture
-def real_extraction_manager() -> "ExtractionManager":
+def real_extraction_manager() -> ExtractionManager:
     """Create real ExtractionManager for testing.
 
     Returns:
@@ -859,7 +879,7 @@ def real_extraction_manager() -> "ExtractionManager":
 
 
 @pytest.fixture
-def real_injection_manager() -> "InjectionManager":
+def real_injection_manager() -> InjectionManager:
     """Create real InjectionManager for testing.
 
     Returns:
@@ -873,7 +893,7 @@ def real_injection_manager() -> "InjectionManager":
 
 
 @pytest.fixture
-def real_session_manager(tmp_path) -> "SessionManager":
+def real_session_manager(tmp_path) -> SessionManager:
     """Create real SessionManager for testing with temporary directory."""
     from core.managers.session_manager import SessionManager
     # Use real SessionManager with temp directory for safe testing
@@ -883,7 +903,7 @@ def real_session_manager(tmp_path) -> "SessionManager":
 
 # Safe Qt fixtures for both headless and GUI environments
 @pytest.fixture
-def safe_qtbot(qtbot: Any) -> Any:  # QtBot | Mock but avoid circular import
+def safe_qtbot(qtbot: Any) -> MockQtBotProtocol:
     """Provide a qtbot that works in both headless and GUI environments."""
     if IS_HEADLESS:
         # Create a mock qtbot for headless environments
@@ -892,8 +912,8 @@ def safe_qtbot(qtbot: Any) -> Any:  # QtBot | Mock but avoid circular import
         mock_qtbot.waitSignal = Mock(return_value=Mock())
         mock_qtbot.waitUntil = Mock()
         mock_qtbot.addWidget = Mock()
-        return mock_qtbot
-    return qtbot
+        return mock_qtbot  # pyright: ignore[reportReturnType]  # Mock qtbot for headless
+    return qtbot  # pyright: ignore[reportReturnType]  # Real qtbot in GUI environments
 
 
 # High-frequency fixture optimizations for 68.6% performance improvement
@@ -934,7 +954,7 @@ def qt_app() -> Any:
     return app
 
 @pytest.fixture(scope="class")
-def main_window() -> Any:
+def main_window() -> MockMainWindowProtocol:
     """Class-scoped main window fixture for performance optimization.
 
     Used 129 times across tests. Class scope reduces instantiations
@@ -974,10 +994,10 @@ def main_window() -> Any:
     window._output_path = ""
     window._extracted_files = []
 
-    return window
+    return window  # pyright: ignore[reportReturnType]  # Mock conforms to protocol at runtime
 
 @pytest.fixture(scope="class")
-def controller(main_window: Any) -> Any:
+def controller(main_window: MockMainWindowProtocol) -> Mock:
     """Class-scoped controller fixture for performance optimization.
 
     Used 119 times across tests. Class scope reduces instantiations
@@ -1026,7 +1046,7 @@ def mock_manager_registry() -> Mock:
     return registry
 
 @pytest.fixture(scope="class", autouse=True)
-def reset_main_window_state(main_window: Any) -> Generator[None, None, None]:
+def reset_main_window_state(main_window: MockMainWindowProtocol) -> Generator[None, None, None]:
     """Auto-reset main window state between tests within the same class.
 
     This fixture ensures state isolation when using class-scoped main_window.
@@ -1050,7 +1070,7 @@ def reset_main_window_state(main_window: Any) -> Generator[None, None, None]:
     pass
 
 @pytest.fixture(scope="class", autouse=True)
-def reset_controller_state(controller: Any) -> Generator[None, None, None]:
+def reset_controller_state(controller: Mock) -> Generator[None, None, None]:
     """Auto-reset controller state between tests within the same class.
 
     This fixture ensures state isolation when using class-scoped controller.
@@ -1069,11 +1089,11 @@ def reset_controller_state(controller: Any) -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def reset_class_scoped_fixtures(
-    request,
-    mock_extraction_manager: Any = None,
-    mock_session_manager: Any = None,
-    rom_cache: Any = None,
-    mock_settings_manager: Any = None
+    request: pytest.FixtureRequest,
+    mock_extraction_manager: MockExtractionManagerProtocol | None = None,
+    mock_session_manager: MockSessionManagerProtocol | None = None,
+    rom_cache: Mock | None = None,
+    mock_settings_manager: Mock | None = None
 ) -> Generator[None, None, None]:
     """Auto-reset state for all class-scoped fixtures between tests.
 
@@ -1159,7 +1179,7 @@ def safe_qapp(qt_app: Any) -> Any:  # QApplication | Mock but avoid circular imp
 
 
 @pytest.fixture(autouse=True)
-def cleanup_workers(request):
+def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """
     Automatically clean up any worker threads after each test.
 
@@ -1174,7 +1194,7 @@ def cleanup_workers(request):
 
     # Clean up any remaining workers
     try:
-        WorkerManager.cleanup_all()  # type: ignore[attr-defined]  # WorkerManager may have different interface
+        WorkerManager.cleanup_all()  # pyright: ignore[reportUnknownMemberType]  # WorkerManager may have different interface
     except Exception as e:
         # Log but don't fail tests due to cleanup errors
         import logging

@@ -29,7 +29,9 @@ from tests.infrastructure.qt_testing_framework import QtTestingFramework
 class MockUnifiedManualOffsetDialog(QObject):
     """Mock dialog for testing without real Qt initialization"""
     
-    sprite_found = Signal(int)
+    # Dialog-level signals that match the real implementation
+    offset_changed = Signal(int)
+    sprite_found = Signal(int, str)  # offset, name
     
     def __init__(self):
         super().__init__()
@@ -44,10 +46,12 @@ class MockUnifiedManualOffsetDialog(QObject):
         self.browse_tab.position_slider.sliderPressed = Mock()
         self.browse_tab.position_slider.sliderReleased = Mock()
         
-        # Mock offset_changed signal
+        # Mock browse_tab offset_changed signal (for compatibility with some tests)
         self.browse_tab.offset_changed = Mock()
         self.browse_tab.offset_changed.connect = Mock()
         self.browse_tab.offset_changed.emit = Mock()
+        
+        # Note: In real dialog, browse_tab changes trigger dialog-level offset_changed
         
         # Mock search signals with emit method
         self.browse_tab.find_next_clicked = Mock()
@@ -437,7 +441,7 @@ class TestManualOffsetDialogHistoryIntegration:
         
         # Emit sprite found signal (this is a real Signal, so we just emit it)
         if hasattr(self.dialog, 'sprite_found'):
-            self.dialog.sprite_found.emit(sprite_offset)
+            self.dialog.sprite_found.emit(sprite_offset, f"sprite_{sprite_offset:06X}")
             
             # Verify this test ran successfully by checking the signal exists
             assert hasattr(self.dialog, 'sprite_found')
@@ -465,7 +469,7 @@ class TestManualOffsetDialogHistoryIntegration:
         for i in range(3):
             offset = 0x200000 + (i * 0x1000)
             if hasattr(self.dialog, 'sprite_found'):
-                self.dialog.sprite_found.emit(offset)
+                self.dialog.sprite_found.emit(offset, f"sprite_{offset:06X}")
         
         # Clear history
         if hasattr(history_tab, 'clear_requested'):
@@ -737,7 +741,7 @@ class TestManualOffsetDialogRealWorldScenarios:
         # 3. User finds sprite and adds to history
         final_offset = 0x280000
         if hasattr(self.dialog, 'sprite_found'):
-            self.dialog.sprite_found.emit(final_offset)
+            self.dialog.sprite_found.emit(final_offset, f"sprite_{final_offset:06X}")
         
         # 4. User selects from history
         if hasattr(self.dialog, 'history_tab'):
@@ -773,7 +777,7 @@ class TestManualOffsetDialogRealWorldScenarios:
             
             # Some offsets contain sprites
             if i % 15 == 0 and hasattr(self.dialog, 'sprite_found'):
-                self.dialog.sprite_found.emit(offset)
+                self.dialog.sprite_found.emit(offset, f"sprite_{offset:06X}")
         
         # Session should complete without memory leaks or performance degradation
         assert len(offsets_explored) == 100

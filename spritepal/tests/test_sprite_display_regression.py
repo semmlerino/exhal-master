@@ -127,7 +127,7 @@ class TestManualOffsetDialogRegression:
         # Test sprite found signal (if available)
         if hasattr(self.dialog, 'sprite_found'):
             with qtbot.wait_signal(self.dialog.sprite_found, timeout=100):
-                self.dialog.sprite_found.emit(0x200000)
+                self.dialog.sprite_found.emit(0x200000, "test_sprite")
     
     def test_history_tab_functionality_preserved(self):
         """Regression: History tab functionality remains intact"""

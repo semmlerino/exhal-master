@@ -5,9 +5,20 @@ This module provides proper QWidget parents for testing instead of using Mock ob
 which can hide real bugs and don't provide proper Qt functionality.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
+
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QWidget
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from PySide6.QtGui import QCloseEvent, QShowEvent
+
+# Type variable for widget factory
+WidgetT = TypeVar('WidgetT', bound=QWidget)
 
 
 class TestParentWidget(QWidget):
@@ -18,7 +29,7 @@ class TestParentWidget(QWidget):
     including proper event handling, lifecycle management, and styling.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # Set a reasonable default size for testing
         self.resize(800, 600)
@@ -27,12 +38,12 @@ class TestParentWidget(QWidget):
         # Ensure the widget is hidden by default
         self.hide()
 
-    def showEvent(self, event):
+    def showEvent(self, event: QShowEvent) -> None:
         """Override to prevent actual showing during tests."""
         # Don't call super() to prevent actual display
         event.accept()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Ensure proper cleanup of child widgets."""
         # Let Qt handle child widget cleanup properly
         super().closeEvent(event)
@@ -40,7 +51,7 @@ class TestParentWidget(QWidget):
 
 
 @pytest.fixture
-def parent_widget(qapp):
+def parent_widget(qapp: QApplication) -> Iterator[TestParentWidget]:
     """
     Fixture providing a proper QWidget parent for tests.
 
@@ -63,7 +74,7 @@ def parent_widget(qapp):
 
 
 @pytest.fixture
-def widget_factory(qapp):
+def widget_factory(qapp: QApplication) -> Iterator[Callable[..., WidgetT]]:
     """
     Factory fixture for creating widgets with proper parents.
 
@@ -78,7 +89,7 @@ def widget_factory(qapp):
     """
     created_widgets = []
 
-    def _create_widget(widget_class, *args, **kwargs):
+    def _create_widget(widget_class: type[WidgetT], *args: Any, **kwargs: Any) -> WidgetT:
         """
         Create a widget with a proper test parent.
 
@@ -113,7 +124,7 @@ def widget_factory(qapp):
     QApplication.processEvents()
 
 
-def ensure_qt_app():
+def ensure_qt_app() -> QApplication:
     """
     Ensure a QApplication instance exists for testing.
 
@@ -135,19 +146,19 @@ class MockableParentWidget(TestParentWidget):
     the core Qt parent functionality intact.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # These can be overridden in tests
         self.mock_width = None
         self.mock_height = None
 
-    def width(self):
+    def width(self) -> int:
         """Return mocked width if set, otherwise real width."""
         if self.mock_width is not None:
             return self.mock_width
         return super().width()
 
-    def height(self):
+    def height(self) -> int:
         """Return mocked height if set, otherwise real height."""
         if self.mock_height is not None:
             return self.mock_height
@@ -155,7 +166,7 @@ class MockableParentWidget(TestParentWidget):
 
 
 @pytest.fixture
-def mockable_parent_widget(qapp):
+def mockable_parent_widget(qapp: QApplication) -> Iterator[MockableParentWidget]:
     """
     Fixture providing a parent widget that supports selective mocking.
 

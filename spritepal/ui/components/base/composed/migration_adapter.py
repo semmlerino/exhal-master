@@ -153,9 +153,25 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
         # Create splitter if requested (and not already created by subclass)
         if orientation is not None and not hasattr(self, 'main_splitter'):
+            # Remove the empty content_widget that was added by ComposedDialog
+            self.main_layout.removeWidget(self.content_widget)
+            self.content_widget.deleteLater()
+            
+            # Create and add the splitter
             self.main_splitter = QSplitter(orientation)
             self.main_splitter.setHandleWidth(splitter_handle_width)
-            self.main_layout.addWidget(self.main_splitter)
+            
+            # Insert splitter before button box if it exists
+            button_manager = self.get_component("button_box")
+            if button_manager and hasattr(button_manager, "button_box"):
+                insert_index = self.main_layout.indexOf(button_manager.button_box)
+                self.main_layout.insertWidget(insert_index, self.main_splitter)
+            else:
+                self.main_layout.addWidget(self.main_splitter)
+            
+            # For splitter dialogs, the splitter IS the content widget
+            self.content_widget = self.main_splitter
+            self.context.content_widget = self.main_splitter
             self.context.main_splitter = self.main_splitter
         elif not hasattr(self, 'main_splitter'):
             self.main_splitter = None

@@ -144,9 +144,20 @@ class DialogBase(QDialog):
         self.main_layout = QVBoxLayout(self)
         self.setLayout(self.main_layout)
 
-        # Create content widget
-        self.content_widget = QWidget()
-        self.main_layout.addWidget(self.content_widget)
+        # For splitter dialogs
+        self.main_splitter = None  # Will be set by add_horizontal_splitter
+
+        # If orientation is specified, create a splitter automatically
+        if orientation is not None:
+            self.main_splitter = QSplitter(orientation)
+            self.main_splitter.setHandleWidth(self._splitter_handle_width)
+            self.main_layout.addWidget(self.main_splitter)
+            # For splitter dialogs, the splitter IS the content widget
+            self.content_widget = self.main_splitter
+        else:
+            # Create content widget only for non-splitter dialogs
+            self.content_widget = QWidget()
+            self.main_layout.addWidget(self.content_widget)
 
         # Create button box if requested
         if with_button_box:
@@ -162,15 +173,6 @@ class DialogBase(QDialog):
         # For tabbed dialogs, create tab widget
         self._tab_widget: QTabWidget | None = None
         self.tab_widget = self._tab_widget  # Public alias for tests
-
-        # For splitter dialogs
-        self.main_splitter = None  # Will be set by add_horizontal_splitter
-
-        # If orientation is specified, create a splitter automatically
-        if orientation is not None:
-            self.main_splitter = QSplitter(orientation)
-            self.main_splitter.setHandleWidth(self._splitter_handle_width)
-            self.main_layout.addWidget(self.main_splitter)
 
         # Call setup method if it exists
         if hasattr(self, "_setup_ui"):
