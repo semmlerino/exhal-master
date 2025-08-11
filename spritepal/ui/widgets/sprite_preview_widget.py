@@ -46,7 +46,7 @@ class SpritePreviewWidget(QWidget):
         self.title = title
         self.sprite_pixmap: QPixmap | None = None
         self.palettes: list[list[list[int]]] = []
-        self.current_palette_index = 8  # Default sprite palette (was 8 in working version)
+        self.current_palette_index = None  # Default to grayscale (None = grayscale)
         self.sprite_data: bytes | None = None
         self._update_in_progress = False  # Guard against concurrent updates
         self.default_palette_loader = DefaultPaletteLoader()
@@ -257,16 +257,15 @@ class SpritePreviewWidget(QWidget):
 
                 # Update combo box
                 self.palette_combo.clear()
+                # Add grayscale as first option
+                self.palette_combo.addItem("Grayscale", None)
+                # Add color palettes
                 for idx, _colors in default_palettes.items():
                     self.palette_combo.addItem(f"Palette {idx}", idx)
 
-                # Select palette 8 by default (sprite palette) or first if not available
-                if self.palette_combo.count() > 8:
-                    self.palette_combo.setCurrentIndex(8)
-                    self.current_palette_index = 8
-                elif self.palette_combo.count() > 0:
-                    self.palette_combo.setCurrentIndex(0)
-                    self.current_palette_index = 0
+                # Select grayscale by default (index 0)
+                self.palette_combo.setCurrentIndex(0)
+                self.current_palette_index = None  # Grayscale
 
         # Store grayscale data for palette swapping
         self.sprite_data = img.tobytes()
@@ -340,14 +339,26 @@ class SpritePreviewWidget(QWidget):
 
         self._update_in_progress = True
         try:
-            # Ensure palette index is valid
-            if self.palettes and self.current_palette_index >= len(self.palettes):
-                self.current_palette_index = 0  # Reset to first palette if out of range
-                logger.debug("[DEBUG_SPRITE] Reset palette index to 0 (was out of range)")
+            # Check if grayscale is selected (None) or palette index is invalid
+            if self.current_palette_index is None:
+                # Grayscale explicitly selected
+                logger.debug("[DEBUG_SPRITE] Grayscale selected, showing without palette")
+                show_grayscale = True
+            elif self.palettes and isinstance(self.current_palette_index, int) and self.current_palette_index >= len(self.palettes):
+                # Invalid palette index - reset to grayscale
+                self.current_palette_index = None
+                logger.debug("[DEBUG_SPRITE] Invalid palette index, reverting to grayscale")
+                show_grayscale = True
+            elif not self.palettes or (isinstance(self.current_palette_index, int) and self.current_palette_index >= len(self.palettes)):
+                # No palettes available or invalid index - show grayscale
+                logger.debug("[DEBUG_SPRITE] No palette available, showing grayscale")
+                show_grayscale = True
+            else:
+                show_grayscale = False
 
-            if not self.palettes or self.current_palette_index >= len(self.palettes):
-                # No palette - show grayscale with proper scaling
-                logger.debug("[DEBUG_SPRITE] No palette available, showing grayscale with scaling")
+            if show_grayscale:
+                # Show grayscale with proper scaling
+                logger.debug("[DEBUG_SPRITE] Showing grayscale with scaling")
                 # Scale 4-bit values (0-15) to 8-bit (0-255)
                 import numpy as np
                 img_array = np.array(grayscale_img)
@@ -464,13 +475,17 @@ class SpritePreviewWidget(QWidget):
     def _on_palette_changed(self, index: int) -> None:
         """Handle palette selection change"""
         if index >= 0 and self.sprite_data:
-            self.current_palette_index = index
+            # Get the actual palette index from combo box data (could be None for grayscale)
+            palette_data = self.palette_combo.itemData(index)
+            self.current_palette_index = palette_data
             # Recreate image from grayscale data
             # Assume square sprite for now
             size = int(len(self.sprite_data) ** 0.5)
             img = Image.frombytes("L", (size, size), self.sprite_data)
             self._update_preview_with_palette(img)
-            self.palette_changed.emit(self.current_palette_index)
+            # Emit -1 for grayscale, otherwise the palette index
+            emit_value = -1 if self.current_palette_index is None else self.current_palette_index
+            self.palette_changed.emit(emit_value)
 
     def load_sprite_from_4bpp(
         self,

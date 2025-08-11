@@ -264,11 +264,12 @@ class BatchThumbnailWorker(QThread):
             logger.debug(f"Rendering {tile_count} tiles as {width_tiles}x{height_tiles} grid")
 
             # Render using tile renderer
+            # Use palette_index=None for grayscale (will trigger grayscale fallback)
             image = self.tile_renderer.render_tiles(
                 decompressed_data,
                 width_tiles,
                 height_tiles,
-                palette_index=8  # Default sprite palette
+                palette_index=None  # Grayscale by default
             )
 
             if not image:

@@ -34,7 +34,7 @@ class TileRenderer:
         tile_data: bytes,
         width_tiles: int,
         height_tiles: int,
-        palette_index: int = 8
+        palette_index: Optional[int] = None
     ) -> Optional[Image.Image]:
         """
         Render 4bpp tile data to an image.
@@ -43,7 +43,7 @@ class TileRenderer:
             tile_data: Raw 4bpp tile data (32 bytes per 8x8 tile)
             width_tiles: Width in tiles
             height_tiles: Height in tiles
-            palette_index: Palette index to use (0-15)
+            palette_index: Palette index to use (0-15) or None for grayscale
 
         Returns:
             PIL Image or None if rendering fails
@@ -60,20 +60,17 @@ class TileRenderer:
                 logger.debug(f"Padded tile data from {len(tile_data) - (expected_size - len(tile_data))} to {expected_size} bytes")
 
             # Get palette
-            if palette_index not in self.default_palettes:
-                logger.debug(f"Palette index {palette_index} not found, using default 8")
-                palette_index = 8  # Default sprite palette
-
-            # Get the palette or use a fallback
-            if palette_index in self.default_palettes:
-                palette = self.default_palettes[palette_index]
-            # Fallback to first available palette or create grayscale
-            elif self.default_palettes:
-                palette = next(iter(self.default_palettes.values()))
-                logger.debug(f"Using fallback palette instead of {palette_index}")
+            if palette_index is None:
+                # Use grayscale palette when None is specified
+                palette = [[i * 17, i * 17, i * 17] for i in range(16)]  # 0-255 range
+                logger.debug("Using grayscale palette (palette_index=None)")
+            elif palette_index not in self.default_palettes:
+                logger.debug(f"Palette index {palette_index} not found, using grayscale")
+                palette = [[i * 17, i * 17, i * 17] for i in range(16)]  # Grayscale fallback
             else:
-                palette = [[i * 16, i * 16, i * 16] for i in range(16)]
-                logger.debug(f"Using grayscale fallback for palette {palette_index}")
+                # Get the specified palette
+                palette = self.default_palettes[palette_index]
+                logger.debug(f"Using palette index {palette_index}")
 
             logger.debug(f"Using palette {palette_index} with {len(palette)} colors")
 
