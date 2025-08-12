@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 
 from PIL import Image
 from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     pass
@@ -312,12 +313,12 @@ class SessionManagerProtocol(BaseManagerProtocol, Protocol):
 class MainWindowProtocol(Protocol):
     """Protocol for main window functionality needed by controller."""
 
-    # Signals the controller connects to
-    extract_requested: Signal
-    open_in_editor_requested: Signal
-    arrange_rows_requested: Signal
-    arrange_grid_requested: Signal
-    inject_requested: Signal
+    # Signals the controller connects to (typed as Any for protocol compatibility)
+    extract_requested: Any  # Signal() - no parameters
+    open_in_editor_requested: Any  # Signal(str) - string parameter
+    arrange_rows_requested: Any  # Signal(str) - string parameter
+    arrange_grid_requested: Any  # Signal(str) - string parameter
+    inject_requested: Any  # Signal() - no parameters
 
     # UI components accessed by controller
     status_bar: Any  # QStatusBar

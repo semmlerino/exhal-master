@@ -51,9 +51,9 @@ class ComposedDialog(QDialog):
         """
         from utils.logging_config import get_logger
         logger = get_logger(__name__)
-        
+
         logger.debug("DEBUGGING: Starting ComposedDialog.__init__")
-        
+
         try:
             super().__init__(parent)
             logger.debug("DEBUGGING: QDialog.__init__ completed")
@@ -93,9 +93,9 @@ class ComposedDialog(QDialog):
                 logger.debug("DEBUGGING: setup_ui() completed successfully")
             else:
                 logger.debug("DEBUGGING: No setup_ui() method found")
-                
+
             logger.debug("DEBUGGING: ComposedDialog.__init__ completed successfully")
-            
+
         except Exception as e:
             logger.error(f"DEBUGGING: ComposedDialog.__init__ failed: {e}")
             import traceback
@@ -112,7 +112,7 @@ class ComposedDialog(QDialog):
         """
         from utils.logging_config import get_logger
         logger = get_logger(__name__)
-        
+
         try:
             # Always initialize message dialog manager
             logger.debug("DEBUGGING: Creating MessageDialogManager")

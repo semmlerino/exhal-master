@@ -14,10 +14,12 @@ This service replaces scattered preview generation code in:
 from __future__ import annotations
 
 import hashlib
+import struct
 import threading
 import time
 import weakref
 from collections import OrderedDict
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -478,29 +480,141 @@ class PreviewGenerator(QObject):
         )
 
     def _convert_sprite_data_to_image(self, sprite_data: bytes, request: PreviewRequest) -> Image.Image:
-        """Convert raw sprite data to PIL Image.
+        """Convert raw sprite data to PIL Image with thread-safe palette handling.
+
+        Thread Safety:
+            This method is thread-safe when called through generate_preview() which uses
+            QMutexLocker to ensure single-threaded execution. The method:
+            - Only reads from request.palette.data (no mutation of shared state)
+            - Creates local palette lists (no shared mutable objects)
+            - Returns newly created Image objects (no shared image state)
+            - Always returns consistent image format (P mode with palette)
 
         Args:
-            sprite_data: Raw sprite tile data
-            request: Original request with configuration
+            sprite_data: Raw sprite tile data (read-only)
+            request: Original request with configuration (read-only)
 
         Returns:
-            PIL Image representation of the sprite
+            PIL Image in palette mode ('P') with applied palette.
+            For error cases, returns a palette mode image with error indication color.
+
+        Format Consistency:
+            Always returns images in 'P' (palette) mode for consistent behavior.
+            Error images use a red palette entry instead of RGBA format.
         """
-        # This is a placeholder implementation
-        # The actual implementation would depend on the sprite data format
-        # and would need to handle 4bpp SNES tile data properly
-
-        # For now, create a basic grayscale image
-        # In practice, this would decode 4bpp tile data
         width, height = request.size
-        return Image.new("L", (width, height), 128)  # Gray placeholder
 
-        # TODO: Implement actual 4bpp tile decoding here
-        # This would involve:
-        # 1. Decoding 4bpp tile data
-        # 2. Applying palette if available
-        # 3. Arranging tiles in proper grid
+        # Always create palette mode image for consistency
+        img = Image.new("P", (width, height), 0)
+
+        # Handle empty sprite data
+        if len(sprite_data) == 0:
+            # Create error palette (red color to indicate error)
+            error_palette = []
+            # First color (index 0) is red for error indication
+            error_palette.extend([255, 0, 0])  # Red
+            # Fill rest with black
+            for _ in range(255):
+                error_palette.extend([0, 0, 0])
+            img.putpalette(error_palette)
+
+            # Fill image with index 0 (red) to show error
+            for y in range(height):
+                for x in range(width):
+                    img.putpixel((x, y), 0)
+
+            logger.debug(f"Empty sprite data at offset {request.offset:06X}, returning error image")
+            return img
+
+        # SNES tiles are 8x8 pixels, 4bpp (32 bytes per tile)
+        TILE_SIZE = 8
+        BYTES_PER_TILE = 32
+
+        # Calculate tile dimensions
+        tiles_x = (width + TILE_SIZE - 1) // TILE_SIZE
+        tiles_y = (height + TILE_SIZE - 1) // TILE_SIZE
+
+        # Create local palette (thread-safe: new list each call)
+        palette = []
+
+        # Apply palette if available
+        if request.palette and hasattr(request.palette, 'data'):
+            # Thread Safety: We only READ from request.palette.data
+            # We create a NEW local palette list, not modifying shared state
+            palette_data = request.palette.data
+
+            # Convert SNES BGR555 palette to RGB888
+            # Process up to 16 colors (4bpp maximum)
+            for i in range(0, min(len(palette_data), 32), 2):  # 32 bytes = 16 colors
+                if i + 1 < len(palette_data):
+                    # Unpack 16-bit color value (little-endian)
+                    color = struct.unpack('<H', palette_data[i:i+2])[0]
+                    # Extract and expand 5-bit color components to 8-bit
+                    r = ((color & 0x001F) << 3) | ((color & 0x001F) >> 2)
+                    g = ((color & 0x03E0) >> 2) | ((color & 0x03E0) >> 7)
+                    b = ((color & 0x7C00) >> 7) | ((color & 0x7C00) >> 12)
+                    palette.extend([r, g, b])
+
+            # Log palette creation for debugging thread issues
+            thread_id = threading.current_thread().ident
+            logger.debug(f"Created palette with {len(palette)//3} colors [thread={thread_id}]")
+        else:
+            # Default grayscale palette for 4bpp (16 shades)
+            for i in range(16):
+                gray = i * 17  # Scale 0-15 to 0-255
+                palette.extend([gray, gray, gray])
+
+        # Pad palette to 256 colors (PIL requirement for P mode)
+        while len(palette) < 768:  # 256 colors * 3 components
+            palette.extend([0, 0, 0])  # Pad with black
+
+        # Apply palette to image (thread-safe: img is local to this call)
+        img.putpalette(palette)
+
+        # Decode 4bpp planar tile data
+        tile_count = min(len(sprite_data) // BYTES_PER_TILE, tiles_x * tiles_y)
+
+        for tile_idx in range(tile_count):
+            tile_offset = tile_idx * BYTES_PER_TILE
+            tile_data = sprite_data[tile_offset:tile_offset + BYTES_PER_TILE]
+
+            if len(tile_data) < BYTES_PER_TILE:
+                # Incomplete tile - pad with zeros
+                tile_data += b'\x00' * (BYTES_PER_TILE - len(tile_data))
+
+            # Decode 4bpp planar format (2 planes of 2 bits each)
+            tile_pixels = []
+            for row in range(TILE_SIZE):
+                row_pixels = []
+                # Get bit planes for this row
+                plane0 = tile_data[row * 2] if row * 2 < len(tile_data) else 0
+                plane1 = tile_data[row * 2 + 1] if row * 2 + 1 < len(tile_data) else 0
+                plane2 = tile_data[16 + row * 2] if 16 + row * 2 < len(tile_data) else 0
+                plane3 = tile_data[16 + row * 2 + 1] if 16 + row * 2 + 1 < len(tile_data) else 0
+
+                # Combine bit planes to get pixel values
+                for bit in range(7, -1, -1):
+                    pixel = ((plane0 >> bit) & 1) | \
+                           (((plane1 >> bit) & 1) << 1) | \
+                           (((plane2 >> bit) & 1) << 2) | \
+                           (((plane3 >> bit) & 1) << 3)
+                    row_pixels.append(pixel)
+                tile_pixels.extend(row_pixels)
+
+            # Place tile in image
+            tile_x = tile_idx % tiles_x
+            tile_y = tile_idx // tiles_x
+
+            for y in range(TILE_SIZE):
+                for x in range(TILE_SIZE):
+                    img_x = tile_x * TILE_SIZE + x
+                    img_y = tile_y * TILE_SIZE + y
+                    if img_x < width and img_y < height:
+                        pixel_idx = y * TILE_SIZE + x
+                        if pixel_idx < len(tile_pixels):
+                            img.putpixel((img_x, img_y), tile_pixels[pixel_idx])
+
+        return img
 
 
     def _get_friendly_error_message(self, error_msg: str) -> str:
@@ -623,11 +737,8 @@ class PreviewGenerator(QObject):
             - Avoid complex operations that might fail
             - Don't rely on other objects existing (they might be deleted)
         """
-        try:
+        with suppress(Exception):
             self._cleanup_on_delete()
-        except Exception:
-            # Absolutely no exceptions should escape __del__
-            pass
 
     def _cleanup_on_delete(self) -> None:
         """Inner cleanup function for __del__ to abstract raise statements (TRY301)."""
@@ -636,10 +747,8 @@ class PreviewGenerator(QObject):
 
         # Cancel timer if it still exists
         if hasattr(self, "_debounce_timer") and self._debounce_timer is not None:
-            try:
-                self._debounce_timer.stop()
-            except (RuntimeError, AttributeError):
-                pass  # Timer might already be deleted
+            with suppress(RuntimeError, AttributeError):
+                self._debounce_timer.stop()  # Timer might already be deleted
 
         # Clear simple attributes
         if hasattr(self, "_pending_request"):

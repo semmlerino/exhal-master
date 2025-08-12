@@ -8,7 +8,7 @@ used across the test suite, eliminating duplication and inconsistencies.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 from unittest.mock import Mock
 
 if TYPE_CHECKING:

@@ -1,6 +1,6 @@
 """
 Sprite gallery widget for displaying multiple sprite thumbnails.
-Provides grid layout with virtual scrolling and lazy loading.
+Provides efficient virtual scrolling using Model/View architecture.
 """
 
 from typing import Any, Optional
@@ -10,38 +10,36 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListView,
     QPushButton,
-    QScrollArea,
-    QSizePolicy,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
-from ui.widgets.sprite_thumbnail_widget import SpriteThumbnailWidget
+from ui.delegates.sprite_gallery_delegate import SpriteGalleryDelegate
+from ui.models.sprite_gallery_model import SpriteGalleryModel
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 # Gallery layout constants
 VIEWPORT_MARGIN = 20
-PARENT_FALLBACK_MARGIN = 40
-MIN_FALLBACK_WIDTH = 400
-DEFAULT_FALLBACK_WIDTH = 800
-SCROLL_BAR_WIDTH = 20  # Approximate scroll bar width
+THUMBNAIL_REQUEST_BATCH_SIZE = 50  # Request thumbnails in batches
+VIEWPORT_BUFFER_ROWS = 2  # Load extra rows above/below viewport
 
 
-class SpriteGalleryWidget(QScrollArea):
-    """Widget displaying a gallery of sprite thumbnails."""
+class SpriteGalleryWidget(QWidget):
+    """Widget displaying a gallery of sprite thumbnails using virtual scrolling."""
 
     # Signals
     sprite_selected = Signal(int)  # Emits offset when sprite selected
     sprite_double_clicked = Signal(int)  # Emits offset on double-click
     selection_changed = Signal(list)  # Emits list of selected offsets
+    thumbnail_request = Signal(int, int)  # Request thumbnail (offset, priority)
 
     def __init__(self, parent: Optional[QWidget] = None):
         """
@@ -52,87 +50,113 @@ class SpriteGalleryWidget(QScrollArea):
         """
         super().__init__(parent)
 
-        # Gallery state
-        self.thumbnails: dict[int, SpriteThumbnailWidget] = {}
-        self.sprite_data: list[dict[str, Any]] = []
-        self.selected_offsets: list[int] = []
-
         # Display settings
         self.thumbnail_size = 256  # Default to actually visible size
         self.columns = 4  # Default columns for better visibility
         self.spacing = 16  # Proper visual separation
 
-        # Filtering
-        self.filter_text = ""
-        self.filter_compressed_only = False
-        self.filter_size_min = 0
-        self.filter_size_max = float('inf')
+        # Model/View components
+        self.model: Optional[SpriteGalleryModel] = None
+        self.delegate: Optional[SpriteGalleryDelegate] = None
+        self.list_view: Optional[QListView] = None
 
         # Performance
-        self.lazy_load_timer = QTimer()
-        self.lazy_load_timer.timeout.connect(self._load_visible_thumbnails)
-        self.lazy_load_timer.setInterval(100)
+        self.viewport_timer = QTimer()
+        self.viewport_timer.timeout.connect(self._update_visible_thumbnails)
+        self.viewport_timer.setInterval(100)
+        self.viewport_timer.setSingleShot(True)
 
         # UI components
-        self.container_widget: Optional[QWidget] = None
-        self.grid_layout: Optional[QGridLayout] = None
         self.controls_widget: Optional[QWidget] = None
+
+        # Track last visible range to avoid redundant requests
+        self._last_visible_range = (-1, -1)
 
         self._setup_ui()
 
     def _setup_ui(self):
         """Setup the gallery UI."""
-        # Configure scroll area - disable auto-resizing to control vertical expansion
-        self.setWidgetResizable(False)  # Critical: False prevents forced vertical expansion
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        # Main container
-        main_widget = QWidget()
-        # With setWidgetResizable(False), we control sizing manually
-        main_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(4, 4, 4, 4)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
 
         # Controls bar
         self.controls_widget = self._create_controls()
-        main_layout.addWidget(self.controls_widget)
+        layout.addWidget(self.controls_widget)
 
-        # Gallery container with optimal size policy for scroll area
-        self.container_widget = QWidget()
-        # Use Expanding horizontally to fill width, Minimum vertically for content-based height
-        self.container_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        # Create model
+        self.model = SpriteGalleryModel(self)
+        self.model.selection_changed.connect(self._on_model_selection_changed)
+        self.model.thumbnail_needed.connect(self._on_thumbnail_needed)
 
-        self.grid_layout = QGridLayout()
-        self.grid_layout.setSpacing(self.spacing)
-        self.grid_layout.setContentsMargins(4, 4, 4, 4)
-        self.container_widget.setLayout(self.grid_layout)
+        # Create delegate
+        self.delegate = SpriteGalleryDelegate(self)
+        self.delegate.set_thumbnail_size(self.thumbnail_size)
 
-        main_layout.addWidget(self.container_widget)
-        # No stretch added - container should expand to show all content
+        # Create list view with grid layout
+        self.list_view = QListView(self)
+        self.list_view.setModel(self.model)
+        self.list_view.setItemDelegate(self.delegate)
 
-        main_widget.setLayout(main_layout)
-        self.setWidget(main_widget)
+        # Configure for grid layout
+        self.list_view.setViewMode(QListView.IconMode)
+        self.list_view.setResizeMode(QListView.Adjust)
+        self.list_view.setLayoutMode(QListView.Batched)
+        self.list_view.setBatchSize(20)  # Process items in batches for performance
+        self.list_view.setUniformItemSizes(True)  # All items same size for performance
+        self.list_view.setSpacing(self.spacing)
+
+        # Selection mode
+        self.list_view.setSelectionMode(QListView.NoSelection)  # We handle selection in delegate
+
+        # Performance optimizations
+        self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
+        self.list_view.setHorizontalScrollMode(QListView.ScrollPerPixel)
+
+        # Connect scroll events to trigger thumbnail loading
+        scrollbar = self.list_view.verticalScrollBar()
+        scrollbar.valueChanged.connect(self._on_scroll)
+
+        # Connect click events
+        self.list_view.clicked.connect(self._on_item_clicked)
+        self.list_view.doubleClicked.connect(self._on_item_double_clicked)
+
+        layout.addWidget(self.list_view, 1)  # Give it stretch
+
+        self.setLayout(layout)
 
         # Style with proper dark theme colors
         self.setStyleSheet("""
-            QScrollArea {
-                background-color: #1e1e1e;
-                border: 1px solid #333;
-                color: #ffffff;
-            }
-            
-            /* Controls styling */
             QWidget {
                 background-color: #1e1e1e;
                 color: #ffffff;
             }
-            
+
+            QListView {
+                background-color: #1e1e1e;
+                border: 1px solid #333;
+                color: #ffffff;
+                outline: none;
+            }
+
+            QListView::item {
+                background-color: transparent;
+                border: none;
+            }
+
+            QListView::item:hover {
+                background-color: transparent;
+            }
+
+            QListView::item:selected {
+                background-color: transparent;
+            }
+
             QLabel {
                 color: #ffffff;
                 background-color: transparent;
             }
-            
+
             QLineEdit {
                 background-color: #2d2d2d;
                 color: #ffffff;
@@ -140,11 +164,11 @@ class SpriteGalleryWidget(QScrollArea):
                 border-radius: 3px;
                 padding: 4px;
             }
-            
+
             QLineEdit:focus {
                 border-color: #0078d4;
             }
-            
+
             QComboBox {
                 background-color: #2d2d2d;
                 color: #ffffff;
@@ -153,16 +177,16 @@ class SpriteGalleryWidget(QScrollArea):
                 padding: 4px;
                 min-width: 80px;
             }
-            
+
             QComboBox:hover {
                 background-color: #404040;
             }
-            
+
             QComboBox::drop-down {
                 border: none;
                 width: 20px;
             }
-            
+
             QComboBox::down-arrow {
                 image: none;
                 border-left: 5px solid transparent;
@@ -170,19 +194,19 @@ class SpriteGalleryWidget(QScrollArea):
                 border-top: 5px solid #ffffff;
                 margin-right: 5px;
             }
-            
+
             QComboBox QAbstractItemView {
                 background-color: #2d2d2d;
                 color: #ffffff;
                 border: 1px solid #444444;
                 selection-background-color: #404040;
             }
-            
+
             QCheckBox {
                 color: #ffffff;
                 background-color: transparent;
             }
-            
+
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
@@ -190,18 +214,18 @@ class SpriteGalleryWidget(QScrollArea):
                 border: 1px solid #444444;
                 border-radius: 2px;
             }
-            
+
             QCheckBox::indicator:checked {
                 background-color: #0078d4;
                 border-color: #0078d4;
             }
-            
+
             QSlider::groove:horizontal {
                 background-color: #404040;
                 height: 4px;
                 border-radius: 2px;
             }
-            
+
             QSlider::handle:horizontal {
                 background-color: #0078d4;
                 border: 1px solid #0078d4;
@@ -210,11 +234,11 @@ class SpriteGalleryWidget(QScrollArea):
                 margin: -6px 0;
                 border-radius: 8px;
             }
-            
+
             QSlider::handle:horizontal:hover {
                 background-color: #106ebe;
             }
-            
+
             QPushButton {
                 background-color: #404040;
                 color: #ffffff;
@@ -222,11 +246,11 @@ class SpriteGalleryWidget(QScrollArea):
                 border-radius: 3px;
                 padding: 6px 12px;
             }
-            
+
             QPushButton:hover {
                 background-color: #505050;
             }
-            
+
             QPushButton:pressed {
                 background-color: #353535;
             }
@@ -308,277 +332,170 @@ class SpriteGalleryWidget(QScrollArea):
         Args:
             sprites: List of sprite dictionaries with offset, size, etc.
         """
-        # Clear existing thumbnails
-        self._clear_gallery()
+        if not self.model:
+            logger.warning("Model not initialized")
+            return
 
-        # Store sprite data
-        self.sprite_data = sprites
+        # Set sprites in model
+        self.model.set_sprites(sprites)
 
         # Apply initial sort
         self._apply_sort()
 
-        # Create thumbnails
-        self._create_thumbnails()
-
-        # Ensure proper column layout after thumbnails are created
-        self._update_columns()
-
         # Update status
         self._update_status()
 
-        # Don't start lazy loading timer - parent will handle thumbnail generation
-        # self.lazy_load_timer.start()
-        logger.debug(f"Gallery populated with {len(sprites)} sprites, waiting for thumbnail generation")
+        # Trigger initial thumbnail loading for visible items
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
-    def _clear_gallery(self):
-        """Clear all thumbnails from the gallery."""
-        for thumbnail in self.thumbnails.values():
-            thumbnail.deleteLater()
-        self.thumbnails.clear()
+        logger.debug(f"Gallery populated with {len(sprites)} sprites using virtual scrolling")
 
-        # Clear layout
-        while self.grid_layout.count():
-            item = self.grid_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-    def _create_thumbnails(self):
-        """Create thumbnail widgets for all sprites."""
-        row = 0
-        col = 0
-
-        for sprite_info in self.sprite_data:
-            offset = sprite_info.get('offset', 0)
-            if isinstance(offset, str):
-                # Convert hex string to int
-                offset = int(offset, 16) if offset.startswith('0x') else int(offset)
-
-            # Create thumbnail
-            thumbnail = SpriteThumbnailWidget(
-                offset=offset,
-                size=self.thumbnail_size
-            )
-
-            # Connect signals
-            thumbnail.clicked.connect(self._on_thumbnail_clicked)
-            thumbnail.double_clicked.connect(self._on_thumbnail_double_clicked)
-            thumbnail.selected.connect(lambda sel, off=offset: self._on_thumbnail_selected(off, sel))
-
-            # Set sprite info (without pixmap yet - lazy load)
-            thumbnail.set_sprite_data(QPixmap(), sprite_info)
-
-            # Add to grid
-            self.grid_layout.addWidget(thumbnail, row, col)
-            self.thumbnails[offset] = thumbnail
-
-            # Update position
-            col += 1
-            if col >= self.columns:
-                col = 0
-                row += 1
-
-        # After creating all thumbnails, update widget size to fit content
-        self._update_widget_height()
-
-    def _update_widget_height(self):
-        """Update the main widget height to fit content exactly."""
-        if not self.widget() or not self.container_widget or not self.controls_widget:
-            return
-
-        # Calculate required height
-        controls_height = self.controls_widget.sizeHint().height()
-        content_height = self.container_widget.sizeHint().height()
-        margins = 16  # Total vertical margins
-
-        total_height = controls_height + content_height + margins
-        current_width = self.widget().width() or self.viewport().width()
-
-        # Update widget size - width from viewport, height from content
-        self.widget().resize(current_width, total_height)
-
-    def _load_visible_thumbnails(self):
-        """Load pixmaps for visible thumbnails (lazy loading)."""
-        # Get visible area
-        visible_rect = self.viewport().rect()
-
-        for offset, thumbnail in self.thumbnails.items():
-            # Check if thumbnail is visible
-            thumbnail_pos = thumbnail.mapTo(self.widget(), thumbnail.pos())
-            thumbnail_rect = thumbnail.rect().translated(thumbnail_pos)
-
-            if visible_rect.intersects(thumbnail_rect):
-                # Load pixmap if not already loaded
-                if not thumbnail.sprite_pixmap or thumbnail.sprite_pixmap.isNull():
-                    # This would be replaced with actual sprite loading
-                    # For now, create a placeholder
-                    self._load_thumbnail_pixmap(thumbnail, offset)
-
-    def _load_thumbnail_pixmap(self, thumbnail: SpriteThumbnailWidget, offset: int):
+    def set_thumbnail(self, offset: int, pixmap: QPixmap):
         """
-        Load the actual sprite pixmap for a thumbnail.
+        Set thumbnail for a sprite.
 
         Args:
-            thumbnail: The thumbnail widget
-            offset: The sprite offset
+            offset: Sprite offset
+            pixmap: Thumbnail pixmap
         """
-        # This is a placeholder - actual implementation would load from ROM
-        # and generate the sprite preview
-        pixmap = QPixmap(128, 128)
-        pixmap.fill(Qt.GlobalColor.darkGray)
-        thumbnail.set_sprite_data(pixmap, thumbnail.sprite_info)
+        if self.model:
+            self.model.set_thumbnail(offset, pixmap)
+            logger.debug(f"Thumbnail set for offset 0x{offset:06X}")
+
+    def _update_visible_thumbnails(self):
+        """Request thumbnails for visible items only."""
+        if not self.list_view or not self.model:
+            return
+
+        # Get visible viewport
+        viewport = self.list_view.viewport()
+        viewport_rect = viewport.rect()
+
+        # Find first and last visible items
+        first_index = self.list_view.indexAt(viewport_rect.topLeft())
+        last_index = self.list_view.indexAt(viewport_rect.bottomRight())
+
+        if not first_index.isValid():
+            first_index = self.model.index(0, 0)
+        if not last_index.isValid():
+            last_index = self.model.index(self.model.rowCount() - 1, 0)
+
+        first_row = first_index.row()
+        last_row = last_index.row()
+
+        # Add buffer rows above and below viewport
+        first_row = max(0, first_row - VIEWPORT_BUFFER_ROWS * self.columns)
+        last_row = min(self.model.rowCount() - 1, last_row + VIEWPORT_BUFFER_ROWS * self.columns)
+
+        # Check if range changed
+        if (first_row, last_row) == self._last_visible_range:
+            return
+
+        self._last_visible_range = (first_row, last_row)
+
+        # Get offsets that need thumbnails
+        offsets_needed = self.model.get_visible_range(first_row, last_row)
+
+        # Request thumbnails with priority based on position
+        for i, offset in enumerate(offsets_needed[:THUMBNAIL_REQUEST_BATCH_SIZE]):
+            priority = i  # Lower number = higher priority
+            self.thumbnail_request.emit(offset, priority)
+
+        logger.debug(f"Requested {len(offsets_needed)} thumbnails for rows {first_row}-{last_row}")
+
+    def _on_scroll(self, value: int):
+        """Handle scroll events to trigger thumbnail loading."""
+        # Use timer to debounce scroll events
+        self.viewport_timer.stop()
+        self.viewport_timer.start()
+
+    def _on_item_clicked(self, index):
+        """Handle item click."""
+        if not index.isValid():
+            return
+
+        offset = index.data(SpriteGalleryModel.OffsetRole)
+        if offset is not None:
+            self.sprite_selected.emit(offset)
+
+    def _on_item_double_clicked(self, index):
+        """Handle item double click."""
+        if not index.isValid():
+            return
+
+        offset = index.data(SpriteGalleryModel.OffsetRole)
+        if offset is not None:
+            self.sprite_double_clicked.emit(offset)
+
+    def _on_model_selection_changed(self, selected_offsets: list[int]):
+        """Handle selection change from model."""
+        self.selection_changed.emit(selected_offsets)
+        self._update_status()
+
+    def _on_thumbnail_needed(self, offset: int, priority: int):
+        """Handle thumbnail request from model."""
+        self.thumbnail_request.emit(offset, priority)
 
     def _on_size_changed(self, value: int):
         """Handle thumbnail size change."""
         self.thumbnail_size = value
         self.size_label.setText(f"{value}px")
 
-        # Update all thumbnails
-        for thumbnail in self.thumbnails.values():
-            thumbnail.thumbnail_size = value
-            thumbnail.setFixedSize(value, value + 20)
-            thumbnail._setup_ui()  # Recreate UI with new size
+        # Update model and delegate
+        if self.model:
+            self.model.set_thumbnail_size(value)
+        if self.delegate:
+            self.delegate.set_thumbnail_size(value)
 
-        # Adjust columns based on new size
-        self._update_columns()
+        # Force view to update item sizes
+        if self.list_view:
+            self.list_view.reset()
 
-        # Update widget height to accommodate new thumbnail sizes
-        self._update_widget_height()
-
-    def _update_columns(self):
-        """Update the number of columns based on widget width and thumbnail size."""
-        # Get available width, accounting for margins and potential scroll bar
-        viewport_width = self.viewport().width()
-        scroll_bar_visible = self.verticalScrollBar().isVisible()
-        scroll_bar_width = SCROLL_BAR_WIDTH if scroll_bar_visible else 0
-
-        available_width = viewport_width - VIEWPORT_MARGIN - scroll_bar_width
-
-        if available_width <= 0:
-            # Use parent width as fallback or a reasonable default
-            parent_width = self.parent().width() if self.parent() else DEFAULT_FALLBACK_WIDTH
-            available_width = max(MIN_FALLBACK_WIDTH, parent_width - PARENT_FALLBACK_MARGIN)
-
-        # Calculate columns based on thumbnail size plus spacing
-        item_width = self.thumbnail_size + self.spacing
-        new_columns = max(1, available_width // item_width)
-
-        # Only reorganize if column count actually changed
-        if new_columns != self.columns:
-            logger.debug(f"Updating columns from {self.columns} to {new_columns} (available_width={available_width})")
-            self.columns = new_columns
-            self._reorganize_grid()
-
-    def _reorganize_grid(self):
-        """Reorganize thumbnails in the grid with new column count."""
-        # Remove all widgets from grid
-        for thumbnail in self.thumbnails.values():
-            self.grid_layout.removeWidget(thumbnail)
-
-        # Re-add in new arrangement
-        row = 0
-        col = 0
-        for sprite_info in self.sprite_data:
-            offset = sprite_info.get('offset', 0)
-            if isinstance(offset, str):
-                offset = int(offset, 16) if offset.startswith('0x') else int(offset)
-
-            if offset in self.thumbnails:
-                self.grid_layout.addWidget(self.thumbnails[offset], row, col)
-                col += 1
-                if col >= self.columns:
-                    col = 0
-                    row += 1
-
-        # Update widget height after reorganizing
-        self._update_widget_height()
+        # Trigger thumbnail reload for new size
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
     def _apply_filters(self):
         """Apply current filters to the gallery."""
-        filter_text = self.filter_input.text().lower()
+        if not self.model:
+            return
+
+        filter_text = self.filter_input.text()
         compressed_only = self.compressed_check.isChecked()
 
-        for sprite_info in self.sprite_data:
-            offset = sprite_info.get('offset', 0)
-            if isinstance(offset, str):
-                offset_int = int(offset, 16) if offset.startswith('0x') else int(offset)
-                offset_str = offset
-            else:
-                offset_int = offset
-                offset_str = f"0x{offset:06X}"
-
-            if offset_int not in self.thumbnails:
-                continue
-
-            thumbnail = self.thumbnails[offset_int]
-
-            # Check filters
-            show = True
-
-            # Text filter
-            if filter_text and filter_text not in offset_str.lower():
-                show = False
-
-            # Compression filter
-            if compressed_only and not sprite_info.get('compressed', False):
-                show = False
-
-            # Show/hide thumbnail
-            thumbnail.setVisible(show)
-
+        self.model.apply_filter(filter_text, compressed_only)
         self._update_status()
+
+        # Trigger thumbnail loading for newly visible items
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
     def _apply_sort(self):
         """Apply sorting to the sprite data."""
+        if not self.model:
+            return
+
         sort_key = self.sort_combo.currentText()
+        self.model.sort_sprites(sort_key)
 
-        if sort_key == "Offset":
-            self.sprite_data.sort(key=lambda x: x.get('offset', 0) if isinstance(x.get('offset', 0), int) else int(x.get('offset', '0'), 16))
-        elif sort_key == "Size":
-            self.sprite_data.sort(key=lambda x: x.get('decompressed_size', 0), reverse=True)
-        elif sort_key == "Tiles":
-            self.sprite_data.sort(key=lambda x: x.get('tile_count', 0), reverse=True)
-
-        # Recreate thumbnails with new order
-        self._create_thumbnails()
-
-    def _on_thumbnail_clicked(self, offset: int):
-        """Handle thumbnail click."""
-        self.sprite_selected.emit(offset)
-
-    def _on_thumbnail_double_clicked(self, offset: int):
-        """Handle thumbnail double-click."""
-        self.sprite_double_clicked.emit(offset)
-
-    def _on_thumbnail_selected(self, offset: int, selected: bool):
-        """Handle thumbnail selection change."""
-        if selected and offset not in self.selected_offsets:
-            self.selected_offsets.append(offset)
-        elif not selected and offset in self.selected_offsets:
-            self.selected_offsets.remove(offset)
-
-        self.selection_changed.emit(self.selected_offsets)
-        self._update_status()
+        # Trigger thumbnail loading for newly visible items
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
     def _select_all(self):
         """Select all visible thumbnails."""
-        for thumbnail in self.thumbnails.values():
-            if thumbnail.isVisible():
-                thumbnail.set_selected(True)
+        if self.model:
+            self.model.select_all()
 
     def _clear_selection(self):
         """Clear all selections."""
-        for thumbnail in self.thumbnails.values():
-            thumbnail.set_selected(False)
-        self.selected_offsets.clear()
-        self.selection_changed.emit([])
-        self._update_status()
+        if self.model:
+            self.model.clear_selection()
 
     def _update_status(self):
         """Update the status label."""
-        # Count total sprites, not just visible ones (filter visibility is different)
-        total_count = len(self.thumbnails)
-        visible_count = sum(1 for t in self.thumbnails.values() if t.isVisible())
-        selected_count = len(self.selected_offsets)
+        if not self.model:
+            self.status_label.setText("0 sprites")
+            return
+
+        visible_count, total_count, selected_count = self.model.get_sprite_count_info()
 
         # Show total count, with filtered count if different
         if visible_count < total_count:
@@ -592,77 +509,68 @@ class SpriteGalleryWidget(QScrollArea):
         self.status_label.setText(status)
 
     def resizeEvent(self, event):
-        """Handle resize event to adjust columns and manage widget sizing."""
+        """Handle resize event."""
         super().resizeEvent(event)
-
-        # With setWidgetResizable(False), we need to manually handle horizontal resizing
-        if self.widget():
-            viewport_size = self.viewport().size()
-            widget_size = self.widget().size()
-
-            # Update width to match viewport, but keep height as content-based
-            new_width = viewport_size.width()
-            current_height = widget_size.height()
-
-            # Only resize if width actually changed to avoid unnecessary updates
-            if widget_size.width() != new_width:
-                self.widget().resize(new_width, current_height)
-
-        # Update column layout after resize
-        self._update_columns()
+        # Trigger thumbnail loading after resize
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
     def showEvent(self, event):
         """Handle show event to ensure proper initial layout."""
         super().showEvent(event)
-        # Ensure columns are calculated when widget becomes visible
-        self._update_columns()
-        # Force a layout update
-        if self.container_widget:
-            self.container_widget.updateGeometry()
+        # Trigger thumbnail loading when widget becomes visible
+        QTimer.singleShot(100, self._update_visible_thumbnails)
 
     def get_selected_sprites(self) -> list[dict[str, Any]]:
         """Get information for all selected sprites."""
-        selected = []
-        for offset in self.selected_offsets:
-            for sprite_info in self.sprite_data:
-                sprite_offset = sprite_info.get('offset', 0)
-                if isinstance(sprite_offset, str):
-                    sprite_offset = int(sprite_offset, 16) if sprite_offset.startswith('0x') else int(sprite_offset)
-                if sprite_offset == offset:
-                    selected.append(sprite_info)
-                    break
-        return selected
+        if self.model:
+            return self.model.get_selected_sprites()
+        return []
+
+    def get_selected_sprite_offset(self) -> int | None:
+        """Get the offset of the first selected sprite, or None if none selected."""
+        if self.model:
+            selected = self.model.get_selected_sprites()
+            if selected:
+                offset = selected[0].get('offset', 0)
+                if isinstance(offset, str):
+                    return int(offset, 16) if offset.startswith('0x') else int(offset)
+                return offset
+        return None
+
     def force_layout_update(self):
-        """Force the gallery to recalculate its layout and size."""
-        if not self.container_widget or not self.grid_layout:
-            logger.warning("Cannot force layout update: container or layout not initialized")
-            return
+        """Force the gallery to recalculate its layout."""
+        if self.list_view:
+            self.list_view.reset()
+            QTimer.singleShot(100, self._update_visible_thumbnails)
+            logger.debug("Forced layout update for list view")
 
-        # Ensure we have valid geometry before calculating columns
-        if self.isVisible() and self.viewport().width() > 0:
-            # Update columns based on current size
-            self._update_columns()
+    def get_sprite_pixmap(self, offset: int) -> Optional[QPixmap]:
+        """
+        Get the sprite pixmap for a given offset.
 
-            # Force layout recalculation in proper order
-            self.grid_layout.invalidate()
-            self.container_widget.adjustSize()
-            self.container_widget.updateGeometry()
+        Args:
+            offset: Sprite offset
 
-            # With setWidgetResizable(False), manually adjust the widget size
-            if self.widget():
-                viewport_size = self.viewport().size()
-                content_height = self.container_widget.sizeHint().height()
-                controls_height = self.controls_widget.sizeHint().height() if self.controls_widget else 0
+        Returns:
+            QPixmap if available, None otherwise
+        """
+        if self.model:
+            return self.model.get_sprite_pixmap(offset)
+        return None
 
-                # Calculate total needed height (controls + content + margins)
-                total_height = controls_height + content_height + 16  # 16 for margins
-
-                # Set width to viewport, height to content
-                self.widget().resize(viewport_size.width(), total_height)
-
-            # Update scroll area last
-            self.updateGeometry()
-
-            logger.debug(f"Forced layout update: {self.columns} columns, container size: {self.container_widget.size()}")
-        else:
-            logger.debug("Deferring layout update - widget not visible or no valid geometry")
+    # Backward compatibility property
+    @property
+    def thumbnails(self) -> dict:
+        """Backward compatibility: return dict with offset as key."""
+        result = {}
+        if self.model:
+            # Create a minimal compatibility dict
+            for i in range(self.model.rowCount()):
+                sprite = self.model.get_sprite_at_row(i)
+                if sprite:
+                    offset = sprite.get('offset', 0)
+                    if isinstance(offset, str):
+                        offset = int(offset, 16) if offset.startswith('0x') else int(offset)
+                    # Create a minimal object that has the offset
+                    result[offset] = type('ThumbnailCompat', (), {'offset': offset})
+        return result

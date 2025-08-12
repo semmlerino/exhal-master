@@ -517,6 +517,41 @@ class ExtractionManager(BaseManager):
             raise ExtractionError("ExtractionManager not initialized")
         return self._rom_extractor
 
+    def extract_sprite_to_png(self, rom_path: str, sprite_offset: int,
+                             output_path: str, cgram_path: str | None = None) -> bool:
+        """
+        Extract a single sprite to PNG file.
+
+        Args:
+            rom_path: Path to ROM file
+            sprite_offset: Offset of sprite in ROM
+            output_path: Full path where PNG should be saved
+            cgram_path: Optional CGRAM file for palette data
+
+        Returns:
+            True if extraction successful, False otherwise
+        """
+        try:
+            # Extract the sprite name from the output path
+            sprite_name = Path(output_path).stem
+            output_base = str(Path(output_path).parent / sprite_name)
+
+            # Use the existing extract_from_rom method
+            created_files = self.extract_from_rom(
+                rom_path=rom_path,
+                offset=sprite_offset,
+                output_base=output_base,
+                sprite_name=sprite_name,
+                cgram_path=cgram_path
+            )
+
+            # Return True if any files were created
+            return len(created_files) > 0
+
+        except (ExtractionError, ValidationError) as e:
+            self.error_occurred.emit(f"Sprite extraction failed: {e}")
+            return False
+
     def get_known_sprite_locations(self, rom_path: str) -> dict[str, Any]:
         """
         Get known sprite locations for a ROM with caching

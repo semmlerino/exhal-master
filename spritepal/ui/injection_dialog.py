@@ -32,6 +32,7 @@ from ui.components import (
     StyledSplitter,
     TabbedDialog,
 )
+from ui.utils.accessibility import AccessibilityHelper
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from utils.logging_config import get_logger
 
@@ -220,6 +221,9 @@ class InjectionDialog(TabbedDialog):
 
     def _setup_keyboard_shortcuts(self) -> None:
         """Setup keyboard shortcuts for the dialog"""
+        # Apply accessibility enhancements
+        self._apply_accessibility_enhancements()
+        
         # Ctrl+S to apply/accept
         apply_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         apply_shortcut.activated.connect(self.accept)
@@ -241,10 +245,23 @@ class InjectionDialog(TabbedDialog):
             if ok_button:
                 ok_button.setText("&Apply")
                 ok_button.setToolTip("Apply injection settings (Ctrl+S)")
+                AccessibilityHelper.make_accessible(
+                    ok_button,
+                    "Apply Injection",
+                    "Apply sprite injection settings and close dialog",
+                    "Ctrl+S"
+                )
 
             cancel_button = self.button_box.button(QDialogButtonBox.StandardButton.Cancel)
             if cancel_button:
+                cancel_button.setText("&Cancel")
                 cancel_button.setToolTip("Cancel without applying changes (Escape)")
+                AccessibilityHelper.make_accessible(
+                    cancel_button,
+                    "Cancel",
+                    "Cancel without applying changes",
+                    "Escape"
+                )
 
     def _next_tab(self) -> None:
         """Switch to next tab"""
@@ -259,24 +276,65 @@ class InjectionDialog(TabbedDialog):
             current = self._tab_widget.currentIndex()
             prev_index = (current - 1) % self._tab_widget.count()
             self._tab_widget.setCurrentIndex(prev_index)
+    
+    def _apply_accessibility_enhancements(self) -> None:
+        """Apply comprehensive accessibility enhancements to the dialog"""
+        # Set dialog accessible name and description
+        AccessibilityHelper.make_accessible(
+            self,
+            "Sprite Injection Dialog",
+            "Configure parameters for injecting sprites into VRAM or ROM files"
+        )
+        
+        # Add focus indicators
+        AccessibilityHelper.add_focus_indicators(self)
+        
+        # Make tab widget accessible if it exists
+        if hasattr(self, '_main_tab_widget') and self._main_tab_widget:
+            self._main_tab_widget.setAccessibleName("Injection Mode Tabs")
+            self._main_tab_widget.setAccessibleDescription("Choose between VRAM or ROM injection mode")
+        
+        # Make preview widget accessible
+        if self.preview_widget:
+            AccessibilityHelper.make_accessible(
+                self.preview_widget,
+                "Sprite Preview",
+                "Preview of the sprite to be injected"
+            )
+        
+        # Make sprite file selector accessible
+        if self.sprite_file_selector:
+            AccessibilityHelper.make_accessible(
+                self.sprite_file_selector,
+                "Sprite File Selector",
+                "Select the PNG sprite file to inject",
+                "Alt+S"
+            )
 
     def _add_vram_controls(self, layout: QVBoxLayout) -> None:
         """Add VRAM-specific controls to layout"""
         # Extraction info (if metadata available)
-        self.extraction_group = QGroupBox("Original Extraction Info", self)
+        self.extraction_group = QGroupBox("&Original Extraction Info", self)
+        AccessibilityHelper.add_group_box_navigation(self.extraction_group)
         extraction_layout = QVBoxLayout()
 
         self.extraction_info = QTextEdit()
         self.extraction_info.setMaximumHeight(80)
         self.extraction_info.setReadOnly(True)
         self.extraction_info.setToolTip("Information about the original sprite extraction")
+        AccessibilityHelper.make_accessible(
+            self.extraction_info,
+            "Extraction Information",
+            "Read-only information about the original sprite extraction"
+        )
         extraction_layout.addWidget(self.extraction_info)
 
         self.extraction_group.setLayout(extraction_layout)
         layout.addWidget(self.extraction_group)
 
         # VRAM settings
-        vram_group = QGroupBox("VRAM Settings", self)
+        vram_group = QGroupBox("&VRAM Settings", self)
+        AccessibilityHelper.add_group_box_navigation(vram_group)
         vram_layout = QVBoxLayout()
 
         # Input VRAM
@@ -333,12 +391,13 @@ class InjectionDialog(TabbedDialog):
     def _add_rom_controls(self, layout: QVBoxLayout) -> None:
         """Add ROM-specific controls to layout"""
         # ROM settings
-        rom_group = QGroupBox("ROM Settings", self)
+        rom_group = QGroupBox("&ROM Settings", self)
+        AccessibilityHelper.add_group_box_navigation(rom_group)
         rom_layout = QVBoxLayout()
 
         # Input ROM
         self.input_rom_selector = FileSelector(
-            label_text="Input ROM:",
+            label_text="&Input ROM:",
             placeholder="Select ROM file to modify...",
             browse_text="Browse...",
             mode="open",
@@ -346,12 +405,17 @@ class InjectionDialog(TabbedDialog):
         )
         self.input_rom_selector.path_changed.connect(self._on_input_rom_changed)
         self.input_rom_selector.setToolTip("Select the ROM file to inject the sprite into")
+        AccessibilityHelper.make_accessible(
+            self.input_rom_selector,
+            "Input ROM Selector",
+            "Select the ROM file to inject the sprite into"
+        )
 
         rom_layout.addWidget(self.input_rom_selector)
 
         # Output ROM
         self.output_rom_selector = FileSelector(
-            label_text="Output ROM:",
+            label_text="&Output ROM:",
             placeholder="Save modified ROM as...",
             browse_text="Browse...",
             mode="save",
@@ -359,12 +423,20 @@ class InjectionDialog(TabbedDialog):
         )
         self.output_rom_selector.path_changed.connect(self._on_output_rom_changed)
         self.output_rom_selector.setToolTip("Specify where to save the modified ROM with the injected sprite")
+        AccessibilityHelper.make_accessible(
+            self.output_rom_selector,
+            "Output ROM Selector",
+            "Specify where to save the modified ROM with the injected sprite"
+        )
 
         rom_layout.addWidget(self.output_rom_selector)
 
         # Sprite location selector
         location_layout = QHBoxLayout()
-        location_layout.addWidget(QLabel("Sprite Location:", self))
+        
+        # Create label with mnemonic
+        location_label = QLabel("Sprite &Location:", self)
+        location_layout.addWidget(location_label)
 
         self.sprite_location_combo = QComboBox(self)
         self.sprite_location_combo.setMinimumWidth(200)
@@ -374,9 +446,16 @@ class InjectionDialog(TabbedDialog):
             self._on_sprite_location_changed
         )
         self.sprite_location_combo.setToolTip("Select a predefined sprite location in the ROM")
+        location_label.setBuddy(self.sprite_location_combo)
+        AccessibilityHelper.make_accessible(
+            self.sprite_location_combo,
+            "Sprite Location",
+            "Select a predefined sprite location in the ROM or enter custom offset"
+        )
         location_layout.addWidget(self.sprite_location_combo)
 
-        location_layout.addWidget(QLabel("or Custom Offset:", self))
+        custom_label = QLabel("or Custom &Offset:", self)
+        location_layout.addWidget(custom_label)
 
         self.rom_offset_input = HexOffsetInput(
             placeholder="0x0",
@@ -385,6 +464,12 @@ class InjectionDialog(TabbedDialog):
         )
         self.rom_offset_input.text_changed.connect(self._on_rom_offset_changed)
         self.rom_offset_input.setToolTip("Enter a custom ROM offset for sprite injection (e.g., 0x8000)")
+        custom_label.setBuddy(self.rom_offset_input)
+        AccessibilityHelper.make_accessible(
+            self.rom_offset_input,
+            "Custom ROM Offset",
+            "Enter a custom ROM offset for sprite injection"
+        )
         location_layout.addWidget(self.rom_offset_input)
 
         location_layout.addStretch()
@@ -392,8 +477,14 @@ class InjectionDialog(TabbedDialog):
 
         # Compression options
         compression_layout = QHBoxLayout()
-        self.fast_compression_check = QCheckBox("Fast compression (larger file size)", self)
+        self.fast_compression_check = QCheckBox("&Fast compression (larger file size)", self)
         self.fast_compression_check.setToolTip("Use faster compression algorithm that may result in larger file size")
+        AccessibilityHelper.make_accessible(
+            self.fast_compression_check,
+            "Fast Compression",
+            "Use faster compression algorithm that may result in larger file size",
+            "Alt+F"
+        )
         compression_layout.addWidget(self.fast_compression_check)
         compression_layout.addStretch()
         rom_layout.addLayout(compression_layout)

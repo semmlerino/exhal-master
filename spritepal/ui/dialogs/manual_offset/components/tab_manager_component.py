@@ -53,50 +53,12 @@ class TabManagerComponent:
             layout.setContentsMargins(6, 6, 6, 6)
             layout.setSpacing(6)
 
-    def _is_composed_implementation(self) -> bool:
-        """Check if we're using composed implementation."""
-        flag_value = os.environ.get('SPRITEPAL_USE_COMPOSED_DIALOGS', '0').lower()
-        return flag_value in ('1', 'true', 'yes', 'on')
-
         # Create tab widget with enhanced styling
         self.tab_widget = QTabWidget()
 
         # Apply enhanced styling for composed implementation
         if self._is_composed_implementation():
             self._apply_enhanced_tab_styling()
-        return None
-
-    def _apply_enhanced_tab_styling(self) -> None:
-        """Apply enhanced visual styling to tab widget."""
-        self.tab_widget.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #c0c0c0;
-                border-radius: 6px;
-                background-color: #fafafa;
-                padding: 4px;
-            }
-            QTabBar::tab {
-                background-color: #e1e1e1;
-                border: 1px solid #c0c0c0;
-                border-bottom-color: transparent;
-                border-radius: 4px 4px 0 0;
-                padding: 8px 16px;
-                margin-right: 2px;
-                min-width: 80px;
-                font-weight: 500;
-            }
-            QTabBar::tab:selected {
-                background-color: #ffffff;
-                border-bottom-color: #ffffff;
-                font-weight: 600;
-            }
-            QTabBar::tab:hover:!selected {
-                background-color: #f0f0f0;
-            }
-            QTabWidget::tab-bar {
-                alignment: left;
-            }
-        """)
 
         # Import and create tab classes
         try:
@@ -142,6 +104,43 @@ class TabManagerComponent:
             layout.addWidget(self.tab_widget)
 
         return panel
+
+    def _is_composed_implementation(self) -> bool:
+        """Check if we're using composed implementation."""
+        flag_value = os.environ.get('SPRITEPAL_USE_COMPOSED_DIALOGS', '0').lower()
+        return flag_value in ('1', 'true', 'yes', 'on')
+
+    def _apply_enhanced_tab_styling(self) -> None:
+        """Apply enhanced visual styling to tab widget."""
+        self.tab_widget.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #c0c0c0;
+                border-radius: 6px;
+                background-color: #fafafa;
+                padding: 4px;
+            }
+            QTabBar::tab {
+                background-color: #e1e1e1;
+                border: 1px solid #c0c0c0;
+                border-bottom-color: transparent;
+                border-radius: 4px 4px 0 0;
+                padding: 8px 16px;
+                margin-right: 2px;
+                min-width: 80px;
+                font-weight: 500;
+            }
+            QTabBar::tab:selected {
+                background-color: #ffffff;
+                border-bottom-color: #ffffff;
+                font-weight: 600;
+            }
+            QTabBar::tab:hover:!selected {
+                background-color: #f0f0f0;
+            }
+            QTabWidget::tab-bar {
+                alignment: left;
+            }
+        """)
 
     def setup_custom_buttons(self, button_box):
         """Set up custom dialog buttons."""

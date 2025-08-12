@@ -136,4 +136,4 @@ class DialogSignalManager(QObject):
 
     def __repr__(self) -> str:
         """Return string representation of the manager."""
-        return f"<DialogSignalManager(available)>"
+        return "<DialogSignalManager(available)>"

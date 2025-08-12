@@ -71,7 +71,7 @@ class SpriteThumbnailWidget(QWidget):
         # Thumbnail display - leave room for label
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setFixedSize(
-            self.thumbnail_size - (margin * 2), 
+            self.thumbnail_size - (margin * 2),
             self.thumbnail_size - label_height - 4
         )
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -147,22 +147,22 @@ class SpriteThumbnailWidget(QWidget):
         placeholder.fill(QColor(35, 35, 35))
 
         painter = QPainter(placeholder)
-        
+
         # Draw a sprite icon pattern instead of "Loading..."
         center_x = placeholder.width() // 2
         center_y = placeholder.height() // 2
-        
+
         # Draw pixel art style grid pattern
         grid_size = 8
         grid_color = QColor(50, 50, 50)
         painter.setPen(QPen(grid_color, 1))
-        
+
         # Draw grid lines
         for i in range(0, placeholder.width(), grid_size):
             painter.drawLine(i, 0, i, placeholder.height())
         for i in range(0, placeholder.height(), grid_size):
             painter.drawLine(0, i, placeholder.width(), i)
-        
+
         # Draw sprite icon in center
         icon_size = min(placeholder.width(), placeholder.height()) // 3
         painter.setPen(QPen(QColor(80, 80, 80), 2))
@@ -172,7 +172,7 @@ class SpriteThumbnailWidget(QWidget):
             icon_size,
             icon_size
         )
-        
+
         # Draw "SPRITE" text
         painter.setPen(QPen(QColor(100, 100, 100)))
         font_size = max(8, min(14, placeholder.height() // 20))
@@ -199,7 +199,7 @@ class SpriteThumbnailWidget(QWidget):
         else:
             # Fall back to just offset
             display_text = self.offset_text
-        
+
         self.info_label.setText(display_text)
 
         # Update size text
@@ -229,7 +229,7 @@ class SpriteThumbnailWidget(QWidget):
 
         if 'tile_count' in self.sprite_info:
             tooltip_parts.append(f"Tiles: {self.sprite_info['tile_count']}")
-        
+
         if 'width' in self.sprite_info and 'height' in self.sprite_info:
             tooltip_parts.append(f"Dimensions: {self.sprite_info['width']}x{self.sprite_info['height']}")
 

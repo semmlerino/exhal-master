@@ -642,7 +642,7 @@ def get_scroll_area_style(background_color: str = "background") -> str:
 def get_dark_preview_style() -> str:
     """
     Get comprehensive dark theme styling for sprite preview areas
-    
+
     Returns:
         CSS string for dark sprite preview styling
     """
@@ -654,13 +654,13 @@ def get_dark_preview_style() -> str:
         color: {COLORS["text_primary"]};
         padding: {DIMENSIONS["spacing_sm"]}px;
     }}
-    
+
     QScrollArea {{
         background-color: {COLORS["preview_background"]};
         border: {DIMENSIONS["border_width"]}px solid {COLORS["border"]};
         border-radius: {DIMENSIONS["border_radius"]}px;
     }}
-    
+
     QScrollArea QWidget {{
         background-color: {COLORS["preview_background"]};
     }}
@@ -670,9 +670,9 @@ def get_dark_preview_style() -> str:
 def get_dark_panel_style() -> str:
     """
     Get comprehensive dark theme styling for panels and group boxes
-    
+
     Returns:
-        CSS string for dark panel styling  
+        CSS string for dark panel styling
     """
     return f"""
     QGroupBox {{
@@ -684,14 +684,14 @@ def get_dark_panel_style() -> str:
         color: {COLORS["text_primary"]};
         font-weight: {FONTS["bold_weight"]};
     }}
-    
+
     QGroupBox::title {{
         subcontrol-origin: margin;
         left: {DIMENSIONS["spacing_md"]}px;
         padding: 0 {DIMENSIONS["spacing_sm"]}px 0 {DIMENSIONS["spacing_sm"]}px;
         color: {COLORS["text_primary"]};
     }}
-    
+
     QWidget {{
         background-color: {COLORS["background"]};
         color: {COLORS["text_primary"]};

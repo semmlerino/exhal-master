@@ -4,10 +4,9 @@ Standalone launcher for the Detached Sprite Gallery.
 Run this script to open the gallery window independently for testing or demonstration.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
-from datetime import datetime
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -15,39 +14,37 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Check if we're in the virtual environment
 def check_virtual_env():
     """Check if we're running in the virtual environment."""
-    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-        return True
-    return False
+    return bool(hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix))
 
 # If not in venv, try to activate it
 if not check_virtual_env():
     print("⚠️  Not running in virtual environment. Checking for venv...")
-    
+
     # Look for venv in parent directory
     venv_path = Path(__file__).parent.parent / "venv"
     if venv_path.exists():
         print(f"📦 Found virtual environment at: {venv_path}")
-        
+
         # Try to use the venv Python directly
         if os.name == 'nt':  # Windows
             python_exe = venv_path / "Scripts" / "python.exe"
         else:  # Unix/Linux/Mac
             python_exe = venv_path / "bin" / "python"
-        
+
         if python_exe.exists():
             print(f"🚀 Restarting with venv Python: {python_exe}")
             import subprocess
             # Re-run this script with the venv Python
-            result = subprocess.run([str(python_exe), str(Path(__file__))] + sys.argv[1:])
+            result = subprocess.run([str(python_exe), str(Path(__file__)), *sys.argv[1:]], check=False)
             sys.exit(result.returncode)
-    
+
     print("❌ Virtual environment not found. Please run from venv or install dependencies.")
 
 try:
+    from PySide6.QtCore import Qt, QTimer
+    from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
     from PySide6.QtWidgets import QApplication, QMessageBox
-    from PySide6.QtCore import QTimer, Qt
-    from PySide6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon
-    
+
     from ui.windows.detached_gallery_window import DetachedGalleryWindow
     QT_AVAILABLE = True
 except ImportError:
@@ -65,7 +62,7 @@ def create_sample_sprites():
         "Shotzo", "Laser Ball", "UFO", "Wheelie", "Rocky", "Mr. Shine",
         "Mr. Bright", "Heavy Lobster", "Computer Virus", "Marx"
     ]
-    
+
     sprites = []
     for i in range(len(sprite_names)):
         sprites.append({
@@ -75,7 +72,7 @@ def create_sample_sprites():
             'compressed': i % 3 == 0,  # Every 3rd sprite is HAL compressed
             'name': sprite_names[i],
         })
-    
+
     return sprites
 
 def create_colorful_thumbnails(gallery_window, sprites):
@@ -86,7 +83,7 @@ def create_colorful_thumbnails(gallery_window, sprites):
         Qt.GlobalColor.darkRed, Qt.GlobalColor.darkGreen, Qt.GlobalColor.darkBlue,
         Qt.GlobalColor.darkYellow, Qt.GlobalColor.darkCyan, Qt.GlobalColor.darkMagenta,
         QColor(255, 165, 0),  # Orange
-        QColor(128, 0, 128),  # Purple  
+        QColor(128, 0, 128),  # Purple
         QColor(255, 192, 203), # Pink
         QColor(165, 42, 42),   # Brown
         QColor(0, 128, 128),   # Teal
@@ -102,80 +99,79 @@ def create_colorful_thumbnails(gallery_window, sprites):
         QColor(0, 206, 209),   # Dark turquoise
         QColor(138, 43, 226),  # Blue violet
     ]
-    
+
     gallery = gallery_window.gallery_widget
-    
+
     for i, sprite in enumerate(sprites):
         offset = sprite['offset']
-        if offset in gallery.thumbnails:
-            # Create unique thumbnail
-            pixmap = QPixmap(128, 128)
-            pixmap.fill(Qt.GlobalColor.black)
-            
-            painter = QPainter(pixmap)
-            
-            # Main sprite color
-            main_color = colors[i % len(colors)]
-            painter.fillRect(8, 8, 112, 112, main_color)
-            
-            # Add border
-            painter.setPen(Qt.GlobalColor.white)
-            painter.drawRect(8, 8, 112, 112)
-            
-            # Add sprite info
-            painter.setPen(Qt.GlobalColor.white)
-            font = QFont("Arial", 8, QFont.Weight.Bold)
-            painter.setFont(font)
-            
-            # Sprite number
-            painter.drawText(12, 25, f"#{i+1}")
-            
-            # Sprite name (truncated)
-            name = sprite['name'][:10] + "..." if len(sprite['name']) > 10 else sprite['name']
-            painter.drawText(12, 40, name)
-            
-            # Offset
-            painter.drawText(12, 55, f"0x{offset:06X}")
-            
-            # Size info
-            size_kb = sprite['decompressed_size'] // 1024
-            painter.drawText(12, 70, f"{size_kb}KB")
-            
-            # Tile count
-            painter.drawText(12, 85, f"{sprite['tile_count']} tiles")
-            
-            # HAL compression indicator
-            if sprite['compressed']:
-                painter.fillRect(90, 95, 30, 20, Qt.GlobalColor.yellow)
-                painter.setPen(Qt.GlobalColor.black)
-                font_small = QFont("Arial", 7, QFont.Weight.Bold)
-                painter.setFont(font_small)
-                painter.drawText(94, 107, "HAL")
-            
-            painter.end()
-            
-            # Set the thumbnail
-            thumbnail = gallery.thumbnails[offset]
-            thumbnail.set_sprite_data(pixmap, sprite)
+        
+        # Create unique thumbnail
+        pixmap = QPixmap(128, 128)
+        pixmap.fill(Qt.GlobalColor.black)
+
+        painter = QPainter(pixmap)
+
+        # Main sprite color
+        main_color = colors[i % len(colors)]
+        painter.fillRect(8, 8, 112, 112, main_color)
+
+        # Add border
+        painter.setPen(Qt.GlobalColor.white)
+        painter.drawRect(8, 8, 112, 112)
+
+        # Add sprite info
+        painter.setPen(Qt.GlobalColor.white)
+        font = QFont("Arial", 8, QFont.Weight.Bold)
+        painter.setFont(font)
+
+        # Sprite number
+        painter.drawText(12, 25, f"#{i+1}")
+
+        # Sprite name (truncated)
+        name = sprite['name'][:10] + "..." if len(sprite['name']) > 10 else sprite['name']
+        painter.drawText(12, 40, name)
+
+        # Offset
+        painter.drawText(12, 55, f"0x{offset:06X}")
+
+        # Size info
+        size_kb = sprite['decompressed_size'] // 1024
+        painter.drawText(12, 70, f"{size_kb}KB")
+
+        # Tile count
+        painter.drawText(12, 85, f"{sprite['tile_count']} tiles")
+
+        # HAL compression indicator
+        if sprite['compressed']:
+            painter.fillRect(90, 95, 30, 20, Qt.GlobalColor.yellow)
+            painter.setPen(Qt.GlobalColor.black)
+            font_small = QFont("Arial", 7, QFont.Weight.Bold)
+            painter.setFont(font_small)
+            painter.drawText(94, 107, "HAL")
+
+        painter.end()
+
+        # Set the thumbnail using the gallery widget's method
+        gallery.set_thumbnail(offset, pixmap)
 
 class StandaloneGalleryLauncher:
     """Standalone launcher for the detached gallery."""
-    
+
     def __init__(self):
         self.app = QApplication.instance() or QApplication(sys.argv)
         self.app.setApplicationName("SpritePal - Detached Gallery")
         self.gallery_window = None
-        
+
         # Initialize SpritePal managers
         self._initialize_managers()
-        
+
         # Set application icon if available
         try:
             # You could add an icon file here
             pass
-        except:
+        except Exception:
             pass
-    
+
     def _initialize_managers(self):
         """Initialize SpritePal core managers."""
         try:
@@ -185,32 +181,32 @@ class StandaloneGalleryLauncher:
         except Exception as e:
             print(f"❌ Failed to initialize managers: {e}")
             raise
-    
+
     def create_gallery_window(self):
         """Create and setup the gallery window."""
         print("🗖 Creating detached gallery window...")
-        
+
         # Create the detached gallery window
         self.gallery_window = DetachedGalleryWindow()
         self.gallery_window.setWindowTitle("SpritePal - Sprite Gallery (Standalone)")
-        
+
         # Create sample sprites
         sprites = create_sample_sprites()
-        
+
         # Set the sprites in the gallery
         self.gallery_window.set_sprites(sprites)
-        
+
         # Generate colorful thumbnails
         create_colorful_thumbnails(self.gallery_window, sprites)
-        
+
         # Update the status to show it's a demo
         if self.gallery_window.gallery_widget:
             status_label = self.gallery_window.gallery_widget.status_label
             status_label.setText(f"{len(sprites)} demo sprites loaded")
-        
+
         print(f"✅ Created gallery with {len(sprites)} colorful demo sprites")
-        
-    
+
+
     def run(self):
         """Run the standalone gallery."""
         print("=" * 60)
@@ -219,19 +215,19 @@ class StandaloneGalleryLauncher:
         print("Full-featured standalone SpritePal gallery with:")
         print("• ROM loading and scanning capabilities")
         print("• Sprite extraction to PNG")
-        print("• Progress indicators and caching") 
+        print("• Progress indicators and caching")
         print("• Fixed empty space stretching issue")
         print("")
-        
+
         # Create and setup the gallery
         self.create_gallery_window()
-        
+
         # Show the window
         self.gallery_window.show()
         self.gallery_window.resize(1200, 800)  # Nice initial size
-        
+
         # Welcome message removed - direct to functionality
-        
+
         print("🎉 Gallery window opened!")
         print("")
         print("💡 Try these actions:")
@@ -247,7 +243,7 @@ class StandaloneGalleryLauncher:
         print("")
         print("Press Ctrl+C in terminal to exit")
         print("=" * 60)
-        
+
         # Run the application
         return self.app.exec()
 
@@ -255,7 +251,7 @@ def main():
     """Main entry point."""
     if not QT_AVAILABLE:
         return 1
-    
+
     try:
         launcher = StandaloneGalleryLauncher()
         return launcher.run()

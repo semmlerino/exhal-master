@@ -23,14 +23,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ui.common.spacing_constants import (
-    COMPACT_BUTTON_HEIGHT,
-    COMPACT_WIDTH,
-    GROUP_PADDING,
-    SPACING_SMALL,
-    SPACING_TINY,
-)
-
 # Import AdvancedSearchDialog lazily to avoid circular imports
 from utils.logging_config import get_logger
 
@@ -192,7 +184,7 @@ class SimpleBrowseTab(QWidget):
                 background-color: #2a2a2a;
             }
         """
-        
+
         self.prev_button = QPushButton("◀ Previous")
         self.prev_button.setStyleSheet(button_style)
         self.prev_button.setToolTip("Find previous sprite (skip empty areas)")
@@ -206,7 +198,7 @@ class SimpleBrowseTab(QWidget):
         nav_row.addWidget(self.next_button)
 
         nav_row.addStretch()  # Add space between navigation and action buttons
-        
+
         # Find Sprites button
         self.find_sprites_button = QPushButton("🔍 Find Sprites")
         self.find_sprites_button.setStyleSheet(button_style)
@@ -222,7 +214,7 @@ class SimpleBrowseTab(QWidget):
         nav_row.addWidget(self.advanced_search_button)
 
         controls_layout.addLayout(nav_row)
-        
+
         # Add another separator for the manual controls section
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.Shape.HLine)
@@ -232,7 +224,7 @@ class SimpleBrowseTab(QWidget):
         # Manual input section with better organization
         manual_section = QVBoxLayout()
         manual_section.setSpacing(8)
-        
+
         # Manual navigation row
         manual_row = QHBoxLayout()
         manual_row.setSpacing(12)
@@ -240,7 +232,7 @@ class SimpleBrowseTab(QWidget):
         # Go to offset group
         goto_group = QHBoxLayout()
         goto_group.setSpacing(8)
-        
+
         goto_label = QLabel("Jump to Offset:")
         goto_label.setStyleSheet("font-weight: bold; color: #aaa;")
         goto_group.addWidget(goto_label)
@@ -268,18 +260,18 @@ class SimpleBrowseTab(QWidget):
         go_button.setStyleSheet(button_style)
         go_button.clicked.connect(self._on_go_button_clicked)
         goto_group.addWidget(go_button)
-        
+
         manual_row.addLayout(goto_group)
         manual_row.addStretch()
-        
+
         # Step size control - moved to separate group
         step_group = QHBoxLayout()
         step_group.setSpacing(8)
-        
+
         step_label = QLabel("Step Size:")
         step_label.setStyleSheet("font-weight: bold; color: #aaa;")
         step_group.addWidget(step_label)
-        
+
         self.step_spinbox = QSpinBox()
         self.step_spinbox.setMinimum(0x100)
         self.step_spinbox.setMaximum(0x100000)
@@ -297,9 +289,9 @@ class SimpleBrowseTab(QWidget):
             }
         """)
         step_group.addWidget(self.step_spinbox)
-        
+
         manual_row.addLayout(step_group)
-        
+
         manual_section.addLayout(manual_row)
         controls_layout.addLayout(manual_section)
 
@@ -364,7 +356,7 @@ class SimpleBrowseTab(QWidget):
 
     def _on_go_button_clicked(self) -> None:
         """Handle go button click without lambda."""
-        self.set_offset(self.manual_spinbox)
+        self.set_offset(self.manual_spinbox.value())
 
     def get_current_offset(self) -> int:
         """

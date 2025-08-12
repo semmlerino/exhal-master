@@ -156,11 +156,11 @@ class DialogBaseMigrationAdapter(ComposedDialog):
             # Remove the empty content_widget that was added by ComposedDialog
             self.main_layout.removeWidget(self.content_widget)
             self.content_widget.deleteLater()
-            
+
             # Create and add the splitter
             self.main_splitter = QSplitter(orientation)
             self.main_splitter.setHandleWidth(splitter_handle_width)
-            
+
             # Insert splitter before button box if it exists
             button_manager = self.get_component("button_box")
             if button_manager and hasattr(button_manager, "button_box"):
@@ -168,7 +168,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
                 self.main_layout.insertWidget(insert_index, self.main_splitter)
             else:
                 self.main_layout.addWidget(self.main_splitter)
-            
+
             # For splitter dialogs, the splitter IS the content widget
             self.content_widget = self.main_splitter
             self.context.content_widget = self.main_splitter
@@ -179,7 +179,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         # Verify initialization (simplified check for compatibility)
         self._verify_initialization()
         self._initialization_phase = "complete"
-        
+
         # DEFER WA_DeleteOnClose until dialog is actually being closed
         # Setting it during initialization causes Qt signal lifecycle issues
         self._should_delete_on_close = True
@@ -496,5 +496,5 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         if getattr(self, '_should_delete_on_close', False):
             self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
             logger.debug("DEBUGGING: WA_DeleteOnClose set during close event")
-        
+
         super().closeEvent(event)

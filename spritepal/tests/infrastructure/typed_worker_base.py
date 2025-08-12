@@ -345,7 +345,7 @@ class TypedWorkerValidator:
         params = worker.params
 
         # Handle dict types specially
-        if expected_params_type == dict:
+        if expected_params_type is dict:
             if not isinstance(params, dict):
                 raise TypeError(f"Worker params is {type(params).__name__}, expected dict")
         elif not isinstance(params, expected_params_type):

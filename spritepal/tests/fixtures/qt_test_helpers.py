@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
     from PySide6.QtGui import QCloseEvent, QShowEvent
 
 # Type variable for widget factory

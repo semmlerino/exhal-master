@@ -47,7 +47,6 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFrame,
-    QHBoxLayout,
     QInputDialog,
     QLabel,
     QListWidget,
@@ -68,22 +67,27 @@ from ui.common.collapsible_group_box import CollapsibleGroupBox
 
 # Use SimplePreviewCoordinator to avoid worker pool crashes
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator
+
+
 # Smart DialogBase selection based on environment
 def _get_dialog_base_class():
     """Get the appropriate DialogBase class based on environment settings."""
     import os
+
     from utils.logging_config import get_logger
     logger = get_logger(__name__)
-    
+
     flag_value = os.environ.get('SPRITEPAL_USE_COMPOSED_DIALOGS', '0').lower()
     use_composed = flag_value in ('1', 'true', 'yes', 'on')
-    
+
     logger.warning(f"DEBUGGING: Dialog selection - flag={flag_value}, use_composed={use_composed}")
-    
+
     if use_composed:
         try:
             logger.warning("DEBUGGING: Attempting to import DialogBaseMigrationAdapter")
-            from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
+            from ui.components.base.composed.migration_adapter import (
+                DialogBaseMigrationAdapter,
+            )
             logger.warning("DEBUGGING: Successfully imported DialogBaseMigrationAdapter")
             return DialogBaseMigrationAdapter
         except Exception as e:
@@ -179,18 +183,18 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # TEMPORARILY DISABLE LayoutManagerComponent to isolate the issue
         logger.debug("DEBUGGING: Skipping LayoutManagerComponent creation")
-        
+
         # Create minimal fallback object to prevent attribute errors
         class MinimalLayoutManager:
             MAX_MINI_MAP_HEIGHT = 60
             MIN_MINI_MAP_HEIGHT = 40
             def configure_splitter(self, *args): pass
             def fix_empty_space_issue(self): pass
-            def apply_standard_layout(self, layout, spacing_type='normal'): 
+            def apply_standard_layout(self, layout, spacing_type='normal'):
                 layout.setSpacing(8)
                 layout.setContentsMargins(8, 8, 8, 8)
             def remove_all_stretches(self, layout): pass
-            def create_section_title(self, title, subtitle=""): 
+            def create_section_title(self, title, subtitle=""):
                 from PySide6.QtWidgets import QLabel
                 label = QLabel(title)
                 label.setStyleSheet("font-weight: bold; font-size: 12px; color: #333;")
@@ -198,7 +202,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             def on_dialog_show(self): pass
             def update_for_tab(self, index, width): pass
             def handle_resize(self, event): pass  # Add missing method
-        
+
         self.layout_manager = MinimalLayoutManager()
         logger.debug("Using minimal layout manager for debugging")
 
@@ -229,9 +233,9 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._setup_smart_preview_coordinator()
         self._setup_preview_timer()
         self._connect_signals()
-        
+
         # DialogSignalManager handles custom signals to avoid Qt metaclass issues
-        
+
         logger.warning("DEBUGGING: UnifiedManualOffsetDialog.__init__ COMPLETED - Dialog should be fully created")
 
     def __del__(self):
@@ -243,7 +247,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Set up the dialog UI."""
         try:
             logger.debug("Starting _setup_ui")
-            
+
             # Create left and right panels
             left_panel = self._create_left_panel()
             right_panel = self._create_right_panel()
@@ -258,9 +262,9 @@ class UnifiedManualOffsetDialog(DialogBase):
             # Left panel should be wider for controls, right panel narrower for preview
             self.add_panel(left_panel, stretch_factor=3)
             self.add_panel(right_panel, stretch_factor=2)
-            
+
             logger.debug("_setup_ui completed successfully")
-            
+
         except Exception as e:
             logger.error(f"Error in _setup_ui: {e}")
             import traceback
@@ -352,15 +356,15 @@ class UnifiedManualOffsetDialog(DialogBase):
         """)
         preview_layout = QVBoxLayout(preview_frame)
         preview_layout.setContentsMargins(8, 8, 8, 8)
-        
+
         # Preview widget configured to expand within frame
         self.preview_widget = SpritePreviewWidget()
         self.preview_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_widget.similarity_search_requested.connect(self._on_similarity_search_requested)
         preview_layout.addWidget(self.preview_widget)
-        
+
         layout.addWidget(preview_frame, 1)  # Give frame all the stretch
-        
+
         # No controls section needed - preview widget handles its own controls
 
         return panel
@@ -369,32 +373,32 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Set up custom dialog buttons with improved layout."""
         # Clear default buttons and create a more organized button layout
         self.button_box.clear()
-        
+
         # Primary action buttons (left side)
         self.apply_btn = QPushButton("Apply Offset")
         self.apply_btn.setToolTip("Apply the current offset to the extraction")
         self.apply_btn.clicked.connect(self._apply_offset)
         self.button_box.addButton(self.apply_btn, self.button_box.ButtonRole.AcceptRole)
-        
+
         # Bookmark management buttons (center)
         bookmark_btn = QPushButton("Add Bookmark")
         bookmark_btn.setToolTip("Save current offset to bookmarks (Ctrl+D)")
         bookmark_btn.clicked.connect(self._add_bookmark)
         self.button_box.addButton(bookmark_btn, self.button_box.ButtonRole.ActionRole)
-        
+
         bookmarks_menu_btn = QPushButton("Bookmarks ▼")
         bookmarks_menu_btn.setToolTip("Show saved bookmarks (Ctrl+B)")
         self.bookmarks_menu = QMenu(self)
         self._update_bookmarks_menu()
         bookmarks_menu_btn.setMenu(self.bookmarks_menu)
         self.button_box.addButton(bookmarks_menu_btn, self.button_box.ButtonRole.ActionRole)
-        
+
         # Standard dialog buttons (right side)
         close_btn = QPushButton("Close")
         close_btn.setToolTip("Close this dialog")
         close_btn.clicked.connect(self.hide)
         self.button_box.addButton(close_btn, self.button_box.ButtonRole.RejectRole)
-        
+
         # Apply consistent spacing to button box
         self.button_box.setStyleSheet("""
             QDialogButtonBox {
@@ -498,8 +502,8 @@ class UnifiedManualOffsetDialog(DialogBase):
             logger.debug(f"[OFFSET_CHANGED] Dialog object: {self}")
             logger.debug(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
             logger.debug(f"[OFFSET_CHANGED] Signal object: {self.offset_changed}")
-            logger.debug(f"[OFFSET_CHANGED] About to emit offset_changed signal")
-            
+            logger.debug("[OFFSET_CHANGED] About to emit offset_changed signal")
+
             # Emit signal directly
             self.offset_changed.emit(offset)
             logger.debug("[OFFSET_CHANGED] Successfully emitted offset_changed signal")
@@ -509,7 +513,7 @@ class UnifiedManualOffsetDialog(DialogBase):
                 logger.error(f"[OFFSET_CHANGED] Dialog still exists: {self}")
                 logger.error(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
                 logger.error(f"[OFFSET_CHANGED] Dialog has signal attr: {hasattr(self, 'offset_changed')}")
-                
+
                 # This indicates a serious Qt lifecycle issue with composed architecture
                 # For now, skip the emit to prevent crashes
                 logger.warning("[OFFSET_CHANGED] Skipping signal emit to prevent crash")

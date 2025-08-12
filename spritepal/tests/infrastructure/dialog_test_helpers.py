@@ -352,13 +352,13 @@ class DialogFactory:
         fields = fields or {"text": str, "number": int, "checked": bool}
 
         for field_name, field_type in fields.items():
-            if field_type == str:
+            if field_type is str:
                 widget = QLineEdit()
                 widget.setObjectName(f"{field_name}_input")
-            elif field_type == int:
+            elif field_type is int:
                 widget = QSpinBox()
                 widget.setObjectName(f"{field_name}_input")
-            elif field_type == bool:
+            elif field_type is bool:
                 widget = QCheckBox()
                 widget.setObjectName(f"{field_name}_input")
             else:

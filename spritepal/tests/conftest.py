@@ -49,7 +49,8 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
-from contextlib import AbstractContextManager
+from collections.abc import Generator
+from contextlib import AbstractContextManager as ContextManager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
@@ -766,7 +767,7 @@ def mock_rom_cache() -> Mock:
 
 # Dependency Injection fixtures
 @pytest.fixture
-def manager_context_factory() -> Callable[[dict[str, Any] | list[str] | None, str], AbstractContextManager[Any]]:
+def manager_context_factory() -> Callable[[dict[str, Any] | list[str] | None, str], ContextManager[Any]]:
     """
     Factory for creating manager contexts for dependency injection tests.
 

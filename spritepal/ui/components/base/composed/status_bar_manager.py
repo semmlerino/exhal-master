@@ -5,6 +5,7 @@ This component manages status bar creation, updates, and permanent widgets.
 It's designed to be composed into dialogs via the DialogBase composition system.
 """
 
+import os
 from typing import Any, Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -56,19 +57,21 @@ class StatusBarManager(QObject):
         with_status_bar = context.config.get('with_status_bar', False)
 
         if with_status_bar:
-            # Check if we're in a mock/test environment
-            is_mock = (hasattr(context, '__class__') and
-                      hasattr(context.__class__, '__module__') and
-                      context.__class__.__module__.startswith('unittest.mock'))
+            # Check if we're in a test environment using environment variable
+            is_test_env = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('TESTING')
 
-            if is_mock:
-                # For mocks, create a mock status bar
-                from unittest.mock import Mock
-                self._status_bar = Mock(spec=QStatusBar)
-                self._status_bar.showMessage = Mock()
-                self._status_bar.clearMessage = Mock()
-                self._status_bar.addPermanentWidget = Mock()
-                self._status_bar.removeWidget = Mock()
+            # For test environments, check if context is a test double
+            is_test_double = is_test_env and (
+                hasattr(context, '_is_test_double') or
+                (hasattr(context, '__class__') and
+                 hasattr(context.__class__, '__module__') and
+                 'test' in context.__class__.__module__.lower())
+            )
+
+            if is_test_double:
+                # For test doubles, create a minimal test-safe status bar
+                # This avoids importing unittest.mock in production code
+                self._status_bar = self._create_test_status_bar()
             else:
                 # Create real status bar - pass parent dialog if available
                 parent = context.dialog if hasattr(context, 'dialog') else None
@@ -78,7 +81,7 @@ class StatusBarManager(QObject):
             context.status_bar = self._status_bar
 
             # If context has main_layout, add the status bar to it
-            if hasattr(context, 'main_layout') and not is_mock:
+            if hasattr(context, 'main_layout') and not is_test_double:
                 context.main_layout.addWidget(self._status_bar)
 
             # Mock setStatusBar for dialogs (QDialog doesn't have this method)
@@ -197,6 +200,32 @@ class StatusBarManager(QObject):
             The QStatusBar instance or None if not created
         """
         return self._status_bar
+
+    def _create_test_status_bar(self) -> Any:
+        """Create a minimal test-safe status bar for test environments.
+
+        This avoids importing unittest.mock in production code.
+        """
+        class TestStatusBar:
+            """Minimal status bar for test environments."""
+            def __init__(self):
+                self._message = ""
+                self._permanent_widgets = []
+
+            def showMessage(self, message, timeout=0):
+                self._message = message
+
+            def clearMessage(self):
+                self._message = ""
+
+            def addPermanentWidget(self, widget, stretch=0):
+                self._permanent_widgets.append(widget)
+
+            def removeWidget(self, widget):
+                if widget in self._permanent_widgets:
+                    self._permanent_widgets.remove(widget)
+
+        return TestStatusBar()
 
     def __repr__(self) -> str:
         """Return string representation of the manager."""

@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import traceback
+import weakref
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
@@ -40,39 +41,123 @@ try:
     QT_AVAILABLE = True
 
     # Use Qt classes directly
-    QObject = QtQObject
-    Signal = QtPyqtSignal
-    QMessageBox = QtQMessageBox
-    QWidget = QtQWidget
+    QObject = QtQObject  # type: ignore[misc]
+    Signal = QtPyqtSignal  # type: ignore[misc]
+    QMessageBox = QtQMessageBox  # type: ignore[misc]
+    QWidget = QtQWidget  # type: ignore[misc]
 except ImportError:
     # Fallback for environments without Qt
     QT_AVAILABLE = False
-    # Create mock classes for runtime use only
+    import sys
 
+    # Create functional fallback classes for non-Qt environments
     class QObject:
+        """Functional QObject fallback for non-Qt environments."""
         def __init__(self, parent=None):
             self.parent = parent
+            self._signals = {}
+
+    class _FallbackSignal:
+        """Functional signal implementation with weak reference support for non-Qt environments."""
+
+        def __init__(self, *args):
+            self._callbacks: list[Any] = []
+            self._arg_types = args
+
+        def _create_reference(self, callback: Callable) -> Any:
+            """Create appropriate reference for the callback."""
+            if hasattr(callback, '__self__') and hasattr(callback, '__func__'):
+                # Bound method (instance method) - use WeakMethod
+                return weakref.WeakMethod(callback)
+            if hasattr(callback, '__self__'):
+                # Callable object with __self__ - use weakref.ref
+                return weakref.ref(callback)
+            # Regular function, lambda, static method, etc. - store directly
+            return callback
+
+        def _get_callback_from_ref(self, ref: Any) -> Callable | None:
+            """Get actual callback from reference, handling weak refs."""
+            if isinstance(ref, (weakref.ref, weakref.WeakMethod)):
+                callback = ref()
+                return callback  # None if dead reference
+            return ref  # Direct reference
+
+        def _is_same_callback(self, ref: Any, target_callback: Callable) -> bool:
+            """Check if reference points to the same callback."""
+            current_callback = self._get_callback_from_ref(ref)
+            return current_callback is not None and current_callback == target_callback
+
+        def emit(self, *args, **kwargs):
+            """Emit signal to all connected callbacks."""
+            dead_refs = []
+
+            # Call all live callbacks and collect dead references
+            for i, ref in enumerate(self._callbacks):
+                callback = self._get_callback_from_ref(ref)
+
+                if callback is None:
+                    # Weak reference is dead - mark for cleanup
+                    dead_refs.append(i)
+                    continue
+
+                try:
+                    callback(*args, **kwargs)
+                except Exception as e:
+                    # Log but don't raise - match Qt behavior
+                    print(f"Error in signal callback: {e}", file=sys.stderr)
+
+            # Clean up dead references (in reverse order to maintain indices)
+            for i in reversed(dead_refs):
+                del self._callbacks[i]
+
+        def connect(self, callback: Callable):
+            """Connect a callback to this signal."""
+            if self._is_already_connected(callback):
+                return
+
+            ref = self._create_reference(callback)
+            self._callbacks.append(ref)
+
+        def _is_already_connected(self, callback: Callable) -> bool:
+            """Check if callback is already connected."""
+            return any(self._is_same_callback(ref, callback) for ref in self._callbacks)
+
+        def disconnect(self, callback: Callable | None = None):
+            """Disconnect callback(s) from this signal."""
+            if callback is None:
+                self._callbacks.clear()
+            else:
+                # Remove all matching callbacks
+                self._callbacks = [
+                    ref for ref in self._callbacks
+                    if not self._is_same_callback(ref, callback)
+                ]
 
     def Signal(*args, **kwargs):
-        """Mock signal for non-Qt environments"""
-        class MockSignal:
-            def emit(self, *args, **kwargs): pass
-            def connect(self, *args, **kwargs): pass
-            def disconnect(self, *args, **kwargs): pass
-        return MockSignal()
+        """Create a functional signal for non-Qt environments."""
+        return _FallbackSignal(*args)
 
     class QMessageBox:
+        """Console-based message box fallback for non-Qt environments."""
         @staticmethod
-        def information(*args, **kwargs): pass
+        def information(parent, title, message):
+            """Display information message to console."""
+            print(f"\n[INFO] {title}: {message}\n", file=sys.stderr)
+
         @staticmethod
-        def warning(*args, **kwargs): pass
+        def warning(parent, title, message):
+            """Display warning message to console."""
+            print(f"\n[WARNING] {title}: {message}\n", file=sys.stderr)
+
         @staticmethod
-        def critical(*args, **kwargs): pass
+        def critical(parent, title, message):
+            """Display critical error message to console."""
+            print(f"\n[CRITICAL ERROR] {title}: {message}\n", file=sys.stderr)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
     try:
-        from PySide6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget  # type: ignore[import-not-found]
     except ImportError:
         QWidget = None  # type: ignore[misc,assignment]
 

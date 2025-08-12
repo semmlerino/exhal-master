@@ -3,6 +3,9 @@ Sprite gallery tab for visual overview of all sprites in ROM.
 Provides grid display, filtering, sorting, and batch operations.
 """
 
+import builtins
+import contextlib
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -17,6 +20,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressDialog,
     QPushButton,
+    QSizePolicy,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -24,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from core.sprite_finder import SpriteFinder
 from ui.widgets.sprite_gallery_widget import SpriteGalleryWidget
-from ui.workers.batch_thumbnail_worker import BatchThumbnailWorker
+from ui.workers.batch_thumbnail_worker import ThumbnailWorkerController
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -58,13 +62,14 @@ class SpriteGalleryTab(QWidget):
         self.sprites_data: list[dict[str, Any]] = []
 
         # Workers
-        self.thumbnail_worker: Optional[BatchThumbnailWorker] = None
+        self.thumbnail_controller: Optional[ThumbnailWorkerController] = None
         self.scan_thread: Optional[QThread] = None
 
-        # UI Components
-        self.gallery_widget: Optional[SpriteGalleryWidget] = None
-        self.toolbar: Optional[QToolBar] = None
+        # UI Components - these are always initialized in _setup_ui()
+        self.gallery_widget: SpriteGalleryWidget  # Always initialized
+        self.toolbar: QToolBar  # Always initialized
         self.progress_dialog: Optional[QProgressDialog] = None
+        self.detached_window: Optional[Any] = None  # DetachedGalleryWindow
 
         self._setup_ui()
 
@@ -80,11 +85,11 @@ class SpriteGalleryTab(QWidget):
 
         # Gallery widget with proper size policy
         self.gallery_widget = SpriteGalleryWidget(self)
-        from PySide6.QtWidgets import QSizePolicy
         self.gallery_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.gallery_widget.sprite_selected.connect(self._on_sprite_selected)
         self.gallery_widget.sprite_double_clicked.connect(self._on_sprite_double_clicked)
         self.gallery_widget.selection_changed.connect(self._on_selection_changed)
+        self.gallery_widget.thumbnail_request.connect(self._on_thumbnail_request)
         layout.addWidget(self.gallery_widget, 1)  # Give it stretch
 
         # Action bar
@@ -137,12 +142,19 @@ class SpriteGalleryTab(QWidget):
         refresh_action.triggered.connect(self._refresh_thumbnails)
         toolbar.addAction(refresh_action)
 
+        toolbar.addSeparator()
+
+        # Detach window
+        detach_action = QAction("🗖 Detach Gallery", self)
+        detach_action.setToolTip("Open gallery in separate window (fixes stretching)")
+        detach_action.triggered.connect(self._open_detached_gallery)
+        toolbar.addAction(detach_action)
+
         return toolbar
 
     def _create_action_bar(self) -> QWidget:
         """Create the bottom action bar."""
         widget = QWidget()
-        from PySide6.QtWidgets import QSizePolicy
         layout = QHBoxLayout()
         layout.setContentsMargins(LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS, LAYOUT_MARGINS)
 
@@ -186,10 +198,10 @@ class SpriteGalleryTab(QWidget):
         # Update info
         rom_name = Path(rom_path).name
         self.info_label.setText(f"ROM: {rom_name} ({rom_size / 1024 / 1024:.1f}MB)")
-        
+
         # Try to load cached scan results for this ROM
         cache_loaded = self._load_scan_cache(rom_path)
-        
+
         if cache_loaded:
             logger.info(f"Successfully loaded cached scan results for {rom_name}")
             # Cache loaded successfully, thumbnails will be generated
@@ -198,7 +210,7 @@ class SpriteGalleryTab(QWidget):
             # Clear any old sprites from previous ROM
             self.sprites_data = []
             self.gallery_widget.set_sprites([])
-            
+
             # Auto-scan if enabled and no cache was loaded
             if self._should_auto_scan():
                 QTimer.singleShot(100, self._scan_for_sprites)
@@ -213,7 +225,7 @@ class SpriteGalleryTab(QWidget):
         if not self.rom_path:
             QMessageBox.warning(self, "No ROM", "Please load a ROM first")
             return
-        
+
         # Ask user for scan type
         msgBox = QMessageBox(self)
         msgBox.setWindowTitle("Scan Type")
@@ -226,7 +238,7 @@ class SpriteGalleryTab(QWidget):
         thorough_btn = msgBox.addButton("Thorough Scan", QMessageBox.ButtonRole.ActionRole)
         msgBox.addButton(QMessageBox.StandardButton.Cancel)
         msgBox.exec()
-        
+
         if msgBox.clickedButton() == quick_btn:
             self.scan_mode = "quick"
         elif msgBox.clickedButton() == thorough_btn:
@@ -258,7 +270,7 @@ class SpriteGalleryTab(QWidget):
         try:
             if not self.rom_path:
                 raise ValueError("No ROM path set")
-            with open(self.rom_path, 'rb') as f:
+            with Path(self.rom_path).open('rb') as f:
                 rom_data = f.read()
 
             sprites = []
@@ -289,17 +301,18 @@ class SpriteGalleryTab(QWidget):
                     # Update progress
                     current_step += 1
                     progress = int((current_step / total_steps) * 100)
-                    self.progress_dialog.setValue(progress)
-                    
-                    # Update progress text with found sprites count
-                    self.progress_dialog.setLabelText(
-                        f"Scanning ROM for sprites... Found: {len(sprites)}"
-                    )
+                    if self.progress_dialog:
+                        self.progress_dialog.setValue(progress)
 
-                    # Check for cancel
-                    if self.progress_dialog.wasCanceled():
-                        break
-                    
+                        # Update progress text with found sprites count
+                        self.progress_dialog.setLabelText(
+                            f"Scanning ROM for sprites... Found: {len(sprites)}"
+                        )
+
+                        # Check for cancel
+                        if self.progress_dialog.wasCanceled():
+                            break
+
                     # Stop if we've found enough sprites
                     if len(sprites) >= max_sprites:
                         logger.info(f"Reached maximum sprite limit of {max_sprites}")
@@ -311,12 +324,12 @@ class SpriteGalleryTab(QWidget):
                         sprites.append(sprite_info)
                         logger.debug(f"Found sprite #{len(sprites)} at 0x{offset:06X}")
 
-                if self.progress_dialog.wasCanceled() or len(sprites) >= max_sprites:
+                if (self.progress_dialog and self.progress_dialog.wasCanceled()) or len(sprites) >= max_sprites:
                     break
 
             # Store results
             self.sprites_data = sprites
-            
+
             # Save to cache for later use (e.g., screenshots)
             self._save_scan_cache()
 
@@ -344,34 +357,19 @@ class SpriteGalleryTab(QWidget):
                 self.progress_dialog = None
 
     def _refresh_thumbnails(self):
-        """Refresh all thumbnail images."""
+        """Refresh thumbnail images - now handled on-demand by virtual scrolling."""
         if not self.sprites_data or not self.rom_path:
             logger.warning("Cannot refresh thumbnails: no sprites or ROM path")
             return
 
-        # Create worker to generate thumbnails if needed
-        if not self.thumbnail_worker:
-            logger.info("Creating BatchThumbnailWorker")
-            self.thumbnail_worker = BatchThumbnailWorker(
-                self.rom_path,
-                self.rom_extractor
-            )
-            self.thumbnail_worker.thumbnail_ready.connect(self._on_thumbnail_ready)
+        # Clear thumbnail cache in model to force regeneration
+        if self.gallery_widget.model:
+            self.gallery_widget.model.clear_thumbnail_cache()
 
-        # Queue all sprites for thumbnail generation
-        logger.info(f"Queueing {len(self.sprites_data)} sprites for thumbnail generation")
-        for sprite_info in self.sprites_data:
-            offset = sprite_info.get('offset', 0)
-            if isinstance(offset, str):
-                offset = int(offset, 16) if offset.startswith('0x') else int(offset)
-            self.thumbnail_worker.queue_thumbnail(offset, 128)
+        # Trigger loading of visible thumbnails
+        self.gallery_widget._update_visible_thumbnails()
 
-        # Start generation if not already running
-        if self.thumbnail_worker and not self.thumbnail_worker.isRunning():
-            logger.info("Starting BatchThumbnailWorker thread")
-            self.thumbnail_worker.start()
-        else:
-            logger.info(f"Worker already running: {self.thumbnail_worker.isRunning() if self.thumbnail_worker else False}")
+        logger.info("Thumbnail refresh triggered - will load on demand as items become visible")
 
     def _on_thumbnail_ready(self, offset: int, pixmap: QPixmap):
         """
@@ -383,21 +381,29 @@ class SpriteGalleryTab(QWidget):
         """
         logger.debug(f"Thumbnail ready for offset 0x{offset:06X}, pixmap null: {pixmap.isNull()}")
 
-        if offset in self.gallery_widget.thumbnails:
-            thumbnail = self.gallery_widget.thumbnails[offset]
-            # Find sprite info
-            sprite_info = None
-            for info in self.sprites_data:
-                info_offset = info.get('offset', 0)
-                if isinstance(info_offset, str):
-                    info_offset = int(info_offset, 16) if info_offset.startswith('0x') else int(info_offset)
-                if info_offset == offset:
-                    sprite_info = info
-                    break
-            logger.debug(f"Setting thumbnail for offset 0x{offset:06X}")
-            thumbnail.set_sprite_data(pixmap, sprite_info)
-        else:
-            logger.warning(f"No thumbnail widget found for offset 0x{offset:06X}")
+        # Set thumbnail in gallery widget (now uses model)
+        self.gallery_widget.set_thumbnail(offset, pixmap)
+
+    def _on_thumbnail_request(self, offset: int, priority: int):
+        """
+        Handle thumbnail request from gallery widget.
+
+        Args:
+            offset: Sprite offset
+            priority: Request priority (lower = higher priority)
+        """
+        if not self.rom_path:
+            return
+
+        # Create controller if needed
+        if not self.thumbnail_controller:
+            logger.info("Creating ThumbnailWorkerController for on-demand requests")
+            self.thumbnail_controller = ThumbnailWorkerController(self)
+            self.thumbnail_controller.thumbnail_ready.connect(self._on_thumbnail_ready)
+            self.thumbnail_controller.start_worker(self.rom_path, self.rom_extractor)
+
+        # Queue thumbnail with priority
+        self.thumbnail_controller.queue_thumbnail(offset, 128, priority)
 
     def _on_sprite_selected(self, offset: int):
         """Handle sprite selection in gallery."""
@@ -522,38 +528,108 @@ class SpriteGalleryTab(QWidget):
             "Batch palette application will be implemented soon"
         )
 
+    def _open_detached_gallery(self):
+        """Open the gallery in a separate window to avoid stretching issues."""
+        # Create or show existing detached window
+        if not self.detached_window:
+            # Local import to avoid circular dependency
+            from ui.windows.detached_gallery_window import DetachedGalleryWindow
+            self.detached_window = DetachedGalleryWindow(self)
+
+            # Connect signals
+            self.detached_window.sprite_selected.connect(self.sprite_selected.emit)
+            self.detached_window.window_closed.connect(self._on_detached_closed)
+
+            # Set ROM info if available
+            if self.rom_path and self.rom_extractor:
+                self.detached_window.set_rom_info(self.rom_path, self.rom_extractor)
+
+        # Set current sprites
+        if self.sprites_data:
+            self.detached_window.set_sprites(self.sprites_data)
+
+            # Copy existing thumbnails from main gallery to detached gallery
+            if self.gallery_widget:
+                self.detached_window.copy_thumbnails_from(self.gallery_widget)
+
+            # Also connect for future thumbnail updates
+            if self.thumbnail_controller:
+                # Connect to the detached gallery for any new thumbnails
+                with contextlib.suppress(RuntimeError):
+                    self.thumbnail_controller.thumbnail_ready.connect(
+                        self._on_detached_thumbnail_ready
+                    )
+
+        # Show the window
+        self.detached_window.show()
+        self.detached_window.raise_()
+        self.detached_window.activateWindow()
+
+        logger.info("Opened detached gallery window")
+
+    def _on_detached_closed(self):
+        """Handle detached window closing."""
+        if self.detached_window:
+            # Disconnect signals
+            if self.thumbnail_controller:
+                with contextlib.suppress(builtins.BaseException):
+                    self.thumbnail_controller.thumbnail_ready.disconnect(
+                        self._on_detached_thumbnail_ready
+                    )
+
+            self.detached_window = None
+            logger.info("Detached gallery window closed")
+
+    def _on_detached_thumbnail_ready(self, offset: int, pixmap):
+        """Update thumbnail in detached window."""
+        if self.detached_window and self.detached_window.gallery_widget and offset in self.detached_window.gallery_widget.thumbnails:
+                thumbnail = self.detached_window.gallery_widget.thumbnails[offset]
+                # Find sprite info
+                sprite_info = None
+                for info in self.sprites_data:
+                    info_offset = info.get('offset', 0)
+                    if isinstance(info_offset, str):
+                        info_offset = int(info_offset, 16) if info_offset.startswith('0x') else int(info_offset)
+                    if info_offset == offset:
+                        sprite_info = info
+                        break
+                thumbnail.set_sprite_data(pixmap, sprite_info)
+
     def cleanup(self):
         """Clean up resources."""
-        if self.thumbnail_worker:
-            self.thumbnail_worker.stop()
-            self.thumbnail_worker.wait()
-            self.thumbnail_worker = None
-    
-    def _get_cache_path(self, rom_path: str = None) -> Path:
+        # Close detached window if open
+        if self.detached_window:
+            self.detached_window.close()
+            self.detached_window = None
+
+        if self.thumbnail_controller:
+            self.thumbnail_controller.cleanup()
+            self.thumbnail_controller = None
+
+    def _get_cache_path(self, rom_path: Optional[str] = None) -> Path:
         """Get the cache file path for a specific ROM."""
         # Use local cache directory in the project
         cache_dir = Path(__file__).parent.parent.parent / ".cache" / "gallery_scans"
         cache_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create ROM-specific cache filename
         if rom_path:
             rom_name = Path(rom_path).stem
             # Add a hash of the full path to handle multiple ROMs with same name
-            import hashlib
             path_hash = hashlib.md5(str(rom_path).encode()).hexdigest()[:8]
             cache_filename = f"scan_cache_{rom_name}_{path_hash}.json"
         else:
             cache_filename = "scan_cache_default.json"
-        
+
         return cache_dir / cache_filename
-    
+
     def _save_scan_cache(self):
         """Save scan results to a cache file for later use."""
         if not self.sprites_data or not self.rom_path:
             return
-        
+
         cache_path = self._get_cache_path(self.rom_path)
-        
+
         try:
             cache_data = {
                 'version': 2,
@@ -564,63 +640,62 @@ class SpriteGalleryTab(QWidget):
                 'scan_mode': getattr(self, 'scan_mode', 'quick'),
                 'timestamp': time.time()
             }
-            
-            with open(cache_path, 'w') as f:
+
+            with cache_path.open('w') as f:
                 json.dump(cache_data, f, indent=2)
-            
+
             logger.info(f"Saved {len(self.sprites_data)} sprites to cache: {cache_path.name}")
         except Exception as e:
             logger.error(f"Failed to save scan cache: {e}")
-    
-    def _load_scan_cache(self, rom_path: str = None):
+
+    def _load_scan_cache(self, rom_path: Optional[str] = None):
         """Load previously saved scan results from cache."""
         if not rom_path:
             rom_path = self.rom_path
-        
+
         if not rom_path:
             logger.debug("No ROM path specified, skipping cache load")
             return False
-        
+
         cache_path = self._get_cache_path(rom_path)
-        
+
         if not cache_path.exists():
             logger.debug(f"No cache file found at: {cache_path.name}")
             return False
-        
+
         try:
-            with open(cache_path, 'r') as f:
+            with cache_path.open() as f:
                 cache_data = json.load(f)
-            
+
             # Verify cache is for the same ROM
             cached_rom_path = cache_data.get('rom_path')
             if str(cached_rom_path) != str(rom_path):
                 logger.warning(f"Cache ROM path mismatch: {cached_rom_path} != {rom_path}")
                 return False
-            
+
             # Check cache version
             if cache_data.get('version', 1) < 2:
                 logger.info("Cache version too old, ignoring")
                 return False
-            
+
             # Load the cached data
             self.sprites_data = cache_data.get('sprites', [])
             scan_mode = cache_data.get('scan_mode', 'unknown')
             timestamp = cache_data.get('timestamp', 0)
-            
+
             if self.sprites_data:
                 # Calculate cache age
-                import time
                 cache_age_hours = (time.time() - timestamp) / 3600 if timestamp else -1
-                
+
                 logger.info(f"Loaded {len(self.sprites_data)} sprites from cache ({scan_mode} scan, {cache_age_hours:.1f} hours old)")
-                
+
                 # Update gallery widget if it exists
                 if self.gallery_widget:
                     self.gallery_widget.set_sprites(self.sprites_data)
-                    
+
                     # Start generating real thumbnails for cached sprites
                     self._refresh_thumbnails()
-                
+
                 # Update info label
                 if hasattr(self, 'info_label'):
                     rom_name = Path(rom_path).name
@@ -628,31 +703,31 @@ class SpriteGalleryTab(QWidget):
                     self.info_label.setText(
                         f"Loaded {len(self.sprites_data)} cached sprites from {rom_name}{age_str}"
                     )
-                
+
                 return True
         except Exception as e:
             logger.error(f"Failed to load scan cache: {e}")
             return False
-    
+
     def _generate_mock_thumbnails(self):
         """Generate mock thumbnails for sprites when no real thumbnails are available."""
         try:
             from generate_mock_thumbnails import generate_mock_sprite_thumbnail
-            
+
             for sprite_info in self.sprites_data:
                 offset = sprite_info.get('offset', 0)
                 if isinstance(offset, str):
                     offset = int(offset, 16) if offset.startswith('0x') else int(offset)
-                
+
                 # Generate mock thumbnail
                 thumbnail_size = self.gallery_widget.thumbnail_size
                 pixmap = generate_mock_sprite_thumbnail(sprite_info, thumbnail_size)
-                
+
                 # Find the thumbnail widget and set its pixmap
                 if offset in self.gallery_widget.thumbnails:
                     thumbnail_widget = self.gallery_widget.thumbnails[offset]
                     thumbnail_widget.set_sprite_data(pixmap, sprite_info)
-                    
+
             logger.info(f"Generated mock thumbnails for {len(self.sprites_data)} sprites")
         except Exception as e:
             logger.error(f"Failed to generate mock thumbnails: {e}")

@@ -3,6 +3,7 @@ Core sprite extraction functionality
 """
 
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -48,7 +49,7 @@ class SpriteExtractor:
             raise ValueError(f"Invalid VRAM file: {error_msg}")
         logger.debug("VRAM file validation passed")
 
-        with open(vram_path, "rb") as f:
+        with Path(vram_path).open("rb") as f:
             self.vram_data = f.read()
 
         expected_size = 65536  # 64KB

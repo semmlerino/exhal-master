@@ -22,7 +22,7 @@ class QtDialogSignalManager(QObject):
 
     Signals:
         finished: Emitted when the dialog is finished (mirrors QDialog.finished)
-        rejected: Emitted when the dialog is rejected (mirrors QDialog.rejected)  
+        rejected: Emitted when the dialog is rejected (mirrors QDialog.rejected)
         destroyed: Emitted when the dialog is destroyed (mirrors QObject.destroyed)
     """
 
@@ -59,7 +59,7 @@ class QtDialogSignalManager(QObject):
             raise AttributeError("Context must have a 'dialog' attribute")
 
         self._dialog = context.dialog
-        
+
         # Connect our clean proxy signals to the dialog's Qt signals (if possible)
         self._connect_to_dialog_signals()
 
@@ -74,17 +74,17 @@ class QtDialogSignalManager(QObject):
     def _connect_to_dialog_signals(self) -> None:
         """
         Connect proxy signals to the dialog's actual Qt signals.
-        
+
         This attempts to connect to the dialog's inherited Qt signals,
         but gracefully handles failures due to Qt metaclass issues.
         """
         from utils.logging_config import get_logger
         logger = get_logger(__name__)
-        
+
         if not self._dialog:
             logger.warning("No dialog available for signal connection")
             return
-            
+
         try:
             # Try to connect to dialog's inherited Qt signals
             self._dialog.finished.connect(self.finished.emit)
@@ -99,31 +99,31 @@ class QtDialogSignalManager(QObject):
     def _setup_manual_triggering(self) -> None:
         """
         Set up manual signal triggering when inherited signals are corrupted.
-        
+
         This method sets up hooks in the dialog's accept/reject methods
         to manually emit our clean proxy signals.
         """
         if not self._dialog:
             return
-            
+
         # Store original methods
         original_accept = self._dialog.accept
         original_reject = self._dialog.reject
         original_close_event = getattr(self._dialog, 'closeEvent', None)
-        
+
         def enhanced_accept():
             """Enhanced accept that triggers our clean signals."""
             result = original_accept()
             self.finished.emit(QDialog.Accepted)
             return result
-            
+
         def enhanced_reject():
-            """Enhanced reject that triggers our clean signals."""  
+            """Enhanced reject that triggers our clean signals."""
             result = original_reject()
             self.rejected.emit()
             self.finished.emit(QDialog.Rejected)
             return result
-            
+
         def enhanced_close_event(event):
             """Enhanced close event that triggers destroyed signal."""
             if original_close_event:
@@ -131,12 +131,12 @@ class QtDialogSignalManager(QObject):
             # Emit destroyed when dialog is actually closing
             if event.isAccepted():
                 self.destroyed.emit()
-                
+
         # Replace dialog methods with enhanced versions
         self._dialog.accept = enhanced_accept
         self._dialog.reject = enhanced_reject
         self._dialog.closeEvent = enhanced_close_event
-        
+
         from utils.logging_config import get_logger
         logger = get_logger(__name__)
         logger.debug("Manual signal triggering set up successfully")

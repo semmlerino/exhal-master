@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import os
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from PIL import Image
-from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -46,6 +47,7 @@ from .row_arrangement.grid_arrangement_manager import (
 )
 from .row_arrangement.grid_image_processor import GridImageProcessor
 from .row_arrangement.grid_preview_generator import GridPreviewGenerator
+from .utils.accessibility import AccessibilityHelper
 
 
 class SelectionMode(Enum):
@@ -78,6 +80,11 @@ class GridGraphicsView(QGraphicsView):
         self.selection_start: TilePosition | None = None
         self.current_selection: set[TilePosition] = set()
 
+        # Keyboard navigation state
+        self.keyboard_focus_pos: TilePosition | None = None
+        self.keyboard_focus_rect: QGraphicsRectItem | None = None
+        self.keyboard_nav_active = False
+
         # Zoom and pan state
         self.zoom_level = 1.0
         self.min_zoom = 0.1
@@ -95,6 +102,7 @@ class GridGraphicsView(QGraphicsView):
         self.selection_color = QColor(255, 255, 0, 128)
         self.hover_color = QColor(0, 255, 255, 64)
         self.arranged_color = QColor(0, 255, 0, 64)
+        self.keyboard_focus_color = QColor(0, 0, 255, 128)  # Blue border for keyboard focus
         self.group_colors = [
             QColor(255, 0, 0, 64),
             QColor(0, 0, 255, 64),
@@ -104,6 +112,9 @@ class GridGraphicsView(QGraphicsView):
 
         self.setMouseTracking(True)
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
+
+        # Enable keyboard focus
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def set_grid_dimensions(
         self, cols: int, rows: int, tile_width: int, tile_height: int
@@ -217,28 +228,57 @@ class GridGraphicsView(QGraphicsView):
             super().wheelEvent(event)
 
     def keyPressEvent(self, a0):
-        """Handle keyboard shortcuts for zoom"""
-        if a0 and a0.key() == Qt.Key.Key_F:
+        """Handle keyboard navigation and shortcuts"""
+        if not a0:
+            super().keyPressEvent(a0)
+            return
+
+        # Zoom shortcuts (existing functionality)
+        if a0.key() == Qt.Key.Key_F:
             # F: Zoom to fit
             self.zoom_to_fit()
-        elif a0 and (
-            a0.key() == Qt.Key.Key_0
-            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
+        elif a0.key() == Qt.Key.Key_0 and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Ctrl+0: Reset zoom
             self.reset_zoom()
-        elif a0 and (
-            a0.key() == Qt.Key.Key_Plus
-            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
+        elif a0.key() == Qt.Key.Key_Plus and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Ctrl++: Zoom in
             self.zoom_in()
-        elif a0 and (
-            a0.key() == Qt.Key.Key_Minus
-            and a0.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
+        elif a0.key() == Qt.Key.Key_Minus and a0.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Ctrl+-: Zoom out
             self.zoom_out()
+
+        # Tile navigation with arrow keys
+        elif a0.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down):
+            self._handle_arrow_key_navigation(a0)
+
+        # Tile selection with Space/Enter
+        elif a0.key() in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._handle_tile_selection_key()
+
+        # Home/End keys for navigation
+        elif a0.key() == Qt.Key.Key_Home:
+            # Go to first tile
+            self._set_keyboard_focus(TilePosition(0, 0))
+        elif a0.key() == Qt.Key.Key_End:
+            # Go to last tile
+            if self.grid_rows > 0 and self.grid_cols > 0:
+                self._set_keyboard_focus(TilePosition(self.grid_rows - 1, self.grid_cols - 1))
+
+        # Page Up/Down for larger movements
+        elif a0.key() == Qt.Key.Key_PageUp:
+            if self.keyboard_focus_pos:
+                new_row = max(0, self.keyboard_focus_pos.row - 5)
+                self._set_keyboard_focus(TilePosition(new_row, self.keyboard_focus_pos.col))
+        elif a0.key() == Qt.Key.Key_PageDown:
+            if self.keyboard_focus_pos:
+                new_row = min(self.grid_rows - 1, self.keyboard_focus_pos.row + 5)
+                self._set_keyboard_focus(TilePosition(new_row, self.keyboard_focus_pos.col))
+
+        # Escape to clear selection
+        elif a0.key() == Qt.Key.Key_Escape:
+            self.clear_selection()
+            self._clear_keyboard_focus()
+
         else:
             super().keyPressEvent(a0)
 
@@ -365,6 +405,172 @@ class GridGraphicsView(QGraphicsView):
         rect.setZValue(1)  # Above grid lines
         return rect
 
+    def _handle_arrow_key_navigation(self, event):
+        """Handle arrow key navigation between tiles"""
+        if not self.keyboard_focus_pos:
+            # Initialize focus at top-left if not set
+            self._set_keyboard_focus(TilePosition(0, 0))
+            return
+
+        row, col = self.keyboard_focus_pos.row, self.keyboard_focus_pos.col
+        shift_pressed = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+        # Calculate new position based on key
+        if event.key() == Qt.Key.Key_Left:
+            col = max(0, col - 1)
+        elif event.key() == Qt.Key.Key_Right:
+            col = min(self.grid_cols - 1, col + 1)
+        elif event.key() == Qt.Key.Key_Up:
+            row = max(0, row - 1)
+        elif event.key() == Qt.Key.Key_Down:
+            row = min(self.grid_rows - 1, row + 1)
+
+        new_pos = TilePosition(row, col)
+
+        # Handle selection extension with Shift
+        if shift_pressed and self.selection_mode != SelectionMode.TILE:
+            # Extend selection from start position to new position
+            if not self.selection_start:
+                self.selection_start = self.keyboard_focus_pos
+
+            # Calculate selection based on mode
+            if self.selection_mode == SelectionMode.ROW:
+                self.current_selection = {
+                    TilePosition(new_pos.row, c) for c in range(self.grid_cols)
+                }
+            elif self.selection_mode == SelectionMode.COLUMN:
+                self.current_selection = {
+                    TilePosition(r, new_pos.col) for r in range(self.grid_rows)
+                }
+            elif self.selection_mode == SelectionMode.RECTANGLE:
+                # Select rectangle from start to new position
+                min_row = min(self.selection_start.row, new_pos.row)
+                max_row = max(self.selection_start.row, new_pos.row)
+                min_col = min(self.selection_start.col, new_pos.col)
+                max_col = max(self.selection_start.col, new_pos.col)
+
+                self.current_selection = {
+                    TilePosition(r, c)
+                    for r in range(min_row, max_row + 1)
+                    for c in range(min_col, max_col + 1)
+                }
+
+            self._update_selection_display()
+            self.tiles_selected.emit(list(self.current_selection))
+
+        # Move focus to new position
+        self._set_keyboard_focus(new_pos)
+
+    def _handle_tile_selection_key(self):
+        """Handle Space/Enter key for tile selection"""
+        if not self.keyboard_focus_pos:
+            return
+
+        # Emit tile clicked signal
+        self.tile_clicked.emit(self.keyboard_focus_pos)
+
+        # In tile mode, toggle selection
+        if self.selection_mode == SelectionMode.TILE:
+            if self.keyboard_focus_pos in self.current_selection:
+                self.current_selection.remove(self.keyboard_focus_pos)
+            else:
+                self.current_selection.add(self.keyboard_focus_pos)
+
+            self._update_selection_display()
+            self.tiles_selected.emit(list(self.current_selection))
+
+    def _set_keyboard_focus(self, tile_pos: TilePosition):
+        """Set keyboard focus to a specific tile"""
+        if not self._is_valid_tile(tile_pos):
+            return
+
+        self.keyboard_focus_pos = tile_pos
+        self.keyboard_nav_active = True
+
+        # Update visual focus indicator
+        self._update_keyboard_focus_display()
+
+        # Ensure the focused tile is visible
+        self._ensure_tile_visible(tile_pos)
+
+    def _clear_keyboard_focus(self):
+        """Clear keyboard focus"""
+        self.keyboard_focus_pos = None
+        self.keyboard_nav_active = False
+
+        # Remove focus indicator
+        if self.keyboard_focus_rect:
+            scene = self.scene()
+            if scene and self.keyboard_focus_rect.scene():
+                scene.removeItem(self.keyboard_focus_rect)
+            self.keyboard_focus_rect = None
+
+    def _update_keyboard_focus_display(self):
+        """Update visual display of keyboard focus"""
+        scene = self.scene()
+        if not scene or not self.keyboard_focus_pos:
+            return
+
+        # Remove old focus rect
+        if self.keyboard_focus_rect:
+            if self.keyboard_focus_rect.scene():
+                scene.removeItem(self.keyboard_focus_rect)
+            self.keyboard_focus_rect = None
+
+        # Create new focus rect with a border
+        x = self.keyboard_focus_pos.col * self.tile_width
+        y = self.keyboard_focus_pos.row * self.tile_height
+
+        self.keyboard_focus_rect = QGraphicsRectItem(
+            x, y, self.tile_width, self.tile_height
+        )
+        self.keyboard_focus_rect.setPen(QPen(self.keyboard_focus_color, 2))  # 2px blue border
+        self.keyboard_focus_rect.setBrush(QBrush(Qt.BrushStyle.NoBrush))  # Transparent fill
+        self.keyboard_focus_rect.setZValue(10)  # Above other elements
+        scene.addItem(self.keyboard_focus_rect)
+
+    def _ensure_tile_visible(self, tile_pos: TilePosition):
+        """Ensure a tile is visible in the viewport"""
+        x = tile_pos.col * self.tile_width
+        y = tile_pos.row * self.tile_height
+
+        # Create a rect for the tile and ensure it's visible
+        tile_rect = QRectF(x, y, self.tile_width, self.tile_height)
+        self.ensureVisible(tile_rect, 50, 50)  # 50px margin
+
+    def _update_selection_display_duplicate(self):
+        """Update the visual display of selected tiles - DUPLICATE TO BE REMOVED"""
+        scene = self.scene()
+        if not scene:
+            return
+
+        # Clear old selection rects
+        for rect in self.selection_rects.values():
+            if rect.scene():
+                scene.removeItem(rect)
+        self.selection_rects.clear()
+
+        # Add new selection rects
+        for tile_pos in self.current_selection:
+            rect = self._create_tile_rect(tile_pos, self.selection_color)
+            scene.addItem(rect)
+            self.selection_rects[tile_pos] = rect
+
+    def focusInEvent(self, event):
+        """Handle focus in event"""
+        super().focusInEvent(event)
+
+        # If no keyboard focus set, initialize at (0,0)
+        if not self.keyboard_focus_pos and self.grid_rows > 0 and self.grid_cols > 0:
+            self._set_keyboard_focus(TilePosition(0, 0))
+
+    def focusOutEvent(self, event):
+        """Handle focus out event"""
+        super().focusOutEvent(event)
+
+        # Keep focus indicator visible but maybe dim it
+        # This allows users to see where they were when returning focus
+
     def _update_grid_lines(self):
         """Update grid line display"""
         # Clear existing grid lines
@@ -469,7 +675,7 @@ class GridArrangementDialog(SplitterDialog):
         self.source_grid: QWidget | None = None
         self.arranged_grid: QWidget | None = None
         self.original_image: Image.Image | None = None
-        self.tiles: dict[tuple[int, int], Image.Image] = {}
+        self.tiles: dict[TilePosition, Image.Image] = {}
 
         # Load and process sprite before UI setup
         try:
@@ -525,6 +731,9 @@ class GridArrangementDialog(SplitterDialog):
         # Call parent _setup_ui first to initialize the main splitter
         super()._setup_ui()
 
+        # Apply accessibility enhancements
+        self._apply_accessibility_enhancements()
+
         # Create horizontal splitter for left and right panels
         self.main_splitter = self.add_horizontal_splitter(handle_width=8)
 
@@ -539,8 +748,14 @@ class GridArrangementDialog(SplitterDialog):
         self.main_splitter.setStretchFactor(1, 1)   # 33% for right panel
 
         # Add custom buttons using SplitterDialog's button system
-        self.export_btn = self.add_button("Export Arrangement", callback=self._export_arrangement)
+        self.export_btn = self.add_button("&Export Arrangement", callback=self._export_arrangement)
         self.export_btn.setEnabled(False)
+        AccessibilityHelper.make_accessible(
+            self.export_btn,
+            "Export Arrangement",
+            "Export the arranged sprites to a new file",
+            "Ctrl+E"
+        )
 
     def _create_left_panel(self) -> QWidget:
         """Create the left panel containing grid view and controls.
@@ -584,6 +799,37 @@ class GridArrangementDialog(SplitterDialog):
 
         return right_widget
 
+    def _apply_accessibility_enhancements(self) -> None:
+        """Apply comprehensive accessibility enhancements to the dialog"""
+        # Set dialog accessible name and description
+        AccessibilityHelper.make_accessible(
+            self,
+            "Grid Arrangement Dialog",
+            "Arrange sprites in a grid layout with row and column support"
+        )
+
+        # Add focus indicators
+        AccessibilityHelper.add_focus_indicators(self)
+
+        # Add keyboard shortcuts
+        from PySide6.QtGui import QKeySequence, QShortcut
+
+        # Ctrl+E for export
+        export_shortcut = QShortcut(QKeySequence("Ctrl+E"), self)
+        export_shortcut.activated.connect(self._export_arrangement)
+
+        # Ctrl+Z for undo
+        undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        undo_shortcut.activated.connect(lambda: None)  # TODO: Implement undo functionality
+
+        # Ctrl+Y for redo
+        redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
+        redo_shortcut.activated.connect(lambda: None)  # TODO: Implement redo functionality
+
+        # Del for clear selection
+        delete_shortcut = QShortcut(QKeySequence("Delete"), self)
+        delete_shortcut.activated.connect(lambda: self.graphics_view.clear_selection() if hasattr(self, 'graphics_view') and hasattr(self.graphics_view, 'clear_selection') else None)
+
     def _create_selection_mode_group(self, parent: QWidget) -> QGroupBox:
         """Create the selection mode controls group.
 
@@ -593,13 +839,30 @@ class GridArrangementDialog(SplitterDialog):
         Returns:
             QGroupBox: The configured selection mode group
         """
-        mode_group = QGroupBox("Selection Mode", parent)
+        mode_group = QGroupBox("&Selection Mode", parent)
+        AccessibilityHelper.add_group_box_navigation(mode_group)
         mode_layout = QHBoxLayout()
 
         self.mode_buttons = QButtonGroup()
+
+        # Create radio buttons with mnemonics and accessibility
+        mode_shortcuts = {
+            SelectionMode.TILE: ("&Tile", "T", "Select individual tiles"),
+            SelectionMode.ROW: ("&Row", "R", "Select entire rows"),
+            SelectionMode.COLUMN: ("&Column", "C", "Select entire columns"),
+            SelectionMode.RECTANGLE: ("Rectan&gle", "G", "Select rectangular regions")
+        }
+
         for mode in SelectionMode:
-            btn = QRadioButton(mode.value.capitalize())
+            text, shortcut_key, description = mode_shortcuts.get(mode, (mode.value.capitalize(), "", ""))
+            btn = QRadioButton(text)
             btn.setProperty("mode", mode)
+            AccessibilityHelper.make_accessible(
+                btn,
+                f"{mode.value.capitalize()} Selection",
+                description,
+                f"Alt+{shortcut_key}" if shortcut_key else None
+            )
             self.mode_buttons.addButton(btn)
             mode_layout.addWidget(btn)
             if mode == SelectionMode.TILE:
@@ -992,7 +1255,7 @@ class GridArrangementDialog(SplitterDialog):
                     self.arrangement_manager, self.processor
                 )
 
-                self._update_status(f"Exported to {os.path.basename(self.output_path)}")
+                self._update_status(f"Exported to {Path(self.output_path).name}")
                 self.accept()
             else:
                 self._update_status("Error: Failed to create arranged image")

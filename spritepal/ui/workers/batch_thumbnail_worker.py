@@ -3,14 +3,24 @@ Batch thumbnail worker for generating sprite thumbnails asynchronously.
 Handles queue management and priority-based generation.
 """
 
-import builtins
-import contextlib
+import mmap
+from collections import OrderedDict
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from pathlib import Path
 from queue import PriorityQueue
 from typing import Optional
 
 from PIL import Image
-from PySide6.QtCore import QMutex, QMutexLocker, Qt, QThread, Signal
+from PySide6.QtCore import (
+    QMutex,
+    QMutexLocker,
+    QObject,
+    Qt,
+    QThread,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QImage, QPixmap
 
 from core.rom_extractor import ROMExtractor
@@ -32,19 +42,105 @@ class ThumbnailRequest:
         return self.priority < other.priority
 
 
-class BatchThumbnailWorker(QThread):
-    """Worker thread for batch thumbnail generation."""
+class LRUCache:
+    """Thread-safe LRU cache for QImage thumbnails."""
 
-    # Signals
-    thumbnail_ready = Signal(int, QPixmap)  # offset, pixmap
+    def __init__(self, maxsize: int = 100):
+        """
+        Initialize LRU cache with maximum size.
+
+        Args:
+            maxsize: Maximum number of items to store
+        """
+        self.maxsize = maxsize
+        self._cache: OrderedDict[tuple[int, int], QImage] = OrderedDict()
+        self._mutex = QMutex()
+        self._hits = 0
+        self._misses = 0
+
+    def get(self, key: tuple[int, int]) -> Optional[QImage]:
+        """
+        Get item from cache, updating access order.
+
+        Args:
+            key: Cache key (offset, size)
+
+        Returns:
+            Cached QImage or None if not found
+        """
+        with QMutexLocker(self._mutex):
+            if key in self._cache:
+                # Move to end (most recently used)
+                self._cache.move_to_end(key)
+                self._hits += 1
+                return self._cache[key]
+            self._misses += 1
+            return None
+
+    def put(self, key: tuple[int, int], value: QImage) -> None:
+        """
+        Add item to cache with LRU eviction.
+
+        Args:
+            key: Cache key (offset, size)
+            value: QImage to cache
+        """
+        with QMutexLocker(self._mutex):
+            if key in self._cache:
+                # Update existing and move to end
+                self._cache.move_to_end(key)
+            else:
+                # Add new item
+                if len(self._cache) >= self.maxsize:
+                    # Remove least recently used (first item)
+                    self._cache.popitem(last=False)
+                self._cache[key] = value
+
+    def clear(self) -> None:
+        """Clear all cached items."""
+        with QMutexLocker(self._mutex):
+            self._cache.clear()
+            self._hits = 0
+            self._misses = 0
+
+    def size(self) -> int:
+        """Get current cache size."""
+        with QMutexLocker(self._mutex):
+            return len(self._cache)
+
+    def get_stats(self) -> dict:
+        """Get cache statistics."""
+        with QMutexLocker(self._mutex):
+            total = self._hits + self._misses
+            hit_rate = (self._hits / total * 100) if total > 0 else 0
+            return {
+                'size': len(self._cache),
+                'hits': self._hits,
+                'misses': self._misses,
+                'hit_rate': hit_rate
+            }
+
+
+class BatchThumbnailWorker(QObject):
+    """
+    Worker for batch thumbnail generation.
+
+    IMPORTANT: This class now inherits from QObject, not QThread.
+    Use the WorkerController class to manage the thread lifecycle.
+    """
+
+    # Signals - Use QImage instead of QPixmap for thread safety
+    thumbnail_ready = Signal(int, QImage)  # offset, qimage (thread-safe)
     progress = Signal(int, int)  # current, total
     error = Signal(str)
+    started = Signal()
+    finished = Signal()
 
     def __init__(
         self,
         rom_path: str,
         rom_extractor: Optional[ROMExtractor] = None,
-        parent: Optional[QThread] = None
+        parent: Optional[QObject] = None
     ):
         """
         Initialize the batch thumbnail worker.
@@ -52,7 +148,7 @@ class BatchThumbnailWorker(QThread):
         Args:
             rom_path: Path to ROM file
             rom_extractor: ROM extractor instance
-            parent: Parent thread
+            parent: Parent object (not thread)
         """
         super().__init__(parent)
 
@@ -64,25 +160,26 @@ class BatchThumbnailWorker(QThread):
         self._stop_requested = False
         self._pause_requested = False
         self._mutex = QMutex()
+        self._cache_mutex = QMutex()  # Separate mutex for cache
 
         # Request queue
         self._request_queue: PriorityQueue = PriorityQueue()
         self._pending_count = 0
         self._completed_count = 0
 
-        # Cache for recently generated thumbnails
-        self._cache: dict[tuple[int, int], QPixmap] = {}
-        self._cache_size_limit = 100
+        # LRU Cache for recently generated thumbnails (store QImage, not QPixmap)
+        self._cache = LRUCache(maxsize=100)
 
-        # ROM data
-        self._rom_data: Optional[bytes] = None
+        # Memory-mapped ROM data
+        self._rom_file = None
+        self._rom_mmap = None
 
     def queue_thumbnail(
         self,
         offset: int,
         size: int = 128,
         priority: int = 0
-    ):
+    ) -> None:
         """
         Queue a thumbnail for generation.
 
@@ -102,7 +199,7 @@ class BatchThumbnailWorker(QThread):
         offsets: list[int],
         size: int = 128,
         priority_start: int = 0
-    ):
+    ) -> None:
         """
         Queue multiple thumbnails for generation.
 
@@ -114,76 +211,105 @@ class BatchThumbnailWorker(QThread):
         for i, offset in enumerate(offsets):
             self.queue_thumbnail(offset, size, priority_start + i)
 
-    def clear_queue(self):
+    def clear_queue(self) -> None:
         """Clear all pending requests."""
         with QMutexLocker(self._mutex):
             # Clear the queue
             while not self._request_queue.empty():
                 try:
                     self._request_queue.get_nowait()
-                except:
+                except Exception:
+                    # Queue is empty or other queue operation error
                     break
             self._pending_count = 0
 
+    @Slot()
     def stop(self):
         """Request the worker to stop."""
         self._stop_requested = True
+        # Also clear the queue to stop processing immediately
+        self.clear_queue()
 
+    @Slot()
     def pause(self):
         """Pause thumbnail generation."""
         self._pause_requested = True
 
+    @Slot()
     def resume(self):
         """Resume thumbnail generation."""
         self._pause_requested = False
 
+    @Slot()
     def run(self):
-        """Main worker thread execution."""
-        logger.info("BatchThumbnailWorker thread started")
+        """Main worker execution - runs in worker thread."""
+        logger.info("BatchThumbnailWorker started")
+        self.started.emit()
+
         try:
-            # Load ROM data once
+            # Load ROM data using memory mapping
             self._load_rom_data()
-            logger.info(f"ROM data loaded: {len(self._rom_data) if self._rom_data else 0} bytes")
+            logger.info(f"ROM data mapped: {len(self._rom_mmap) if self._rom_mmap else 0} bytes")
 
             processed_count = 0
+            idle_iterations = 0
+            max_idle_iterations = 100  # Stop after 10 seconds of idle (100 * 100ms)
+            last_log_count = -1  # Track last logged count to avoid spam
+
             while not self._stop_requested:
                 # Check for pause
                 if self._pause_requested:
-                    self.msleep(100)
+                    QThread.currentThread().msleep(100)
                     continue
 
                 # Get next request
                 request = self._get_next_request()
                 if not request:
-                    if processed_count > 0:
-                        logger.debug(f"No more requests, processed {processed_count} thumbnails")
-                    self.msleep(50)  # No requests, wait a bit
+                    # Log only once when we finish processing
+                    if processed_count > 0 and processed_count != last_log_count:
+                        logger.debug(f"Finished batch: processed {processed_count} thumbnails")
+                        last_log_count = processed_count
+
+                    # Increment idle counter
+                    idle_iterations += 1
+
+                    # Auto-stop after being idle for too long
+                    if idle_iterations >= max_idle_iterations:
+                        logger.info(f"Auto-stopping after {idle_iterations * 100}ms idle, processed {processed_count} total")
+                        break
+
+                    # Sleep longer when idle to reduce CPU usage
+                    QThread.currentThread().msleep(100)  # Sleep 100ms instead of busy-waiting
                     continue
+
+                # Reset idle counter when we get work
+                idle_iterations = 0
 
                 logger.debug(f"Processing thumbnail request: offset=0x{request.offset:06X}, size={request.size}")
 
-                # Check cache first
+                # Check cache first (thread-safe)
                 cache_key = (request.offset, request.size)
-                if cache_key in self._cache:
-                    pixmap = self._cache[cache_key]
-                    self.thumbnail_ready.emit(request.offset, pixmap)
+                cached_image = self._get_cached_image(cache_key)
+
+                if cached_image:
+                    self.thumbnail_ready.emit(request.offset, cached_image)
                     self._completed_count += 1
                     self._emit_progress()
                     continue
 
                 # Generate thumbnail
-                pixmap = self._generate_thumbnail(request)
+                qimage = self._generate_thumbnail(request)
 
-                if pixmap and not pixmap.isNull():
-                    logger.debug(f"Generated valid thumbnail for 0x{request.offset:06X} (size: {pixmap.width()}x{pixmap.height()})")
+                if qimage and not qimage.isNull():
+                    logger.debug(f"Generated valid thumbnail for 0x{request.offset:06X} (size: {qimage.width()}x{qimage.height()})")
                     # Cache it
-                    self._add_to_cache(cache_key, pixmap)
+                    self._add_to_cache(cache_key, qimage)
 
-                    # Emit result
-                    self.thumbnail_ready.emit(request.offset, pixmap)
+                    # Emit result (QImage is thread-safe)
+                    self.thumbnail_ready.emit(request.offset, qimage)
                     processed_count += 1
                 else:
-                    logger.warning(f"Failed to generate thumbnail for 0x{request.offset:06X} - pixmap is null or None")
+                    logger.warning(f"Failed to generate thumbnail for 0x{request.offset:06X} - image is null or None")
 
                 self._completed_count += 1
                 self._emit_progress()
@@ -192,16 +318,91 @@ class BatchThumbnailWorker(QThread):
             logger.error(f"Thumbnail worker error: {e}", exc_info=True)
             self.error.emit(str(e))
         finally:
-            logger.info("BatchThumbnailWorker thread stopped")
+            logger.info("BatchThumbnailWorker stopped")
+            # Clear ROM data to free memory
+            self._clear_rom_data()
+            # Clear cache as well
+            self._clear_cache_memory()
+            self.finished.emit()
+
+    @contextmanager
+    def _rom_context(self):
+        """Context manager for safe ROM file and memory map handling."""
+        rom_file = None
+        rom_mmap = None
+        try:
+            rom_file = Path(self.rom_path).open('rb')
+            try:
+                # Try memory mapping first
+                rom_mmap = mmap.mmap(rom_file.fileno(), 0, access=mmap.ACCESS_READ)
+                yield rom_mmap
+            except Exception as mmap_error:
+                logger.warning(f"Failed to memory-map ROM, using fallback: {mmap_error}")
+                # Fallback to reading entire file
+                rom_file.seek(0)
+                rom_data = rom_file.read()
+
+                # Create a mmap-compatible wrapper
+                class BytesMMAPWrapper:
+                    def __init__(self, data):
+                        self._data = data
+                    def __getitem__(self, key):
+                        return self._data[key]
+                    def __len__(self):
+                        return len(self._data)
+                    def close(self):
+                        pass  # No-op for bytes wrapper
+
+                yield BytesMMAPWrapper(rom_data)
+        finally:
+            # Ensure proper cleanup in all cases
+            with suppress(Exception):
+                if rom_mmap is not None:
+                    rom_mmap.close()
+            with suppress(Exception):
+                if rom_file is not None:
+                    rom_file.close()
 
     def _load_rom_data(self):
-        """Load ROM data into memory."""
+        """Load ROM data using memory mapping for efficiency with proper resource management."""
         try:
-            with open(self.rom_path, 'rb') as f:
-                self._rom_data = f.read()
+            # Use context manager for safe resource handling
+            with self._rom_context() as mmap_obj:
+                # Store reference for use in other methods
+                # Note: This is safe because we're copying the wrapper, not the actual file handle
+                if hasattr(mmap_obj, '_data'):
+                    # It's our BytesMMAPWrapper - safe to store
+                    self._rom_mmap = mmap_obj
+                    self._rom_file = None  # No file handle to store
+                else:
+                    # It's a real mmap - need to keep file handle open
+                    # Re-open file and mmap for persistent use
+                    self._rom_file = Path(self.rom_path).open('rb')
+                    self._rom_mmap = mmap.mmap(self._rom_file.fileno(), 0, access=mmap.ACCESS_READ)
+
+                if self._rom_mmap:
+                    logger.info(f"ROM data mapped: {len(self._rom_mmap)} bytes")
         except Exception as e:
             logger.error(f"Failed to load ROM: {e}")
+            self._rom_mmap = None
+            self._rom_file = None
             self.error.emit(f"Failed to load ROM: {e}")
+
+    def _read_rom_chunk(self, offset: int, size: int) -> Optional[bytes]:
+        """Read a chunk from memory-mapped ROM."""
+        if not self._rom_mmap:
+            return None
+
+        try:
+            # Bounds checking
+            if offset < 0 or offset >= len(self._rom_mmap):
+                return None
+
+            end_offset = min(offset + size, len(self._rom_mmap))
+            return self._rom_mmap[offset:end_offset]
+        except Exception as e:
+            logger.error(f"Failed to read ROM chunk at 0x{offset:06X}: {e}")
+            return None
 
     def _get_next_request(self) -> Optional[ThumbnailRequest]:
         """Get the next request from the queue."""
@@ -209,11 +410,16 @@ class BatchThumbnailWorker(QThread):
             if not self._request_queue.empty():
                 try:
                     return self._request_queue.get_nowait()
-                except:
+                except Exception:
+                    # Queue operation error (e.g., queue became empty during operation)
                     pass
         return None
 
-    def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QPixmap]:
+    def _get_cached_image(self, key: tuple[int, int]) -> Optional[QImage]:
+        """Thread-safe cache read with LRU."""
+        return self._cache.get(key)
+
+    def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QImage]:
         """
         Generate a thumbnail for a sprite.
 
@@ -221,9 +427,9 @@ class BatchThumbnailWorker(QThread):
             request: Thumbnail request
 
         Returns:
-            Generated pixmap or None
+            Generated QImage (thread-safe) or None
         """
-        if not self._rom_data:
+        if not self._rom_mmap:
             return None
 
         try:
@@ -232,22 +438,29 @@ class BatchThumbnailWorker(QThread):
 
             if self.rom_extractor and hasattr(self.rom_extractor, 'rom_injector'):
                 # Try HAL decompression
-                with contextlib.suppress(builtins.BaseException):
-                    _, decompressed_data = self.rom_extractor.rom_injector.find_compressed_sprite(
-                        self._rom_data,
-                        request.offset,
-                        expected_size=None
-                    )
-                    if decompressed_data:
-                        logger.debug(f"HAL decompressed {len(decompressed_data)} bytes from 0x{request.offset:06X}")
+                try:
+                    # Read chunk for decompression
+                    chunk = self._read_rom_chunk(request.offset, 0x10000)  # Read up to 64KB
+                    if chunk:
+                        _, decompressed_data = self.rom_extractor.rom_injector.find_compressed_sprite(
+                            chunk,
+                            0,  # Offset within chunk
+                            expected_size=None
+                        )
+                        if decompressed_data:
+                            logger.debug(f"HAL decompressed {len(decompressed_data)} bytes from 0x{request.offset:06X}")
+                except Exception as e:
+                    # Log decompression failures for debugging, but continue with fallback to raw data
+                    logger.debug(f"HAL decompression failed for offset 0x{request.offset:06X}: {e}")
+                    decompressed_data = None
 
             # If no decompressed data, use raw data
             if not decompressed_data:
                 # Read raw tile data (up to 256 tiles)
                 max_size = 32 * 256  # 32 bytes per tile, max 256 tiles
-                end_offset = min(request.offset + max_size, len(self._rom_data))
-                decompressed_data = self._rom_data[request.offset:end_offset]
-                logger.debug(f"Using raw data: {len(decompressed_data)} bytes from 0x{request.offset:06X}")
+                decompressed_data = self._read_rom_chunk(request.offset, max_size)
+                if decompressed_data:
+                    logger.debug(f"Using raw data: {len(decompressed_data)} bytes from 0x{request.offset:06X}")
 
             if not decompressed_data:
                 return None
@@ -276,33 +489,33 @@ class BatchThumbnailWorker(QThread):
                 logger.warning(f"TileRenderer returned None for 0x{request.offset:06X}")
                 return None
 
-            # Convert PIL Image to QPixmap
-            pixmap = self._pil_to_qpixmap(image)
+            # Convert PIL Image to QImage (thread-safe)
+            qimage = self._pil_to_qimage(image)
 
             # Scale to requested size
-            if pixmap and not pixmap.isNull():
-                pixmap = pixmap.scaled(
+            if qimage and not qimage.isNull():
+                qimage = qimage.scaled(
                     request.size,
                     request.size,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
 
-            return pixmap
+            return qimage
 
         except Exception as e:
             logger.debug(f"Failed to generate thumbnail for offset {request.offset:06X}: {e}")
             return None
 
-    def _pil_to_qpixmap(self, image: Image.Image) -> QPixmap:
+    def _pil_to_qimage(self, image: Image.Image) -> QImage:
         """
-        Convert PIL Image to QPixmap.
+        Convert PIL Image to QImage (thread-safe).
 
         Args:
             image: PIL Image
 
         Returns:
-            QPixmap
+            QImage (thread-safe alternative to QPixmap)
         """
         # Convert to RGBA if needed
         if image.mode != "RGBA":
@@ -312,7 +525,7 @@ class BatchThumbnailWorker(QThread):
         width, height = image.size
         bytes_data = image.tobytes("raw", "RGBA")
 
-        # Create QImage
+        # Create QImage (thread-safe)
         qimage = QImage(
             bytes_data,
             width,
@@ -320,29 +533,154 @@ class BatchThumbnailWorker(QThread):
             QImage.Format.Format_RGBA8888
         )
 
-        # Convert to QPixmap
-        return QPixmap.fromImage(qimage)
+        # Make a copy to ensure the data is owned by the QImage
+        return qimage.copy()
 
-    def _add_to_cache(self, key: tuple[int, int], pixmap: QPixmap):
-        """Add a pixmap to the cache."""
-        # Limit cache size
-        if len(self._cache) >= self._cache_size_limit:
-            # Remove oldest entry (simple FIFO for now)
-            first_key = next(iter(self._cache))
-            del self._cache[first_key]
+    def _add_to_cache(self, key: tuple[int, int], qimage: QImage):
+        """Add an image to the cache (thread-safe with LRU eviction)."""
+        self._cache.put(key, qimage)
 
-        self._cache[key] = pixmap
-
-    def _emit_progress(self):
+    def _emit_progress(self) -> None:
         """Emit progress signal."""
         total = self._pending_count + self._completed_count
         if total > 0:
             self.progress.emit(self._completed_count, total)
 
     def get_cache_size(self) -> int:
-        """Get the current cache size."""
-        return len(self._cache)
+        """Get the current cache size (thread-safe)."""
+        return self._cache.size()
 
-    def clear_cache(self):
-        """Clear the thumbnail cache."""
+    def clear_cache(self) -> None:
+        """Clear the thumbnail cache (thread-safe)."""
         self._cache.clear()
+
+    def _clear_cache_memory(self) -> None:
+        """Clear cache memory with logging."""
+        if hasattr(self, '_cache') and self._cache:
+            cache_size = self._cache.size()
+            self._cache.clear()
+            if cache_size > 0:
+                logger.debug(f"Cleared thumbnail cache: freed {cache_size} cached images")
+                # Log cache statistics before clearing
+                stats = self._cache.get_stats()
+                logger.debug(f"Cache stats before clear: hit_rate={stats['hit_rate']:.1f}%, hits={stats['hits']}, misses={stats['misses']}")
+
+    def _clear_rom_data(self) -> None:
+        """Clear ROM data from memory with logging."""
+        if hasattr(self, '_rom_mmap') and self._rom_mmap is not None:
+            try:
+                if hasattr(self._rom_mmap, '__len__'):
+                    rom_size = len(self._rom_mmap)
+                else:
+                    rom_size = 0
+
+                # Close memory map
+                if hasattr(self._rom_mmap, 'close') and callable(getattr(self._rom_mmap, 'close', None)):
+                    self._rom_mmap.close()
+                self._rom_mmap = None
+
+                # Close file handle
+                if hasattr(self, '_rom_file') and self._rom_file:
+                    self._rom_file.close()
+                    self._rom_file = None
+
+                if rom_size > 0:
+                    logger.debug(f"Cleared ROM data: freed {rom_size} bytes")
+            except Exception as e:
+                logger.warning(f"Error clearing ROM data: {e}")
+
+    def cleanup(self) -> None:
+        """Clean up the worker resources properly."""
+        logger.debug("BatchThumbnailWorker cleanup started")
+
+        # Request stop
+        self.stop()
+
+        # Clear resources thoroughly with error protection
+        try:
+            self._clear_cache_memory()
+        except Exception as e:
+            logger.warning(f"Error clearing cache during cleanup: {e}")
+
+        try:
+            self._clear_rom_data()
+        except Exception as e:
+            logger.warning(f"Error clearing ROM data during cleanup: {e}")
+
+        logger.debug("BatchThumbnailWorker cleanup completed")
+
+
+class ThumbnailWorkerController(QObject):
+    """
+    Controller for managing BatchThumbnailWorker lifecycle properly.
+    This handles thread creation and management.
+    """
+
+    # Forward signals from worker
+    thumbnail_ready = Signal(int, QPixmap)  # Convert QImage back to QPixmap in main thread
+    progress = Signal(int, int)
+    error = Signal(str)
+
+    def __init__(self, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent)
+        self.worker: Optional[BatchThumbnailWorker] = None
+        self._thread: Optional[QThread] = None
+
+    def start_worker(self, rom_path: str, rom_extractor: Optional[ROMExtractor] = None) -> None:
+        """Start worker with proper thread management."""
+        if self._thread and self._thread.isRunning():
+            logger.warning("Worker already running, stopping first")
+            self.stop_worker()
+
+        # Create worker and thread
+        self.worker = BatchThumbnailWorker(rom_path, rom_extractor)
+        self._thread = QThread()
+
+        # Move worker to thread
+        self.worker.moveToThread(self._thread)
+
+        # Connect signals for proper lifecycle
+        self._thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self._thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self._thread.finished.connect(self._thread.deleteLater)
+
+        # Forward worker signals, converting QImage to QPixmap
+        self.worker.thumbnail_ready.connect(self._on_thumbnail_ready)
+        self.worker.progress.connect(self.progress.emit)
+        self.worker.error.connect(self.error.emit)
+
+        # Start thread
+        self._thread.start()
+
+    @Slot(int, QImage)
+    def _on_thumbnail_ready(self, offset: int, qimage: QImage) -> None:
+        """Convert QImage to QPixmap in main thread and forward signal."""
+        if not qimage.isNull():
+            pixmap = QPixmap.fromImage(qimage)
+            self.thumbnail_ready.emit(offset, pixmap)
+
+    def queue_thumbnail(self, offset: int, size: int = 128, priority: int = 0) -> None:
+        """Queue a thumbnail for generation."""
+        if self.worker:
+            self.worker.queue_thumbnail(offset, size, priority)
+
+    def queue_batch(self, offsets: list[int], size: int = 128, priority_start: int = 0) -> None:
+        """Queue multiple thumbnails for generation."""
+        if self.worker:
+            self.worker.queue_batch(offsets, size, priority_start)
+
+    def stop_worker(self) -> None:
+        """Safely stop worker and thread."""
+        if self.worker:
+            self.worker.stop()
+        if self._thread:
+            self._thread.quit()
+            if not self._thread.wait(3000):  # Wait up to 3 seconds
+                logger.warning("Thread did not stop within timeout")
+
+    def cleanup(self) -> None:
+        """Clean up resources."""
+        self.stop_worker()
+        if self.worker:
+            self.worker.cleanup()

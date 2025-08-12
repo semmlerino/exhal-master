@@ -4,36 +4,35 @@ Script to take a screenshot of the main window for layout analysis.
 """
 
 import sys
-import time
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication
 
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ui.main_window import MainWindow
 from core.managers.registry import initialize_managers
+from ui.main_window import MainWindow
 
 
 def take_main_window_screenshot():
     """Launch app and take screenshot of main window."""
     app = QApplication.instance() or QApplication(sys.argv)
-    
+
     # Initialize managers first
     initialize_managers()
-    
+
     # Create main window
     main_window = MainWindow()
     main_window.show()
-    
+
     def load_rom_and_capture():
         """Load ROM and capture main window screenshot."""
         try:
             # Get the ROM extraction panel
             panel = main_window.rom_extraction_panel
-            
+
             # Load a ROM file from current directory
             rom_path = Path(__file__).parent / "Kirby Super Star (USA).sfc"
             if not rom_path.exists():
@@ -42,7 +41,7 @@ def take_main_window_screenshot():
                     rom_path = Path(__file__).parent / rom_name
                     if rom_path.exists():
                         break
-            
+
             if rom_path.exists():
                 print(f"Loading ROM: {rom_path}")
                 # Load the ROM file
@@ -60,13 +59,13 @@ def take_main_window_screenshot():
         except Exception as e:
             print(f"Error loading ROM: {e}")
             capture_screenshot()
-    
+
     def capture_screenshot():
         """Capture screenshot of the main window."""
         try:
             # Take screenshot with incrementing number
             pixmap = main_window.grab()
-            
+
             # Find the next available screenshot number
             screenshot_num = 1
             while True:
@@ -74,23 +73,23 @@ def take_main_window_screenshot():
                 if not screenshot_path.exists():
                     break
                 screenshot_num += 1
-            
+
             pixmap.save(str(screenshot_path))
             print(f"Screenshot saved to: {screenshot_path}")
-            
+
             # Also save as "current" for easy access
             current_path = Path(__file__).parent / "main_window_current_screenshot.png"
             pixmap.save(str(current_path))
             print(f"Also saved as current: {current_path}")
-            
+
         except Exception as e:
             print(f"Error taking screenshot: {e}")
         finally:
             app.quit()
-    
+
     # Wait for main window to load, then capture
     QTimer.singleShot(2000, load_rom_and_capture)
-    
+
     # Run the application
     app.exec()
 

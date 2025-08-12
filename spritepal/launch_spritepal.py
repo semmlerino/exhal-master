@@ -16,22 +16,22 @@ def _configure_composed_dialogs_early():
     try:
         import json
         settings_file = Path(__file__).parent / ".spritepal_settings.json"
-        
+
         if settings_file.exists():
             with settings_file.open("r") as f:
                 settings = json.load(f)
-                
+
             # Check experimental settings for composed dialogs
             use_composed = settings.get("experimental", {}).get("use_composed_dialogs", False)
-            
+
             if use_composed:
-                os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "1" 
+                os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "1"
             else:
                 os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
         else:
             # Default to legacy if no settings file
             os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
-            
+
     except Exception:
         # Fallback to legacy on any error
         os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = "0"
@@ -50,6 +50,7 @@ from core.managers import (
 )
 from ui.common.error_handler import get_error_handler
 from ui.main_window import MainWindow
+from ui.styles.accessibility import initialize_accessibility
 from utils.error_display_adapter import ErrorHandlerAdapter
 from utils.logging_config import get_logger, setup_logging
 from utils.unified_error_handler import set_global_error_display
@@ -90,6 +91,9 @@ class SpritePalApp(QApplication):
 
         # Apply modern dark theme
         self._apply_dark_theme()
+        
+        # Initialize accessibility features
+        initialize_accessibility()
 
         # Create main window
         self.main_window = MainWindow()
@@ -148,7 +152,7 @@ class SpritePalApp(QApplication):
                 background-color: #2d2d30;
                 color: white;
             }
-            
+
             QWidget {
                 background-color: #2d2d30;
                 color: white;

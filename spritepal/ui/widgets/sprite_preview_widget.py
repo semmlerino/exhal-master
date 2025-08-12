@@ -633,7 +633,7 @@ class SpritePreviewWidget(QWidget):
                         try:
                             pixel_val = img.getpixel((x, y))
                             unique_pixels.add(pixel_val)
-                        except:
+                        except (IndexError, ValueError):
                             pass
                 logger.debug(f"[DEBUG_SPRITE] Unique pixel values in 16x16 sample: {sorted(unique_pixels)[:20]}")
                 if len(unique_pixels) <= 1:
@@ -928,7 +928,7 @@ class SpritePreviewWidget(QWidget):
 
             # Get raw bytes from QImage
             ptr = qimage.bits()
-            ptr.setsize(height * width * 4)  # 4 bytes per pixel (RGBA)
+            ptr.setsize(height * width * 4)  # type: ignore[attr-defined] # Qt-specific memoryview method
             img_data = bytes(ptr)
 
             # Create PIL image
@@ -1269,7 +1269,9 @@ class SpritePreviewWidget(QWidget):
             logger.debug(f"[DEBUG_SPRITE] QApplication thread: {app.thread()}")
             logger.debug(f"[DEBUG_SPRITE] Current thread: {QThread.currentThread()}")
             logger.debug(f"[DEBUG_SPRITE] Label thread: {self.preview_label.thread()}")
-        logger.debug(f"[SPRITE_DISPLAY] Widget hierarchy visibility: widget={self.isVisible()}, parent={self.parent().isVisible() if self.parent() else 'no parent'}")
+        parent = self.parent()
+        parent_visible = parent.isVisible() if parent and hasattr(parent, 'isVisible') else 'N/A'  # type: ignore[attr-defined]
+        logger.debug(f"[SPRITE_DISPLAY] Widget hierarchy visibility: widget={self.isVisible()}, parent={parent_visible}")
 
         # Apply the standard guarantee method
         self._guarantee_pixmap_display()
@@ -1287,11 +1289,11 @@ class SpritePreviewWidget(QWidget):
         while parent:
             parent_info = {
                 'class': parent.__class__.__name__,
-                'visible': parent.isVisible() if hasattr(parent, 'isVisible') else 'N/A',
-                'enabled': parent.isEnabled() if hasattr(parent, 'isEnabled') else 'N/A'
+                'visible': parent.isVisible() if hasattr(parent, 'isVisible') else 'N/A',  # type: ignore[attr-defined]
+                'enabled': parent.isEnabled() if hasattr(parent, 'isEnabled') else 'N/A'  # type: ignore[attr-defined]
             }
             parent_chain.append(parent_info)
-            if hasattr(parent, 'isVisible') and not parent.isVisible():
+            if hasattr(parent, 'isVisible') and not parent.isVisible():  # type: ignore[attr-defined]
                 logger.warning(f"[DEBUG_SPRITE] Parent widget not visible: {parent.__class__.__name__}")
             parent = parent.parent() if hasattr(parent, 'parent') else None
 
@@ -1377,7 +1379,7 @@ class SpritePreviewWidget(QWidget):
         while parent and level < 10:  # Limit depth to prevent infinite loops
             report.append(f"  {'  ' * level}Parent {level}: {parent.__class__.__name__}")
             if hasattr(parent, 'isVisible'):
-                report.append(f"  {'  ' * level}  - visible: {parent.isVisible()}")
+                report.append(f"  {'  ' * level}  - visible: {parent.isVisible()}")  # type: ignore[attr-defined]
             parent = parent.parent() if hasattr(parent, 'parent') else None
             level += 1
 

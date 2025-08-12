@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 from PIL import Image
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget
+from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from core.protocols.manager_protocols import (
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
         SessionManagerProtocol,
     )
 
+from core.console_error_handler import ConsoleErrorHandler
 from core.managers import (
     ExtractionManager,
     InjectionManager,
@@ -66,7 +68,7 @@ class ROMExtractionParams(TypedDict):
     sprite_offset: int
     sprite_name: str
     output_base: str
-    cgram_path: str | None
+    cgram_path: NotRequired[str | None]
 
 
 logger = get_logger(__name__)
@@ -102,67 +104,9 @@ class ErrorHandlerProtocol(Protocol):
         ...
 
 
-class MockErrorHandler:
-    """
-    Mock error handler for testing that implements all ErrorHandler methods.
-
-    This replaces the dangerous Mock() usage that would crash when unmocked
-    methods are called. Each method logs the call for debugging but never
-    raises exceptions.
-    """
-
-    def __init__(self) -> None:
-        """Initialize the mock error handler"""
-        self._call_log: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
-
-    def handle_exception(self, exception: Exception, context: str = "") -> None:
-        """Handle an exception with optional context"""
-        self._log_call("handle_exception", (exception, context), {})
-        logger.info(f"MockErrorHandler.handle_exception: {type(exception).__name__}: {exception} (context: {context})")
-
-    def handle_critical_error(self, title: str, message: str) -> None:
-        """Handle a critical error"""
-        self._log_call("handle_critical_error", (title, message), {})
-        logger.info(f"MockErrorHandler.handle_critical_error: {title} - {message}")
-
-    def handle_warning(self, title: str, message: str) -> None:
-        """Handle a warning"""
-        self._log_call("handle_warning", (title, message), {})
-        logger.info(f"MockErrorHandler.handle_warning: {title} - {message}")
-
-    def handle_info(self, title: str, message: str) -> None:
-        """Handle an info message"""
-        self._log_call("handle_info", (title, message), {})
-        logger.info(f"MockErrorHandler.handle_info: {title} - {message}")
-
-    def handle_validation_error(
-        self,
-        error: Exception,
-        context_info: str,
-        user_input: str | None = None,
-        **context_kwargs: Any
-    ) -> None:
-        """Handle a validation error with context"""
-        self._log_call("handle_validation_error", (error, context_info, user_input), context_kwargs)
-        user_input_str = f" (user_input: {user_input})" if user_input else ""
-        logger.info(f"MockErrorHandler.handle_validation_error: {type(error).__name__}: {error} in {context_info}{user_input_str}")
-
-    def set_show_dialogs(self, show: bool) -> None:
-        """Mock implementation of set_show_dialogs"""
-        self._log_call("set_show_dialogs", (show,), {})
-        logger.info(f"MockErrorHandler.set_show_dialogs: {show}")
-
-    def _log_call(self, method_name: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
-        """Log method call for debugging"""
-        self._call_log.append((method_name, args, kwargs))
-
-    def get_call_log(self) -> list[tuple[str, tuple[Any, ...], dict[str, Any]]]:
-        """Get the log of all method calls for testing"""
-        return self._call_log.copy()
-
-    def clear_call_log(self) -> None:
-        """Clear the call log"""
-        self._call_log.clear()
+# MockErrorHandler removed - replaced with ConsoleErrorHandler
+# The MockErrorHandler was a dangerous pattern that silently swallowed errors.
+# Now using ConsoleErrorHandler which properly logs errors to console/file.
 
 
 class ExtractionController(QObject):
@@ -188,13 +132,20 @@ class ExtractionController(QObject):
         self.worker: VRAMExtractionWorker | None = None
         self.rom_worker: ROMExtractionWorker | None = None
 
-        # Initialize error handler (skip for test mocks)
+        # Initialize error handler with fallback to console handler
         try:
-            self.error_handler = get_error_handler(self.main_window)
+            # Check if main_window is a QWidget for error handler compatibility
+            if isinstance(self.main_window, QWidget):
+                self.error_handler = get_error_handler(self.main_window)
+            else:
+                # Use console error handler for non-QWidget protocols (e.g., in tests)
+                logger.debug("MainWindowProtocol is not a QWidget, using console error handler")
+                self.error_handler = ConsoleErrorHandler()
         except (TypeError, AttributeError):
-            # Handle test scenarios with mock objects - use proper MockErrorHandler
-            # instead of dangerous Mock() that crashes when unmocked methods are called
-            self.error_handler = MockErrorHandler()
+            # Fallback to console error handler for test scenarios or when UI is unavailable
+            # This ensures errors are properly logged instead of being silently ignored
+            logger.warning("UI error handler unavailable, using console error handler")
+            self.error_handler = ConsoleErrorHandler()
 
         # Connect UI signals
         _ = self.main_window.extract_requested.connect(self.start_extraction)

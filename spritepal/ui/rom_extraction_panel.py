@@ -112,12 +112,12 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             cls._creator_panel = creator_panel
 
             logger.debug(f"New dialog created with ID: {getattr(instance, '_debug_id', 'Unknown')}")
-            
+
             # Test if the dialog object is still valid
             logger.warning(f"DEBUGGING: Dialog object type: {type(instance)}")
             logger.warning(f"DEBUGGING: Dialog isVisible(): {instance.isVisible()}")
             logger.warning(f"DEBUGGING: Dialog windowTitle(): {instance.windowTitle()}")
-            
+
             # Try to access the finished signal to see if it exists
             logger.warning("DEBUGGING: About to test signal access...")
             try:
@@ -125,10 +125,10 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
                 logger.warning(f"DEBUGGING: Successfully accessed finished signal: {signal_obj}")
             except Exception as e:
                 logger.error(f"DEBUGGING: Cannot access finished signal: {e}")
-            
+
             # Defer signal connection until dialog is shown to avoid Qt race condition
             logger.debug("Deferring signal connection until dialog is shown...")
-            
+
             def _connect_signals_when_shown():
                 """Connect signals after dialog is fully shown and ready."""
                 try:
@@ -144,10 +144,10 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
                         logger.error("QtDialogSignalManager component not found - cannot connect Qt dialog signals")
                 except Exception as e:
                     logger.error(f"Failed to connect signals after show: {e}")
-            
+
             # Store the connection function to call after show
             instance._deferred_signal_connection = _connect_signals_when_shown
-            
+
         except Exception as e:
             logger.error(f"Error during dialog creation or signal connection: {e}")
             import traceback
@@ -637,7 +637,7 @@ class ROMExtractionPanel(QWidget):
                     logger.debug("Custom dialog signals connected successfully")
                 except Exception as e:
                     logger.error(f"Failed to connect custom dialog signals: {e}")
-            
+
             # Add to existing deferred signal connection or create new one
             existing_deferred = getattr(dialog, '_deferred_signal_connection', None)
             if existing_deferred:
@@ -665,13 +665,13 @@ class ROMExtractionPanel(QWidget):
             dialog.activateWindow()  # And activate to ensure focus
             # Process events to ensure the show takes effect immediately
             QApplication.processEvents()
-            
+
             # Connect deferred signals now that dialog is fully shown
             if hasattr(dialog, '_deferred_signal_connection'):
                 logger.warning("[DEBUG] Calling deferred signal connection...")
                 dialog._deferred_signal_connection()
                 delattr(dialog, '_deferred_signal_connection')  # Clean up
-            
+
             logger.warning("[DEBUG] Showed and raised ManualOffsetDialog singleton")
         else:
             # Bring to front if already visible

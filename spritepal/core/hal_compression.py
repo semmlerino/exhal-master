@@ -205,8 +205,7 @@ def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
                 )
 
             # Read decompressed data
-            with open(output_path, "rb") as f:
-                data = f.read()
+            data = Path(output_path).read_bytes()
 
             return HALResult(
                 success=True,
@@ -295,14 +294,14 @@ class HALProcessPool:
     _lock = threading.Lock()
     _cleanup_registered = False
 
-    def __new__(cls):
+    def __new__(cls) -> "HALProcessPool":
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Only initialize once
         if hasattr(self, "_initialized"):
             return
@@ -311,7 +310,7 @@ class HALProcessPool:
         self._pool_lock: threading.RLock = threading.RLock()
         self._pool_initialized = False  # Use a boolean flag for initialization status
         self._manager: Any | None = None
-        self._request_queue: mp.Queue[HALRequest] | None = None
+        self._request_queue: mp.Queue[HALRequest | None] | None = None
         self._result_queue: mp.Queue[HALResult] | None = None
         self._processes: list[mp.Process] = []
         self._process_pids: list[int] = []  # Track PIDs for debugging
@@ -331,7 +330,7 @@ class HALProcessPool:
         if not HALProcessPool._cleanup_registered:
             # Register atexit handler with suppress_logging_errors to prevent I/O errors during shutdown
             @suppress_logging_errors
-            def cleanup_at_exit():
+            def cleanup_at_exit() -> None:
                 try:
                     self.shutdown()
                 except Exception:
@@ -340,7 +339,7 @@ class HALProcessPool:
             atexit.register(cleanup_at_exit)
 
             # Register with Qt if available
-            if QT_AVAILABLE:
+            if QT_AVAILABLE and QApplication is not None:
                 try:
                     app = QApplication.instance()
                     if app is not None:
@@ -402,11 +401,17 @@ class HALProcessPool:
                     offset=0,
                     request_id="test"
                 )
-                self._request_queue.put(test_request)
+                if self._request_queue is not None:
+                    self._request_queue.put(test_request)
+                else:
+                    raise HALPoolError("Request queue not initialized")
 
                 try:
-                    self._result_queue.get(timeout=2.0)
-                    logger.debug("Pool communication test successful")
+                    if self._result_queue is not None:
+                        self._result_queue.get(timeout=2.0)
+                        logger.debug("Pool communication test successful")
+                    else:
+                        raise HALPoolError("Result queue not initialized")
                 except queue.Empty:
                     raise HALPoolError("Pool communication test failed - no response from workers") from None
 
@@ -420,17 +425,18 @@ class HALProcessPool:
                 self.force_reset()
                 return False
 
-    def _connect_qt_cleanup(self):
+    def _connect_qt_cleanup(self) -> None:
         """Connect cleanup to QApplication.aboutToQuit signal if Qt is available."""
         if not QT_AVAILABLE or self._qt_cleanup_connected:
             return
 
         try:
-            app = QApplication.instance()
-            if app is not None:
-                app.aboutToQuit.connect(self.shutdown)
-                self._qt_cleanup_connected = True
-                logger.debug("Connected HAL pool cleanup to QApplication.aboutToQuit signal")
+            if QApplication is not None:
+                app = QApplication.instance()
+                if app is not None:
+                    app.aboutToQuit.connect(self.shutdown)
+                    self._qt_cleanup_connected = True
+                    logger.debug("Connected HAL pool cleanup to QApplication.aboutToQuit signal")
         except Exception as e:
             logger.debug(f"Could not connect to QApplication.aboutToQuit: {e}")
 
@@ -455,10 +461,15 @@ class HALProcessPool:
 
         try:
             # Put request in queue
-            self._request_queue.put(request)
+            if self._request_queue is not None:
+                self._request_queue.put(request)
+            else:
+                raise HALPoolError("Request queue not initialized")
 
             # Wait for result with timeout
-            return self._result_queue.get(timeout=timeout)
+            if self._result_queue is not None:
+                return self._result_queue.get(timeout=timeout)
+            raise HALPoolError("Result queue not initialized")
 
 
         except queue.Empty:
@@ -496,7 +507,10 @@ class HALProcessPool:
         try:
             # Submit all requests
             for req in requests:
-                self._request_queue.put(req)
+                if self._request_queue is not None:
+                    self._request_queue.put(req)
+                else:
+                    raise HALPoolError("Request queue not initialized")
 
             # Collect results
             results = {}
@@ -509,7 +523,10 @@ class HALProcessPool:
                     break
 
                 try:
-                    result = self._result_queue.get(timeout=remaining)
+                    if self._result_queue is not None:
+                        result = self._result_queue.get(timeout=remaining)
+                    else:
+                        raise HALPoolError("Result queue not initialized")
                     if result.request_id:
                         results[result.request_id] = result
                 except queue.Empty:
@@ -540,7 +557,7 @@ class HALProcessPool:
             ]
 
     @suppress_logging_errors
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Properly shutdown pool with process joining."""
         with self._pool_lock:
             if not self._pool_initialized or self._shutdown:
@@ -581,7 +598,8 @@ class HALProcessPool:
                     # Use a thread with timeout for manager shutdown
                     def shutdown_manager():
                         try:
-                            self._manager.shutdown()
+                            if self._manager is not None:
+                                self._manager.shutdown()
                         except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
                             pass  # Expected during shutdown
                         except Exception as e:
@@ -725,7 +743,8 @@ class HALProcessPool:
                     # Force manager shutdown in a thread with very short timeout
                     def force_shutdown_manager():
                         try:
-                            self._manager.shutdown()
+                            if self._manager is not None:
+                                self._manager.shutdown()
                         except (BrokenPipeError, EOFError, OSError, ConnectionResetError):
                             pass  # Expected during force shutdown
                         except Exception:
@@ -824,34 +843,49 @@ class HALCompressor:
         exe_suffix = ".exe" if platform.system() == "Windows" else ""
         tool_with_suffix = f"{tool_name}{exe_suffix}"
 
-        # Search locations
+        # Get absolute path to spritepal directory to avoid working directory dependency
+        # This file is in core/hal_compression.py, so spritepal is the parent directory
+        spritepal_dir = Path(__file__).parent.parent
+        logger.debug(f"SpritePal directory: {spritepal_dir}")
+
+        # Search locations with robust path handling
         search_paths = [
-            # Compiled tools directory (preferred)
-            f"tools/{tool_with_suffix}",
-            f"./tools/{tool_with_suffix}",
-            # Current directory
-            tool_with_suffix,
-            f"./{tool_with_suffix}",
+            # Compiled tools directory (preferred) - use absolute paths
+            spritepal_dir / "tools" / tool_with_suffix,
+            # Alternative tools locations relative to spritepal
+            spritepal_dir.parent / "tools" / tool_with_suffix,  # exhal-master/tools/
             # Archive directory (from codebase structure)
-            f"../archive/obsolete_test_images/ultrathink/{tool_name}",
-            f"../archive/obsolete_test_images/ultrathink/{tool_with_suffix}",
-            # Parent directories
-            f"../{tool_name}",
-            f"../../{tool_name}",
-            # System PATH
-            tool_name,
+            spritepal_dir.parent / "archive" / "obsolete_test_images" / "ultrathink" / tool_name,
+            spritepal_dir.parent / "archive" / "obsolete_test_images" / "ultrathink" / tool_with_suffix,
+            # Working directory relative paths (for backward compatibility)
+            Path.cwd() / "tools" / tool_with_suffix,
+            Path.cwd() / tool_with_suffix,
+            # Parent directories from current working directory
+            Path.cwd().parent / tool_name,
+            Path.cwd().parent.parent / tool_name,
         ]
+
+        # Add system PATH as string for shutil.which
+        system_tool = shutil.which(tool_name)
+        if system_tool:
+            search_paths.append(Path(system_tool))
 
         logger.debug(f"Searching {len(search_paths)} locations for {tool_name}")
         for i, path in enumerate(search_paths, 1):
-            full_path = Path(path).resolve()
-            if full_path.is_file():
-                logger.info(f"Found {tool_name} at location {i}/{len(search_paths)}: {full_path}")
-                # Check if file is executable
-                if not os.access(full_path, os.X_OK):
-                    logger.warning(f"Found {tool_name} but it may not be executable: {full_path}")
-                return str(full_path)
-            logger.debug(f"Location {i}/{len(search_paths)}: Not found at {full_path}")
+            try:
+                # Convert to Path object if it's a string
+                path_obj = Path(path) if not isinstance(path, Path) else path
+                full_path = path_obj.resolve()
+
+                if full_path.is_file():
+                    logger.info(f"Found {tool_name} at location {i}/{len(search_paths)}: {full_path}")
+                    # Check if file is executable
+                    if not os.access(full_path, os.X_OK):
+                        logger.warning(f"Found {tool_name} but it may not be executable: {full_path}")
+                    return str(full_path)
+                logger.debug(f"Location {i}/{len(search_paths)}: Not found at {full_path}")
+            except Exception as e:
+                logger.debug(f"Location {i}/{len(search_paths)}: Error checking {path}: {e}")
 
         logger.error(f"Could not find {tool_name} executable in any search path")
         raise HALCompressionError(
@@ -891,8 +925,7 @@ class HALCompressor:
                 logger.info(f"Successfully decompressed {len(result.data)} bytes using pool")
                 # Save to output file if specified
                 if output_path:
-                    with open(output_path, "wb") as f:
-                        f.write(result.data)
+                    Path(output_path).write_bytes(result.data)
                 return result.data
             if not self._pool_failed:
                 # Pool operation failed, fall back to subprocess
@@ -922,8 +955,7 @@ class HALCompressor:
                 raise HALCompressionError(f"Decompression failed: {result.stderr}")
 
             # Read decompressed data
-            with open(output_path, "rb") as f:
-                data = f.read()
+            data = Path(output_path).read_bytes()
 
             logger.info(f"Successfully decompressed {len(data)} bytes from ROM offset 0x{offset:X}")
             return data
