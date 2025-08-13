@@ -204,7 +204,7 @@ class SpritePreviewWorker(BaseWorker):
                 _validate_sprite_integrity(tile_data, self.offset, bytes_per_tile)
 
             # Validate size against expected size if available
-            if expected_size:
+            if expected_size and expected_size > 0:
                 size_ratio = len(tile_data) / expected_size
                 if size_ratio < 0.5:
                     logger.warning(

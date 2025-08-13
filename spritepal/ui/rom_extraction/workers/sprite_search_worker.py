@@ -174,7 +174,7 @@ class SpriteSearchWorker(BaseWorker):
                     quality += 0.2
 
                 # Bonus for good compression ratio
-                if compressed_size > 0:
+                if compressed_size > 0 and tile_count > 0:
                     uncompressed_size = tile_count * 32  # 32 bytes per tile
                     ratio = compressed_size / uncompressed_size
                     if 0.1 <= ratio <= 0.8:
