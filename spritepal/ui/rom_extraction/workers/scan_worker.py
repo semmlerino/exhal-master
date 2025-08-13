@@ -1,7 +1,8 @@
 """Worker thread for scanning ROM for sprite offsets"""
 
+import os
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
@@ -27,11 +28,14 @@ class SpriteScanWorker(BaseWorker):
     # For compatibility with existing code that expects (current, total) progress
     progress_detailed = Signal(int, int)  # current, total
 
-    def __init__(self, rom_path: str, extractor, use_cache: bool = True, parent: "QObject | None" = None):
+    def __init__(self, rom_path: str, extractor, use_cache: bool = True,
+                 start_offset: Optional[int] = None, end_offset: Optional[int] = None, parent: "QObject | None" = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.extractor = extractor
         self.use_cache = use_cache
+        self.custom_start_offset = start_offset  # Custom scan range
+        self.custom_end_offset = end_offset      # Custom scan range
         self._last_save_progress = 0
         self._cancellation_token = threading.Event()
         self._parallel_finder = ParallelSpriteFinder(
@@ -43,13 +47,26 @@ class SpriteScanWorker(BaseWorker):
     @handle_worker_errors("sprite scanning", handle_interruption=True)
     def run(self):
         """Scan ROM for valid sprite offsets using parallel processing"""
-        self._cancellation_token.clear()
+        if self._cancellation_token:
+            self._cancellation_token.clear()
 
-        # Define scan range based on known Kirby sprite locations
-        # Scan both typical sprite ranges and where we found data in logs
-        # PAL ROM seems to have sprites at different locations
-        start_offset = 0xC0000  # Start earlier to catch 0xC0200, 0xC0300
-        end_offset = 0xF0000   # Extended range to cover all possibilities
+        # Use custom range if provided, otherwise use default range
+        if self.custom_start_offset is not None and self.custom_end_offset is not None:
+            # Use custom scan range
+            start_offset = self.custom_start_offset
+            end_offset = self.custom_end_offset
+            logger.info(f"Using custom scan range: 0x{start_offset:X} - 0x{end_offset:X}")
+        else:
+            # Get ROM size to scan the entire ROM by default
+            rom_size = os.path.getsize(self.rom_path)
+            
+            # Default to scanning the entire ROM with reasonable limits
+            # Start from 0x40000 to skip headers and early data
+            # End at ROM size or reasonable max (4MB for SNES ROMs)
+            start_offset = 0x40000  # Skip headers and early data
+            end_offset = min(rom_size, 0x400000)  # Cap at 4MB for safety
+            
+            logger.info(f"Scanning entire ROM: 0x{start_offset:X} to 0x{end_offset:X} (ROM size: 0x{rom_size:X})")
 
         found_sprites = {}  # Track unique sprites by offset
 
@@ -78,7 +95,9 @@ class SpriteScanWorker(BaseWorker):
                 cached_sprites = partial_cache.get("found_sprites", [])
                 found_count = len(cached_sprites)
                 last_offset = partial_cache.get("current_offset", start_offset)
-                progress_pct = int(((last_offset - original_start_offset) / (end_offset - original_start_offset)) * 100)
+                # Prevent division by zero
+                scan_range = end_offset - original_start_offset
+                progress_pct = int(((last_offset - original_start_offset) / scan_range) * 100) if scan_range > 0 else 0
 
                 self.cache_status.emit(f"Resuming from {progress_pct}% (found {found_count} sprites)")
                 logger.info(f"Resuming scan from offset 0x{last_offset:X}")
@@ -92,7 +111,9 @@ class SpriteScanWorker(BaseWorker):
                         self.sprite_found.emit(sprite_info)
 
                 # Update start position to continue from where we left off
-                start_offset = last_offset + 0x100
+                # Use the step_size from the parallel finder configuration instead of hardcoded 0x100
+                # This ensures we don't skip any offsets when resuming
+                start_offset = last_offset + self._parallel_finder.step_size
                 # Initialize last save progress to the current progress
                 self._last_save_progress = progress_pct
             else:
@@ -104,9 +125,18 @@ class SpriteScanWorker(BaseWorker):
         def progress_callback(current_progress, total_progress):
             # Map parallel finder progress to our progress signals
             total_range = end_offset - original_start_offset  # Use original for consistency
+
+            # Prevent division by zero and handle edge cases
+            if total_range <= 0:
+                logger.warning(f"Invalid scan range: {original_start_offset:X} to {end_offset:X}")
+                # Emit 100% progress since we can't scan anything
+                self.emit_progress(100, "Invalid scan range")
+                return
+
             current_range = (current_progress / 100) * total_range
-            current_step = int(current_range // 0x100)
-            total_steps = int(total_range // 0x100)
+            current_step = int(current_range // 0x100) if total_range >= 0x100 else int(current_range)
+            total_steps = max(1, int(total_range // 0x100)) if total_range >= 0x100 else max(1, int(total_range))
+
             # Emit both legacy and new progress signals
             self.progress_detailed.emit(current_step, total_steps)
             percent = int((current_progress / 100) * 100)  # Already a percentage

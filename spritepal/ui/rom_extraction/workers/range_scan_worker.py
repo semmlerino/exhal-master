@@ -84,7 +84,9 @@ class RangeScanWorker(BaseWorker):
                 # Resume from cached progress
                 self.found_sprites = cached_progress.get("found_sprites", [])
                 self.current_offset = cached_progress.get("current_offset", self.start_offset)
-                progress_pct = int(((self.current_offset - self.start_offset) / (self.end_offset - self.start_offset)) * 100)
+                # Prevent division by zero
+                scan_range = self.end_offset - self.start_offset
+                progress_pct = int(((self.current_offset - self.start_offset) / scan_range) * 100) if scan_range > 0 else 0
                 self.cache_status.emit(f"Resumed from cache: {progress_pct}% complete, {len(self.found_sprites)} sprites found")
                 logger.info(f"Resuming scan from cached progress: 0x{self.current_offset:06X}, {len(self.found_sprites)} sprites found")
             else:
