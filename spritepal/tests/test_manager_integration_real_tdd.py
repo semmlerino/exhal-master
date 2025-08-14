@@ -35,11 +35,6 @@ from PIL import Image
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     ManagerTestContext,
@@ -57,6 +52,23 @@ from core.managers.exceptions import ValidationError
 from core.managers.session_manager import SessionManager
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class TestManagerIntegrationTDD:
     """TDD tests for cross-manager integration with real components."""
 

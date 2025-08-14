@@ -1,3 +1,17 @@
+
+pytestmark = [
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 """
 Comprehensive integration tests for DialogBaseMigrationAdapter using real Qt widgets.
 

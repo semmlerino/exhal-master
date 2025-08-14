@@ -1,3 +1,12 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.rom_data,
+]
 """
 Test suite for the refactored FileValidator with separated concerns.
 

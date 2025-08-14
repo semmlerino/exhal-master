@@ -101,7 +101,8 @@ class ArrangementManager(QObject):
 
     def clear(self) -> None:
         """Clear all arranged rows"""
-        self._arranged_rows.clear()
+        if self._arranged_rows:
+            self._arranged_rows.clear()
         self.arrangement_cleared.emit()
         self.arrangement_changed.emit()
 

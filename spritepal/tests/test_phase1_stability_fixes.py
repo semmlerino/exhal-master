@@ -766,7 +766,16 @@ class TestMemoryStabilityPatterns:
 pytestmark = [
     pytest.mark.stability,
     pytest.mark.phase1_fixes,
-    pytest.mark.no_manager_setup
+    pytest.mark.no_manager_setup,
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.memory,
+    pytest.mark.performance,
+    pytest.mark.serial,
+    pytest.mark.slow,
+    pytest.mark.thread_safety,
+    pytest.mark.unit,
 ]
 
 

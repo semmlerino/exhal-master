@@ -6,7 +6,7 @@ UI/UX principles like progressive disclosure and clear visual hierarchy.
 """
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 
@@ -82,7 +82,8 @@ class TabbedWidgetBase(QWidget):
             return
 
         # Modern tab styling that matches SpritePal's dark theme
-        self._tab_widget.setStyleSheet(f"""
+        if self._tab_widget:
+            self._tab_widget.setStyleSheet(f"""
             QTabWidget::pane {{
                 border: 1px solid {COLOR_BORDER};
                 background-color: {COLOR_SURFACE};

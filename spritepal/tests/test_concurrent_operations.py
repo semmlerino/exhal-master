@@ -33,7 +33,15 @@ from utils.rom_cache import ROMCache, get_rom_cache
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
 

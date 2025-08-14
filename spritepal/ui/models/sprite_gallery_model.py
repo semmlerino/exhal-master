@@ -17,13 +17,13 @@ class SpriteGalleryModel(QAbstractListModel):
     """Model for sprite gallery using virtual item view."""
 
     # Custom roles for sprite data
-    OffsetRole = Qt.UserRole + 1
-    PixmapRole = Qt.UserRole + 2
-    InfoRole = Qt.UserRole + 3
-    SelectedRole = Qt.UserRole + 4
-    CompressedRole = Qt.UserRole + 5
-    SizeRole = Qt.UserRole + 6
-    TileCountRole = Qt.UserRole + 7
+    OffsetRole = Qt.ItemDataRole.UserRole + 1
+    PixmapRole = Qt.ItemDataRole.UserRole + 2
+    InfoRole = Qt.ItemDataRole.UserRole + 3
+    SelectedRole = Qt.ItemDataRole.UserRole + 4
+    CompressedRole = Qt.ItemDataRole.UserRole + 5
+    SizeRole = Qt.ItemDataRole.UserRole + 6
+    TileCountRole = Qt.ItemDataRole.UserRole + 7
 
     # Signals
     thumbnail_needed = Signal(int, int)  # offset, priority
@@ -158,8 +158,10 @@ class SpriteGalleryModel(QAbstractListModel):
 
         self._sprites = sprites
         self._filtered_sprites = sprites.copy()
-        self._thumbnails.clear()
-        self._selected_offsets.clear()
+        if self._thumbnails:
+            self._thumbnails.clear()
+        if self._selected_offsets:
+            self._selected_offsets.clear()
         self._use_filtering = False
 
         self.endResetModel()
@@ -267,7 +269,8 @@ class SpriteGalleryModel(QAbstractListModel):
         """Select all visible sprites."""
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
 
-        self._selected_offsets.clear()
+        if self._selected_offsets:
+            self._selected_offsets.clear()
         for sprite in sprites:
             self._selected_offsets.add(self._get_offset(sprite))
 
@@ -282,7 +285,8 @@ class SpriteGalleryModel(QAbstractListModel):
     def clear_selection(self):
         """Clear all selections."""
         had_selection = bool(self._selected_offsets)
-        self._selected_offsets.clear()
+        if self._selected_offsets:
+            self._selected_offsets.clear()
 
         if had_selection:
             sprites = self._filtered_sprites if self._use_filtering else self._sprites
@@ -351,7 +355,8 @@ class SpriteGalleryModel(QAbstractListModel):
 
     def clear_thumbnail_cache(self):
         """Clear the thumbnail cache."""
-        self._thumbnails.clear()
+        if self._thumbnails:
+            self._thumbnails.clear()
 
         # Notify view that all pixmaps need refresh
         if self._sprites:

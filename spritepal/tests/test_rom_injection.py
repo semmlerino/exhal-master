@@ -23,6 +23,9 @@ pytestmark = [
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
+    pytest.mark.mock_only,
+    pytest.mark.unit,
 ]
 
 

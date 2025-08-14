@@ -17,12 +17,6 @@ from unittest.mock import Mock, patch
 import pytest
 from PySide6.QtCore import (
 # Serial execution required: QApplication management, Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application,
-    pytest.mark.thread_safety
-]
 
 
     QEventLoop,
@@ -39,6 +33,17 @@ from core.workers.base import BaseWorker, handle_worker_errors
 from ui.common.worker_manager import WorkerManager
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety,
+    pytest.mark.headless,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+]
 class ThreadInfoCapture:
     """Helper to capture thread information during signal delivery"""
     

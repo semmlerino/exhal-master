@@ -41,11 +41,6 @@ from PIL import Image
 from tests.utils.file_helpers import create_temp_directory, create_test_files
 from utils.constants import (
 # Serial execution required: Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     BYTES_PER_TILE,
@@ -78,6 +73,20 @@ from utils.unified_error_handler import (
 )
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+]
 @pytest.fixture
 def temp_test_environment():
     """Create a temporary test environment with test files."""

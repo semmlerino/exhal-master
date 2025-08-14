@@ -4,10 +4,6 @@ import pytest
 from unittest.mock import Mock
 
 
-@pytest.mark.no_manager_setup
-class TestControllerMinimal:
-    """Minimal controller tests to verify basic functionality"""
-    
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -16,9 +12,14 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.rom_data,
     pytest.mark.unit,
+    pytest.mark.ci_safe,
 ]
 
 
+@pytest.mark.no_manager_setup
+class TestControllerMinimal:
+    """Minimal controller tests to verify basic functionality"""
+    
     def test_controller_import(self):
         """Test that controller module can be imported"""
         import core.controller

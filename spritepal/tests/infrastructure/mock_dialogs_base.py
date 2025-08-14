@@ -5,39 +5,46 @@ This module provides lightweight mock dialogs that prevent blocking operations
 while maintaining realistic Qt signal behavior.
 """
 
-from typing import Any, Optional
-
-from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QDialog
+import contextlib
+from typing import Any, Callable, Optional
 
 
-class MockDialogBase(QObject):
+class TestDialogBase:
     """
-    Base class for all mock dialogs.
+    Pure Python base class for all mock dialogs.
 
     Provides:
     - Non-blocking exec() method
-    - Real Qt signals
+    - Callback-based signals
     - Configurable return values
     - Automatic cleanup
     """
 
-    # Standard dialog signals
-    accepted = Signal()
-    rejected = Signal()
-    finished = Signal(int)
+    # Dialog result constants (replaces QDialog.DialogCode)
+    class DialogCode:
+        Accepted = 1
+        Rejected = 0
 
-    def __init__(self, parent: Optional[QObject] = None):
-        super().__init__(parent)
-        self.result_value = QDialog.DialogCode.Accepted
+    def __init__(self, parent: Optional[Any] = None):
+        self.parent_widget = parent
+        self.result_value = self.DialogCode.Accepted
         self._exec_called = False
         self._show_called = False
+
+        # Callback-based signal system
+        self.accepted_callbacks: list[Callable[[], None]] = []
+        self.rejected_callbacks: list[Callable[[], None]] = []
+        self.finished_callbacks: list[Callable[[int], None]] = []
 
     def exec(self) -> int:
         """Non-blocking exec replacement."""
         self._exec_called = True
-        # Emit finished signal asynchronously
-        QTimer.singleShot(0, lambda: self.finished.emit(self.result_value))
+        # Emit finished signal via callbacks
+        for callback in self.finished_callbacks:
+            try:
+                callback(self.result_value)
+            except Exception:
+                pass  # Don't crash on callback errors
         return self.result_value
 
     def show(self) -> None:
@@ -46,15 +53,27 @@ class MockDialogBase(QObject):
 
     def accept(self) -> None:
         """Accept the dialog."""
-        self.result_value = QDialog.DialogCode.Accepted
-        self.accepted.emit()
-        self.finished.emit(self.result_value)
+        self.result_value = self.DialogCode.Accepted
+        # Emit accepted signal via callbacks
+        for callback in self.accepted_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
+        # Emit finished signal via callbacks
+        for callback in self.finished_callbacks:
+            with contextlib.suppress(Exception):
+                callback(self.result_value)
 
     def reject(self) -> None:
         """Reject the dialog."""
-        self.result_value = QDialog.DialogCode.Rejected
-        self.rejected.emit()
-        self.finished.emit(self.result_value)
+        self.result_value = self.DialogCode.Rejected
+        # Emit rejected signal via callbacks
+        for callback in self.rejected_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
+        # Emit finished signal via callbacks
+        for callback in self.finished_callbacks:
+            with contextlib.suppress(Exception):
+                callback(self.result_value)
 
     def close(self) -> bool:
         """Close the dialog."""
@@ -64,11 +83,54 @@ class MockDialogBase(QObject):
         """Schedule deletion."""
         pass
 
+    # Signal-like interface for compatibility
+    @property
+    def accepted(self):
+        """Accepted signal interface."""
+        return CallbackSignal(self.accepted_callbacks)
 
-class MockMessageBox(MockDialogBase):
-    """Mock QMessageBox for testing."""
+    @property
+    def rejected(self):
+        """Rejected signal interface."""
+        return CallbackSignal(self.rejected_callbacks)
 
-    def __init__(self, parent: Optional[QObject] = None):
+    @property
+    def finished(self):
+        """Finished signal interface."""
+        return CallbackSignal(self.finished_callbacks)
+
+
+class CallbackSignal:
+    """Signal-like interface for callbacks."""
+
+    def __init__(self, callbacks: list[Callable]):
+        self.callbacks = callbacks
+
+    def connect(self, callback: Callable) -> None:
+        """Connect a callback."""
+        if callback not in self.callbacks:
+            self.callbacks.append(callback)
+
+    def disconnect(self, callback: Optional[Callable] = None) -> None:
+        """Disconnect callback(s)."""
+        if callback is None:
+            self.callbacks.clear()
+        elif callback in self.callbacks:
+            self.callbacks.remove(callback)
+
+    def emit(self, *args) -> None:
+        """Emit signal to all callbacks."""
+        for callback in self.callbacks:
+            try:
+                callback(*args)
+            except Exception:
+                pass  # Don't crash on callback errors
+
+
+class TestMessageBox(TestDialogBase):
+    """Test QMessageBox for testing."""
+
+    def __init__(self, parent: Optional[Any] = None):
         super().__init__(parent)
         self.text = ""
         self.informative_text = ""
@@ -79,29 +141,29 @@ class MockMessageBox(MockDialogBase):
     @staticmethod
     def information(parent: Any, title: str, text: str) -> int:
         """Mock information dialog."""
-        return QDialog.DialogCode.Accepted
+        return TestDialogBase.DialogCode.Accepted
 
     @staticmethod
     def warning(parent: Any, title: str, text: str) -> int:
         """Mock warning dialog."""
-        return QDialog.DialogCode.Accepted
+        return TestDialogBase.DialogCode.Accepted
 
     @staticmethod
     def critical(parent: Any, title: str, text: str) -> int:
         """Mock critical dialog."""
-        return QDialog.DialogCode.Accepted
+        return TestDialogBase.DialogCode.Accepted
 
     @staticmethod
     def question(parent: Any, title: str, text: str,
                  buttons: Any = None, defaultButton: Any = None) -> int:
         """Mock question dialog."""
-        return QDialog.DialogCode.Accepted
+        return TestDialogBase.DialogCode.Accepted
 
 
-class MockFileDialog(MockDialogBase):
-    """Mock QFileDialog for testing."""
+class TestFileDialog(TestDialogBase):
+    """Test QFileDialog for testing."""
 
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, parent: Optional[Any] = None):
         super().__init__(parent)
         self.selected_files = []
         self.selected_directory = ""
@@ -125,8 +187,8 @@ class MockFileDialog(MockDialogBase):
         return "/test/directory"
 
 
-class MockInputDialog(MockDialogBase):
-    """Mock QInputDialog for testing."""
+class TestInputDialog(TestDialogBase):
+    """Test QInputDialog for testing."""
 
     @staticmethod
     def getText(parent: Any, title: str, label: str,
@@ -149,14 +211,13 @@ class MockInputDialog(MockDialogBase):
         return 3.14, True
 
 
-class MockProgressDialog(MockDialogBase):
-    """Mock QProgressDialog for testing."""
+class TestProgressDialog(TestDialogBase):
+    """Test QProgressDialog for testing."""
 
-    # Progress dialog specific signals
-    canceled = Signal()
-
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, parent: Optional[Any] = None):
         super().__init__(parent)
+        # Progress dialog specific callbacks
+        self.canceled_callbacks: list[Callable[[], None]] = []
         self.value = 0
         self.minimum = 0
         self.maximum = 100
@@ -178,10 +239,18 @@ class MockProgressDialog(MockDialogBase):
     def cancel(self) -> None:
         """Cancel the dialog."""
         self._was_canceled = True
-        self.canceled.emit()
+        # Emit canceled signal via callbacks
+        for callback in self.canceled_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
+
+    @property
+    def canceled(self):
+        """Canceled signal interface."""
+        return CallbackSignal(self.canceled_callbacks)
 
 
-def create_mock_dialog(dialog_type: str, **kwargs) -> MockDialogBase:
+def create_mock_dialog(dialog_type: str, **kwargs) -> TestDialogBase:
     """
     Factory function to create mock dialogs.
 
@@ -193,13 +262,13 @@ def create_mock_dialog(dialog_type: str, **kwargs) -> MockDialogBase:
         Mock dialog instance
     """
     dialog_map = {
-        'message': MockMessageBox,
-        'file': MockFileDialog,
-        'input': MockInputDialog,
-        'progress': MockProgressDialog,
+        'message': TestMessageBox,
+        'file': TestFileDialog,
+        'input': TestInputDialog,
+        'progress': TestProgressDialog,
     }
 
-    dialog_class = dialog_map.get(dialog_type, MockDialogBase)
+    dialog_class = dialog_map.get(dialog_type, TestDialogBase)
     return dialog_class(**kwargs)
 
 
@@ -211,9 +280,12 @@ def patch_all_dialogs(monkeypatch):
     Args:
         monkeypatch: pytest monkeypatch fixture
     """
-    import PySide6.QtWidgets as widgets
+    try:
+        import PySide6.QtWidgets as widgets
+    except ImportError:
+        return  # Skip patching if Qt not available
 
-    monkeypatch.setattr(widgets, 'QMessageBox', MockMessageBox)
-    monkeypatch.setattr(widgets, 'QFileDialog', MockFileDialog)
-    monkeypatch.setattr(widgets, 'QInputDialog', MockInputDialog)
-    monkeypatch.setattr(widgets, 'QProgressDialog', MockProgressDialog)
+    monkeypatch.setattr(widgets, 'QMessageBox', TestMessageBox)
+    monkeypatch.setattr(widgets, 'QFileDialog', TestFileDialog)
+    monkeypatch.setattr(widgets, 'QInputDialog', TestInputDialog)
+    monkeypatch.setattr(widgets, 'QProgressDialog', TestProgressDialog)

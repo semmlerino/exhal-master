@@ -22,10 +22,6 @@ from PySide6.QtGui import QPixmap
 
 from core.preview_orchestrator import (
 # Serial execution required: Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial
-]
 
 
     PreviewOrchestrator, 
@@ -40,6 +36,19 @@ pytestmark = [
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.cache,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class MockROMCache:
     """Mock ROM cache for testing"""
     def __init__(self):

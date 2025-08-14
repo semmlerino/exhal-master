@@ -13,16 +13,6 @@ from PIL import Image
 from PySide6.QtGui import QPixmap
 from utils.preview_generator import (
 # Test characteristics: Timer usage
-pytestmark = [
-    pytest.mark.benchmark,
-    pytest.mark.headless,
-    pytest.mark.performance,
-    pytest.mark.qt_mock,
-    pytest.mark.rom_data,
-    pytest.mark.serial,
-    pytest.mark.widget,
-    pytest.mark.worker_threads,
-]
 
 
     LRUCache,
@@ -36,6 +26,21 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.headless,
+    pytest.mark.performance,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.widget,
+    pytest.mark.worker_threads,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class TestLRUCache:
     """Test the LRU cache implementation."""
 

@@ -96,7 +96,8 @@ class SpritePreviewWidget(QWidget):
 
         # Essential info (always visible) - single line for collapsed state
         self.essential_info_label = QLabel("No sprite loaded")
-        self.essential_info_label.setStyleSheet(f"""
+        if self.essential_info_label:
+            self.essential_info_label.setStyleSheet(f"""
             QLabel {{
                 color: {COLOR_MUTED};
                 font-size: 11px;
@@ -134,7 +135,8 @@ class SpritePreviewWidget(QWidget):
 
         # Detailed info label (only visible when expanded)
         self.info_label = QLabel("No sprite loaded")
-        self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
+        if self.info_label:
+            self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
         self.info_label.setWordWrap(True)
 
         # Add to collapsible group
@@ -206,19 +208,23 @@ class SpritePreviewWidget(QWidget):
                 self._load_indexed_sprite(img)
 
             # Update info
-            self.info_label.setText(
+            if self.info_label:
+                self.info_label.setText(
                 f"Size: {img.size[0]}x{img.size[1]} | Mode: {img.mode}"
             )
 
         except (OSError, PermissionError) as e:
             logger.exception("File I/O error loading sprite preview")
-            self.info_label.setText(f"Cannot access sprite file: {e}")
+            if self.info_label:
+                self.info_label.setText(f"Cannot access sprite file: {e}")
         except (ValueError, TypeError) as e:
             logger.exception("Image format error loading sprite preview")
-            self.info_label.setText(f"Invalid sprite format: {e}")
+            if self.info_label:
+                self.info_label.setText(f"Invalid sprite format: {e}")
         except Exception as e:
             logger.exception("Failed to load sprite preview")
-            self.info_label.setText(f"Error loading sprite: {e}")
+            if self.info_label:
+                self.info_label.setText(f"Error loading sprite: {e}")
 
     def _load_grayscale_sprite(
         self, img: Image.Image, sprite_name: str | None = None
@@ -256,15 +262,19 @@ class SpritePreviewWidget(QWidget):
                 self.palettes = palette_list
 
                 # Update combo box
-                self.palette_combo.clear()
+                if self.palette_combo:
+                    self.palette_combo.clear()
                 # Add grayscale as first option
-                self.palette_combo.addItem("Grayscale", None)
+                if self.palette_combo:
+                    self.palette_combo.addItem("Grayscale", None)
                 # Add color palettes
                 for idx, _colors in default_palettes.items():
-                    self.palette_combo.addItem(f"Palette {idx}", idx)
+                    if self.palette_combo:
+                        self.palette_combo.addItem(f"Palette {idx}", idx)
 
                 # Select grayscale by default (index 0)
-                self.palette_combo.setCurrentIndex(0)
+                if self.palette_combo:
+                    self.palette_combo.setCurrentIndex(0)
                 self.current_palette_index = None  # Grayscale
 
         # Store grayscale data for palette swapping
@@ -311,7 +321,8 @@ class SpritePreviewWidget(QWidget):
         # Scale for preview - adaptive sizing for space efficiency
         scaled = self._scale_pixmap_efficiently(pixmap)
 
-        self.preview_label.setPixmap(scaled)
+        if self.preview_label:
+            self.preview_label.setPixmap(scaled)
         # SPACE EFFICIENCY: When content is loaded, use borderless style
         self._apply_content_style()
         self.sprite_pixmap = pixmap
@@ -320,9 +331,12 @@ class SpritePreviewWidget(QWidget):
         self._guarantee_pixmap_display()
 
         # No palette selection for indexed sprites
-        self.palette_combo.setEnabled(False)
-        self.palette_combo.clear()
-        self.palette_combo.addItem("Built-in Palette")
+        if self.palette_combo:
+            self.palette_combo.setEnabled(False)
+        if self.palette_combo:
+            self.palette_combo.clear()
+        if self.palette_combo:
+            self.palette_combo.addItem("Built-in Palette")
 
     def _update_preview_with_palette(self, grayscale_img: Image.Image) -> None:
         """Update preview by applying selected palette to grayscale image"""
@@ -428,7 +442,8 @@ class SpritePreviewWidget(QWidget):
                 logger.debug(f"  - current pixmap: {self.preview_label.pixmap()}")
                 logger.debug(f"  - current text: '{self.preview_label.text()}'")
 
-            self.preview_label.setPixmap(scaled)
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled)
             # SPACE EFFICIENCY: When content is loaded, use borderless style
             self._apply_content_style()
             self.sprite_pixmap = pixmap
@@ -509,8 +524,10 @@ class SpritePreviewWidget(QWidget):
                 logger.debug("[SPRITE_DISPLAY] No tile data")
                 # Don't clear to prevent flashing - keep last valid preview
                 # Just update the info labels
-                self.essential_info_label.setText("No data")
-                self.info_label.setText("No sprite data at this offset")
+                if self.essential_info_label:
+                    self.essential_info_label.setText("No data")
+                if self.info_label:
+                    self.info_label.setText("No sprite data at this offset")
                 return
 
             logger.debug(f"[SPRITE_DISPLAY] Tile data validation: {len(tile_data)} bytes received")
@@ -550,8 +567,10 @@ class SpritePreviewWidget(QWidget):
             if extra_bytes > bytes_per_tile // 2:  # More than half a tile of extra data
                 logger.warning(f"[SPRITE_DISPLAY] Possible corrupted data: {extra_bytes} extra bytes (>{bytes_per_tile//2})")
                 # Don't clear() - try to display what we can to prevent flashing
-                self.essential_info_label.setText("Warning: Partial data")
-                self.info_label.setText(
+                if self.essential_info_label:
+                    self.essential_info_label.setText("Warning: Partial data")
+                if self.info_label:
+                    self.info_label.setText(
                     "Unable to display sprite - data appears corrupted"
                 )
                 return
@@ -580,8 +599,10 @@ class SpritePreviewWidget(QWidget):
             if num_tiles == 0:
                 logger.warning("[SPRITE_DISPLAY] No valid tiles found")
                 # Don't call clear() to prevent flashing - just update labels
-                self.essential_info_label.setText("No tiles")
-                self.info_label.setText("No valid sprite tiles found")
+                if self.essential_info_label:
+                    self.essential_info_label.setText("No tiles")
+                if self.info_label:
+                    self.info_label.setText("No valid sprite tiles found")
                 return
 
             # Track actual pixel data for debugging
@@ -657,7 +678,8 @@ class SpritePreviewWidget(QWidget):
             info_text = f"Size: {width}x{height} | Tiles: {num_tiles} | Pixels: {non_zero_pixels}/{pixel_count}"
             if extra_bytes > 0:
                 info_text += f" | Warning: {extra_bytes} extra bytes"
-            self.info_label.setText(info_text)
+            if self.info_label:
+                self.info_label.setText(info_text)
 
             # Final verification that pixmap was created and set
             self._verify_pixmap_display()
@@ -671,7 +693,8 @@ class SpritePreviewWidget(QWidget):
         except Exception as e:
             logger.exception("Failed to load 4bpp sprite")
             self._show_error_state("Load error")
-            self.info_label.setText(f"Error loading sprite: {e}")
+            if self.info_label:
+                self.info_label.setText(f"Error loading sprite: {e}")
 
     # _load_sprite_from_4bpp_main_thread method removed - no longer needed
     # Signals already ensure main thread execution with QueuedConnection
@@ -683,25 +706,31 @@ class SpritePreviewWidget(QWidget):
         # This prevents unnecessary flashing during rapid updates
         if self.sprite_pixmap is not None or self.preview_label.pixmap() is not None:
             self.preview_label.clear()
-            self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
+            if self.preview_label:
+                self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
             # Reset to minimum size for visibility when empty
             self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
 
             # Apply visible empty state style
             self._apply_empty_state_style()
 
-            self.palette_combo.clear()
-            self.palette_combo.setEnabled(False)
+            if self.palette_combo:
+                self.palette_combo.clear()
+            if self.palette_combo:
+                self.palette_combo.setEnabled(False)
             # Reset both info labels to cleared state
-            self.essential_info_label.setText("No sprite loaded")
-            self.info_label.setText("No sprite loaded")
+            if self.essential_info_label:
+                self.essential_info_label.setText("No sprite loaded")
+            if self.info_label:
+                self.info_label.setText("No sprite loaded")
             self.sprite_pixmap = None
             self.sprite_data = None
             self.palettes = []
 
     def _apply_empty_state_style(self) -> None:
         """Apply dark theme styling for empty state that's clearly visible"""
-        self.preview_label.setStyleSheet("""
+        if self.preview_label:
+            self.preview_label.setStyleSheet("""
             QLabel {
                 border: 2px dashed #666;
                 background-color: #1e1e1e;
@@ -717,7 +746,8 @@ class SpritePreviewWidget(QWidget):
     def _apply_content_style(self) -> None:
         """Apply style for actual content display with checkerboard background"""
         # Use dark background for better sprite visibility on dark theme
-        self.preview_label.setStyleSheet("""
+        if self.preview_label:
+            self.preview_label.setStyleSheet("""
             QLabel {
                 background-color: #1e1e1e;
                 border: 1px solid #555;
@@ -751,7 +781,8 @@ class SpritePreviewWidget(QWidget):
             logger.debug(f"[SPRITE_DISPLAY] Scaled pixmap: {scaled_pixmap.width()}x{scaled_pixmap.height()}")
 
             # Update the preview label
-            self.preview_label.setPixmap(scaled_pixmap)
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled_pixmap)
             logger.debug("[SPRITE_DISPLAY] Pixmap set on label")
 
             # Apply content styling with checkerboard background
@@ -763,14 +794,19 @@ class SpritePreviewWidget(QWidget):
             # Update sprite info with dimensions
             width = pixmap.width()
             height = pixmap.height()
-            self.essential_info_label.setText(f"{width}x{height} - Direct")
-            self.info_label.setText(f"Size: {width}x{height} | Source: QPixmap")
+            if self.essential_info_label:
+                self.essential_info_label.setText(f"{width}x{height} - Direct")
+            if self.info_label:
+                self.info_label.setText(f"Size: {width}x{height} | Source: QPixmap")
 
             # Disable palette combo for direct pixmap display
             # (since pixmaps are already rendered with colors)
-            self.palette_combo.clear()
-            self.palette_combo.setEnabled(False)
-            self.palette_combo.addItem("Direct Display")
+            if self.palette_combo:
+                self.palette_combo.clear()
+            if self.palette_combo:
+                self.palette_combo.setEnabled(False)
+            if self.palette_combo:
+                self.palette_combo.addItem("Direct Display")
 
             # Clear sprite data since this is a direct pixmap
             self.sprite_data = None
@@ -779,8 +815,10 @@ class SpritePreviewWidget(QWidget):
         except Exception as e:
             logger.exception("Failed to set sprite pixmap")
             # Don't clear on error - keep previous preview visible
-            self.essential_info_label.setText("Display error")
-            self.info_label.setText(f"Error displaying sprite: {e}")
+            if self.essential_info_label:
+                self.essential_info_label.setText("Display error")
+            if self.info_label:
+                self.info_label.setText(f"Error displaying sprite: {e}")
 
     def get_current_pixmap(self) -> QPixmap | None:
         """Get the current preview pixmap"""
@@ -1088,17 +1126,22 @@ class SpritePreviewWidget(QWidget):
         scaled = self._scale_pixmap_efficiently(pixmap)
 
         # Update display
-        self.preview_label.setPixmap(scaled)
-        self.info_label.setText("No sprite data at this offset (all zeros)")
+        if self.preview_label:
+            self.preview_label.setPixmap(scaled)
+        if self.info_label:
+            self.info_label.setText("No sprite data at this offset (all zeros)")
         self.info_label.setVisible(True)
 
         # Ensure it's displayed
         self._guarantee_pixmap_display()
 
         # Disable palette selection for empty data
-        self.palette_combo.setEnabled(False)
-        self.palette_combo.clear()
-        self.palette_combo.addItem("No Data")
+        if self.palette_combo:
+            self.palette_combo.setEnabled(False)
+        if self.palette_combo:
+            self.palette_combo.clear()
+        if self.palette_combo:
+            self.palette_combo.addItem("No Data")
 
     def _force_visibility(self) -> None:
         """Force the preview widget and its contents to be visible."""
@@ -1124,7 +1167,8 @@ class SpritePreviewWidget(QWidget):
         """Show visual loading state for immediate user feedback."""
         if self.preview_label is not None:
             self.preview_label.setText("Loading...")
-            self.preview_label.setStyleSheet("""
+            if self.preview_label:
+                self.preview_label.setStyleSheet("""
                 QLabel {
                     border: 1px solid #87ceeb;
                     background-color: #2d2d30;
@@ -1143,7 +1187,8 @@ class SpritePreviewWidget(QWidget):
         """Show visual error state with clear feedback."""
         if self.preview_label is not None:
             self.preview_label.setText(f"Error: {error_type}")
-            self.preview_label.setStyleSheet("""
+            if self.preview_label:
+                self.preview_label.setStyleSheet("""
                 QLabel {
                     border: 1px solid #ff6347;
                     background-color: #2d2d30;

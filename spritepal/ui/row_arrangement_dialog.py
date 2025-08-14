@@ -202,7 +202,8 @@ class RowArrangementDialog(SplitterDialog):
         scroll_area = QScrollArea(self)
         self.preview_label: QLabel = QLabel(self)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setStyleSheet(
+        if self.preview_label:
+            self.preview_label.setStyleSheet(
             "background-color: #2d2d2d; border: 1px solid #555;"
         )
         scroll_area.setWidget(self.preview_label)
@@ -217,14 +218,16 @@ class RowArrangementDialog(SplitterDialog):
 
         # Add custom buttons using SplitterDialog's button system
         self.export_btn: QPushButton = self.add_button("Export Arranged", callback=self._export_arranged)
-        self.export_btn.setEnabled(False)
+        if self.export_btn:
+            self.export_btn.setEnabled(False)
 
         # Initial preview
         self._update_preview()
 
     def _populate_available_rows(self):
         """Populate the available rows list"""
-        self.available_list.clear()
+        if self.available_list:
+            self.available_list.clear()
 
         for row_data in self.tile_rows:
             row_index = row_data["index"]
@@ -244,12 +247,14 @@ class RowArrangementDialog(SplitterDialog):
             )
 
             item.setSizeHint(thumbnail.sizeHint())
-            self.available_list.addItem(item)
+            if self.available_list:
+                self.available_list.addItem(item)
             self.available_list.setItemWidget(item, thumbnail)
 
     def _populate_arranged_rows(self):
         """Populate the arranged rows list"""
-        self.arranged_list.clear()
+        if self.arranged_list:
+            self.arranged_list.clear()
 
         for row_index in self.arrangement_manager.get_arranged_indices():
             if row_index < len(self.tile_rows):
@@ -270,7 +275,8 @@ class RowArrangementDialog(SplitterDialog):
                 )
 
                 item.setSizeHint(thumbnail.sizeHint())
-                self.arranged_list.addItem(item)
+                if self.arranged_list:
+                    self.arranged_list.addItem(item)
                 self.arranged_list.setItemWidget(item, thumbnail)
 
     def _on_available_selection_changed(self):
@@ -347,7 +353,8 @@ class RowArrangementDialog(SplitterDialog):
 
     def _clear_arrangement(self):
         """Clear all arranged rows"""
-        self.arrangement_manager.clear()
+        if self.arrangement_manager:
+            self.arrangement_manager.clear()
         self._refresh_ui()
         self._update_status("Cleared all arranged rows")
 
@@ -372,7 +379,8 @@ class RowArrangementDialog(SplitterDialog):
         self._update_panel_titles()
 
         # Update export button state
-        self.export_btn.setEnabled(self.arrangement_manager.get_arranged_count() > 0)
+        if self.export_btn:
+            self.export_btn.setEnabled(self.arrangement_manager.get_arranged_count() > 0)
 
     def _update_preview(self):
         """Update the preview with current arrangement"""
@@ -422,7 +430,8 @@ class RowArrangementDialog(SplitterDialog):
                 Qt.TransformationMode.FastTransformation,
             )
 
-            self.preview_label.setPixmap(scaled_pixmap)
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled_pixmap)
 
     def _show_original_preview(self):
         """Show original sprite sheet in preview"""
@@ -474,7 +483,8 @@ class RowArrangementDialog(SplitterDialog):
                 Qt.TransformationMode.FastTransformation,
             )
 
-            self.preview_label.setPixmap(scaled_pixmap)
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled_pixmap)
 
     def _create_arranged_image(self):
         """Create image with arranged rows"""

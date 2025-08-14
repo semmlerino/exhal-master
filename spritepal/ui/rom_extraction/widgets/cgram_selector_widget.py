@@ -88,8 +88,10 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
 
     def set_cgram_path(self, path: str):
         """Set the CGRAM path"""
-        self.cgram_path_edit.setText(path)
+        if self.cgram_path_edit:
+            self.cgram_path_edit.setText(path)
 
     def clear(self):
         """Clear the CGRAM path"""
-        self.cgram_path_edit.clear()
+        if self.cgram_path_edit:
+            self.cgram_path_edit.clear()

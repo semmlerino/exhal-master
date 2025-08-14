@@ -1,3 +1,11 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.unit,
+]
 """
 Integration test for manager initialization regression.
 

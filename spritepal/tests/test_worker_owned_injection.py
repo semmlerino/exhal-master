@@ -22,11 +22,6 @@ from PySide6.QtWidgets import QApplication
 from core.managers.factory import StandardManagerFactory
 from core.workers.injection import (
 # Serial execution required: QApplication management
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application
-]
 
 
     VRAMInjectionParams,
@@ -36,6 +31,17 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.headless,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.stability,
+]
 class TestWorkerOwnedInjectionPattern:
     """Test the worker-owned injection manager pattern."""
 

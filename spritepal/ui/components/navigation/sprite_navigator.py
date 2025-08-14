@@ -79,7 +79,8 @@ class SpriteThumbnail(QWidget):
         """)
 
         self.offset_label = QLabel(f"0x{offset:06X}")
-        self.offset_label.setStyleSheet("font-size: 10px; color: #888;")
+        if self.offset_label:
+            self.offset_label.setStyleSheet("font-size: 10px; color: #888;")
         self.offset_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Layout
@@ -104,10 +105,12 @@ class SpriteThumbnail(QWidget):
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
-            self.preview_label.setPixmap(scaled)
-        else:
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled)
+        elif self.preview_label:
             self.preview_label.setPixmap(pixmap)
-        self.offset_label.setText(f"0x{offset:06X}")
+        if self.offset_label:
+            self.offset_label.setText(f"0x{offset:06X}")
 
         # Update border color based on quality
         if quality > 0.8:
@@ -117,7 +120,8 @@ class SpriteThumbnail(QWidget):
         else:
             border_color = "#F44336"  # Red for low quality
 
-        self.preview_label.setStyleSheet(f"""
+        if self.preview_label:
+            self.preview_label.setStyleSheet(f"""
             QLabel {{
                 background: #2b2b2b;
                 border: 2px solid {border_color};
@@ -132,9 +136,12 @@ class SpriteThumbnail(QWidget):
 
     def clear(self):
         """Clear thumbnail display"""
-        self.preview_label.clear()
-        self.preview_label.setText("Empty")
-        self.preview_label.setStyleSheet("""
+        if self.preview_label:
+            self.preview_label.clear()
+        if self.preview_label:
+            self.preview_label.setText("Empty")
+        if self.preview_label:
+            self.preview_label.setStyleSheet("""
             QLabel {
                 background: #1b1b1b;
                 border: 2px solid #333;
@@ -143,7 +150,8 @@ class SpriteThumbnail(QWidget):
                 color: #555;
             }
         """)
-        self.offset_label.setText("--")
+        if self.offset_label:
+            self.offset_label.setText("--")
 
 
 class SpriteNavigator(QWidget):
@@ -245,7 +253,8 @@ class SpriteNavigator(QWidget):
         position_layout.setContentsMargins(0, 0, 0, 0)
 
         self.position_label = QLabel("0x200000")
-        self.position_label.setStyleSheet("""
+        if self.position_label:
+            self.position_label.setStyleSheet("""
             font-family: monospace;
             font-size: 14px;
             font-weight: bold;
@@ -254,7 +263,8 @@ class SpriteNavigator(QWidget):
         self.position_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.context_label = QLabel("High ROM - Common sprite area")
-        self.context_label.setStyleSheet("font-size: 10px; color: #888;")
+        if self.context_label:
+            self.context_label.setStyleSheet("font-size: 10px; color: #888;")
         self.context_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
         position_layout.addWidget(self.position_label)
@@ -552,7 +562,8 @@ class SpriteNavigator(QWidget):
                         break
 
             context += f" ({mb_position:.1f}MB)"
-            self.context_label.setText(context)
+            if self.context_label:
+                self.context_label.setText(context)
 
     def _update_rom_map(self):
         """Update ROM map visualization"""
@@ -707,7 +718,8 @@ class SpriteNavigator(QWidget):
             self.rom_map.set_rom_size(rom_size)
 
         # Clear caches
-        self.thumbnail_cache.clear()
+        if self.thumbnail_cache:
+            self.thumbnail_cache.clear()
 
         # Load sprite data from cache if available
         self._load_cached_sprites()
@@ -847,7 +859,9 @@ class SpriteNavigator(QWidget):
         # Clean up all preview workers
         for worker in self.preview_workers:
             WorkerManager.cleanup_worker(worker)
-        self.preview_workers.clear()
+        if self.preview_workers:
+            self.preview_workers.clear()
 
         # Clear caches
-        self.thumbnail_cache.clear()
+        if self.thumbnail_cache:
+            self.thumbnail_cache.clear()

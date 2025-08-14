@@ -176,7 +176,8 @@ class StatusBarManager(QObject):
             if self._status_bar:
                 self._status_bar.removeWidget(widget)
             widget.deleteLater()
-        self._permanent_widgets.clear()
+        if self._permanent_widgets:
+            self._permanent_widgets.clear()
 
         # Clear status bar reference
         self._status_bar = None

@@ -21,7 +21,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 
@@ -372,7 +372,8 @@ class UnifiedManualOffsetDialog(DialogBase):
     def _setup_custom_buttons(self):
         """Set up custom dialog buttons with improved layout."""
         # Clear default buttons and create a more organized button layout
-        self.button_box.clear()
+        if self.button_box:
+            self.button_box.clear()
 
         # Primary action buttons (left side)
         self.apply_btn = QPushButton("Apply Offset")
@@ -400,7 +401,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         self.button_box.addButton(close_btn, self.button_box.ButtonRole.RejectRole)
 
         # Apply consistent spacing to button box
-        self.button_box.setStyleSheet("""
+        if self.button_box:
+            self.button_box.setStyleSheet("""
             QDialogButtonBox {
                 padding: 8px;
                 spacing: 8px;
@@ -712,7 +714,8 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # Reset cache stats
         self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
-        self._adjacent_offsets_cache.clear()
+        if self._adjacent_offsets_cache:
+            self._adjacent_offsets_cache.clear()
 
     def cleanup(self):
         """Clean up resources to prevent memory leaks."""
@@ -755,10 +758,12 @@ class UnifiedManualOffsetDialog(DialogBase):
         self._manual_offset_dialog = None
 
         # Clear cache references
-        self._adjacent_offsets_cache.clear()
+        if self._adjacent_offsets_cache:
+            self._adjacent_offsets_cache.clear()
 
         # Clear bookmarks to prevent reference leaks
-        self.bookmarks.clear()
+        if self.bookmarks:
+            self.bookmarks.clear()
 
         # Clear preview pixmaps
         if self.preview_widget is not None:
@@ -1095,7 +1100,8 @@ class UnifiedManualOffsetDialog(DialogBase):
         try:
             # Reset cache stats for new ROM
             self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
-            self._adjacent_offsets_cache.clear()
+            if self._adjacent_offsets_cache:
+                self._adjacent_offsets_cache.clear()
 
             # Log cache status
             if self.rom_cache.cache_enabled:
@@ -1321,7 +1327,8 @@ Cache Misses: {session_stats['misses']}"""
 
                 # Reset session stats
                 self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
-                self._adjacent_offsets_cache.clear()
+                if self._adjacent_offsets_cache:
+                    self._adjacent_offsets_cache.clear()
 
                 # Update status display
                 self._update_cache_status_display()
@@ -1517,7 +1524,8 @@ Cache Misses: {session_stats['misses']}"""
         if self.bookmarks_menu is None:
             return
 
-        self.bookmarks_menu.clear()
+        if self.bookmarks_menu:
+            self.bookmarks_menu.clear()
 
         if not self.bookmarks:
             action = self.bookmarks_menu.addAction("No bookmarks")
@@ -1538,7 +1546,8 @@ Cache Misses: {session_stats['misses']}"""
 
     def _clear_bookmarks(self):
         """Clear all bookmarks"""
-        self.bookmarks.clear()
+        if self.bookmarks:
+            self.bookmarks.clear()
         self._update_bookmarks_menu()
         self._update_status("Bookmarks cleared")
 

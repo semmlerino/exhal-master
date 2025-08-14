@@ -34,6 +34,61 @@ from tests.infrastructure.qt_real_testing import (
 from ui.workers.batch_thumbnail_worker import BatchThumbnailWorker, ThumbnailRequest
 
 
+class WorkerThreadWrapper:
+    """Wrapper to make BatchThumbnailWorker behave like a QThread for tests."""
+    
+    def __init__(self, worker: BatchThumbnailWorker):
+        self.worker = worker
+        self.thread = QThread()
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        
+        # Forward worker attributes
+        self.rom_path = worker.rom_path
+        self.rom_extractor = worker.rom_extractor
+        self._pending_count = worker._pending_count
+        self._completed_count = worker._completed_count
+        
+        # Forward signals
+        self.thumbnail_ready = worker.thumbnail_ready
+        self.progress = worker.progress
+        self.error = worker.error
+        self.finished = worker.finished
+        
+    def start(self):
+        """Start the worker thread."""
+        self.thread.start()
+        
+    def stop(self):
+        """Stop the worker."""
+        self.worker.stop()
+        
+    def wait(self, timeout: int = 5000) -> bool:
+        """Wait for thread to finish."""
+        return self.thread.wait(timeout)
+        
+    def isRunning(self) -> bool:
+        """Check if thread is running."""
+        return self.thread.isRunning()
+        
+    def cleanup(self):
+        """Clean up worker and thread."""
+        if hasattr(self.worker, 'cleanup'):
+            self.worker.cleanup()
+        if self.thread.isRunning():
+            self.worker.stop()
+            self.thread.wait(1000)
+        
+    def queue_request(self, *args, **kwargs):
+        """Forward to worker."""
+        return self.worker.queue_request(*args, **kwargs)
+        
+    def __getattr__(self, name):
+        """Forward any other attribute access to the worker."""
+        return getattr(self.worker, name)
+
+
 @pytest.fixture
 def test_rom_file(tmp_path) -> str:
     """Create a test ROM file with some sprite data."""
@@ -87,21 +142,20 @@ class TestBatchThumbnailWorkerIntegration(QtTestCase):
     def setup_method(self):
         """Set up for each test method."""
         super().setup_method()
-        self.workers: list[BatchThumbnailWorker] = []
+        self.workers: list[WorkerThreadWrapper] = []
     
     def teardown_method(self):
         """Clean up after each test."""
         # Clean up all workers
         for worker in self.workers:
-            if worker.isRunning():
-                worker.stop()
-                worker.wait(3000)
+            worker.cleanup()
         self.workers.clear()
         super().teardown_method()
     
-    def create_worker(self, rom_path: str, rom_extractor=None) -> BatchThumbnailWorker:
-        """Create a worker and track it for cleanup."""
-        worker = BatchThumbnailWorker(rom_path, rom_extractor)
+    def create_worker(self, rom_path: str, rom_extractor=None) -> WorkerThreadWrapper:
+        """Create a worker with thread wrapper and track it for cleanup."""
+        base_worker = BatchThumbnailWorker(rom_path, rom_extractor)
+        worker = WorkerThreadWrapper(base_worker)
         self.workers.append(worker)
         return worker
     
@@ -113,7 +167,7 @@ class TestBatchThumbnailWorkerIntegration(QtTestCase):
             # Worker should be initialized properly
             assert worker.rom_path == test_rom_file
             assert worker.rom_extractor is mock_rom_extractor
-            assert not worker.isRunning()
+            assert not worker.isRunning()  # Now works with wrapper
             assert worker._pending_count == 0
             assert worker._completed_count == 0
             

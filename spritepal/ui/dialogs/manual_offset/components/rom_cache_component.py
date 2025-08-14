@@ -36,7 +36,8 @@ class ROMCacheComponent:
 
         # Reset cache stats
         self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}
-        self._adjacent_offsets_cache.clear()
+        if self._adjacent_offsets_cache:
+            self._adjacent_offsets_cache.clear()
 
         if self.rom_cache and self.rom_cache.cache_enabled:
             logger.debug("ROM cache is enabled")
@@ -81,5 +82,6 @@ class ROMCacheComponent:
     def cleanup(self):
         """Clean up cache resources."""
         logger.debug("Cleaning up ROM cache component")
-        self._adjacent_offsets_cache.clear()
+        if self._adjacent_offsets_cache:
+            self._adjacent_offsets_cache.clear()
         self._cache_stats = {"hits": 0, "misses": 0, "total_requests": 0}

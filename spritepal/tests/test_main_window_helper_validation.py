@@ -2,6 +2,8 @@
 Validation tests for TestMainWindowHelper
 """
 
+import pytest
+
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
 
@@ -12,6 +14,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.no_qt,
     pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

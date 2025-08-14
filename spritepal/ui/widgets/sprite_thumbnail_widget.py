@@ -75,7 +75,8 @@ class SpriteThumbnailWidget(QWidget):
             self.thumbnail_size - label_height - 4
         )
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumbnail_label.setStyleSheet("""
+        if self.thumbnail_label:
+            self.thumbnail_label.setStyleSheet("""
             QLabel {
                 background-color: #2b2b2b;
                 border: 2px solid #444;
@@ -136,7 +137,8 @@ class SpriteThumbnailWidget(QWidget):
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
-            self.thumbnail_label.setPixmap(scaled)
+            if self.thumbnail_label:
+                self.thumbnail_label.setPixmap(scaled)
         else:
             # Show placeholder
             self._show_placeholder()
@@ -184,7 +186,8 @@ class SpriteThumbnailWidget(QWidget):
         )
         painter.end()
 
-        self.thumbnail_label.setPixmap(placeholder)
+        if self.thumbnail_label:
+            self.thumbnail_label.setPixmap(placeholder)
 
     def _update_info_display(self):
         """Update the info display based on sprite metadata."""
@@ -200,7 +203,8 @@ class SpriteThumbnailWidget(QWidget):
             # Fall back to just offset
             display_text = self.offset_text
 
-        self.info_label.setText(display_text)
+        if self.info_label:
+            self.info_label.setText(display_text)
 
         # Update size text
         if 'decompressed_size' in self.sprite_info:
@@ -261,7 +265,8 @@ class SpriteThumbnailWidget(QWidget):
             border_width = "1px"
             bg_color = "#2b2b2b"
 
-        self.thumbnail_label.setStyleSheet(f"""
+        if self.thumbnail_label:
+            self.thumbnail_label.setStyleSheet(f"""
             QLabel {{
                 background-color: {bg_color};
                 border: {border_width} solid {border_color};

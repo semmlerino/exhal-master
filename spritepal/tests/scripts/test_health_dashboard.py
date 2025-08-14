@@ -26,16 +26,25 @@ import re
 from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
+import pytest
+
 # Type aliases for clarity
+TestResult = Dict[str, Union[str, int, float, bool]]
+
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
 ]
-
-
-TestResult = Dict[str, Union[str, int, float, bool]]
 FailureCategory = str
 TestMetrics = Dict[str, Union[int, float]]
 

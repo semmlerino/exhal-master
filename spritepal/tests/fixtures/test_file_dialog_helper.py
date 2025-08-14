@@ -10,6 +10,7 @@ import tempfile
 from contextlib import contextmanager
 from typing import Any
 
+import pytest
 from PySide6.QtWidgets import QFileDialog
 
 
@@ -25,6 +26,7 @@ pytestmark = [
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
 ]
 
 

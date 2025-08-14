@@ -1,3 +1,12 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+]
 #!/usr/bin/env python
 """
 Quick validation test for UnifiedManualOffsetDialog migration.

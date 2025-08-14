@@ -615,7 +615,8 @@ class SmartPreviewCoordinator(QObject):
                 total_failed += len(offset_data)
 
         # Clear pending saves
-        self._pending_rom_cache_saves.clear()
+        if self._pending_rom_cache_saves:
+            self._pending_rom_cache_saves.clear()
 
         if total_saved > 0 or total_failed > 0:
             logger.debug(f"ROM cache batch flush complete: {total_saved} saved, {total_failed} failed")
@@ -734,7 +735,8 @@ class SmartPreviewCoordinator(QObject):
         self._worker_pool.cleanup()
 
         # Clear cache
-        self._cache.clear()
+        if self._cache:
+            self._cache.clear()
 
         # Clear references
         self._slider_ref = None

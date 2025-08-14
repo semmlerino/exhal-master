@@ -1,3 +1,11 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.rom_data,
+]
 """
 Test data generator for creating test ROMs with known content.
 """

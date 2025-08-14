@@ -41,7 +41,8 @@ class RangeScanDialog(QDialog):
             "±64 KB (±0x10000)",
             "±256 KB (±0x40000)"
         ])
-        self.range_combo.setCurrentIndex(2)  # Default to ±16KB
+        if self.range_combo:
+            self.range_combo.setCurrentIndex(2)  # Default to ±16KB
         form_layout.addRow("Scan Range:", self.range_combo)
 
         # Current offset display
@@ -51,7 +52,8 @@ class RangeScanDialog(QDialog):
 
         # Range preview
         self.range_label = QLabel()
-        self.range_label.setStyleSheet("color: #666; font-family: monospace;")
+        if self.range_label:
+            self.range_label.setStyleSheet("color: #666; font-family: monospace;")
         form_layout.addRow("Scan Range:", self.range_label)
 
         layout.addLayout(form_layout)
@@ -88,7 +90,8 @@ class RangeScanDialog(QDialog):
             size_kb = actual_range / 1024
             size_text = f" ({size_kb:.0f} KB)"
 
-        self.range_label.setText(f"0x{start_offset:06X} - 0x{end_offset:06X}{size_text}")
+        if self.range_label:
+            self.range_label.setText(f"0x{start_offset:06X} - 0x{end_offset:06X}{size_text}")
 
     def _validate_and_accept(self):
         """Validate scan parameters before accepting"""

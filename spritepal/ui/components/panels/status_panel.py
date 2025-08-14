@@ -30,7 +30,8 @@ class StatusPanel(QWidget):
 
         self.detection_info = QLabel("Ready", parent=self)
         self.detection_info.setWordWrap(True)
-        self.detection_info.setStyleSheet("color: #cccccc; font-size: 10px;")  # Smaller text
+        if self.detection_info:
+            self.detection_info.setStyleSheet("color: #cccccc; font-size: 10px;")  # Smaller text
         layout.addWidget(self.detection_info)
 
         # Progress bar (initially hidden) - set proper parent
@@ -46,7 +47,8 @@ class StatusPanel(QWidget):
 
     def update_status(self, message: str):
         """Update the status message"""
-        self.detection_info.setText(message)
+        if self.detection_info:
+            self.detection_info.setText(message)
 
     def show_progress(self, minimum: int = 0, maximum: int = 100):
         """Show and configure the progress bar"""
@@ -96,12 +98,14 @@ class StatusPanel(QWidget):
 
         # Cache icon - set proper parent
         self.cache_icon_label = QLabel(parent=self.cache_status_widget)
-        self.cache_icon_label.setStyleSheet("font-size: 10px;")  # Smaller icon
+        if self.cache_icon_label:
+            self.cache_icon_label.setStyleSheet("font-size: 10px;")  # Smaller icon
         cache_layout.addWidget(self.cache_icon_label)
 
         # Cache info label - set proper parent
         self.cache_info_label = QLabel(parent=self.cache_status_widget)
-        self.cache_info_label.setStyleSheet(get_muted_text_style() + " font-size: 9px;")  # Smaller text
+        if self.cache_info_label:
+            self.cache_info_label.setStyleSheet(get_muted_text_style() + " font-size: 9px;")  # Smaller text
         cache_layout.addWidget(self.cache_info_label)
 
         # Add stretch to push content to left
@@ -138,15 +142,18 @@ class StatusPanel(QWidget):
                 stats = rom_cache.get_cache_stats()
 
                 # Update icon
-                self.cache_icon_label.setText("✓")
-                self.cache_icon_label.setStyleSheet("color: green; font-weight: bold;")
+                if self.cache_icon_label:
+                    self.cache_icon_label.setText("✓")
+                if self.cache_icon_label:
+                    self.cache_icon_label.setStyleSheet("color: green; font-weight: bold;")
 
                 # Update info
                 total_files = stats.get("total_files", 0)
                 size_bytes = stats.get("total_size_bytes", 0)
                 size_mb = size_bytes / (1024 * 1024)
 
-                self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
+                if self.cache_info_label:
+                    self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
 
                 # Update tooltip
                 sprite_caches = stats.get("sprite_location_caches", 0)
@@ -164,15 +171,21 @@ class StatusPanel(QWidget):
 
             except Exception:
                 # Error getting stats
-                self.cache_icon_label.setText("⚠")
-                self.cache_icon_label.setStyleSheet("color: orange; font-weight: bold;")
-                self.cache_info_label.setText("Error")
+                if self.cache_icon_label:
+                    self.cache_icon_label.setText("⚠")
+                if self.cache_icon_label:
+                    self.cache_icon_label.setStyleSheet("color: orange; font-weight: bold;")
+                if self.cache_info_label:
+                    self.cache_info_label.setText("Error")
                 self.cache_status_widget.setToolTip("Error reading cache statistics")
         else:
             # Cache disabled
-            self.cache_icon_label.setText("✗")
-            self.cache_icon_label.setStyleSheet("color: gray; font-weight: bold;")
-            self.cache_info_label.setText("Disabled")
+            if self.cache_icon_label:
+                self.cache_icon_label.setText("✗")
+            if self.cache_icon_label:
+                self.cache_icon_label.setStyleSheet("color: gray; font-weight: bold;")
+            if self.cache_info_label:
+                self.cache_info_label.setText("Disabled")
             self.cache_status_widget.setToolTip("ROM caching is disabled")
 
     def update_cache_status(self) -> None:

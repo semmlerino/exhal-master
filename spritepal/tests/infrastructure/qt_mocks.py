@@ -180,12 +180,92 @@ class CommonSignalHolder(QObject):
     finished = Signal()
 
 
-class TestMainWindow(QObject):
+class TestMainWindowPure:
+    """
+    Pure Python test double for MainWindow.
+
+    Uses callback-based signals to avoid Qt inheritance and prevent metaclass conflicts.
+    For integration tests requiring real Qt signals, use RealTestMainWindow instead.
+    """
+
+    def __init__(self, parent=None):
+        self.parent_widget = parent
+
+        # Callback-based signals
+        self.extract_requested_callbacks = []
+        self.open_in_editor_requested_callbacks = []
+        self.arrange_rows_requested_callbacks = []
+        self.arrange_grid_requested_callbacks = []
+        self.inject_requested_callbacks = []
+
+        # Mock methods
+        self.show = Mock()
+        self.close = Mock()
+        self.extraction_complete = Mock()
+        self.extraction_failed = Mock()
+        self.get_extraction_params = Mock(return_value={
+            "vram_path": "/test/vram.dmp",
+            "cgram_path": "/test/cgram.dmp",
+            "output_base": "/test/output",
+            "create_grayscale": True,
+            "create_metadata": True,
+            "oam_path": None,
+        })
+
+        # Mock UI components
+        self.status_bar = Mock()
+        self.status_bar.showMessage = Mock()
+        self.sprite_preview = Mock()
+        self.palette_preview = Mock()
+        self.preview_info = Mock()
+        self.output_name_edit = Mock()
+        self.output_name_edit.text = Mock(return_value="test_output")
+
+        # Create TestExtractionPanel with real signals
+        self.extraction_panel = TestExtractionPanel()
+
+        # Add preview_coordinator mock (needed by controller tests)
+        self.preview_coordinator = Mock()
+        self.preview_coordinator.update_preview_info = Mock()
+
+        # Add get_output_path method (needed by injection tests)
+        self.get_output_path = Mock(return_value="/test/output")
+
+    # Signal-like properties for compatibility
+    @property
+    def extract_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.extract_requested_callbacks)
+
+    @property
+    def open_in_editor_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.open_in_editor_requested_callbacks)
+
+    @property
+    def arrange_rows_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.arrange_rows_requested_callbacks)
+
+    @property
+    def arrange_grid_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.arrange_grid_requested_callbacks)
+
+    @property
+    def inject_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.inject_requested_callbacks)
+
+
+# Keep the original Qt-based version for integration tests that need real Qt signals
+class RealTestMainWindow(QObject):
     """
     QObject-based test double for MainWindow.
 
-    This provides real Qt signals while mocking other functionality,
-    avoiding segfaults from attaching signals to Mock objects.
+    This provides real Qt signals while mocking other functionality.
+    Use this ONLY for integration tests that require real Qt signal behavior.
+    For unit tests, use TestMainWindowPure instead.
     """
 
     # Define signals as class attributes (required by Qt)
@@ -222,7 +302,7 @@ class TestMainWindow(QObject):
         self.output_name_edit.text = Mock(return_value="test_output")
 
         # Create TestExtractionPanel with real signals
-        self.extraction_panel = TestExtractionPanel()
+        self.extraction_panel = RealTestExtractionPanel()
 
         # Add preview_coordinator mock (needed by controller tests)
         self.preview_coordinator = Mock()
@@ -232,11 +312,65 @@ class TestMainWindow(QObject):
         self.get_output_path = Mock(return_value="/test/output")
 
 
-class TestExtractionPanel(QObject):
+class TestExtractionPanelPure:
+    """
+    Pure Python test double for ExtractionPanel.
+
+    Uses callback-based signals to avoid Qt inheritance.
+    """
+
+    def __init__(self, parent=None):
+        self.parent_widget = parent
+
+        # Callback-based signals
+        self.file_dropped_callbacks = []
+        self.files_changed_callbacks = []
+        self.extraction_ready_callbacks = []
+        self.offset_changed_callbacks = []
+        self.mode_changed_callbacks = []
+
+        # Mock methods and attributes
+        self.get_vram_path = Mock(return_value="/test/vram.dmp")
+        self.get_cgram_path = Mock(return_value="/test/cgram.dmp")
+        self.get_oam_path = Mock(return_value=None)
+        self.get_output_base = Mock(return_value="/test/output")
+        self.get_vram_offset = Mock(return_value=0xC000)
+        self.set_vram_offset = Mock()
+
+    # Signal-like properties for compatibility
+    @property
+    def file_dropped(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.file_dropped_callbacks)
+
+    @property
+    def files_changed(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.files_changed_callbacks)
+
+    @property
+    def extraction_ready(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.extraction_ready_callbacks)
+
+    @property
+    def offset_changed(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.offset_changed_callbacks)
+
+    @property
+    def mode_changed(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.mode_changed_callbacks)
+
+
+# Keep Qt-based version for integration tests
+class RealTestExtractionPanel(QObject):
     """
     QObject-based test double for ExtractionPanel.
 
     Provides real Qt signals for extraction panel functionality.
+    Use this ONLY for integration tests that require real Qt signals.
     """
 
     # Define signals as class attributes
@@ -258,11 +392,57 @@ class TestExtractionPanel(QObject):
         self.set_vram_offset = Mock()
 
 
-class TestROMExtractionPanel(QObject):
+class TestROMExtractionPanelPure:
+    """
+    Pure Python test double for ROMExtractionPanel.
+
+    Uses callback-based signals to avoid Qt inheritance.
+    """
+
+    def __init__(self, parent=None):
+        self.parent_widget = parent
+
+        # Callback-based signals
+        self.files_changed_callbacks = []
+        self.extraction_ready_callbacks = []
+        self.rom_extraction_requested_callbacks = []
+        self.output_name_changed_callbacks = []
+
+        # Mock methods and attributes
+        self.get_rom_path = Mock(return_value="/test/rom.sfc")
+        self.get_sprite_offset = Mock(return_value=0x8000)
+        self.get_output_base = Mock(return_value="/test/output")
+        self.get_sprite_name = Mock(return_value="TestSprite")
+
+    # Signal-like properties for compatibility
+    @property
+    def files_changed(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.files_changed_callbacks)
+
+    @property
+    def extraction_ready(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.extraction_ready_callbacks)
+
+    @property
+    def rom_extraction_requested(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.rom_extraction_requested_callbacks)
+
+    @property
+    def output_name_changed(self):
+        from .mock_dialogs_base import CallbackSignal
+        return CallbackSignal(self.output_name_changed_callbacks)
+
+
+# Keep Qt-based version for integration tests
+class RealTestROMExtractionPanel(QObject):
     """
     QObject-based test double for ROMExtractionPanel.
 
     Provides real Qt signals for ROM extraction panel functionality.
+    Use this ONLY for integration tests that require real Qt signals.
     """
 
     # Define signals as class attributes
@@ -481,11 +661,44 @@ def create_qt_mock_context():
     return mock_modules
 
 
+def create_test_main_window(**kwargs):
+    """
+    Create a test main window for testing.
+
+    Returns pure Python TestMainWindowPure by default.
+    For integration tests requiring real Qt signals, use create_real_test_main_window().
+    """
+    return TestMainWindowPure(**kwargs)
+
+
+def create_real_test_main_window(**kwargs):
+    """
+    Create a real Qt-based test main window for integration testing.
+
+    Use this ONLY when you need real Qt signal behavior for integration tests.
+    """
+    return RealTestMainWindow(**kwargs)
+
+
+# Backward compatibility - delegates to MockFactory if available
 def create_mock_main_window(**kwargs):
     """
     Create a mock main window for testing.
 
-    This is a compatibility function that delegates to MockFactory.
+    This is a compatibility function.
     """
-    from .mock_factory import MockFactory
-    return MockFactory.create_main_window(**kwargs)
+    try:
+        from .real_component_factory import RealComponentFactory
+        factory = RealComponentFactory()
+        return factory.create_main_window(**kwargs)
+    except ImportError:
+        return TestMainWindowPure(**kwargs)
+
+
+# Backward compatibility aliases - point to pure Python versions by default
+TestMainWindow = TestMainWindowPure
+TestExtractionPanel = TestExtractionPanelPure
+TestROMExtractionPanel = TestROMExtractionPanelPure
+
+# For integration tests that specifically need Qt inheritance, use Real* versions:
+# RealTestMainWindow, RealTestExtractionPanel, RealTestROMExtractionPanel

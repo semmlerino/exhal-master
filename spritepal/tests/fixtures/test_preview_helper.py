@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication
@@ -18,7 +19,11 @@ from PySide6.QtWidgets import QApplication
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.qt_application
+    pytest.mark.qt_application,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
 
 

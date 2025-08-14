@@ -2,20 +2,13 @@
 Unit tests for GridPreviewGenerator
 """
 
+import pytest
 from unittest.mock import Mock
 
 from PIL import Image, ImageDraw
 
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.headless,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-    pytest.mark.unit,
-]
 
 
     ArrangementType,
@@ -28,6 +21,17 @@ from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
 
 
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.ci_safe,
+    pytest.mark.slow,
+]
 class TestGridPreviewGenerator:
     """Test the GridPreviewGenerator class"""
 

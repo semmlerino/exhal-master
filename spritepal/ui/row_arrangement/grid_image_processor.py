@@ -54,7 +54,8 @@ class GridImageProcessor(RowImageProcessor):
                 f"Invalid tile dimensions: {self.tile_width}x{self.tile_height}"
             )
 
-        self.tiles.clear()
+        if self.tiles:
+            self.tiles.clear()
 
         # Calculate grid dimensions
         self.grid_cols = image.width // self.tile_width
@@ -307,7 +308,8 @@ class GridImageProcessor(RowImageProcessor):
         except Exception as e:
             # Clean up on error
             self.original_image = None
-            self.tiles.clear()
+            if self.tiles:
+                self.tiles.clear()
             raise TileError(f"Error processing sprite sheet: {e}") from e
         else:
             return image, tiles

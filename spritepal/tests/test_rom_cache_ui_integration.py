@@ -20,6 +20,18 @@ from ui.dialogs.resume_scan_dialog import ResumeScanDialog
 from ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
 from ui.rom_extraction.widgets.sprite_selector_widget import (
 # Systematic pytest markers applied based on test content analysis
+
+
+    SpriteSelectorWidget,
+)
+from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
+from ui.rom_extraction_panel import ROMExtractionPanel
+from utils.rom_cache import ROMCache
+
+# Manager setup is handled by conftest.py setup_managers fixture
+
+
+
 pytestmark = [
     pytest.mark.benchmark,
     pytest.mark.dialog,
@@ -32,18 +44,10 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.slow,
     pytest.mark.widget,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
-
-
-    SpriteSelectorWidget,
-)
-from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
-from ui.rom_extraction_panel import ROMExtractionPanel
-from utils.rom_cache import ROMCache
-
-# Manager setup is handled by conftest.py setup_managers fixture
-
-
 @pytest.fixture
 def temp_cache_dir(tmp_path):
     """Create a temporary cache directory."""

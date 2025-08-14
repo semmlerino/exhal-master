@@ -35,11 +35,6 @@ from PIL import Image
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     ManagerTestContext,
@@ -54,6 +49,21 @@ from tests.infrastructure.test_data_repository import (
 from core.managers import ExtractionManager, InjectionManager, ValidationError
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.memory,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class TestManagerPerformanceBenchmarksTDD:
     """TDD performance benchmarks for manager operations."""
 

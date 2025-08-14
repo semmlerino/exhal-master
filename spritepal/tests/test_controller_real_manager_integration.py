@@ -42,6 +42,8 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.slow,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
 
 

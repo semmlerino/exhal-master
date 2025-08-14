@@ -9,6 +9,7 @@ For backward compatibility, this module now imports from the new infrastructure.
 import warnings
 
 from tests.infrastructure.mock_factory import MockFactory
+from tests.infrastructure.real_component_factory import RealComponentFactory
 
 # Import from new infrastructure for backward compatibility
 
@@ -24,7 +25,8 @@ warnings.warn(
 # Backward compatibility aliases (original definitions are now in infrastructure/)
 def create_mock_file_dialogs():
     """Backward compatibility function."""
-    return MockFactory.create_file_dialogs()
+    factory = RealComponentFactory()
+    return factory.create_file_dialogs()
 
 
 def create_mock_qimage():

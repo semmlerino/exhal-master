@@ -268,7 +268,8 @@ class ImportExportPanel(QWidget):
                         return
 
             # Clear existing sprites
-            self.found_sprites.clear()
+            if self.found_sprites:
+                self.found_sprites.clear()
             if self.rom_map is not None:
                 self.rom_map.clear_sprites()
 

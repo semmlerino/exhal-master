@@ -11,15 +11,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from core.managers.exceptions import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.headless,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-    pytest.mark.unit,
-    pytest.mark.widget,
-]
 
 
     ExtractionError,
@@ -34,6 +25,18 @@ from utils.unified_error_handler import (
 )
 
 
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.widget,
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+]
 @pytest.fixture
 def error_handler():
     """Create a fresh error handler for testing without Qt dependencies"""

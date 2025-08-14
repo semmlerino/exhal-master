@@ -19,7 +19,13 @@ from ui.row_arrangement.grid_arrangement_manager import TilePosition
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.qt_application
+    pytest.mark.qt_application,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
 
 

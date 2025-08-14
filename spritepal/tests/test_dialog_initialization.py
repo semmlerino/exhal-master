@@ -11,11 +11,6 @@ from PySide6.QtWidgets import QApplication
 # Import mock dialog infrastructure
 from tests.infrastructure.mock_dialogs import (
 # Serial execution required: QApplication management
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application
-]
 
 
     MockUnifiedManualOffsetDialog as ManualOffsetDialog,
@@ -50,6 +45,15 @@ mock_injection_dialog.rom_offset_input = MagicMock()
 InjectionDialog = MagicMock(return_value=mock_injection_dialog)
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+]
 @pytest.mark.mock_dialogs
 class TestDialogInitialization:
     """Test that all dialogs can be initialized without errors"""

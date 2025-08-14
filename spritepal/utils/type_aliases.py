@@ -12,17 +12,9 @@ from typing import Any, Callable, TypeAlias
 # Python compatibility imports for typing
 # These are re-exported for use in other modules
 try:
-    from typing import NotRequired, Protocol, TypedDict, TypeGuard, override
+    from typing_extensions import override
     __all__ = [
-        "ImageMode",
-        "ImageSize",
-        "NotRequired",
-        "PILImage",
-        "Protocol",
-        "TypeGuard",
-        "TypedDict",
-        "override",
-    ]
+        "ImageMode", "ImageSize", "NotRequired", "PILImage", "Protocol", "TypeGuard", "TypedDict", "override", ]
 except ImportError:
     # Fallback for older Python versions
     try:
@@ -31,7 +23,6 @@ except ImportError:
             Protocol,
             TypedDict,
             TypeGuard,
-            override,
         )
         __all__ = [
             "ImageMode",

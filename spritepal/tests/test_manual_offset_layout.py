@@ -43,18 +43,25 @@ if not os.environ.get('QT_QPA_PLATFORM'):
 # Test marks for proper categorization - minimal marks for compatibility
 pytestmark = [
     pytest.mark.integration,  # Integration test
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
 ]
 
 from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from ui.tabs.manual_offset.browse_tab import SimpleBrowseTab
 from ui.tabs.manual_offset.smart_tab import SimpleSmartTab
 from ui.tabs.manual_offset.history_tab import SimpleHistoryTab
-from ui.dialogs.manual_offset_layout_manager import (
-    LAYOUT_SPACING,
-    LAYOUT_MARGINS,
-    MIN_LEFT_PANEL_WIDTH,
-    SPLITTER_HANDLE_WIDTH,
-)
+from ui.dialogs import manual_offset_layout_manager
+LAYOUT_SPACING = manual_offset_layout_manager.LAYOUT_SPACING
+LAYOUT_MARGINS = manual_offset_layout_manager.LAYOUT_MARGINS
+MIN_LEFT_PANEL_WIDTH = manual_offset_layout_manager.MIN_LEFT_PANEL_WIDTH
+SPLITTER_HANDLE_WIDTH = manual_offset_layout_manager.SPLITTER_HANDLE_WIDTH
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 from tests.infrastructure.qt_real_testing import QtTestCase
 

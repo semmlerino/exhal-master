@@ -13,10 +13,6 @@ from typing import Any
 
 from tests.infrastructure.real_component_factory import (
 # Serial execution required: Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial
-]
 
 
     RealComponentFactory,
@@ -49,6 +45,16 @@ from core.managers.session_manager import SessionManager
 from core.workers.specialized import ExtractionWorkerBase as ExtractionWorker, InjectionWorkerBase as InjectionWorker
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+]
 class TestRealComponentFactory:
     """Tests demonstrating RealComponentFactory usage."""
 

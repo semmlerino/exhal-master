@@ -2,10 +2,9 @@
 Enhanced tests for PaletteColorizer
 """
 
-
-
 from unittest.mock import Mock
 
+import pytest
 from PIL import Image
 
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
@@ -21,6 +20,10 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.performance,
     pytest.mark.rom_data,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
 

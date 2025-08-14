@@ -3,24 +3,182 @@ Test fixtures package for SpritePal test suite.
 
 This package contains reusable test components including Qt mocks,
 test data generators, and common test utilities.
+
+This module uses lazy loading to avoid Qt dependency chains in headless environments.
 """
 
-from tests.infrastructure.mock_factory import MockFactory
-from tests.infrastructure.qt_mocks import (
-    MockQLabel,
-    MockQPixmap,
-    MockQThread,
-    MockQWidget,
-    MockSignal,
-)
+import os
+from typing import Any, Callable
+from unittest.mock import Mock
 
-# Create backward compatibility functions
-create_mock_drag_drop_event = MockFactory.create_drag_drop_event
-create_mock_extraction_manager = MockFactory.create_extraction_manager
-create_mock_extraction_worker = MockFactory.create_extraction_worker
-create_mock_file_dialogs = MockFactory.create_file_dialogs
-create_mock_main_window = MockFactory.create_main_window
-create_mock_qimage = MockFactory.create_qimage
+
+# Import Qt mocks with lazy loading to avoid Qt dependencies
+def _get_qt_mocks():
+    """Lazy import of Qt mocks to avoid dependency chain."""
+    try:
+        from tests.infrastructure.qt_mocks import (
+            MockQLabel,
+            MockQPixmap,
+            MockQThread,
+            MockQWidget,
+            MockSignal,
+        )
+        return {
+            "MockQLabel": MockQLabel,
+            "MockQPixmap": MockQPixmap,
+            "MockQThread": MockQThread,
+            "MockQWidget": MockQWidget,
+            "MockSignal": MockSignal,
+        }
+    except ImportError:
+        # Provide basic mocks if qt_mocks can't be imported
+        from unittest.mock import Mock
+        return {
+            "MockQLabel": Mock,
+            "MockQPixmap": Mock,
+            "MockQThread": Mock,
+            "MockQWidget": Mock,
+            "MockSignal": Mock,
+        }
+
+
+def _is_headless_environment() -> bool:
+    """Detect if we're in a headless environment where Qt is not available."""
+    if os.environ.get("CI"):
+        return True
+    if not os.environ.get("DISPLAY") and os.name != "nt":  # Unix without DISPLAY
+        return True
+    try:
+        # Try to import Qt and create a minimal test
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance() or QApplication([])
+        return not app.primaryScreen()
+    except Exception:
+        return True
+
+
+def _get_real_factory():
+    """Lazy import and return RealComponentFactory for Qt-enabled environments."""
+    try:
+        from tests.infrastructure.real_component_factory import RealComponentFactory
+        return RealComponentFactory()
+    except ImportError as e:
+        raise RuntimeError(f"Cannot import RealComponentFactory in headless environment: {e}")
+
+
+class _HeadlessFallbackFactory:
+    """Lightweight fallback factory for headless environments."""
+
+    def create_drag_drop_event(self):
+        """Create a mock drag drop event."""
+        return Mock(spec=["mimeData", "acceptProposedAction", "ignore"])
+
+    def create_extraction_manager(self):
+        """Create a mock extraction manager."""
+        mock = Mock()
+        mock.extract_sprites = Mock(return_value={"sprites": [], "success": True})
+        mock.validate_vram = Mock(return_value=True)
+        return mock
+
+    def create_extraction_worker(self, params=None, worker_type="vram"):
+        """Create a mock extraction worker."""
+        mock = Mock()
+        mock.finished = Mock()
+        mock.progress = Mock()
+        mock.error = Mock()
+        mock.start = Mock()
+        mock.quit = Mock()
+        mock.wait = Mock()
+        return mock
+
+    def create_file_dialogs(self):
+        """Create mock file dialog functions."""
+        import tempfile
+        from pathlib import Path
+
+        return {
+            "getOpenFileName": Mock(return_value=(str(Path(tempfile.gettempdir()) / "test.dmp"), "Memory dump (*.dmp)")),
+            "getSaveFileName": Mock(return_value=(str(Path(tempfile.gettempdir()) / "output.png"), "PNG files (*.png)")),
+            "getExistingDirectory": Mock(return_value=str(Path(tempfile.gettempdir()))),
+        }
+
+    def create_main_window(self, with_managers=True):
+        """Create a mock main window."""
+        mock = Mock()
+        mock.extraction_panel = Mock()
+        mock.extraction_panel.vram_input = Mock()
+        mock.extraction_panel.cgram_input = Mock()
+        mock.show = Mock()
+        mock.hide = Mock()
+        mock.close = Mock()
+        return mock
+
+    def create_qimage(self):
+        """Create a mock QImage."""
+        mock = Mock()
+        mock.width = Mock(return_value=16)
+        mock.height = Mock(return_value=16)
+        mock.format = Mock(return_value=4)  # QImage.Format_RGB32
+        mock.save = Mock(return_value=True)
+        return mock
+
+
+def _get_factory():
+    """Get the appropriate factory based on environment."""
+    if _is_headless_environment():
+        return _HeadlessFallbackFactory()
+    return _get_real_factory()
+
+
+# Create backward compatibility functions with lazy loading
+def create_mock_drag_drop_event():
+    """Create a mock drag drop event, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    if hasattr(factory, 'create_drag_drop_event'):
+        return factory.create_drag_drop_event()
+    return None
+
+
+def create_mock_extraction_manager():
+    """Create a mock extraction manager, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    return factory.create_extraction_manager()
+
+
+def create_mock_extraction_worker():
+    """Create a mock extraction worker, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    return factory.create_extraction_worker()
+
+
+def create_mock_file_dialogs():
+    """Create mock file dialogs, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    return factory.create_file_dialogs()
+
+
+def create_mock_main_window():
+    """Create a mock main window, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    return factory.create_main_window()
+
+
+def create_mock_qimage():
+    """Create a mock QImage, using lazy loading for Qt dependencies."""
+    factory = _get_factory()
+    if hasattr(factory, 'create_qimage'):
+        return factory.create_qimage()
+    return None
+
+
+# Make Qt mocks available at module level for backward compatibility
+def __getattr__(name: str):
+    """Provide lazy access to Qt mocks."""
+    qt_mocks = _get_qt_mocks()
+    if name in qt_mocks:
+        return qt_mocks[name]
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 __all__ = [
     "MockQLabel",

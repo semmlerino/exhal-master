@@ -26,6 +26,9 @@ pytestmark = [
     pytest.mark.performance,
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
 

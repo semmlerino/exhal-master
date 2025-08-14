@@ -672,7 +672,9 @@ class ROMExtractor:
         scan_count = 0
         save_progress_interval = PROGRESS_SAVE_INTERVAL
 
-        for offset in range(resume_offset, end_offset, step):
+        # Use while loop to ensure we scan up to and including the last valid offset
+        offset = resume_offset
+        while offset < end_offset:
             scan_count += 1
 
             # Log progress periodically
@@ -694,6 +696,16 @@ class ROMExtractor:
                     f"{sprite_info['tile_count']} tiles, {sprite_info['compressed_size']} bytes compressed, "
                     f"alignment: {sprite_info['alignment']}"
                 )
+
+            offset += step
+
+        # Check the final offset if it's exactly at the end boundary
+        if offset == end_offset and offset < len(rom_data):
+            scan_count += 1
+            sprite_info = self._try_extract_sprite_at_offset(rom_data, offset)
+            if sprite_info:
+                found_sprites.append(sprite_info)
+                logger.info(f"Found valid sprite at end offset 0x{offset:X}")
 
         logger.info(f"Scan complete: checked {scan_count} offsets, found {len(found_sprites)} valid sprites")
         return found_sprites

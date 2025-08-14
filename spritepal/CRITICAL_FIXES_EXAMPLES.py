@@ -20,7 +20,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QWidget
 
 # ============================================================================
 # FIX 1: Thread-Safe Worker Pattern (Replace QThread inheritance)

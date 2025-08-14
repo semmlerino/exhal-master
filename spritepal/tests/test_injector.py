@@ -15,6 +15,8 @@ pytestmark = [
     pytest.mark.file_io,  # Involves file operations
     pytest.mark.rom_data,  # Tests requiring ROM files or data
     pytest.mark.worker_threads,  # Tests using worker threads
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
 
 from core.injector import InjectionWorker, SpriteInjector, encode_4bpp_tile

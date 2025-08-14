@@ -4,19 +4,31 @@ Provides helpers for keyboard navigation, screen reader support, and focus manag
 """
 
 from typing import Optional, Union
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QWidget, QLabel, QPushButton, QLineEdit, QSpinBox,
-    QComboBox, QSlider, QCheckBox, QRadioButton,
-    QTextEdit, QPlainTextEdit, QGroupBox, QTabWidget,
-    QDialog, QMainWindow, QToolBar, QMenu
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPlainTextEdit,
+    QPushButton,
+    QRadioButton,
+    QSlider,
+    QSpinBox,
+    QTextEdit,
+    QToolBar,
+    QWidget,
 )
 
 
 class AccessibilityHelper:
     """Helper class for adding accessibility features to Qt widgets."""
-    
+
     # Standard keyboard shortcuts for common actions
     STANDARD_SHORTCUTS = {
         'open': QKeySequence.StandardKey.Open,
@@ -45,7 +57,7 @@ class AccessibilityHelper:
         'zoom_out': 'Ctrl+-',
         'zoom_reset': 'Ctrl+0',
     }
-    
+
     @staticmethod
     def make_accessible(
         widget: QWidget,
@@ -56,14 +68,14 @@ class AccessibilityHelper:
     ) -> QWidget:
         """
         Make a widget accessible with proper naming and descriptions.
-        
+
         Args:
             widget: The widget to make accessible
             name: Accessible name for screen readers
             description: Longer description of the widget's purpose
             shortcut: Keyboard shortcut (if applicable)
             role: Accessibility role (if needed to override default)
-        
+
         Returns:
             The widget with accessibility features added
         """
@@ -73,17 +85,17 @@ class AccessibilityHelper:
             widget.setAccessibleDescription(description)
         elif shortcut:
             widget.setAccessibleDescription(f"{name} ({shortcut})")
-        
+
         # Enable keyboard focus for interactive widgets
-        if isinstance(widget, (QPushButton, QLineEdit, QSpinBox, QComboBox, 
-                               QSlider, QCheckBox, QRadioButton, QTextEdit, 
+        if isinstance(widget, (QPushButton, QLineEdit, QSpinBox, QComboBox,
+                               QSlider, QCheckBox, QRadioButton, QTextEdit,
                                QPlainTextEdit)):
             widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         # Add keyboard shortcut if provided
         if shortcut and hasattr(widget, 'setShortcut'):
             widget.setShortcut(shortcut)
-        
+
         # Add tooltip with shortcut info
         if shortcut:
             current_tooltip = widget.toolTip()
@@ -91,9 +103,9 @@ class AccessibilityHelper:
                 widget.setToolTip(f"{current_tooltip} ({shortcut})")
             else:
                 widget.setToolTip(f"{name} ({shortcut})")
-        
+
         return widget
-    
+
     @staticmethod
     def create_label_input_pair(
         label_text: str,
@@ -103,13 +115,13 @@ class AccessibilityHelper:
     ) -> tuple[QLabel, QWidget]:
         """
         Create a properly linked label-input pair for accessibility.
-        
+
         Args:
             label_text: Text for the label
             input_widget: The input widget to link to
             description: Description for screen readers
             mnemonic_char: Character to use for Alt+key access (auto-detected if None)
-        
+
         Returns:
             Tuple of (label, input_widget) with accessibility features
         """
@@ -125,10 +137,10 @@ class AccessibilityHelper:
             else:
                 # Auto-add using first letter
                 label_text = f"&{label_text}"
-        
+
         label = QLabel(label_text)
         label.setBuddy(input_widget)
-        
+
         # Make input accessible
         clean_name = label_text.replace('&', '').replace(':', '').strip()
         AccessibilityHelper.make_accessible(
@@ -136,14 +148,14 @@ class AccessibilityHelper:
             clean_name,
             description or f"Enter {clean_name.lower()}"
         )
-        
+
         return label, input_widget
-    
+
     @staticmethod
     def add_focus_indicators(widget: QWidget, color: str = "#0078d4"):
         """
         Add visual focus indicators to a widget.
-        
+
         Args:
             widget: Widget to add focus indicators to
             color: Color for the focus border
@@ -163,21 +175,21 @@ class AccessibilityHelper:
         }}
         """
         widget.setStyleSheet(current_style + focus_style)
-    
+
     @staticmethod
     def setup_tab_order(widgets: list[QWidget]):
         """
         Set up logical tab order for a list of widgets.
-        
+
         Args:
             widgets: List of widgets in desired tab order
         """
         if len(widgets) < 2:
             return
-        
+
         for i in range(len(widgets) - 1):
             QWidget.setTabOrder(widgets[i], widgets[i + 1])
-    
+
     @staticmethod
     def add_action_with_shortcut(
         parent: Union[QMainWindow, QDialog, QWidget],
@@ -191,7 +203,7 @@ class AccessibilityHelper:
     ) -> QAction:
         """
         Add an action with keyboard shortcut and accessibility info.
-        
+
         Args:
             parent: Parent widget for the action
             name: Internal name for the action
@@ -201,44 +213,44 @@ class AccessibilityHelper:
             description: Status tip / accessibility description
             icon: Optional icon for the action
             checkable: Whether the action is checkable
-        
+
         Returns:
             The created QAction
         """
         action = QAction(text, parent)
         action.setObjectName(name)
-        
+
         # Set shortcut
         if shortcut in AccessibilityHelper.STANDARD_SHORTCUTS:
             action.setShortcut(AccessibilityHelper.STANDARD_SHORTCUTS[shortcut])
         else:
             action.setShortcut(shortcut)
-        
+
         # Set description
         if description:
             action.setStatusTip(description)
             action.setToolTip(f"{text.replace('&', '')} ({shortcut})\n{description}")
         else:
             action.setToolTip(f"{text.replace('&', '')} ({shortcut})")
-        
+
         # Set icon if provided
         if icon:
             action.setIcon(icon)
-        
+
         # Make checkable if needed
         if checkable:
             action.setCheckable(True)
-        
+
         # Connect callback
         action.triggered.connect(callback)
-        
+
         # Set accessible name
         clean_text = text.replace('&', '')
         action.setAccessibleName(clean_text)
         action.setAccessibleDescription(description or clean_text)
-        
+
         return action
-    
+
     @staticmethod
     def setup_dialog_buttons(
         dialog: QDialog,
@@ -249,7 +261,7 @@ class AccessibilityHelper:
     ):
         """
         Set up standard dialog buttons with proper keyboard shortcuts.
-        
+
         Args:
             dialog: The dialog to set up
             accept_text: Text for accept button
@@ -259,7 +271,7 @@ class AccessibilityHelper:
         """
         # Find or create buttons
         from PySide6.QtWidgets import QDialogButtonBox
-        
+
         button_box = dialog.findChild(QDialogButtonBox)
         if button_box:
             # Update existing button box
@@ -272,7 +284,7 @@ class AccessibilityHelper:
                     accept_text.replace('&', ''),
                     "Accept changes and close dialog"
                 )
-            
+
             cancel_button = button_box.button(QDialogButtonBox.StandardButton.Cancel)
             if cancel_button:
                 cancel_button.setText(reject_text)
@@ -282,35 +294,35 @@ class AccessibilityHelper:
                     reject_text.replace('&', ''),
                     "Cancel changes and close dialog"
                 )
-    
+
     @staticmethod
     def add_group_box_navigation(group_box: QGroupBox):
         """
         Add keyboard navigation support to a group box.
-        
+
         Args:
             group_box: The group box to enhance
         """
         # Make the group box focusable
         group_box.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        
+
         # Set accessible name from title
         title = group_box.title().replace('&', '')
         group_box.setAccessibleName(title)
         group_box.setAccessibleDescription(f"Group: {title}")
-    
+
     @staticmethod
     def enhance_toolbar(toolbar: QToolBar):
         """
         Enhance toolbar accessibility with keyboard navigation.
-        
+
         Args:
             toolbar: The toolbar to enhance
         """
         toolbar.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         toolbar.setAccessibleName("Main Toolbar")
         toolbar.setAccessibleDescription("Application toolbar with main actions")
-        
+
         # Make all actions keyboard accessible
         for action in toolbar.actions():
             if action.text() and not action.shortcut():
@@ -322,12 +334,12 @@ class AccessibilityHelper:
                     action.setShortcut('Ctrl+S')
                 elif 'export' in text_lower:
                     action.setShortcut('Ctrl+E')
-    
+
     @staticmethod
     def announce_to_screen_reader(widget: QWidget, message: str):
         """
         Announce a message to screen readers.
-        
+
         Args:
             widget: Widget context for the announcement
             message: Message to announce
@@ -335,7 +347,7 @@ class AccessibilityHelper:
         # This would typically use QAccessible.updateAccessibility
         # For now, we'll update the widget's accessible description
         widget.setAccessibleDescription(message)
-        
+
         # Also show as status tip if it's a main window
         if isinstance(widget, QMainWindow):
             widget.statusBar().showMessage(message, 5000)
@@ -344,11 +356,11 @@ class AccessibilityHelper:
 def apply_global_accessibility_styles():
     """Apply global accessibility styles to the application."""
     from PySide6.QtWidgets import QApplication
-    
+
     app = QApplication.instance()
     if not app:
         return
-    
+
     # Global focus indicator styles
     global_style = """
     /* Focus indicators for all focusable widgets */
@@ -356,28 +368,28 @@ def apply_global_accessibility_styles():
         outline: 2px solid #0078d4;
         outline-offset: 2px;
     }
-    
+
     QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
         border: 2px solid #0078d4;
     }
-    
+
     QPushButton:focus {
         border: 2px solid #0078d4;
         padding: 3px;
     }
-    
+
     QComboBox:focus, QSpinBox:focus {
         border: 2px solid #0078d4;
     }
-    
+
     QSlider:focus {
         border: 1px solid #0078d4;
     }
-    
+
     QCheckBox:focus, QRadioButton:focus {
         color: #0078d4;
     }
-    
+
     /* High contrast for better visibility */
     QToolTip {
         background-color: #ffffcc;
@@ -385,18 +397,18 @@ def apply_global_accessibility_styles():
         border: 1px solid #000000;
         padding: 5px;
     }
-    
+
     /* Keyboard navigation hints */
     QMenuBar::item:selected {
         background-color: #0078d4;
         color: white;
     }
-    
+
     QMenu::item:selected {
         background-color: #0078d4;
         color: white;
     }
     """
-    
+
     current_style = app.styleSheet()
     app.setStyleSheet(current_style + global_style)

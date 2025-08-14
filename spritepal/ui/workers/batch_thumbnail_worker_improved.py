@@ -7,7 +7,16 @@ from dataclasses import dataclass
 from queue import PriorityQueue
 from typing import Optional
 
-from PySide6.QtCore import QMutex, QMutexLocker, QObject, Qt, QThread, Signal, Slot
+from PySide6.QtCore import (
+    QMutex,
+    QMutexLocker,
+    QObject,
+    Qt,
+    QThread,
+    QTimer,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QPixmap
 
 from core.rom_extractor import ROMExtractor
@@ -50,7 +59,7 @@ class BatchThumbnailWorker(QObject):
     ):
         """
         Initialize the batch thumbnail worker.
-        
+
         Args:
             rom_path: Path to ROM file
             rom_extractor: ROM extractor instance
@@ -102,7 +111,7 @@ class BatchThumbnailWorker(QObject):
     def queue_thumbnail(self, offset: int, size: int = 128, priority: int = 0):
         """
         Queue a thumbnail for generation (thread-safe).
-        
+
         Args:
             offset: ROM offset of sprite
             size: Thumbnail size in pixels
@@ -118,7 +127,7 @@ class BatchThumbnailWorker(QObject):
     def queue_batch(self, offsets: list[int], size: int = 128, priority_start: int = 0):
         """
         Queue multiple thumbnails for generation (thread-safe).
-        
+
         Args:
             offsets: List of ROM offsets
             size: Thumbnail size for all
@@ -272,10 +281,10 @@ class BatchThumbnailWorker(QObject):
     def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QPixmap]:
         """
         Generate a thumbnail for a sprite.
-        
+
         Args:
             request: Thumbnail request
-            
+
         Returns:
             Generated pixmap or None
         """
@@ -305,7 +314,8 @@ class BatchThumbnailWorker(QObject):
     def clear_cache(self):
         """Clear the thumbnail cache (thread-safe)."""
         with QMutexLocker(self._cache_mutex):
-            self._cache.clear()
+            if self._cache:
+                self._cache.clear()
 
     @Slot()
     def cleanup(self):

@@ -15,6 +15,8 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.no_qt,
     pytest.mark.parallel_safe,
+    pytest.mark.ci_safe,
+    pytest.mark.slow,
 ]
 from PIL import Image
 

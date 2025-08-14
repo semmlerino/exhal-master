@@ -1,3 +1,11 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+]
 #!/usr/bin/env python3
 """
 Test why we're seeing black boxes in the preview.

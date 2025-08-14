@@ -17,6 +17,7 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.performance,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
 ]
 
 

@@ -112,7 +112,8 @@ class SimpleBrowseTab(QWidget):
         self.position_slider.sliderReleased.connect(lambda: logger.debug("[TRACE_SIGNAL] Slider released"))
 
         # Apply distinct styling for ROM offset slider
-        self.position_slider.setStyleSheet("""
+        if self.position_slider:
+            self.position_slider.setStyleSheet("""
             QSlider::groove:horizontal {
                 border: 2px solid #4488dd;
                 height: 8px;
@@ -151,7 +152,8 @@ class SimpleBrowseTab(QWidget):
         info_row.addStretch()  # Push offset label to the right
 
         self.offset_label = QLabel(f"0x{self._current_offset:06X}")
-        self.offset_label.setStyleSheet("font-family: monospace; color: #888; font-size: 12px;")
+        if self.offset_label:
+            self.offset_label.setStyleSheet("font-family: monospace; color: #888; font-size: 12px;")
         info_row.addWidget(self.offset_label)
 
         controls_layout.addLayout(info_row)
@@ -186,13 +188,15 @@ class SimpleBrowseTab(QWidget):
         """
 
         self.prev_button = QPushButton("◀ Previous")
-        self.prev_button.setStyleSheet(button_style)
+        if self.prev_button:
+            self.prev_button.setStyleSheet(button_style)
         self.prev_button.setToolTip("Find previous sprite (skip empty areas)")
         self.prev_button.clicked.connect(self.find_prev_clicked.emit)
         nav_row.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Next ▶")
-        self.next_button.setStyleSheet(button_style)
+        if self.next_button:
+            self.next_button.setStyleSheet(button_style)
         self.next_button.setToolTip("Find next sprite (skip empty areas)")
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
@@ -201,14 +205,16 @@ class SimpleBrowseTab(QWidget):
 
         # Find Sprites button
         self.find_sprites_button = QPushButton("🔍 Find Sprites")
-        self.find_sprites_button.setStyleSheet(button_style)
+        if self.find_sprites_button:
+            self.find_sprites_button.setStyleSheet(button_style)
         self.find_sprites_button.setToolTip("Scan ROM for HAL-compressed sprites")
         self.find_sprites_button.clicked.connect(self._on_find_sprites)
         nav_row.addWidget(self.find_sprites_button)
 
         # Advanced Search button
         self.advanced_search_button = QPushButton("⚙️ Advanced")
-        self.advanced_search_button.setStyleSheet(button_style)
+        if self.advanced_search_button:
+            self.advanced_search_button.setStyleSheet(button_style)
         self.advanced_search_button.setToolTip("Open advanced search dialog with filtering and batch operations")
         self.advanced_search_button.clicked.connect(self._open_advanced_search)
         nav_row.addWidget(self.advanced_search_button)
@@ -244,7 +250,8 @@ class SimpleBrowseTab(QWidget):
         self.manual_spinbox.setDisplayIntegerBase(16)
         self.manual_spinbox.setPrefix("0x")
         self.manual_spinbox.setMinimumWidth(120)
-        self.manual_spinbox.setStyleSheet("""
+        if self.manual_spinbox:
+            self.manual_spinbox.setStyleSheet("""
             QSpinBox {
                 padding: 4px;
                 background-color: #3c3c3c;
@@ -279,7 +286,8 @@ class SimpleBrowseTab(QWidget):
         self.step_spinbox.setDisplayIntegerBase(16)
         self.step_spinbox.setPrefix("0x")
         self.step_spinbox.setMinimumWidth(100)
-        self.step_spinbox.setStyleSheet("""
+        if self.step_spinbox:
+            self.step_spinbox.setStyleSheet("""
             QSpinBox {
                 padding: 4px;
                 background-color: #3c3c3c;
@@ -351,8 +359,10 @@ class SimpleBrowseTab(QWidget):
 
     def _update_displays(self) -> None:
         """Update position displays."""
-        self.position_label.setText(self._format_position(self._current_offset))
-        self.offset_label.setText(f"0x{self._current_offset:06X}")
+        if self.position_label:
+            self.position_label.setText(self._format_position(self._current_offset))
+        if self.offset_label:
+            self.offset_label.setText(f"0x{self._current_offset:06X}")
 
     def _on_go_button_clicked(self) -> None:
         """Handle go button click without lambda."""
@@ -424,8 +434,10 @@ class SimpleBrowseTab(QWidget):
         Args:
             enabled: Whether navigation should be enabled
         """
-        self.prev_button.setEnabled(enabled)
-        self.next_button.setEnabled(enabled)
+        if self.prev_button:
+            self.prev_button.setEnabled(enabled)
+        if self.next_button:
+            self.next_button.setEnabled(enabled)
 
     def connect_smart_preview_coordinator(self, coordinator: SimplePreviewCoordinator) -> None:
         """

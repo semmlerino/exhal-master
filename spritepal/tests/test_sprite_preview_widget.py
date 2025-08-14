@@ -24,7 +24,12 @@ pytestmark = [
     ),
     pytest.mark.serial,
     pytest.mark.qt_application,
-    pytest.mark.qt_integration
+    pytest.mark.qt_integration,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
 ]
 
 

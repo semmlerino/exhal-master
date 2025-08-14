@@ -15,9 +15,6 @@ from utils.exceptions import (
 )
 
 
-class TestExceptions:
-    """Test custom exception classes"""
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -26,6 +23,9 @@ pytestmark = [
     pytest.mark.unit,
 ]
 
+
+class TestExceptions:
+    """Test custom exception classes"""
 
     def test_sprite_pal_error_base(self):
         """Test base SpritePalError"""

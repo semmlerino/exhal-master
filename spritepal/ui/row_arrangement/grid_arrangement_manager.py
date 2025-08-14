@@ -309,11 +309,16 @@ class GridArrangementManager(QObject):
 
     def clear(self) -> None:
         """Clear all arrangements"""
-        self._arranged_tiles.clear()
-        self._tile_set.clear()
-        self._groups.clear()
-        self._tile_to_group.clear()
-        self._arrangement_order.clear()
+        if self._arranged_tiles:
+            self._arranged_tiles.clear()
+        if self._tile_set:
+            self._tile_set.clear()
+        if self._groups:
+            self._groups.clear()
+        if self._tile_to_group:
+            self._tile_to_group.clear()
+        if self._arrangement_order:
+            self._arrangement_order.clear()
 
         self.arrangement_cleared.emit()
         self.arrangement_changed.emit()

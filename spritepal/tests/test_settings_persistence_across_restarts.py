@@ -24,11 +24,6 @@ import utils.rom_cache
 import utils.settings_manager
 from core.managers import (
 # Serial execution required: Manager registry manipulation
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.singleton
-]
 
 
     cleanup_managers,
@@ -42,6 +37,18 @@ from utils.settings_manager import get_settings_manager
 
 
 # Override the autouse fixture from conftest to prevent automatic initialization
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.singleton,
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+]
 @pytest.fixture(autouse=True)
 def setup_managers():
     """Override conftest.py setup_managers to prevent automatic initialization"""

@@ -1,3 +1,17 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+]
 """
 Comprehensive Test Suite for UnifiedManualOffsetDialog Migration
 

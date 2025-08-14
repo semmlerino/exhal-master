@@ -33,7 +33,15 @@ from PySide6.QtWidgets import QCheckBox, QLineEdit, QPushButton
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
 

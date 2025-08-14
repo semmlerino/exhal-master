@@ -17,6 +17,14 @@ from PySide6.QtWidgets import QSlider, QSpinBox
 from core.managers.extraction_manager import ExtractionManager
 from ui.rom_extraction_panel import (
 # Test characteristics: Singleton management
+
+
+    ManualOffsetDialogSingleton,
+    ROMExtractionPanel,
+)
+
+
+
 pytestmark = [
     pytest.mark.dialog,
     pytest.mark.headless,
@@ -26,14 +34,8 @@ pytestmark = [
     pytest.mark.serial,
     pytest.mark.singleton,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
 ]
-
-
-    ManualOffsetDialogSingleton,
-    ROMExtractionPanel,
-)
-
-
 @pytest.mark.no_manager_setup
 class TestNoDuplicateSlidersValidation:
     """Focused tests to validate no duplicate sliders are ever created."""

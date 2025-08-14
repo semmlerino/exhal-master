@@ -17,7 +17,16 @@ from PySide6.QtTest import QSignalSpy
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
 
@@ -1208,12 +1217,12 @@ class TestControllerManagerContextIntegration:
         # Set unique value on manager
         controller1.extraction_manager.test_value = "controller1"
         
-        # Create second controller with separate managers - use MockFactory for isolation
-        from tests.infrastructure.mock_factory import MockFactory
+        # Create second controller with separate managers - use RealComponentFactory for isolation
+        from tests.infrastructure.real_component_factory import RealComponentFactory
         from core.managers.extraction_manager import ExtractionManager
         from core.managers.injection_manager import InjectionManager
         from core.managers.session_manager import SessionManager
-        factory = MockFactory()
+        factory = RealComponentFactory()
         window2 = factory.create_main_window()
         
         # Create new managers for isolation
@@ -1232,7 +1241,6 @@ class TestControllerManagerContextIntegration:
         assert controller2.extraction_manager.test_value == "controller2"
         assert controller1.extraction_manager.test_value == "controller1"
     
-    @pytest.mark.skip(reason="Missing real_factory fixture - needs infrastructure update")
     def test_controller_manager_state_persistence(self, real_factory):
         """Test that real managers maintain their state independently."""
         # Create shared manager instance

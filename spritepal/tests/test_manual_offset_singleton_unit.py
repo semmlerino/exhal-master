@@ -27,6 +27,9 @@ pytestmark = [
     pytest.mark.serial,
     pytest.mark.singleton,
     pytest.mark.unit,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
 
 

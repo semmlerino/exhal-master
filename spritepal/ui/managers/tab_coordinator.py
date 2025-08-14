@@ -133,8 +133,10 @@ class TabCoordinator(QObject):
 
     def switch_to_rom_tab(self) -> None:
         """Switch to ROM extraction tab"""
-        self.extraction_tabs.setCurrentIndex(0)
+        if self.extraction_tabs:
+            self.extraction_tabs.setCurrentIndex(0)
 
     def switch_to_vram_tab(self) -> None:
         """Switch to VRAM extraction tab"""
-        self.extraction_tabs.setCurrentIndex(1)
+        if self.extraction_tabs:
+            self.extraction_tabs.setCurrentIndex(1)

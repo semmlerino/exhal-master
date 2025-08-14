@@ -3,16 +3,13 @@ Test fixture managers for real extraction/injection logic
 
 Provides real manager instances with test data instead of mocks,
 improving test reliability and reducing mocking overhead.
-
-import shutil
-
-import shutil
 """
 
 import os
 import sys
 import tempfile
 
+import pytest
 from PIL import Image
 
 # Systematic pytest markers applied based on test content analysis
@@ -22,6 +19,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.no_qt,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
 ]
 
 

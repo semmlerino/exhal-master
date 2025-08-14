@@ -20,6 +20,11 @@ pytestmark = [
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
     pytest.mark.widget,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.memory,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
 ]
 
 

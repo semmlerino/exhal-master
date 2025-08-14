@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QLabel, QStatusBar
 
@@ -21,6 +22,9 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.rom_data,
     pytest.mark.widget,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
 
 

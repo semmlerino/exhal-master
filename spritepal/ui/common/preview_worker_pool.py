@@ -55,7 +55,8 @@ class PooledPreviewWorker(SpritePreviewWorker):
         self.rom_cache = rom_cache  # Store ROM cache for potential use
         self.sprite_config = None
         self._current_request_id = request.request_id
-        self._cancel_requested.clear()
+        if self._cancel_requested:
+            self._cancel_requested.clear()
         self._is_processing = True
 
     def cancel_current_request(self) -> None:
@@ -605,7 +606,8 @@ class PreviewWorkerPool(QObject):
                 except Exception as e:
                     logger.warning(f"Error during worker cleanup: {e}")
 
-            self._active_workers.clear()
+            if self._active_workers:
+                self._active_workers.clear()
             self._worker_count = 0
 
         logger.debug("PreviewWorkerPool cleanup complete")

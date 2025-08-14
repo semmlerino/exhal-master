@@ -104,7 +104,8 @@ class PaletteWidget(QFrame):
         # Palette label
         self.label = QLabel(f"{palette_index}", self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet("font-weight: bold; color: #ddd;")
+        if self.label:
+            self.label.setStyleSheet("font-weight: bold; color: #ddd;")
         layout.addWidget(self.label, 0, 0, 1, 4)
 
         # Color swatches
@@ -134,8 +135,9 @@ class PaletteWidget(QFrame):
         """Set the palette name"""
         self.name = name
         if name:
-            self.label.setText(f"{self.palette_index}: {name}")
-        else:
+            if self.label:
+                self.label.setText(f"{self.palette_index}: {name}")
+        elif self.label:
             self.label.setText(f"{self.palette_index}")
 
 

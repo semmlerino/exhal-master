@@ -59,8 +59,10 @@ class OutputNameWidget(BaseExtractionWidget):
 
     def set_output_name(self, name: str):
         """Set the output name"""
-        self.output_name_edit.setText(name)
+        if self.output_name_edit:
+            self.output_name_edit.setText(name)
 
     def clear(self):
         """Clear the output name"""
-        self.output_name_edit.clear()
+        if self.output_name_edit:
+            self.output_name_edit.clear()

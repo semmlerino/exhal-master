@@ -73,18 +73,23 @@ def is_headless_environment() -> bool:
 # Ensure Qt environment is configured
 # Serial execution required: Real Qt components
 pytestmark = [
-    pytest.mark.gui,  # Requires display/X11 environment
-    pytest.mark.integration,  # Integration test
-    pytest.mark.qt_real,  # Uses real Qt components (not mocked)
-    pytest.mark.qt_app,  # Requires QApplication instance
-    pytest.mark.serial,  # Must run in serial (not parallel)
-    pytest.mark.dialog,  # Tests involving dialogs
-    pytest.mark.widget,  # Tests involving widgets
-    pytest.mark.slow,  # Real Qt components are slower
+    pytest.mark.gui,  # Requires display/X11 environment,
+    pytest.mark.integration,  # Integration test,
+    pytest.mark.qt_real,  # Uses real Qt components (not mocked),
+    pytest.mark.qt_app,  # Requires QApplication instance,
+    pytest.mark.serial,  # Must run in serial (not parallel),
+    pytest.mark.dialog,  # Tests involving dialogs,
+    pytest.mark.widget,  # Tests involving widgets,
+    pytest.mark.slow,  # Real Qt components are slower,
     pytest.mark.skipif(
         is_headless_environment(),
         reason="Requires display for real Qt components"
-    )
+    ),
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from PySide6.QtCore import QObject, QThread
 from PySide6.QtWidgets import QApplication, QWidget
@@ -112,7 +112,11 @@ class RealComponentFactory:
         if QApplication.instance() is None:
             self._app = QApplication([])
         else:
-            self._app = cast(QApplication, QApplication.instance())
+            # Type-safe alternative to cast() - QApplication.instance() can return None
+            # but we've already checked it's not None above
+            app_instance = QApplication.instance()
+            assert app_instance is not None, "QApplication instance should exist"
+            self._app = app_instance
 
     def create_extraction_manager(self, with_test_data: bool = True) -> ExtractionManager:
         """
@@ -371,6 +375,25 @@ class RealComponentFactory:
             pass
 
         return cache
+
+    def create_file_dialogs(self) -> dict[str, Any]:
+        """
+        Create mock file dialog functions for testing.
+
+        Returns:
+            Dictionary of mock file dialog functions configured with test data
+        """
+        from unittest.mock import Mock
+
+        # Get test data paths from repository
+        vram_data = self._data_repo.get_vram_extraction_data("small")
+        self._data_repo.get_rom_extraction_data("small")
+
+        return {
+            "getOpenFileName": Mock(return_value=(vram_data["vram_path"], "Memory dump (*.dmp)")),
+            "getSaveFileName": Mock(return_value=(str(Path(tempfile.gettempdir()) / "output.png"), "PNG files (*.png)")),
+            "getExistingDirectory": Mock(return_value=str(Path(tempfile.gettempdir()))),
+        }
 
     def create_error_handler(self, parent: QWidget | None = None) -> ErrorHandler:
         """

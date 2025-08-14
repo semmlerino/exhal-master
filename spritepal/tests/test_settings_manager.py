@@ -10,9 +10,6 @@ import pytest
 from utils.settings_manager import SettingsManager, get_settings_manager
 
 
-class TestSettingsManager:
-    """Test the SettingsManager class"""
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -22,8 +19,12 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.parallel_safe,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
 ]
 
+
+class TestSettingsManager:
+    """Test the SettingsManager class"""
 
     @pytest.fixture
     def temp_dir(self):

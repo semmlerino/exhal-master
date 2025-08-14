@@ -2,9 +2,16 @@
 Test the WorkerManager utility class.
 """
 
+import pytest
 from PySide6.QtCore import QThread, Signal
 from ui.common import WorkerManager
 from ui.common.timing_constants import (
+    SLEEP_MEDIUM,
+    TEST_TIMEOUT_MEDIUM,
+    WORKER_TIMEOUT_LONG,
+    WORKER_TIMEOUT_SHORT,
+)
+
 # Test characteristics: Real GUI components requiring display, Thread safety concerns
 pytestmark = [
     pytest.mark.gui,
@@ -14,14 +21,9 @@ pytestmark = [
     pytest.mark.serial,
     pytest.mark.slow,
     pytest.mark.worker_threads,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
-
-
-    SLEEP_MEDIUM,
-    TEST_TIMEOUT_MEDIUM,
-    WORKER_TIMEOUT_LONG,
-    WORKER_TIMEOUT_SHORT,
-)
 
 
 class DummyWorker(QThread):

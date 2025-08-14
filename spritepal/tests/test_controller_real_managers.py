@@ -18,7 +18,13 @@ from tests.infrastructure.real_component_factory import RealComponentFactory
 # Serial execution required: Real Qt components
 pytestmark = [
     
-    pytest.mark.serial
+    pytest.mark.serial,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.unit,
 ]
 
 
@@ -137,7 +143,7 @@ class TestControllerWithRealManagers:
         # It loads settings automatically on initialization
         new_session = SessionManager("TestApp")
         # Override the settings file path to use the same one
-        new_session.settings_file = controller.session_manager.settings_file
+        new_session._settings_file = controller.session_manager._settings_file
         new_session._settings = new_session._load_settings()
         
         # Verify data persisted through real manager

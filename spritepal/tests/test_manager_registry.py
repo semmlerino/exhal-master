@@ -8,11 +8,6 @@ import pytest
 
 from core.managers import (
 # Serial execution required: Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     ExtractionManager,
@@ -28,6 +23,14 @@ pytestmark = [
 from core.managers.registry import ManagerRegistry
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+]
 class TestManagerRegistry:
     """Test ManagerRegistry functionality"""
 

@@ -17,6 +17,9 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.rom_data,
     pytest.mark.slow,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.signals_slots,
 ]
 
 

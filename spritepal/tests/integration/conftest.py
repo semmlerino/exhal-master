@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
 # Add spritepal to path
@@ -155,9 +155,42 @@ def loaded_rom_panel(rom_extraction_panel, test_rom_with_sprites, qtbot):
     return rom_extraction_panel, rom_info
 
 
+class ConditionWaiter(QObject):
+    """Helper class for waiting on conditions with proper Qt event loop handling."""
+
+    condition_met = Signal()
+
+    def __init__(self, condition_func, parent=None):
+        super().__init__(parent)
+        self.condition_func = condition_func
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.check_condition)
+
+    def check_condition(self):
+        """Check if condition is met and emit signal if true."""
+        try:
+            if self.condition_func():
+                self.timer.stop()
+                self.condition_met.emit()
+        except Exception:
+            # Ignore exceptions in condition check to prevent crashes
+            pass
+
+    def start(self, interval=50):
+        """Start checking the condition."""
+        self.timer.start(interval)
+
+    def stop(self):
+        """Stop checking."""
+        self.timer.stop()
+
+
 def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition not met"):
     """
-    Wait for a condition to become true.
+    Wait for a condition to become true using proper Qt event loop handling.
+
+    This implementation uses qtbot's waitUntil which properly handles the Qt event loop
+    and avoids segfaults from improper event processing.
 
     Args:
         qtbot: pytest-qt bot
@@ -165,20 +198,13 @@ def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition n
         timeout: Maximum time to wait in milliseconds
         message: Error message if timeout occurs
     """
-    timer = QTimer()
-    timer.timeout.connect(lambda: None)
-    timer.start(100)  # Check every 100ms
-
-    elapsed = 0
-    while elapsed < timeout:
-        if condition_func():
-            timer.stop()
-            return True
-        qtbot.wait(100)
-        elapsed += 100
-
-    timer.stop()
-    raise TimeoutError(f"Timeout waiting for condition: {message}")
+    try:
+        # Use qtbot's waitUntil for proper event loop handling
+        qtbot.waitUntil(condition_func, timeout=timeout)
+        return True
+    except AssertionError:
+        # waitUntil raises AssertionError on timeout
+        raise TimeoutError(f"Timeout waiting for condition: {message}")
 
 
 @pytest.fixture

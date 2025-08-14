@@ -84,7 +84,8 @@ class FormRow(QWidget):
         # Add help text if provided
         if help_text:
             self.help_label = QLabel(help_text)
-            self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
+            if self.help_label:
+                self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
             self.help_label.setWordWrap(True)
             self.input_layout.addWidget(self.help_label)
 
@@ -107,7 +108,8 @@ class FormRow(QWidget):
 
     def set_label_text(self, text: str):
         """Update the label text"""
-        self.label.setText(text)
+        if self.label:
+            self.label.setText(text)
 
     def get_label_text(self) -> str:
         """Get the current label text"""
@@ -119,7 +121,8 @@ class FormRow(QWidget):
             self.help_label.setText(text)
         else:
             self.help_label = QLabel(text)
-            self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
+            if self.help_label:
+                self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
             self.help_label.setWordWrap(True)
             self.input_layout.addWidget(self.help_label)
 
@@ -135,17 +138,20 @@ class FormRow(QWidget):
         if not is_valid and error_message:
             if self.help_label is None:
                 self.set_help_text(error_message)
-            else:
+            elif self.help_label:
                 self.help_label.setText(error_message)
             # Change help label to error styling
-            self.help_label.setStyleSheet(get_muted_text_style(color_level="dark"))
+            if self.help_label:
+                self.help_label.setStyleSheet(get_muted_text_style(color_level="dark"))
         elif is_valid and self.help_label is not None and not self._help_text:
             # Clear error message if no permanent help text
             self.clear_help_text()
         elif is_valid and self.help_label is not None and self._help_text:
             # Restore original help text
-            self.help_label.setText(self._help_text)
-            self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
+            if self.help_label:
+                self.help_label.setText(self._help_text)
+            if self.help_label:
+                self.help_label.setStyleSheet(get_muted_text_style(color_level="medium"))
 
     def set_label_width(self, width: int):
         """Set the label width"""

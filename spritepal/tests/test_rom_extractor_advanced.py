@@ -20,6 +20,8 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.parallel_safe,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+    pytest.mark.slow,
 ]
 
 

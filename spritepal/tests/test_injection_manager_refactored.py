@@ -27,7 +27,13 @@ from tests.infrastructure.real_component_factory import RealComponentFactory
 # Serial execution required: Real Qt components
 pytestmark = [
     
-    pytest.mark.serial
+    pytest.mark.serial,
+    pytest.mark.file_io,
+    pytest.mark.gui,
+    pytest.mark.performance,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

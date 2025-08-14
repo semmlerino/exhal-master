@@ -16,6 +16,22 @@ Performance Note: This test file uses session-scoped managers for performance.
 - Current fixtures work as-is (no change needed)  
 - For new tests, consider using `managers` fixture directly:
   
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
   def test_extraction(managers):
       extraction_manager = managers.get_extraction_manager()
       # test logic...
@@ -37,11 +53,6 @@ from typing import Generator, Optional
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     ManagerTestContext,

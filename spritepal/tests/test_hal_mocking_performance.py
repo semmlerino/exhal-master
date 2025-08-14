@@ -18,7 +18,11 @@ pytestmark = [
     pytest.mark.serial,
     pytest.mark.process_pool,
     pytest.mark.singleton,
-    pytest.mark.benchmark
+    pytest.mark.benchmark,
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.performance,
 ]
 
 

@@ -13,16 +13,26 @@ from core.rom_injector import SpritePointer
 from utils.rom_cache import ROMCache, get_rom_cache
 
 
-class TestROMCacheCore:
-    """Test core ROMCache functionality."""
-
 # Serial execution required: Thread safety concerns
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
 ]
 
+
+class TestROMCacheCore:
+    """Test core ROMCache functionality."""
 
     @pytest.fixture
     def temp_cache_dir(self):

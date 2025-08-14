@@ -22,7 +22,14 @@ from ui.rom_extraction.workers.search_worker import SpriteSearchWorker
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.performance,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

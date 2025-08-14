@@ -15,7 +15,13 @@ pytest_plugins = ["pytestqt"]
 pytestmark = [
     pytest.mark.serial,
     pytest.mark.qt_application,
-    pytest.mark.qt_app
+    pytest.mark.qt_app,
+    pytest.mark.ci_safe,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
 
 

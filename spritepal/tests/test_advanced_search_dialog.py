@@ -27,6 +27,8 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.serial,
     pytest.mark.worker_threads,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
 
 

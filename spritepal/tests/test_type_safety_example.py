@@ -33,6 +33,13 @@ pytestmark = [
     pytest.mark.unit,      # Fast unit tests
     pytest.mark.mock_only, # Uses only mocks
     pytest.mark.parallel_safe,  # Safe for parallel execution
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

@@ -1,3 +1,4 @@
+
 """
 Comprehensive memory leak detection tests.
 
@@ -11,6 +12,18 @@ These tests verify:
 """
 
 from __future__ import annotations
+
+import pytest
+
+pytestmark = [
+    pytest.mark.cache,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+]
 
 import gc
 import os

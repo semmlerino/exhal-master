@@ -16,16 +16,6 @@ from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 # Import all dialogs
 from ui.dialogs import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.dialog,
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.mock_dialogs,
-    pytest.mark.qt_mock,
-    pytest.mark.rom_data,
-    pytest.mark.widget,
-]
 
 
     ResumeScanDialog,
@@ -37,6 +27,20 @@ from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
 
 
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_mock,
+    pytest.mark.rom_data,
+    pytest.mark.widget,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.qt_real,
+]
 class TestDialogInstantiation:
     """Test that all dialogs can be instantiated without errors."""
 

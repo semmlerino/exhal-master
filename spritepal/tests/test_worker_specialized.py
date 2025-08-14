@@ -14,20 +14,22 @@ from PySide6.QtTest import QSignalSpy
 
 from core.managers.base_manager import BaseManager
 from core.workers.specialized import (
-# Serial execution required: QApplication management, Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application,
-    pytest.mark.thread_safety
-]
-
-
     ExtractionWorkerBase,
     InjectionWorkerBase,
     PreviewWorkerBase,
     ScanWorkerBase,
 )
+
+# Serial execution required: QApplication management, Thread safety concerns
+pytestmark = [
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+]
 
 
 class TestExtractionWorkerBase:

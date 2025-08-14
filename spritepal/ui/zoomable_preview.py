@@ -403,23 +403,27 @@ class PreviewPanel(QWidget):
 
         # Palette application controls
         self.palette_toggle = QCheckBox("Apply Palette")
-        self.palette_toggle.setChecked(False)
+        if self.palette_toggle:
+            self.palette_toggle.setChecked(False)
         _ = self.palette_toggle.toggled.connect(self._on_palette_toggle)
 
         # Transparency toggle
         self.transparency_toggle = QCheckBox("Transparency")
-        self.transparency_toggle.setChecked(True)
+        if self.transparency_toggle:
+            self.transparency_toggle.setChecked(True)
         self.transparency_toggle.setToolTip("Toggle transparency for palette index 0")
         _ = self.transparency_toggle.toggled.connect(self._on_transparency_toggle)
 
         self.palette_selector = QComboBox(self)
         self.palette_selector.setMinimumWidth(PALETTE_SELECTOR_MIN_WIDTH)
-        self.palette_selector.setEnabled(False)
+        if self.palette_selector:
+            self.palette_selector.setEnabled(False)
         _ = self.palette_selector.currentTextChanged.connect(self._on_palette_changed)
 
         # Populate palette selector
         for i in range(8, 16):
-            self.palette_selector.addItem(f"Palette {i}", i)
+            if self.palette_selector:
+                self.palette_selector.addItem(f"Palette {i}", i)
 
         # Zoom controls
         self.zoom_fit_btn = QPushButton("Fit")
@@ -453,7 +457,8 @@ class PreviewPanel(QWidget):
         if checked != self.colorizer.is_palette_mode():
             self.colorizer.toggle_palette_mode()
 
-        self.palette_selector.setEnabled(checked)
+        if self.palette_selector:
+            self.palette_selector.setEnabled(checked)
 
         if checked and self._grayscale_image and self.colorizer.has_palettes():
             self._apply_current_palette()
@@ -564,9 +569,12 @@ class PreviewPanel(QWidget):
         self.colorizer.set_palettes({})  # Clear palettes
         if self.colorizer.is_palette_mode():
             self.colorizer.toggle_palette_mode()  # Turn off palette mode
-        self.palette_toggle.setChecked(False)
-        self.palette_selector.setEnabled(False)
-        self.preview.clear()
+        if self.palette_toggle:
+            self.palette_toggle.setChecked(False)
+        if self.palette_selector:
+            self.palette_selector.setEnabled(False)
+        if self.preview:
+            self.preview.clear()
 
     def clear_preview(self) -> None:
         """Clear the preview (alias for clear)"""
@@ -586,7 +594,8 @@ class PreviewPanel(QWidget):
 
         # Enable palette controls if we have both image and palettes
         has_data = self._grayscale_image is not None and self.colorizer.has_palettes()
-        self.palette_toggle.setEnabled(has_data)
+        if self.palette_toggle:
+            self.palette_toggle.setEnabled(has_data)
 
         if self.palette_toggle.isChecked() and has_data:
             self._apply_current_palette()
@@ -599,15 +608,18 @@ class PreviewPanel(QWidget):
         """Handle keyboard input"""
         if a0.key() == Qt.Key.Key_C:
             # Toggle palette application
-            self.palette_toggle.setChecked(not self.palette_toggle.isChecked())
+            if self.palette_toggle:
+                self.palette_toggle.setChecked(not self.palette_toggle.isChecked())
         else:
             super().keyPressEvent(a0)
 
     def _on_colorizer_palette_mode_changed(self, enabled: bool) -> None:
         """Handle palette mode change from colorizer"""
         # Update UI to reflect colorizer state
-        self.palette_toggle.setChecked(enabled)
-        self.palette_selector.setEnabled(enabled)
+        if self.palette_toggle:
+            self.palette_toggle.setChecked(enabled)
+        if self.palette_selector:
+            self.palette_selector.setEnabled(enabled)
 
     def _on_colorizer_palette_index_changed(self, index: int) -> None:
         """Handle palette index change from colorizer"""

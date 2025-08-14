@@ -19,6 +19,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.no_qt,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
 ]
 
 

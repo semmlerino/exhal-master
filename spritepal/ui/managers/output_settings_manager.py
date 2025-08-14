@@ -92,14 +92,16 @@ class OutputSettingsManager(QObject):
     def _create_output_options_section(self, layout: QVBoxLayout) -> None:
         """Create output options checkboxes"""
         self.grayscale_check = QCheckBox("Create grayscale with palettes")
-        self.grayscale_check.setChecked(True)
+        if self.grayscale_check:
+            self.grayscale_check.setChecked(True)
         self.grayscale_check.setToolTip(
             "Extract sprites in grayscale with separate .pal.json files"
         )
         layout.addWidget(self.grayscale_check)
 
         self.metadata_check = QCheckBox("Generate metadata for palette switching")
-        self.metadata_check.setChecked(True)
+        if self.metadata_check:
+            self.metadata_check.setChecked(True)
         self.metadata_check.setToolTip(
             "Create .metadata.json file for easy palette switching in editor"
         )
@@ -108,7 +110,8 @@ class OutputSettingsManager(QObject):
     def _create_output_info_section(self, layout: QVBoxLayout) -> None:
         """Create output files info label"""
         self.output_info_label = QLabel("Files to create: Loading...")
-        self.output_info_label.setStyleSheet(get_muted_text_style(italic=True))
+        if self.output_info_label:
+            self.output_info_label.setStyleSheet(get_muted_text_style(italic=True))
         layout.addWidget(self.output_info_label)
 
     def _connect_signals(self) -> None:
@@ -153,7 +156,8 @@ class OutputSettingsManager(QObject):
         if filename:
             # Update output name without extension
             base_name = Path(filename).stem
-            self.output_name_edit.setText(base_name)
+            if self.output_name_edit:
+                self.output_name_edit.setText(base_name)
 
     def get_output_name(self) -> str:
         """Get current output name"""
@@ -167,7 +171,8 @@ class OutputSettingsManager(QObject):
             return
         # Temporarily disconnect to avoid signal loops
         self.output_name_edit.textChanged.disconnect()
-        self.output_name_edit.setText(name)
+        if self.output_name_edit:
+            self.output_name_edit.setText(name)
         self.output_name_edit.textChanged.connect(self._on_output_name_changed)
 
     def get_grayscale_enabled(self) -> bool:
@@ -180,7 +185,8 @@ class OutputSettingsManager(QObject):
         """Set grayscale checkbox state"""
         if not hasattr(self, "grayscale_check") or not self.grayscale_check:
             return
-        self.grayscale_check.setChecked(enabled)
+        if self.grayscale_check:
+            self.grayscale_check.setChecked(enabled)
 
     def get_metadata_enabled(self) -> bool:
         """Get metadata checkbox state"""
@@ -192,7 +198,8 @@ class OutputSettingsManager(QObject):
         """Set metadata checkbox state"""
         if not hasattr(self, "metadata_check") or not self.metadata_check:
             return
-        self.metadata_check.setChecked(enabled)
+        if self.metadata_check:
+            self.metadata_check.setChecked(enabled)
 
     def update_output_info_label(self, is_vram_tab: bool, is_grayscale_mode: bool) -> None:
         """Update the label showing which files will be created
@@ -209,7 +216,8 @@ class OutputSettingsManager(QObject):
             return
 
         if is_grayscale_mode:
-            self.output_info_label.setText("Files to create: grayscale PNG only")
+            if self.output_info_label:
+                self.output_info_label.setText("Files to create: grayscale PNG only")
         else:
             files = ["PNG"]
             if self.grayscale_check.isChecked():
@@ -217,12 +225,14 @@ class OutputSettingsManager(QObject):
             if self.metadata_check.isChecked():
                 files.append("metadata.json")
 
-            self.output_info_label.setText(f"Files to create: {', '.join(files)}")
+            if self.output_info_label:
+                self.output_info_label.setText(f"Files to create: {', '.join(files)}")
 
     def set_rom_extraction_mode(self) -> None:
         """Configure for ROM extraction mode"""
         if hasattr(self, "output_info_label") and self.output_info_label:
-            self.output_info_label.setText("Files to create: PNG, palette files (.pal.json), metadata.json")
+            if self.output_info_label:
+                self.output_info_label.setText("Files to create: PNG, palette files (.pal.json), metadata.json")
         if hasattr(self, "output_group") and self.output_group:
             self.output_group.setTitle("Output Settings (Shared)")
 
@@ -242,8 +252,10 @@ class OutputSettingsManager(QObject):
             return
 
         # Disable palette-related options in grayscale mode
-        self.grayscale_check.setEnabled(not is_grayscale_mode)
-        self.metadata_check.setEnabled(not is_grayscale_mode)
+        if self.grayscale_check:
+            self.grayscale_check.setEnabled(not is_grayscale_mode)
+        if self.metadata_check:
+            self.metadata_check.setEnabled(not is_grayscale_mode)
 
         # Update tooltips to explain why they're disabled
         if is_grayscale_mode:
@@ -264,4 +276,5 @@ class OutputSettingsManager(QObject):
     def clear_output_name(self) -> None:
         """Clear output name field"""
         if hasattr(self, "output_name_edit") and self.output_name_edit:
-            self.output_name_edit.clear()
+            if self.output_name_edit:
+                self.output_name_edit.clear()

@@ -33,7 +33,8 @@ class PaletteColorizer(QObject):
             palettes_dict: Dictionary mapping palette index to RGB color lists
         """
         self._current_palettes = palettes_dict
-        self._colorized_cache.clear()  # Clear cache when palettes change
+        if self._colorized_cache:
+            self._colorized_cache.clear()  # Clear cache when palettes change
 
     def get_palettes(self) -> dict[int, list[tuple[int, int, int]]]:
         """Get the current palette data
@@ -51,7 +52,8 @@ class PaletteColorizer(QObject):
         """
         if palette_index != self._selected_palette_index:
             self._selected_palette_index = palette_index
-            self._colorized_cache.clear()  # Clear cache when selection changes
+            if self._colorized_cache:
+                self._colorized_cache.clear()  # Clear cache when selection changes
             self.palette_index_changed.emit(palette_index)
 
     def toggle_palette_mode(self) -> bool:
@@ -61,7 +63,8 @@ class PaletteColorizer(QObject):
             True if palette mode is now enabled, False otherwise
         """
         self._palette_applied = not self._palette_applied
-        self._colorized_cache.clear()  # Clear cache when mode changes
+        if self._colorized_cache:
+            self._colorized_cache.clear()  # Clear cache when mode changes
         self.palette_mode_changed.emit(self._palette_applied)
         return self._palette_applied
 
@@ -89,7 +92,8 @@ class PaletteColorizer(QObject):
             self._selected_palette_index = available_indices[0]
 
         # Clear cache when palette changes
-        self._colorized_cache.clear()
+        if self._colorized_cache:
+            self._colorized_cache.clear()
         self.palette_index_changed.emit(self._selected_palette_index)
 
         return self._selected_palette_index
@@ -209,7 +213,8 @@ class PaletteColorizer(QObject):
 
     def clear_cache(self) -> None:
         """Clear the colorized image cache"""
-        self._colorized_cache.clear()
+        if self._colorized_cache:
+            self._colorized_cache.clear()
 
     def _enforce_cache_limit(self) -> None:
         """Enforce maximum cache size to prevent memory issues"""

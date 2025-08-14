@@ -256,10 +256,12 @@ class ButtonBoxManager(QObject):
             if self._button_box:
                 self._button_box.removeButton(button)
             button.deleteLater()
-        self._custom_buttons.clear()
+        if self._custom_buttons:
+            self._custom_buttons.clear()
 
         # Clear callbacks
-        self._button_callbacks.clear()
+        if self._button_callbacks:
+            self._button_callbacks.clear()
 
         # Clear button box reference
         self._button_box = None

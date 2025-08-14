@@ -1,3 +1,10 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.rom_data,
+]
 #!/usr/bin/env python3
 """
 Test decompression at a known sprite offset.

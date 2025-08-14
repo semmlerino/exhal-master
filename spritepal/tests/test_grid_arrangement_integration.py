@@ -11,15 +11,6 @@ from PIL import Image
 
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-]
 
 
     ArrangementType,
@@ -32,6 +23,19 @@ from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
 
 
+
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class TestGridArrangementIntegration:
     """Integration tests for the complete grid arrangement workflow"""
 

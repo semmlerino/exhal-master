@@ -22,7 +22,11 @@ pytestmark = [
     pytest.mark.qt_application,
     pytest.mark.singleton,
     pytest.mark.process_pool,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.requires_display,
 ]
 
 

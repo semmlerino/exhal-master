@@ -2,21 +2,13 @@
 Tests for row arrangement refactored components
 """
 
+import pytest
 from unittest.mock import Mock, patch
 
 from PIL import Image
 
 from ui.row_arrangement import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-]
 
 
     ArrangementManager,
@@ -26,6 +18,19 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+]
 class TestRowImageProcessor:
     """Test the RowImageProcessor component"""
 

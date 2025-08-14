@@ -1,3 +1,12 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+]
 #!/usr/bin/env python3
 """
 Test next/prev navigation in manual offset dialog.

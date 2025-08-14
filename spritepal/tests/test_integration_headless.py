@@ -22,16 +22,22 @@ from utils.constants import (
 )
 
 
-class TestVRAMExtractionWorkerHeadless:
-    """Test VRAMExtractionWorker in headless environment"""
-
 # Serial execution required: Thread safety concerns
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.unit,
 ]
 
+
+class TestVRAMExtractionWorkerHeadless:
+    """Test VRAMExtractionWorker in headless environment"""
 
     @pytest.fixture
     def mock_qt_imports(self):

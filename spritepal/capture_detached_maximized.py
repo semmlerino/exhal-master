@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 try:
     from PySide6.QtCore import Qt, QTimer
-    from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
+    from PySide6.QtGui import QFont, QPainter, QPixmap
     from PySide6.QtWidgets import QApplication
 
     from ui.tabs.sprite_gallery_tab import SpriteGalleryTab

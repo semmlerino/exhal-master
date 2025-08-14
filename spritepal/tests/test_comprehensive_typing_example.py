@@ -45,14 +45,16 @@ class TestComprehensiveTypingExample:
     @pytest.fixture
     def mock_main_window(self) -> MockMainWindowProtocol:
         """Create a properly typed mock main window."""
-        from tests.infrastructure.mock_factory import MockFactory
-        return MockFactory.create_main_window()
+        from tests.infrastructure.real_component_factory import RealComponentFactory
+        factory = RealComponentFactory()
+        return factory.create_main_window()
 
     @pytest.fixture
     def mock_extraction_manager(self) -> MockExtractionManagerProtocol:
         """Create a properly typed mock extraction manager."""
-        from tests.infrastructure.mock_factory import MockFactory
-        return MockFactory.create_extraction_manager()
+        from tests.infrastructure.real_component_factory import RealComponentFactory
+        factory = RealComponentFactory()
+        return factory.create_extraction_manager()
 
     @pytest.fixture
     def test_file_factory(self, tmp_path: Path) -> Callable[[bytes, str], Path]:

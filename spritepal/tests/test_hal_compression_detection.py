@@ -1,3 +1,12 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.ci_safe,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.unit,
+]
 """
 Test suite for HAL compression tool detection robustness.
 

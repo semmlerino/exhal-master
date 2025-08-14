@@ -21,7 +21,10 @@ from ui.common import get_error_handler, reset_error_handler
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.headless,
+    pytest.mark.qt_real,
+    pytest.mark.worker_threads,
 ]
 
 

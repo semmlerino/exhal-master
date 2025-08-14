@@ -925,7 +925,8 @@ class AdvancedSearchDialog(QDialog):
 
         self.stop_button = QPushButton("Stop")
         self.stop_button.clicked.connect(self._stop_search)
-        self.stop_button.setEnabled(False)
+        if self.stop_button:
+            self.stop_button.setEnabled(False)
         buttons.addButton(self.stop_button, QDialogButtonBox.ButtonRole.ActionRole)
 
         layout.addWidget(buttons)
@@ -976,7 +977,8 @@ class AdvancedSearchDialog(QDialog):
 
         # Adaptive stepping
         self.adaptive_check = QCheckBox("Adaptive Step Sizing")
-        self.adaptive_check.setChecked(True)
+        if self.adaptive_check:
+            self.adaptive_check.setChecked(True)
         perf_layout.addWidget(self.adaptive_check, 1, 0, 1, 2)
 
         perf_group.setLayout(perf_layout)
@@ -1014,7 +1016,8 @@ class AdvancedSearchDialog(QDialog):
         self.ref_preview_label = QLabel("No reference sprite selected")
         self.ref_preview_label.setMinimumHeight(128)
         self.ref_preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.ref_preview_label.setStyleSheet(
+        if self.ref_preview_label:
+            self.ref_preview_label.setStyleSheet(
             "border: 1px solid #666; background-color: #333;"
         )
         ref_layout.addWidget(self.ref_preview_label)
@@ -1065,7 +1068,8 @@ class AdvancedSearchDialog(QDialog):
         # Pattern type
         type_layout = QHBoxLayout()
         self.hex_radio = QRadioButton("Hex Pattern")
-        self.hex_radio.setChecked(True)
+        if self.hex_radio:
+            self.hex_radio.setChecked(True)
         self.regex_radio = QRadioButton("Regular Expression")
         type_layout.addWidget(self.hex_radio)
         type_layout.addWidget(self.regex_radio)
@@ -1215,7 +1219,8 @@ class AdvancedSearchDialog(QDialog):
 
         # Compression filter
         self.compressed_check = QCheckBox("Include Compressed")
-        self.compressed_check.setChecked(True)
+        if self.compressed_check:
+            self.compressed_check.setChecked(True)
         self.uncompressed_check = QCheckBox("Include Uncompressed")
 
         layout.addWidget(self.compressed_check, 2, 0, 1, 2)
@@ -1234,7 +1239,8 @@ class AdvancedSearchDialog(QDialog):
 
     def _update_similarity_label(self, value: int):
         """Update similarity label text."""
-        self.similarity_label.setText(f"{value}%")
+        if self.similarity_label:
+            self.similarity_label.setText(f"{value}%")
 
     def _focus_search(self):
         """Focus the search input field."""
@@ -1242,7 +1248,8 @@ class AdvancedSearchDialog(QDialog):
 
     def _show_history_tab(self):
         """Show the history tab."""
-        self.tabs.setCurrentIndex(3)
+        if self.tabs:
+            self.tabs.setCurrentIndex(3)
 
     def _setup_shortcuts(self):
         """Setup keyboard shortcuts."""
@@ -1283,7 +1290,8 @@ class AdvancedSearchDialog(QDialog):
             start = int(self.start_offset_edit.text(), 16) if self.start_offset_edit.text() else 0
             end = int(self.end_offset_edit.text(), 16) if self.end_offset_edit.text() else None
         except ValueError:
-            self.results_label.setText("Invalid offset format")
+            if self.results_label:
+                self.results_label.setText("Invalid offset format")
             return
 
         # Create filters
@@ -1312,12 +1320,16 @@ class AdvancedSearchDialog(QDialog):
         self._connect_worker_signals()
 
         # Update UI
-        self.search_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
+        if self.search_button:
+            self.search_button.setEnabled(False)
+        if self.stop_button:
+            self.stop_button.setEnabled(True)
         self.progress_bar.setVisible(True)
-        self.results_list.clear()
+        if self.results_list:
+            self.results_list.clear()
         self.current_results = []
-        self.results_label.setText("Searching...")
+        if self.results_label:
+            self.results_label.setText("Searching...")
 
         # Add to history
         entry = SearchHistoryEntry(
@@ -1343,13 +1355,15 @@ class AdvancedSearchDialog(QDialog):
         # Get reference sprite offset
         ref_text = self.ref_offset_edit.text().strip()
         if not ref_text:
-            self.results_label.setText("Please specify a reference sprite offset")
+            if self.results_label:
+                self.results_label.setText("Please specify a reference sprite offset")
             return
 
         try:
             ref_offset = int(ref_text, 16) if ref_text.startswith("0x") else int(ref_text, 16)
         except ValueError:
-            self.results_label.setText("Invalid offset format. Use hex format like 0x12345")
+            if self.results_label:
+                self.results_label.setText("Invalid offset format. Use hex format like 0x12345")
             return
 
         # Get similarity threshold
@@ -1371,12 +1385,16 @@ class AdvancedSearchDialog(QDialog):
         self._connect_worker_signals()
 
         # Update UI
-        self.search_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
+        if self.search_button:
+            self.search_button.setEnabled(False)
+        if self.stop_button:
+            self.stop_button.setEnabled(True)
         self.progress_bar.setVisible(True)
-        self.results_list.clear()
+        if self.results_list:
+            self.results_list.clear()
         self.current_results = []
-        self.results_label.setText("Searching for similar sprites...")
+        if self.results_label:
+            self.results_label.setText("Searching for similar sprites...")
 
         # Add to history
         entry = SearchHistoryEntry(
@@ -1404,7 +1422,8 @@ class AdvancedSearchDialog(QDialog):
         # Get pattern input
         pattern_text = self.pattern_edit.toPlainText().strip()
         if not pattern_text:
-            self.results_label.setText("Please enter a search pattern")
+            if self.results_label:
+                self.results_label.setText("Please enter a search pattern")
             return
 
         # Determine pattern type
@@ -1417,12 +1436,14 @@ class AdvancedSearchDialog(QDialog):
         if pattern_type == "hex":
             for i, pattern in enumerate(patterns):
                 if not self._validate_hex_pattern(pattern):
-                    self.results_label.setText(f"Invalid hex pattern on line {i+1}: Use format like: 00 01 02 ?? FF")
+                    if self.results_label:
+                        self.results_label.setText(f"Invalid hex pattern on line {i+1}: Use format like: 00 01 02 ?? FF")
                     return
         else:  # regex
             for i, pattern in enumerate(patterns):
                 if not self._validate_regex_pattern(pattern):
-                    self.results_label.setText(f"Invalid regex pattern on line {i+1}")
+                    if self.results_label:
+                        self.results_label.setText(f"Invalid regex pattern on line {i+1}")
                     return
 
         # Get search options
@@ -1447,12 +1468,16 @@ class AdvancedSearchDialog(QDialog):
         self._connect_worker_signals()
 
         # Update UI
-        self.search_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
+        if self.search_button:
+            self.search_button.setEnabled(False)
+        if self.stop_button:
+            self.stop_button.setEnabled(True)
         self.progress_bar.setVisible(True)
-        self.results_list.clear()
+        if self.results_list:
+            self.results_list.clear()
         self.current_results = []
-        self.results_label.setText("Searching for pattern...")
+        if self.results_label:
+            self.results_label.setText("Searching for pattern...")
 
         # Add to history
         entry = SearchHistoryEntry(
@@ -1582,16 +1607,20 @@ class AdvancedSearchDialog(QDialog):
         item = QListWidgetItem(display_text)
         item.setData(Qt.ItemDataRole.UserRole, result)
         item.setToolTip(tooltip_text)
-        self.results_list.addItem(item)
+        if self.results_list:
+            self.results_list.addItem(item)
 
         # Update count with appropriate label
         result_type = "patterns" if result.metadata.get("pattern_type") else "sprites"
-        self.results_label.setText(f"Found {len(self.current_results)} {result_type}")
+        if self.results_label:
+            self.results_label.setText(f"Found {len(self.current_results)} {result_type}")
 
     def _search_complete(self, results: list):
         """Handle search completion."""
-        self.search_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
+        if self.search_button:
+            self.search_button.setEnabled(True)
+        if self.stop_button:
+            self.stop_button.setEnabled(False)
         self.progress_bar.setVisible(False)
 
         # Update history
@@ -1606,18 +1635,22 @@ class AdvancedSearchDialog(QDialog):
             self._show_visual_search_results(results)
 
         # Update results
-        self.results_label.setText(
+        if self.results_label:
+            self.results_label.setText(
             f"Search complete: {len(results)} sprites found"
         )
         self.search_completed.emit(len(results))
 
     def _search_error(self, error_msg: str):
         """Handle search error."""
-        self.search_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
+        if self.search_button:
+            self.search_button.setEnabled(True)
+        if self.stop_button:
+            self.stop_button.setEnabled(False)
         self.progress_bar.setVisible(False)
 
-        self.results_label.setText(f"Search error: {error_msg}")
+        if self.results_label:
+            self.results_label.setText(f"Search error: {error_msg}")
         logger.error(f"Search error: {error_msg}")
 
     def _handle_worker_input_request(self, title: str, prompt: str):
@@ -1667,7 +1700,8 @@ class AdvancedSearchDialog(QDialog):
             # Wake up any waiting threads to allow clean shutdown
             if hasattr(self.search_worker, "_user_response_condition"):
                 self.search_worker._user_response_condition.wakeAll()
-            self.results_label.setText("Search cancelled")
+            if self.results_label:
+                self.results_label.setText("Search cancelled")
 
     def _on_result_selected(self, item: QListWidgetItem):
         """Handle result selection."""
@@ -1711,23 +1745,28 @@ class AdvancedSearchDialog(QDialog):
                         offset = int(offset_text, 16)
 
                     # Set the offset in the edit field
-                    self.ref_offset_edit.setText(f"0x{offset:X}")
+                    if self.ref_offset_edit:
+                        self.ref_offset_edit.setText(f"0x{offset:X}")
 
                     # Try to generate and show a preview
                     self._update_reference_preview(offset)
 
                 except ValueError:
-                    self.results_label.setText("Invalid offset format")
+                    if self.results_label:
+                        self.results_label.setText("Invalid offset format")
         except Exception as e:
             logger.exception(f"Error in _browse_reference_sprite: {e}")
-            self.results_label.setText(f"Error: {e}")
+            if self.results_label:
+                self.results_label.setText(f"Error: {e}")
 
     def _on_reference_offset_changed(self):
         """Handle changes to reference offset text."""
         offset_text = self.ref_offset_edit.text().strip()
         if not offset_text:
-            self.ref_preview_label.setText("No reference sprite selected")
-            self.ref_preview_label.setPixmap(QPixmap())
+            if self.ref_preview_label:
+                self.ref_preview_label.setText("No reference sprite selected")
+            if self.ref_preview_label:
+                self.ref_preview_label.setPixmap(QPixmap())
             return
 
         try:
@@ -1741,8 +1780,10 @@ class AdvancedSearchDialog(QDialog):
             self._update_reference_preview(offset)
 
         except ValueError:
-            self.ref_preview_label.setText("Invalid offset format")
-            self.ref_preview_label.setPixmap(QPixmap())
+            if self.ref_preview_label:
+                self.ref_preview_label.setText("Invalid offset format")
+            if self.ref_preview_label:
+                self.ref_preview_label.setPixmap(QPixmap())
 
     def _update_reference_preview(self, offset: int):
         """Update the reference sprite preview."""
@@ -1766,16 +1807,22 @@ class AdvancedSearchDialog(QDialog):
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
-                self.ref_preview_label.setPixmap(scaled_pixmap)
-                self.ref_preview_label.setText("")
+                if self.ref_preview_label:
+                    self.ref_preview_label.setPixmap(scaled_pixmap)
+                if self.ref_preview_label:
+                    self.ref_preview_label.setText("")
             else:
-                self.ref_preview_label.setText(f"Could not load sprite at 0x{offset:X}")
-                self.ref_preview_label.setPixmap(QPixmap())
+                if self.ref_preview_label:
+                    self.ref_preview_label.setText(f"Could not load sprite at 0x{offset:X}")
+                if self.ref_preview_label:
+                    self.ref_preview_label.setPixmap(QPixmap())
 
         except Exception as e:
             logger.exception(f"Failed to generate reference preview: {e}")
-            self.ref_preview_label.setText(f"Preview error: {str(e)[:50]}...")
-            self.ref_preview_label.setPixmap(QPixmap())
+            if self.ref_preview_label:
+                self.ref_preview_label.setText(f"Preview error: {str(e)[:50]}...")
+            if self.ref_preview_label:
+                self.ref_preview_label.setPixmap(QPixmap())
 
     def _show_visual_search_results(self, results: list):
         """Show visual search results in similarity dialog."""
@@ -1801,7 +1848,8 @@ class AdvancedSearchDialog(QDialog):
 
         except Exception as e:
             logger.exception(f"Failed to show visual search results: {e}")
-            self.results_label.setText(f"Error displaying results: {e}")
+            if self.results_label:
+                self.results_label.setText(f"Error displaying results: {e}")
 
     def _check_similarity_index_exists(self) -> bool:
         """Check if similarity index exists for the current ROM."""
@@ -1834,7 +1882,8 @@ class AdvancedSearchDialog(QDialog):
                 self._build_similarity_index()
         except Exception as e:
             logger.exception(f"Error in _offer_to_build_similarity_index: {e}")
-            self.results_label.setText(f"Error: {e}")
+            if self.results_label:
+                self.results_label.setText(f"Error: {e}")
 
     def _build_similarity_index(self):
         """Build similarity index for the current ROM (thread-safe)."""
@@ -1861,7 +1910,8 @@ class AdvancedSearchDialog(QDialog):
             )
         except Exception as e:
             logger.exception(f"Error in _build_similarity_index: {e}")
-            self.results_label.setText(f"Error: {e}")
+            if self.results_label:
+                self.results_label.setText(f"Error: {e}")
 
     def _replay_search(self, item: QListWidgetItem):
         """Replay a search from history."""
@@ -1869,8 +1919,10 @@ class AdvancedSearchDialog(QDialog):
 
     def _clear_history(self):
         """Clear search history."""
-        self.search_history.clear()
-        self.history_list.clear()
+        if self.search_history:
+            self.search_history.clear()
+        if self.history_list:
+            self.history_list.clear()
         self._save_history()
 
     def _export_history(self):
@@ -1879,11 +1931,13 @@ class AdvancedSearchDialog(QDialog):
 
     def _update_history_display(self):
         """Update history list display."""
-        self.history_list.clear()
+        if self.history_list:
+            self.history_list.clear()
         for entry in reversed(self.search_history[-20:]):  # Show last 20
             item = QListWidgetItem(entry.to_display_string())
             item.setData(Qt.ItemDataRole.UserRole, entry)
-            self.history_list.addItem(item)
+            if self.history_list:
+                self.history_list.addItem(item)
 
     def _save_history(self):
         """Save search history to file."""

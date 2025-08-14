@@ -75,7 +75,8 @@ class ROMFileWidget(BaseExtractionWidget):
         # ROM info display
         self.rom_info_label = QLabel("No ROM loaded")
         self.rom_info_label.setWordWrap(True)
-        self.rom_info_label.setStyleSheet("QLabel { color: #666; font-size: 11px; padding: 5px; }")
+        if self.rom_info_label:
+            self.rom_info_label.setStyleSheet("QLabel { color: #666; font-size: 11px; padding: 5px; }")
         rom_layout.addWidget(self.rom_info_label)
 
         rom_group.setLayout(rom_layout)
@@ -86,7 +87,8 @@ class ROMFileWidget(BaseExtractionWidget):
     def set_rom_path(self, path: str):
         """Set the ROM path display"""
         self._rom_path = path
-        self.rom_path_edit.setText(path)
+        if self.rom_path_edit:
+            self.rom_path_edit.setText(path)
         # Check cache status when ROM is set
         if path:
             self._check_cache_status()
@@ -102,14 +104,17 @@ class ROMFileWidget(BaseExtractionWidget):
                 html = parts[0] + "</span><br>" + cache_html + (parts[1] if len(parts) > 1 else "")
             else:
                 html += "<br>" + cache_html
-        self.rom_info_label.setText(html)
+        if self.rom_info_label:
+            self.rom_info_label.setText(html)
 
     def clear(self):
         """Clear the ROM selection"""
         self._rom_path = ""
         self._cache_status = {"has_cache": False, "cache_type": None}
-        self.rom_path_edit.clear()
-        self.rom_info_label.setText("No ROM loaded")
+        if self.rom_path_edit:
+            self.rom_path_edit.clear()
+        if self.rom_info_label:
+            self.rom_info_label.setText("No ROM loaded")
 
     def _check_cache_status(self):
         """Check cache status for the current ROM"""

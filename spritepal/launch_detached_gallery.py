@@ -104,7 +104,7 @@ def create_colorful_thumbnails(gallery_window, sprites):
 
     for i, sprite in enumerate(sprites):
         offset = sprite['offset']
-        
+
         # Create unique thumbnail
         pixmap = QPixmap(128, 128)
         pixmap.fill(Qt.GlobalColor.black)

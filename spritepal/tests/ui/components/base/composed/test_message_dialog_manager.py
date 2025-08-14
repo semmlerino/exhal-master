@@ -1,3 +1,9 @@
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.signals_slots,
+]
 """
 Tests for the MessageDialogManager component.
 """

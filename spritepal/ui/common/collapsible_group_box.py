@@ -6,11 +6,11 @@ following the principle of progressive disclosure to reduce UI complexity.
 """
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Signal
+from PySide6.QtCore import QEasingCurve, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QFrame,
@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from ui.utils.safe_animation import SafeAnimation, is_headless_environment
 
 from .spacing_constants import (
     COLLAPSIBLE_ANIMATION_DURATION,
@@ -39,10 +41,11 @@ class CollapsibleGroupBox(QFrame):
     A group box that can be collapsed/expanded with smooth animation.
 
     Features:
-    - Smooth expand/collapse animation
+    - Smooth expand/collapse animation (or instant in headless mode)
     - Customizable title and collapse button
     - Signal emission on state change
     - Proper size policies for layout integration
+    - Safe operation in headless environments
     """
 
     # Signals
@@ -61,10 +64,11 @@ class CollapsibleGroupBox(QFrame):
         self._animation_duration: int = COLLAPSIBLE_ANIMATION_DURATION
         self._content_widget: QWidget | None = None
         self._content_layout: QVBoxLayout | None = None
-        self._animation: QPropertyAnimation | None = None
+        self._animation: SafeAnimation | None = None
         self._title_label: QLabel
         self._toggle_button: QPushButton
         self._animation_connections: list = []  # Track our connections
+        self._is_headless = is_headless_environment()
 
         # Setup UI components first
         self._setup_ui(title)
@@ -108,7 +112,8 @@ class CollapsibleGroupBox(QFrame):
         title_font.setPointSize(int(FONT_SIZE_MEDIUM.replace("px", "")))
         title_font.setBold(True)
         self._title_label.setFont(title_font)
-        self._title_label.setStyleSheet(f"color: {COLOR_PRIMARY};")
+        if self._title_label:
+            self._title_label.setStyleSheet(f"color: {COLOR_PRIMARY};")
         header_layout.addWidget(self._title_label)
 
         header_layout.addStretch()
@@ -116,7 +121,8 @@ class CollapsibleGroupBox(QFrame):
         # Collapse/expand button
         self._toggle_button = QPushButton(self)
         self._toggle_button.setFixedSize(20, 20)
-        self._toggle_button.setStyleSheet(f"""
+        if self._toggle_button:
+            self._toggle_button.setStyleSheet(f"""
             QPushButton {{
                 border: none;
                 background: transparent;
@@ -149,10 +155,17 @@ class CollapsibleGroupBox(QFrame):
         self._content_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
     def _setup_animation(self) -> None:
-        """Set up the collapse/expand animation."""
-        self._animation = QPropertyAnimation(self._content_widget, b"maximumHeight")
+        """Set up the collapse/expand animation (safe for headless mode)."""
+        if self._content_widget is None:
+            return
+
+        # Use SafeAnimation which handles headless environments
+        self._animation = SafeAnimation(self._content_widget, b"maximumHeight")
         self._animation.setDuration(self._animation_duration)
-        self._animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+
+        # Only set easing curve if not in headless mode
+        if not self._is_headless:
+            self._animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
 
     def _update_button_text(self) -> None:
         """Update the toggle button text based on collapsed state."""
@@ -160,7 +173,8 @@ class CollapsibleGroupBox(QFrame):
             self._toggle_button.setText("▶")  # Pointing right (collapsed)
             self._toggle_button.setToolTip("Expand section")
         else:
-            self._toggle_button.setText("▼")  # Pointing down (expanded)
+            if self._toggle_button:
+                self._toggle_button.setText("▼")  # Pointing down (expanded)
             self._toggle_button.setToolTip("Collapse section")
 
     def toggle_collapsed(self) -> None:
@@ -168,14 +182,14 @@ class CollapsibleGroupBox(QFrame):
         self.set_collapsed(not self._is_collapsed)
 
     def set_collapsed(self, collapsed: bool) -> None:
-        """Set the collapsed state with smooth animation."""
+        """Set the collapsed state with smooth animation (or instant in headless mode)."""
         if self._is_collapsed == collapsed:
             return
 
         self._is_collapsed = collapsed
         self._update_button_text()
 
-        if self._animation is not None:
+        if self._animation is not None and self._content_widget is not None:
             self._animation.stop()
 
             # Disconnect our previous connections
@@ -189,9 +203,10 @@ class CollapsibleGroupBox(QFrame):
                 except TypeError:
                     # Connection might have incompatible signature
                     pass
-            self._animation_connections.clear()
+            if self._animation_connections:
+                self._animation_connections.clear()
 
-            if collapsed and self._content_widget is not None:
+            if collapsed:
                 # Collapse: animate to height 0
                 start_height = self._content_widget.height()
                 self._animation.setStartValue(start_height)
@@ -218,7 +233,7 @@ class CollapsibleGroupBox(QFrame):
                     lambda: self._animation.valueChanged.disconnect(on_collapse_value_changed) if self._animation else None,
                     lambda: self._animation.finished.disconnect(on_collapse_finished) if self._animation else None
                 ]
-            elif not collapsed and self._content_widget is not None:
+            else:
                 # Expand: animate to natural height
                 # Show content widget at start of expansion
                 self._content_widget.setVisible(True)
@@ -270,7 +285,8 @@ class CollapsibleGroupBox(QFrame):
 
     def set_title(self, title: str) -> None:
         """Set the title text."""
-        self._title_label.setText(title)
+        if self._title_label:
+            self._title_label.setText(title)
 
     def title(self) -> str:
         """Get the current title text."""

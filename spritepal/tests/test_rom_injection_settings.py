@@ -13,17 +13,6 @@ from core.managers import InjectionManager
 from ui.injection_dialog import InjectionDialog
 from utils.constants import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.dialog,
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.mock_dialogs,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-]
 
 
     SETTINGS_KEY_FAST_COMPRESSION,
@@ -36,6 +25,19 @@ pytestmark = [
 from utils.settings_manager import SettingsManager
 
 
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.mock_dialogs,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+]
 class TestROMInjectionSettingsPersistence:
     """Test ROM injection settings persistence functionality"""
 

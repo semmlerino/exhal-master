@@ -2,18 +2,12 @@
 Test constants validation and usage in Phase 2 improvements.
 
 Validates that constants are properly defined, used consistently,
-
-from utils import constants
-
-from utils import constants
-
-from utils import constants
-
-from utils import constants
 and that the replacement of magic numbers is effective.
 """
 
 from unittest.mock import patch
+
+import pytest
 
 from ui.common import spacing_constants
 from utils import constants
@@ -28,6 +22,7 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.unit,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
 ]
 
 

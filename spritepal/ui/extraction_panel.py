@@ -99,13 +99,15 @@ class DropZone(QWidget):
         # Icon and label
         self.label = QLabel(f"Drop {file_type} file here")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet(get_muted_text_style(color_level="light"))
+        if self.label:
+            self.label.setStyleSheet(get_muted_text_style(color_level="light"))
         layout.addWidget(self.label)
 
         # File path label
         self.path_label = QLabel("")
         self.path_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.path_label.setStyleSheet(get_link_text_style("extract"))
+        if self.path_label:
+            self.path_label.setStyleSheet(get_link_text_style("extract"))
         self.path_label.setWordWrap(True)
         layout.addWidget(self.path_label)
 
@@ -191,12 +193,15 @@ class DropZone(QWidget):
         """Set the file path"""
         if os.path.exists(file_path):
             self.file_path = file_path
-            self.label.setText(f"✓ {self.file_type}")
-            self.label.setStyleSheet(get_success_text_style())
+            if self.label:
+                self.label.setText(f"✓ {self.file_type}")
+            if self.label:
+                self.label.setStyleSheet(get_success_text_style())
 
             # Show filename
             filename = Path(file_path).name
-            self.path_label.setText(filename)
+            if self.path_label:
+                self.path_label.setText(filename)
 
             self.file_dropped.emit(file_path)
             self.update()  # Trigger repaint
@@ -205,9 +210,12 @@ class DropZone(QWidget):
         """Clear the current file"""
         old_path = self.file_path
         self.file_path = ""
-        self.label.setText(f"Drop {self.file_type} file here")
-        self.label.setStyleSheet(get_muted_text_style(color_level="light"))
-        self.path_label.setText("")
+        if self.label:
+            self.label.setText(f"Drop {self.file_type} file here")
+        if self.label:
+            self.label.setStyleSheet(get_muted_text_style(color_level="light"))
+        if self.path_label:
+            self.path_label.setText("")
         self.update()
 
         # Emit file_dropped signal with empty path to trigger UI updates
@@ -275,19 +283,22 @@ class ExtractionPanel(QGroupBox):
 
         # Enhanced hex label with better styling
         self.offset_hex_label = QLabel("0xC000")
-        self.offset_hex_label.setStyleSheet(get_hex_label_style(background=True, color="extract"))
+        if self.offset_hex_label:
+            self.offset_hex_label.setStyleSheet(get_hex_label_style(background=True, color="extract"))
         self.offset_hex_label.setMinimumWidth(OFFSET_LABEL_MIN_WIDTH)
         self.offset_hex_label.setToolTip("Current offset in VRAM")
         offset_label_layout.addWidget(self.offset_hex_label)
 
         # Tile info label
         self.tile_info_label = QLabel("(Tile #1536)")
-        self.tile_info_label.setStyleSheet(get_muted_text_style(color_level="medium"))
+        if self.tile_info_label:
+            self.tile_info_label.setStyleSheet(get_muted_text_style(color_level="medium"))
         offset_label_layout.addWidget(self.tile_info_label)
 
         # Position percentage
         self.position_label = QLabel("75.0%")
-        self.position_label.setStyleSheet(get_muted_text_style(color_level="medium"))
+        if self.position_label:
+            self.position_label.setStyleSheet(get_muted_text_style(color_level="medium"))
         offset_label_layout.addWidget(self.position_label)
 
         offset_label_layout.addStretch()
@@ -304,7 +315,8 @@ class ExtractionPanel(QGroupBox):
         self.offset_slider.setSingleStep(0x20)  # Single tile step
         self.offset_slider.setPageStep(0x100)  # Page step
         _ = self.offset_slider.valueChanged.connect(self._on_offset_slider_changed)
-        self.offset_slider.setStyleSheet(get_slider_style("extract"))
+        if self.offset_slider:
+            self.offset_slider.setStyleSheet(get_slider_style("extract"))
         self.offset_slider.setToolTip("VRAM Offset: Adjust position within VRAM dump (0x0000-0x10000)")
         offset_layout.addWidget(self.offset_slider)
 
@@ -333,7 +345,8 @@ class ExtractionPanel(QGroupBox):
             "0x1000 (128 tiles)",
             "0x4000 (512 tiles)"
         ])
-        self.step_combo.setCurrentIndex(0)  # Default to tile-aligned
+        if self.step_combo:
+            self.step_combo.setCurrentIndex(0)  # Default to tile-aligned
         _ = self.step_combo.currentIndexChanged.connect(self._on_step_changed)
         self.step_combo.setToolTip("Select step size for navigation")
         offset_controls_layout.addWidget(self.step_combo)
@@ -640,18 +653,21 @@ class ExtractionPanel(QGroupBox):
         """Update all offset display elements"""
         # Update hex label
         hex_text = f"0x{value:04X}"
-        self.offset_hex_label.setText(hex_text)
+        if self.offset_hex_label:
+            self.offset_hex_label.setText(hex_text)
 
         # Update tile info
         tile_number = value // 32  # 32 bytes per tile
-        self.tile_info_label.setText(f"(Tile #{tile_number})")
+        if self.tile_info_label:
+            self.tile_info_label.setText(f"(Tile #{tile_number})")
 
         # Update position percentage
         max_val = self.offset_slider.maximum()
         if max_val > 0:
             percentage = (value / max_val) * 100
-            self.position_label.setText(f"{percentage:.1f}%")
-        else:
+            if self.position_label:
+                self.position_label.setText(f"{percentage:.1f}%")
+        elif self.position_label:
             self.position_label.setText("0%")
 
     def _on_step_changed(self, index):
@@ -682,7 +698,8 @@ class ExtractionPanel(QGroupBox):
                 logger.exception("Invalid jump offset: %s", hex_part)
 
             # Reset combo to "Select..."
-            self.jump_combo.setCurrentIndex(0)
+            if self.jump_combo:
+                self.jump_combo.setCurrentIndex(0)
 
     def _emit_offset_changed(self):
         """Emit the pending offset change after debounce"""
@@ -710,9 +727,12 @@ class ExtractionPanel(QGroupBox):
 
     def clear_files(self):
         """Clear all loaded files"""
-        self.vram_drop.clear()
-        self.cgram_drop.clear()
-        self.oam_drop.clear()
+        if self.vram_drop:
+            self.vram_drop.clear()
+        if self.cgram_drop:
+            self.cgram_drop.clear()
+        if self.oam_drop:
+            self.oam_drop.clear()
         self._check_extraction_ready()
 
     def has_vram(self):
@@ -753,7 +773,8 @@ class ExtractionPanel(QGroupBox):
         if "extraction_mode" in file_paths:
             mode_index = file_paths.get("extraction_mode", 0)
             if 0 <= mode_index < self.mode_combo.count():
-                self.mode_combo.setCurrentIndex(mode_index)
+                if self.mode_combo:
+                    self.mode_combo.setCurrentIndex(mode_index)
 
         if file_paths.get("vram_path") and os.path.exists(file_paths["vram_path"]):
             self.vram_drop.set_file(file_paths["vram_path"])

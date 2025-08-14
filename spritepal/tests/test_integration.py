@@ -26,9 +26,6 @@ from utils.constants import (
 )
 
 
-class TestEndToEndWorkflow:
-    """Test complete extraction workflows"""
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -36,8 +33,14 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
 
+
+class TestEndToEndWorkflow:
+    """Test complete extraction workflows"""
 
     @pytest.fixture
     def sample_files(self):

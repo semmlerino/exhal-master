@@ -21,12 +21,6 @@ from PySide6.QtWidgets import QApplication
 from core.controller import ExtractionController
 from core.managers import (
 # Serial execution required: QApplication management, Thread safety concerns, Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application,
-    pytest.mark.thread_safety
-]
 
 
     ExtractionManager,
@@ -42,6 +36,21 @@ from core.protocols.manager_protocols import (
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.headless,
+    pytest.mark.memory,
+    pytest.mark.performance,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+]
 class SignalCapture(QObject):
     """Helper class to capture Qt signals for testing"""
     

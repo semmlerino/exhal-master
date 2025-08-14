@@ -18,9 +18,6 @@ from utils.constants import (
 )
 
 
-class TestPaletteManager:
-    """Test the PaletteManager functionality"""
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -30,6 +27,9 @@ pytestmark = [
     pytest.mark.rom_data,
 ]
 
+
+class TestPaletteManager:
+    """Test the PaletteManager functionality"""
 
     @pytest.fixture
     def palette_manager(self):

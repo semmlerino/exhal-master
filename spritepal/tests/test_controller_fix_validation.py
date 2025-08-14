@@ -25,6 +25,7 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.unit,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
 ]
 
 

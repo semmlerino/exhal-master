@@ -91,7 +91,8 @@ class RegionJumpWidget(QWidget):
         title_row.addStretch()
 
         self.stats_label = QLabel("No regions")
-        self.stats_label.setStyleSheet("font-size: 10px; color: #888;")
+        if self.stats_label:
+            self.stats_label.setStyleSheet("font-size: 10px; color: #888;")
         title_row.addWidget(self.stats_label)
 
         container_layout.addLayout(title_row)
@@ -107,7 +108,8 @@ class RegionJumpWidget(QWidget):
         self.region_combo = QComboBox()
         self.region_combo.setMinimumWidth(200)
         self.region_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self.region_combo.setStyleSheet("""
+        if self.region_combo:
+            self.region_combo.setStyleSheet("""
             QComboBox {
                 background: #2b2b2b;
                 border: 1px solid #555;
@@ -132,7 +134,8 @@ class RegionJumpWidget(QWidget):
 
         self.go_button = QPushButton("Go")
         self.go_button.setMinimumWidth(40)
-        self.go_button.setStyleSheet("""
+        if self.go_button:
+            self.go_button.setStyleSheet("""
             QPushButton {
                 background: #4488dd;
                 color: white;
@@ -170,7 +173,8 @@ class RegionJumpWidget(QWidget):
         self.offset_spinbox.setSingleStep(0x1000)
         self.offset_spinbox.setDisplayIntegerBase(16)
         self.offset_spinbox.setPrefix("0x")
-        self.offset_spinbox.setStyleSheet("""
+        if self.offset_spinbox:
+            self.offset_spinbox.setStyleSheet("""
             QSpinBox {
                 background: #2b2b2b;
                 border: 1px solid #555;
@@ -228,18 +232,21 @@ class RegionJumpWidget(QWidget):
             return
 
         if not self.regions:
-            self.stats_label.setText("No regions")
+            if self.stats_label:
+                self.stats_label.setText("No regions")
             return
 
         if 0 <= self.current_region_index < len(self.regions):
             region = self.regions[self.current_region_index]
             quality_text = self._get_quality_text(region.average_quality)
-            self.stats_label.setText(
+            if self.stats_label:
+                self.stats_label.setText(
                 f"{region.sprite_count} sprites, {quality_text} quality"
             )
         else:
             total_sprites = sum(r.sprite_count for r in self.regions)
-            self.stats_label.setText(f"{len(self.regions)} regions, {total_sprites} sprites total")
+            if self.stats_label:
+                self.stats_label.setText(f"{len(self.regions)} regions, {total_sprites} sprites total")
 
     def _get_quality_text(self, quality: float) -> str:
         """Convert quality value to text description"""
@@ -289,20 +296,24 @@ class RegionJumpWidget(QWidget):
             self.region_combo.clear()
 
             if not regions:
-                self.region_combo.addItem("No regions detected")
-                self.region_combo.setEnabled(False)
+                if self.region_combo:
+                    self.region_combo.addItem("No regions detected")
+                if self.region_combo:
+                    self.region_combo.setEnabled(False)
                 if self.go_button is not None:
                     self.go_button.setEnabled(False)
             else:
                 for i, region in enumerate(regions):
-                    self.region_combo.addItem(self._format_region_name(region, i))
+                    if self.region_combo:
+                        self.region_combo.addItem(self._format_region_name(region, i))
 
-                self.region_combo.setEnabled(True)
+                if self.region_combo:
+                    self.region_combo.setEnabled(True)
                 if self.go_button is not None:
                     self.go_button.setEnabled(True)
 
                 # Select first region by default
-                if regions:
+                if regions and self.region_combo:
                     self.region_combo.setCurrentIndex(0)
 
         self._update_stats_display()
@@ -314,7 +325,8 @@ class RegionJumpWidget(QWidget):
         # In smart mode, emphasize region navigation
         if self.region_combo is not None:
             if enabled:
-                self.region_combo.setStyleSheet("""
+                if self.region_combo:
+                    self.region_combo.setStyleSheet("""
                     QComboBox {
                         background: #2b4b2b;  /* Green tint for smart mode */
                         border: 2px solid #4CAF50;
@@ -335,8 +347,8 @@ class RegionJumpWidget(QWidget):
                         margin-right: 4px;
                     }
                 """)
-            else:
-                # Reset to normal style
+            # Reset to normal style
+            elif self.region_combo:
                 self.region_combo.setStyleSheet("""
                     QComboBox {
                         background: #2b2b2b;

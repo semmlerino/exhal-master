@@ -124,7 +124,8 @@ class SettingsDialog(BaseDialog):
         dumps_layout.addWidget(self.dumps_dir_edit, 1)
 
         self.dumps_dir_button = QPushButton("Browse...", self)
-        self.dumps_dir_button.setStyleSheet(get_button_style())
+        if self.dumps_dir_button:
+            self.dumps_dir_button.setStyleSheet(get_button_style())
         self.dumps_dir_button.clicked.connect(self._browse_dumps_directory)
         dumps_layout.addWidget(self.dumps_dir_button)
 
@@ -163,7 +164,8 @@ class SettingsDialog(BaseDialog):
         location_layout.addWidget(self.cache_location_edit, 1)
 
         self.cache_location_button = QPushButton("Browse...", self)
-        self.cache_location_button.setStyleSheet(get_button_style())
+        if self.cache_location_button:
+            self.cache_location_button.setStyleSheet(get_button_style())
         self.cache_location_button.clicked.connect(self._browse_cache_location)
         location_layout.addWidget(self.cache_location_button)
 
@@ -207,27 +209,32 @@ class SettingsDialog(BaseDialog):
 
         # Cache stats labels
         self.cache_dir_label = QLabel("N/A", self)
-        self.cache_dir_label.setStyleSheet(get_muted_text_style())
+        if self.cache_dir_label:
+            self.cache_dir_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Directory:", self.cache_dir_label)
 
         self.cache_files_label = QLabel("0 files", self)
-        self.cache_files_label.setStyleSheet(get_muted_text_style())
+        if self.cache_files_label:
+            self.cache_files_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Cached items:", self.cache_files_label)
 
         self.cache_size_label = QLabel("0 MB", self)
-        self.cache_size_label.setStyleSheet(get_muted_text_style())
+        if self.cache_size_label:
+            self.cache_size_label.setStyleSheet(get_muted_text_style())
         stats_layout.addRow("Total size:", self.cache_size_label)
 
         # Cache actions
         actions_layout = QHBoxLayout()
 
         self.refresh_stats_button = QPushButton("Refresh", self)
-        self.refresh_stats_button.setStyleSheet(get_button_style())
+        if self.refresh_stats_button:
+            self.refresh_stats_button.setStyleSheet(get_button_style())
         self.refresh_stats_button.clicked.connect(self._update_cache_stats)
         actions_layout.addWidget(self.refresh_stats_button)
 
         self.clear_cache_button = QPushButton("Clear Cache", self)
-        self.clear_cache_button.setStyleSheet(get_button_style("danger"))
+        if self.clear_cache_button:
+            self.clear_cache_button.setStyleSheet(get_button_style("danger"))
         self.clear_cache_button.clicked.connect(self._clear_cache)
         actions_layout.addWidget(self.clear_cache_button)
 
@@ -263,25 +270,32 @@ class SettingsDialog(BaseDialog):
     def _load_settings(self):
         """Load current settings into UI"""
         # General settings
-        self.restore_window_check.setChecked(
+        if self.restore_window_check:
+            self.restore_window_check.setChecked(
             self.settings_manager.get("ui", "restore_position", True)
         )
-        self.auto_save_session_check.setChecked(
+        if self.auto_save_session_check:
+            self.auto_save_session_check.setChecked(
             self.settings_manager.get("session", "auto_save", True)
         )
-        self.dumps_dir_edit.setText(
+        if self.dumps_dir_edit:
+            self.dumps_dir_edit.setText(
             self.settings_manager.get("paths", "default_dumps_dir", "")
         )
 
         # Cache settings
-        self.cache_enabled_check.setChecked(self.settings_manager.get_cache_enabled())
-        self.cache_location_edit.setText(self.settings_manager.get_cache_location())
+        if self.cache_enabled_check:
+            self.cache_enabled_check.setChecked(self.settings_manager.get_cache_enabled())
+        if self.cache_location_edit:
+            self.cache_location_edit.setText(self.settings_manager.get_cache_location())
         self.cache_size_spin.setValue(self.settings_manager.get_cache_max_size_mb())
         self.cache_expiry_spin.setValue(self.settings_manager.get_cache_expiration_days())
-        self.auto_cleanup_check.setChecked(
+        if self.auto_cleanup_check:
+            self.auto_cleanup_check.setChecked(
             self.settings_manager.get("cache", "auto_cleanup", True)
         )
-        self.show_indicators_check.setChecked(
+        if self.show_indicators_check:
+            self.show_indicators_check.setChecked(
             self.settings_manager.get("cache", "show_indicators", True)
         )
 
@@ -319,7 +333,8 @@ class SettingsDialog(BaseDialog):
             if cache_dir and len(cache_dir) > 50:
                 # Truncate long paths
                 cache_dir = "..." + cache_dir[-47:]
-            self.cache_dir_label.setText(cache_dir)
+            if self.cache_dir_label:
+                self.cache_dir_label.setText(cache_dir)
 
             # Update file count
             total_files = stats.get("total_files", 0)
@@ -330,12 +345,14 @@ class SettingsDialog(BaseDialog):
             file_text = f"{total_files} files"
             if total_files > 0:
                 file_text += f" ({sprite_caches} sprites, {rom_caches} ROMs, {scan_caches} scans)"
-            self.cache_files_label.setText(file_text)
+            if self.cache_files_label:
+                self.cache_files_label.setText(file_text)
 
             # Update size
             size_bytes = stats.get("total_size_bytes", 0)
             size_mb = size_bytes / (1024 * 1024)
-            self.cache_size_label.setText(f"{size_mb:.1f} MB")
+            if self.cache_size_label:
+                self.cache_size_label.setText(f"{size_mb:.1f} MB")
 
             # Update status bar
             if self.status_bar is not None:
@@ -343,9 +360,12 @@ class SettingsDialog(BaseDialog):
 
         except Exception as e:
             # Handle errors gracefully
-            self.cache_dir_label.setText("Error reading cache")
-            self.cache_files_label.setText("N/A")
-            self.cache_size_label.setText("N/A")
+            if self.cache_dir_label:
+                self.cache_dir_label.setText("Error reading cache")
+            if self.cache_files_label:
+                self.cache_files_label.setText("N/A")
+            if self.cache_size_label:
+                self.cache_size_label.setText("N/A")
             if self.status_bar is not None:
                 self.status_bar.showMessage(f"Error reading cache: {e!s}")
 
@@ -358,13 +378,20 @@ class SettingsDialog(BaseDialog):
         enabled = self.cache_enabled_check.isChecked()
 
         # Enable/disable cache controls
-        self.cache_location_edit.setEnabled(enabled)
-        self.cache_location_button.setEnabled(enabled)
-        self.cache_size_spin.setEnabled(enabled)
-        self.cache_expiry_spin.setEnabled(enabled)
-        self.auto_cleanup_check.setEnabled(enabled)
-        self.show_indicators_check.setEnabled(enabled)
-        self.clear_cache_button.setEnabled(enabled)
+        if self.cache_location_edit:
+            self.cache_location_edit.setEnabled(enabled)
+        if self.cache_location_button:
+            self.cache_location_button.setEnabled(enabled)
+        if self.cache_size_spin:
+            self.cache_size_spin.setEnabled(enabled)
+        if self.cache_expiry_spin:
+            self.cache_expiry_spin.setEnabled(enabled)
+        if self.auto_cleanup_check:
+            self.auto_cleanup_check.setEnabled(enabled)
+        if self.show_indicators_check:
+            self.show_indicators_check.setEnabled(enabled)
+        if self.clear_cache_button:
+            self.clear_cache_button.setEnabled(enabled)
 
     def _browse_dumps_directory(self):
         """Browse for default dumps directory"""
@@ -377,7 +404,7 @@ class SettingsDialog(BaseDialog):
             QFileDialog.Option.ShowDirsOnly
         )
 
-        if dir_path:
+        if dir_path and self.dumps_dir_edit:
             self.dumps_dir_edit.setText(dir_path)
 
     def _browse_cache_location(self):
@@ -393,7 +420,7 @@ class SettingsDialog(BaseDialog):
             QFileDialog.Option.ShowDirsOnly
         )
 
-        if dir_path:
+        if dir_path and self.cache_location_edit:
             self.cache_location_edit.setText(dir_path)
 
     def _clear_cache(self):

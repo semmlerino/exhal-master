@@ -695,6 +695,16 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.real_qt,  # Uses real Qt components
     pytest.mark.no_manager_setup,  # Skip manager initialization
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.thread_safety,
+    pytest.mark.worker_threads,
 ]
 
 

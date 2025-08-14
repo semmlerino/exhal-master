@@ -91,7 +91,7 @@ class SpritePalApp(QApplication):
 
         # Apply modern dark theme
         self._apply_dark_theme()
-        
+
         # Initialize accessibility features
         initialize_accessibility()
 

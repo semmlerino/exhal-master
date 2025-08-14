@@ -1,3 +1,4 @@
+
 """
 Comprehensive thread safety tests for BatchThumbnailWorker and LRU cache.
 
@@ -11,6 +12,19 @@ These tests verify:
 """
 
 from __future__ import annotations
+
+import pytest
+
+pytestmark = [
+    pytest.mark.cache,
+    pytest.mark.headless,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.thread_safety,
+    pytest.mark.unit,
+    pytest.mark.worker_threads,
+]
 
 import threading
 import time

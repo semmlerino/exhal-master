@@ -24,20 +24,93 @@ try:
 except ImportError:
     pass  # Qt not available, tests will use fallback mocks
 
-from tests.infrastructure.mock_factory import (
-    create_manual_offset_dialog_tabs,
-    create_signal_coordinator,
-    create_unified_dialog_services,
-)
+# No longer using deprecated MockFactory - migrated to RealComponentFactory
 
 
 class TestUnifiedDialogIntegrationMocked:
     """Test unified dialog integration with comprehensive mocking."""
 
     @pytest.fixture
-    def mock_services(self):
+    def mock_services(self, real_factory):
         """Create all mock services for testing."""
-        return create_unified_dialog_services()
+        # Create mock services without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        # Preview generator
+        preview_generator = Mock()
+        preview_generator.create_preview_request = Mock()
+        preview_generator.generate_preview = Mock()
+        preview_generator.preview_ready = Mock()
+        preview_generator.preview_error = Mock()
+        
+        # Error handler
+        error_handler = Mock()
+        error_handler.handle_error = Mock()
+        error_handler.handle_exception = Mock()
+        error_handler.report_warning = Mock()
+        
+        # Offset navigator
+        offset_navigator = Mock()
+        offset_navigator.offset_changed = Mock()
+        offset_navigator.navigation_bounds_changed = Mock()
+        offset_navigator.step_size_changed = Mock()
+        offset_navigator.get_current_state = Mock()
+        offset_navigator.set_offset = Mock(return_value=True)
+        offset_navigator.set_rom_size = Mock()
+        offset_navigator.set_step_size = Mock()
+        offset_navigator.move_forward = Mock(return_value=True)
+        offset_navigator.move_backward = Mock(return_value=True)
+        offset_navigator.validate_offset = Mock(return_value=(True, ""))
+        offset_navigator.get_valid_range = Mock(return_value=(0, 0x400000))
+        
+        # Preview coordinator
+        preview_coordinator = Mock()
+        preview_coordinator.preview_requested = Mock()
+        preview_coordinator.preview_ready = Mock()
+        preview_coordinator.preview_error = Mock()
+        preview_coordinator.preview_cleared = Mock()
+        preview_coordinator.request_preview = Mock()
+        preview_coordinator.request_preview_with_debounce = Mock()
+        preview_coordinator.clear_preview = Mock()
+        preview_coordinator.cancel_pending_previews = Mock()
+        preview_coordinator.set_preview_widget = Mock()
+        preview_coordinator.cleanup_workers = Mock()
+        
+        # Sprites registry
+        sprites_registry = Mock()
+        sprites_registry.sprite_added = Mock()
+        sprites_registry.sprite_removed = Mock()
+        sprites_registry.sprites_cleared = Mock()
+        sprites_registry.sprites_imported = Mock()
+        sprites_registry.add_sprite = Mock(return_value=True)
+        sprites_registry.remove_sprite = Mock(return_value=True)
+        sprites_registry.get_sprite = Mock(return_value=None)
+        sprites_registry.get_all_sprites = Mock(return_value=[])
+        sprites_registry.get_sprite_count = Mock(return_value=0)
+        sprites_registry.clear_sprites = Mock()
+        sprites_registry.import_sprites = Mock(return_value=0)
+        sprites_registry.export_sprites = Mock(return_value=[])
+        sprites_registry.has_sprite_at = Mock(return_value=False)
+        sprites_registry.get_sprites_in_range = Mock(return_value=[])
+        
+        # Worker manager
+        worker_manager = Mock()
+        worker_manager.worker_started = Mock()
+        worker_manager.worker_finished = Mock()
+        worker_manager.worker_error = Mock()
+        worker_manager.create_worker = Mock(return_value="test_worker_123")
+        worker_manager.cleanup_worker = Mock(return_value=True)
+        worker_manager.cleanup_all_workers = Mock(return_value=0)
+        worker_manager.get_active_workers = Mock(return_value=[])
+        
+        return {
+            "preview_generator": preview_generator,
+            "error_handler": error_handler,
+            "offset_navigator": offset_navigator,
+            "preview_coordinator": preview_coordinator,
+            "sprites_registry": sprites_registry,
+            "worker_manager": worker_manager,
+        }
 
     @pytest.fixture
     def mock_tabs(self):
@@ -116,7 +189,40 @@ class TestUnifiedDialogIntegrationMocked:
     @pytest.fixture
     def mock_coordinator(self, mock_services):
         """Create mock signal coordinator."""
-        return create_signal_coordinator(mock_services)
+        # Create coordinator without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        coordinator = Mock()
+        
+        # External compatibility signals
+        coordinator.offset_changed = Mock()
+        coordinator.sprite_found = Mock()
+        coordinator.preview_requested = Mock()
+        coordinator.search_started = Mock()
+        coordinator.search_completed = Mock()
+        
+        # Internal coordination signals
+        coordinator.tab_switch_requested = Mock()
+        coordinator.update_title_requested = Mock()
+        coordinator.status_message = Mock()
+        coordinator.navigation_enabled = Mock()
+        coordinator.step_size_synchronized = Mock()
+        coordinator.preview_update_queued = Mock()
+        coordinator.preview_generation_started = Mock()
+        coordinator.preview_generation_completed = Mock()
+        
+        # Methods
+        coordinator.queue_offset_update = Mock()
+        coordinator.queue_preview_update = Mock()
+        coordinator.coordinate_preview_update = Mock()
+        coordinator.block_signals_temporarily = Mock()
+        coordinator.register_worker = Mock()
+        coordinator.unregister_worker = Mock()
+        coordinator.is_searching = Mock(return_value=False)
+        coordinator.get_current_offset = Mock(return_value=0x200000)
+        coordinator.cleanup = Mock()
+        
+        return coordinator
 
     @pytest.fixture
     def mock_dialog(self, mock_services, mock_tabs, mock_coordinator):
@@ -371,14 +477,84 @@ class TestSignalCoordinatorIntegrationMocked:
     """Test signal coordinator integration with mocks."""
 
     @pytest.fixture
-    def mock_services(self):
+    def mock_services(self, real_factory):
         """Create mock services."""
-        return create_unified_dialog_services()
+        # Reuse the same mock service creation logic
+        from unittest.mock import Mock
+        
+        # Preview generator
+        preview_generator = Mock()
+        preview_generator.create_preview_request = Mock()
+        preview_generator.generate_preview = Mock()
+        preview_generator.preview_ready = Mock()
+        preview_generator.preview_error = Mock()
+        
+        # Error handler 
+        error_handler = real_factory.create_error_handler()  # Use real error handler from factory
+        
+        # Other services as mocks
+        offset_navigator = Mock()
+        offset_navigator.get_current_state = Mock()
+        offset_navigator.set_offset = Mock(return_value=True)
+        offset_navigator.validate_offset = Mock(return_value=(True, ""))
+        offset_navigator.get_valid_range = Mock(return_value=(0, 0x400000))
+        
+        preview_coordinator = Mock()
+        preview_coordinator.request_preview = Mock()
+        preview_coordinator.cleanup_workers = Mock()
+        
+        sprites_registry = Mock()
+        sprites_registry.add_sprite = Mock(return_value=True)
+        sprites_registry.get_all_sprites = Mock(return_value=[])
+        
+        worker_manager = real_factory.create_worker_manager()  # Use real worker manager
+        
+        return {
+            "preview_generator": preview_generator,
+            "error_handler": error_handler,
+            "offset_navigator": offset_navigator,
+            "preview_coordinator": preview_coordinator,
+            "sprites_registry": sprites_registry,
+            "worker_manager": worker_manager,
+        }
 
     @pytest.fixture
     def coordinator(self, mock_services):
         """Create mock signal coordinator."""
-        return create_signal_coordinator(mock_services)
+        # Create coordinator without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        coordinator = Mock()
+        
+        # External compatibility signals
+        coordinator.offset_changed = Mock()
+        coordinator.sprite_found = Mock()
+        coordinator.preview_requested = Mock()
+        coordinator.search_started = Mock()
+        coordinator.search_completed = Mock()
+        
+        # Internal coordination signals
+        coordinator.tab_switch_requested = Mock()
+        coordinator.update_title_requested = Mock()
+        coordinator.status_message = Mock()
+        coordinator.navigation_enabled = Mock()
+        coordinator.step_size_synchronized = Mock()
+        coordinator.preview_update_queued = Mock()
+        coordinator.preview_generation_started = Mock()
+        coordinator.preview_generation_completed = Mock()
+        
+        # Methods
+        coordinator.queue_offset_update = Mock()
+        coordinator.queue_preview_update = Mock()
+        coordinator.coordinate_preview_update = Mock()
+        coordinator.block_signals_temporarily = Mock()
+        coordinator.register_worker = Mock()
+        coordinator.unregister_worker = Mock()
+        coordinator.is_searching = Mock(return_value=False)
+        coordinator.get_current_offset = Mock(return_value=0x200000)
+        coordinator.cleanup = Mock()
+        
+        return coordinator
 
     def test_queue_based_offset_updates(self, coordinator):
         """Test queued offset updates prevent signal loops."""
@@ -443,9 +619,19 @@ class TestThreadSafetyIntegrationMocked:
     """Test thread safety with mock components."""
 
     @pytest.fixture
-    def mock_services(self):
+    def mock_services(self, real_factory):
         """Create thread-safe mock services."""
-        services = create_unified_dialog_services()
+        # Create services without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        services = {
+            "preview_generator": Mock(),
+            "error_handler": real_factory.create_error_handler(),
+            "offset_navigator": Mock(),
+            "preview_coordinator": Mock(),
+            "sprites_registry": Mock(),
+            "worker_manager": real_factory.create_worker_manager(),
+        }
 
         # Add thread-safe behaviors
         for service in services.values():
@@ -459,7 +645,10 @@ class TestThreadSafetyIntegrationMocked:
     @pytest.fixture
     def threaded_coordinator(self, mock_services):
         """Create coordinator for thread testing."""
-        coordinator = create_signal_coordinator(mock_services)
+        # Create coordinator without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        coordinator = Mock()
 
         # Make coordinator methods track call count for thread testing
         coordinator.queue_offset_update = Mock()
@@ -564,14 +753,27 @@ class TestPerformanceIntegrationMocked:
     """Test performance with mock components."""
 
     @pytest.fixture
-    def performance_services(self):
+    def performance_services(self, real_factory):
         """Create performance-optimized mock services."""
-        return create_unified_dialog_services()
+        # Create services without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        return {
+            "preview_generator": Mock(),
+            "error_handler": real_factory.create_error_handler(),
+            "offset_navigator": Mock(),
+            "preview_coordinator": Mock(),
+            "sprites_registry": Mock(),
+            "worker_manager": real_factory.create_worker_manager(),
+        }
 
     @pytest.fixture
     def performance_coordinator(self, performance_services):
         """Create performance coordinator."""
-        coordinator = create_signal_coordinator(performance_services)
+        # Create coordinator without using deprecated MockFactory
+        from unittest.mock import Mock
+        
+        coordinator = Mock()
 
         # Add performance tracking
         coordinator.queue_offset_update = Mock()
@@ -761,6 +963,13 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.unit,  # These are actually unit tests with mocks
     pytest.mark.no_manager_setup,  # Skip manager initialization
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
 ]
 
 

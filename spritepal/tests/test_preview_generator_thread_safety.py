@@ -23,7 +23,11 @@ import pytest
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.worker_threads,
 ]
 
 

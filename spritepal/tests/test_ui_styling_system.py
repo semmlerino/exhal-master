@@ -10,14 +10,9 @@ from ui.styles import get_button_style, get_input_style, get_muted_text_style, g
 from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
 """
 
+import pytest
 from ui.styles import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.dialog,
-    pytest.mark.qt_app,
-    pytest.mark.qt_real,
-    pytest.mark.rom_data,
-]
 
 
     COLORS,
@@ -28,6 +23,15 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.headless,
+    pytest.mark.integration,
+]
 class TestStylingSystemFunctions:
     """Test the new styling functions added in Phase 1"""
 

@@ -66,6 +66,7 @@ class PreviewCoordinator(QObject):
 
         # Configure existing preview info label (created in __init__)
         self.preview_info.setStyleSheet(get_muted_text_style())
+        self.preview_info.setStyleSheet(get_muted_text_style())
         self.preview_info.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
         )
@@ -95,9 +96,12 @@ class PreviewCoordinator(QObject):
 
     def clear_previews(self) -> None:
         """Clear both sprite and palette previews"""
-        self.sprite_preview.clear()
-        self.palette_preview.clear()
-        self.preview_info.setText("No sprites loaded")
+        if self.sprite_preview:
+            self.sprite_preview.clear()
+        if self.palette_preview:
+            self.palette_preview.clear()
+        if self.preview_info:
+            self.preview_info.setText("No sprites loaded")
 
     def update_preview_info(self, message: str) -> None:
         """Update preview info message
@@ -105,4 +109,5 @@ class PreviewCoordinator(QObject):
         Args:
             message: Message to display
         """
-        self.preview_info.setText(message)
+        if self.preview_info:
+            self.preview_info.setText(message)

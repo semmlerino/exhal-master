@@ -10,14 +10,6 @@ import pytest
 
 from utils.sprite_regions import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.benchmark,
-    pytest.mark.headless,
-    pytest.mark.no_qt,
-    pytest.mark.performance,
-    pytest.mark.rom_data,
-    pytest.mark.unit,
-]
 
 
     RegionUpdateManager,
@@ -27,6 +19,16 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.benchmark,
+    pytest.mark.headless,
+    pytest.mark.no_qt,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.slow,
+]
 class TestSpriteRegion:
     """Test SpriteRegion data class functionality"""
 

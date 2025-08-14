@@ -122,12 +122,14 @@ class SimpleHistoryTab(QWidget):
         if self._history_manager.add_sprite(offset, quality):
             # Only add to UI if successfully added to manager
             item_text = f"0x{offset:06X} - Quality: {quality:.2f}"
-            self.sprite_list.addItem(item_text)
+            if self.sprite_list:
+                self.sprite_list.addItem(item_text)
 
     def clear_history(self) -> None:
         """Clear sprite history."""
         self._history_manager.clear_history()
-        self.sprite_list.clear()
+        if self.sprite_list:
+            self.sprite_list.clear()
 
     def get_sprites(self) -> list[tuple[int, float]]:
         """

@@ -25,7 +25,7 @@ from PySide6.QtCore import (
     QThread,
     QTimer,
     Signal,
-    pyqtBoundSignal,
+    SignalInstance,
 )
 
 from .qt_real_testing import EventLoopHelper
@@ -53,7 +53,7 @@ class SignalSpy:
     Replaces MockSignal with real signal monitoring capabilities.
     """
 
-    def __init__(self, signal: Signal | pyqtBoundSignal, signal_name: str = "signal"):
+    def __init__(self, signal: Signal | SignalInstance, signal_name: str = "signal"):
         """
         Initialize signal spy.
 
@@ -222,7 +222,7 @@ class MultiSignalSpy:
         self.spies: dict[str, SignalSpy] = {}
         self.all_emissions: list[SignalEmission] = []
 
-    def add_signal(self, signal: Signal | pyqtBoundSignal, name: str) -> SignalSpy:
+    def add_signal(self, signal: Signal | SignalInstance, name: str) -> SignalSpy:
         """
         Add a signal to monitor.
 
@@ -336,7 +336,7 @@ class AsyncSignalTester:
     @staticmethod
     @contextmanager
     def wait_for_signal(
-        signal: Signal | pyqtBoundSignal,
+        signal: Signal | SignalInstance,
         timeout_ms: int = 1000
     ) -> Generator[list[Any], None, None]:
         """
@@ -373,7 +373,7 @@ class AsyncSignalTester:
 
     @staticmethod
     def emit_delayed(
-        signal: Signal | pyqtBoundSignal,
+        signal: Signal | SignalInstance,
         delay_ms: int,
         *args
     ) -> QTimer:
@@ -396,7 +396,7 @@ class AsyncSignalTester:
 
     @staticmethod
     def emit_sequence(
-        signals: list[tuple[Signal | pyqtBoundSignal, tuple[Any, ...]]],
+        signals: list[tuple[Signal | SignalInstance, tuple[Any, ...]]],
         interval_ms: int = 100
     ) -> list[QTimer]:
         """
@@ -424,7 +424,7 @@ class CrossThreadSignalTester:
 
     @staticmethod
     def verify_thread_safety(
-        signal: Signal | pyqtBoundSignal,
+        signal: Signal | SignalInstance,
         emit_in_thread: bool = True,
         connect_in_thread: bool = False
     ) -> bool:

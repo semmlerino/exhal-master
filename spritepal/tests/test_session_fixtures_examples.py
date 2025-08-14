@@ -24,6 +24,8 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.performance,
     pytest.mark.rom_data,
+    pytest.mark.cache,
+    pytest.mark.unit,
 ]
 
 

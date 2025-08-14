@@ -166,7 +166,8 @@ class PreviewCache:
         """Clear all cached entries."""
         with self._lock:
             entry_count = len(self._cache)
-            self._cache.clear()
+            if self._cache:
+                self._cache.clear()
             self._memory_usage = 0
 
             if entry_count > 0:

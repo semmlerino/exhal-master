@@ -1,3 +1,14 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+]
 #!/usr/bin/env python3
 """
 Test script to verify the refactored manual offset tab widgets.

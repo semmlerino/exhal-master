@@ -36,7 +36,16 @@ from tests.infrastructure.qt_testing_framework import QtTestingFramework
 pytestmark = [
     
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
 ]
 
 

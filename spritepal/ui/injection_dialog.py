@@ -223,7 +223,7 @@ class InjectionDialog(TabbedDialog):
         """Setup keyboard shortcuts for the dialog"""
         # Apply accessibility enhancements
         self._apply_accessibility_enhancements()
-        
+
         # Ctrl+S to apply/accept
         apply_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         apply_shortcut.activated.connect(self.accept)
@@ -268,15 +268,17 @@ class InjectionDialog(TabbedDialog):
         if self._tab_widget:
             current = self._tab_widget.currentIndex()
             next_index = (current + 1) % self._tab_widget.count()
-            self._tab_widget.setCurrentIndex(next_index)
+            if self._tab_widget:
+                self._tab_widget.setCurrentIndex(next_index)
 
     def _prev_tab(self) -> None:
         """Switch to previous tab"""
         if self._tab_widget:
             current = self._tab_widget.currentIndex()
             prev_index = (current - 1) % self._tab_widget.count()
-            self._tab_widget.setCurrentIndex(prev_index)
-    
+            if self._tab_widget:
+                self._tab_widget.setCurrentIndex(prev_index)
+
     def _apply_accessibility_enhancements(self) -> None:
         """Apply comprehensive accessibility enhancements to the dialog"""
         # Set dialog accessible name and description
@@ -285,15 +287,15 @@ class InjectionDialog(TabbedDialog):
             "Sprite Injection Dialog",
             "Configure parameters for injecting sprites into VRAM or ROM files"
         )
-        
+
         # Add focus indicators
         AccessibilityHelper.add_focus_indicators(self)
-        
+
         # Make tab widget accessible if it exists
         if hasattr(self, '_main_tab_widget') and self._main_tab_widget:
             self._main_tab_widget.setAccessibleName("Injection Mode Tabs")
             self._main_tab_widget.setAccessibleDescription("Choose between VRAM or ROM injection mode")
-        
+
         # Make preview widget accessible
         if self.preview_widget:
             AccessibilityHelper.make_accessible(
@@ -301,7 +303,7 @@ class InjectionDialog(TabbedDialog):
                 "Sprite Preview",
                 "Preview of the sprite to be injected"
             )
-        
+
         # Make sprite file selector accessible
         if self.sprite_file_selector:
             AccessibilityHelper.make_accessible(
@@ -433,7 +435,7 @@ class InjectionDialog(TabbedDialog):
 
         # Sprite location selector
         location_layout = QHBoxLayout()
-        
+
         # Create label with mnemonic
         location_label = QLabel("Sprite &Location:", self)
         location_layout.addWidget(location_label)
@@ -441,7 +443,8 @@ class InjectionDialog(TabbedDialog):
         self.sprite_location_combo = QComboBox(self)
         self.sprite_location_combo.setMinimumWidth(200)
         # These will be populated dynamically when ROM is loaded
-        self.sprite_location_combo.addItem("Select sprite location...", None)
+        if self.sprite_location_combo:
+            self.sprite_location_combo.addItem("Select sprite location...", None)
         self.sprite_location_combo.currentIndexChanged.connect(
             self._on_sprite_location_changed
         )
@@ -534,7 +537,8 @@ class InjectionDialog(TabbedDialog):
                         f"ROM Offset: {self.rom_extraction_info.get('rom_offset', 'Unknown')}\n"
                     )
                     info_text += f"Tiles: {self.rom_extraction_info.get('tile_count', 'Unknown')}"
-                    self.extraction_info.setText(info_text)
+                    if self.extraction_info:
+                        self.extraction_info.setText(info_text)
 
                     # Set default VRAM offset
                     self.vram_offset_input.set_text(metadata_info.get("default_vram_offset", "0xC000"))
@@ -545,7 +549,8 @@ class InjectionDialog(TabbedDialog):
                         f"Offset: {extraction.get('vram_offset', '0xC000')}\n"
                     )
                     info_text += f"Tiles: {extraction.get('tile_count', 'Unknown')}"
-                    self.extraction_info.setText(info_text)
+                    if self.extraction_info:
+                        self.extraction_info.setText(info_text)
 
                     # Set VRAM offset from extraction
                     if self.extraction_vram_offset is not None:
@@ -575,7 +580,8 @@ class InjectionDialog(TabbedDialog):
             logger.debug("Manual ROM offset entered, clearing sprite location selection")
             self.sprite_location_combo.blockSignals(True)
             try:
-                self.sprite_location_combo.setCurrentIndex(0)
+                if self.sprite_location_combo:
+                    self.sprite_location_combo.setCurrentIndex(0)
             finally:
                 self.sprite_location_combo.blockSignals(False)
 
@@ -654,16 +660,19 @@ class InjectionDialog(TabbedDialog):
         info_text = f"Title: {header['title']}\n"
         info_text += f"ROM Type: 0x{header['rom_type']:02X}\n"
         info_text += f"Checksum: 0x{header['checksum']:04X}"
-        self.rom_info_text.setText(info_text)
+        if self.rom_info_text:
+            self.rom_info_text.setText(info_text)
         self.rom_info_group.show()
 
         # Populate sprite locations
         sprite_locations = rom_info.get("sprite_locations", {})
         if sprite_locations:
-            self.sprite_location_combo.addItem("Select sprite location...", None)
+            if self.sprite_location_combo:
+                self.sprite_location_combo.addItem("Select sprite location...", None)
 
             for display_name, offset in sprite_locations.items():
-                self.sprite_location_combo.addItem(
+                if self.sprite_location_combo:
+                    self.sprite_location_combo.addItem(
                     f"{display_name} (0x{offset:06X})", offset
                 )
 
@@ -678,15 +687,19 @@ class InjectionDialog(TabbedDialog):
                 logger.warning(f"Failed to restore sprite location: {restore_error}")
         # Not a Kirby ROM or no sprite locations
         elif "KIRBY" not in header["title"].upper():
-            self.sprite_location_combo.addItem(f"No sprite data available for: {header['title']}", None)
-        else:
+            if self.sprite_location_combo:
+                self.sprite_location_combo.addItem(f"No sprite data available for: {header['title']}", None)
+        elif self.sprite_location_combo:
             self.sprite_location_combo.addItem("Error loading sprite locations", None)
 
     def _clear_rom_ui_state(self) -> None:
         """Clear ROM-related UI state"""
-        self.sprite_location_combo.clear()
-        self.sprite_location_combo.addItem("Load ROM file first...", None)
-        self.rom_info_text.clear()
+        if self.sprite_location_combo:
+            self.sprite_location_combo.clear()
+        if self.sprite_location_combo:
+            self.sprite_location_combo.addItem("Load ROM file first...", None)
+        if self.rom_info_text:
+            self.rom_info_text.clear()
         self.rom_info_group.hide()
 
     def _on_sprite_location_changed(self, index: int) -> None:
@@ -877,7 +890,8 @@ class InjectionDialog(TabbedDialog):
                 for i in range(self.sprite_location_combo.count()):
                     offset_data = self.sprite_location_combo.itemData(i)
                     if offset_data == defaults["rom_offset"]:
-                        self.sprite_location_combo.setCurrentIndex(i)
+                        if self.sprite_location_combo:
+                            self.sprite_location_combo.setCurrentIndex(i)
                         sprite_found = True
                         break
 
@@ -893,7 +907,8 @@ class InjectionDialog(TabbedDialog):
             self.rom_offset_input.set_text(defaults["custom_offset"])
 
         # Set fast compression
-        self.fast_compression_check.setChecked(defaults["fast_compression"])
+        if self.fast_compression_check:
+            self.fast_compression_check.setChecked(defaults["fast_compression"])
 
     def _restore_saved_sprite_location(self) -> None:
         """Restore saved sprite location in combo box"""
@@ -913,7 +928,8 @@ class InjectionDialog(TabbedDialog):
         )
 
         if restore_info["sprite_location_index"] is not None:
-            self.sprite_location_combo.setCurrentIndex(restore_info["sprite_location_index"])
+            if self.sprite_location_combo:
+                self.sprite_location_combo.setCurrentIndex(restore_info["sprite_location_index"])
         elif restore_info["custom_offset"]:
             self.rom_offset_input.set_text(restore_info["custom_offset"])
 
@@ -930,7 +946,8 @@ class InjectionDialog(TabbedDialog):
     def _load_sprite_preview(self) -> None:
         """Load and display sprite preview"""
         if not self.sprite_path or not os.path.exists(self.sprite_path):
-            self.preview_widget.clear()
+            if self.preview_widget:
+                self.preview_widget.clear()
             return
 
         try:
@@ -954,7 +971,8 @@ class InjectionDialog(TabbedDialog):
 
         except Exception as e:
             logger.exception("Failed to load sprite preview")
-            self.preview_widget.clear()
+            if self.preview_widget:
+                self.preview_widget.clear()
             self.preview_widget.info_label.setText(f"Error loading preview: {e}")
 
     def _validate_sprite(self) -> None:

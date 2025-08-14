@@ -48,7 +48,8 @@ class SpriteSearchWorker(QThread):
     def run(self):
         """Search for valid sprite in the specified direction"""
         try:
-            self._cancellation_token.clear()
+            if self._cancellation_token:
+                self._cancellation_token.clear()
 
             with open(self.rom_path, "rb") as f:
                 rom_data = f.read()

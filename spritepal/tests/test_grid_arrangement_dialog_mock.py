@@ -2,6 +2,7 @@
 Mock-based tests for grid arrangement dialog logic (without actual PySide6 imports)
 """
 
+import pytest
 import os
 import tempfile
 from typing import Any
@@ -11,6 +12,16 @@ from PIL import Image
 
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
+
+
+    GridArrangementManager,
+    TilePosition,
+)
+from ui.row_arrangement.grid_image_processor import GridImageProcessor
+from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
+
+
+
 pytestmark = [
     pytest.mark.dialog,
     pytest.mark.file_io,
@@ -22,16 +33,10 @@ pytestmark = [
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
 ]
-
-
-    GridArrangementManager,
-    TilePosition,
-)
-from ui.row_arrangement.grid_image_processor import GridImageProcessor
-from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-
-
 class MockSelectionMode:
     """Mock version of SelectionMode enum"""
 

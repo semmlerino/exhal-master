@@ -13,12 +13,6 @@ import pytest
 from PySide6.QtWidgets import QApplication, QWidget
 from utils.thread_safe_singleton import (
 # Serial execution required: QApplication management, Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application,
-    pytest.mark.thread_safety
-]
 
 
     LazyThreadSafeSingleton,
@@ -29,6 +23,18 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.requires_display,
+    pytest.mark.worker_threads,
+]
 class MockClass:
     """Mock class for testing singleton patterns."""
 

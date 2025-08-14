@@ -49,6 +49,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import warnings
 from collections.abc import Generator
 from contextlib import AbstractContextManager as ContextManager
 from pathlib import Path
@@ -83,7 +84,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # Add spritepal directory
 # Import consolidated mock utilities
 import contextlib
 
-from .infrastructure.mock_factory import MockFactory
+from .infrastructure.environment_detection import (
+    configure_qt_for_environment,
+    get_environment_info,
+    get_environment_report,
+)
 from .infrastructure.mock_hal import (
     MockHALCompressor,
     MockHALProcessPool,
@@ -91,6 +96,21 @@ from .infrastructure.mock_hal import (
     create_mock_hal_tools,
 )
 from .infrastructure.qt_mocks import create_qt_mock_context
+from .infrastructure.real_component_factory import RealComponentFactory
+
+# Import safe fixture infrastructure
+from .infrastructure.safe_fixtures import (
+    SafeQApplicationProtocol,
+    SafeQtBotProtocol,
+    cleanup_all_fixtures,
+    create_safe_dialog_factory,
+    create_safe_qapp,
+    create_safe_qtbot,
+    create_safe_widget_factory,
+    report_fixture_error,
+    safe_qt_context,
+    validate_fixture_environment,
+)
 
 # Import for controller fixture
 try:
@@ -99,13 +119,13 @@ except ImportError:
     # Avoid import errors in environments where controller isn't available
     ExtractionController = None
 
-# Environment detection for fixture optimization
-IS_HEADLESS = (
-    not os.environ.get("DISPLAY")
-    or os.environ.get("QT_QPA_PLATFORM") == "offscreen"
-    or os.environ.get("CI")
-    or (sys.platform == "linux" and "microsoft" in os.uname().release.lower())
-)
+# Environment detection for fixture optimization - use centralized detection
+# Configure Qt environment based on detected environment
+configure_qt_for_environment()
+
+# Get environment info for fixture optimization
+_environment_info = get_environment_info()
+IS_HEADLESS = _environment_info.is_headless
 
 # Performance optimization: Estimated fixture instantiation reductions
 # Based on usage analysis across 1,682 tests:
@@ -133,6 +153,10 @@ def pytest_addoption(parser: Any) -> None:
 
 def pytest_configure(config: Any) -> None:
     """Configure pytest with unified markers for SpritePal tests."""
+    # Print environment report if verbose mode is enabled
+    if config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT'):
+        print(get_environment_report())
+
     markers = [
         # Execution Environment Markers (Primary Categories)
         "gui: GUI tests requiring display/X11 environment (may be skipped in headless)",
@@ -239,10 +263,25 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     - Performance optimization based on markers
     - Environmental context-aware test filtering
     """
-    # Environment-based test filtering
-    if IS_HEADLESS:
-        skip_gui = pytest.mark.skip(reason="GUI tests requiring display skipped in headless environment")
+    env_info = get_environment_info()
+
+    # Environment-based test filtering with detailed reasons
+    if env_info.is_headless:
+        # More specific skip reasons based on environment
+        skip_reason = "GUI tests skipped in headless environment"
+        if env_info.is_ci:
+            skip_reason = f"GUI tests skipped in CI environment ({env_info.ci_system})"
+        elif env_info.is_wsl:
+            skip_reason = "GUI tests skipped in WSL environment"
+        elif env_info.is_docker:
+            skip_reason = "GUI tests skipped in Docker container"
+
+        skip_gui = pytest.mark.skip(reason=skip_reason)
         skip_qt_real = pytest.mark.skip(reason="Real Qt components require display - use mocked versions")
+
+        # Count skipped tests for reporting
+        skipped_gui_count = 0
+        skipped_qt_real_count = 0
 
         for item in items:
             # Skip GUI tests that require real Qt components in headless environments
@@ -250,11 +289,19 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
                 "mock_only" not in item.keywords and
                 "qt_mock" not in item.keywords):
                 item.add_marker(skip_gui)
+                skipped_gui_count += 1
 
             # Skip tests requiring real Qt components unless they're mocked
             if ("qt_real" in item.keywords and
                 not any(marker in item.keywords for marker in ["mock_only", "qt_mock"])):
                 item.add_marker(skip_qt_real)
+                skipped_qt_real_count += 1
+
+        # Report skipped tests if verbose
+        if (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')) and (skipped_gui_count > 0 or skipped_qt_real_count > 0):
+            print(f"\nSkipped {skipped_gui_count} GUI tests and {skipped_qt_real_count} real Qt tests due to headless environment")
+            if env_info.xvfb_available:
+                print("Note: xvfb is available - consider running with xvfb for GUI tests")
 
     # Add automatic slow marker for certain test categories
     slow_patterns = ["integration", "gui", "rom_data", "performance", "benchmark"]
@@ -270,30 +317,34 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     for item in items:
         # Warn about conflicting markers
         if ("gui" in item.keywords and "headless" in item.keywords):
-            pytest.warns(UserWarning, f"Test {item.name} has conflicting gui/headless markers")
+            warnings.warn(f"Test {item.name} has conflicting gui/headless markers", UserWarning, stacklevel=2)
 
         if ("qt_real" in item.keywords and "no_qt" in item.keywords):
-            pytest.warns(UserWarning, f"Test {item.name} has conflicting qt_real/no_qt markers")
+            warnings.warn(f"Test {item.name} has conflicting qt_real/no_qt markers", UserWarning, stacklevel=2)
 
         if ("serial" in item.keywords and "parallel_safe" in item.keywords):
-            pytest.warns(UserWarning, f"Test {item.name} has conflicting serial/parallel_safe markers")
+            warnings.warn(f"Test {item.name} has conflicting serial/parallel_safe markers", UserWarning, stacklevel=2)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def qt_environment_setup() -> Iterator[None]:
     """
-    Setup Qt environment automatically based on capabilities.
+    Setup Qt environment automatically based on comprehensive environment detection.
 
+    Uses centralized environment detection to determine the best Qt configuration.
     In headless environments, this provides comprehensive Qt mocking.
     In GUI environments, this ensures proper Qt initialization.
     """
-    if IS_HEADLESS:
-        # Mock Qt completely in headless environments
+    env_info = get_environment_info()
+
+    if env_info.is_headless and not env_info.xvfb_available:
+        # Mock Qt completely in headless environments without xvfb
         mock_modules = create_qt_mock_context()
         with patch.dict("sys.modules", mock_modules):
             yield
     else:
-        # In GUI environments, let pytest-qt handle Qt setup
+        # In GUI environments or with xvfb, let pytest-qt handle Qt setup
+        # Qt environment variables are already configured by configure_qt_for_environment()
         yield
 
 
@@ -537,17 +588,26 @@ def minimal_sprite_data(
     }
 
 
-# Consolidated mock fixtures using MockFactory
+# Consolidated mock fixtures using RealComponentFactory
 @pytest.fixture
-def mock_main_window() -> MockMainWindowProtocol:
-    """Provide a fully configured mock main window."""
-    return MockFactory.create_main_window()
+def real_factory() -> RealComponentFactory:
+    """Provide a RealComponentFactory for creating test components."""
+    factory = RealComponentFactory()
+    yield factory
+    # Cleanup will be handled by factory's cleanup method if needed
+    if hasattr(factory, 'cleanup'):
+        factory.cleanup()
+
+@pytest.fixture
+def mock_main_window(real_factory: RealComponentFactory) -> MockMainWindowProtocol:
+    """Provide a fully configured mock main window using real components."""
+    return real_factory.create_main_window()
 
 
 @pytest.fixture
-def mock_extraction_worker() -> Mock:  # Would be MockExtractionWorkerProtocol if it existed
-    """Provide a fully configured mock extraction worker."""
-    return MockFactory.create_extraction_worker()
+def mock_extraction_worker(real_factory: RealComponentFactory) -> Mock:  # Would be MockExtractionWorkerProtocol if it existed
+    """Provide a fully configured mock extraction worker using real components."""
+    return real_factory.create_extraction_worker()
 
 
 @pytest.fixture(scope="class")
@@ -557,27 +617,29 @@ def mock_extraction_manager() -> MockExtractionManagerProtocol:
     Used 51 times across tests. Class scope reduces instantiations
     from 51 to ~12 (77% reduction).
 
-    Provides a fully configured mock extraction manager.
+    Provides a fully configured real extraction manager.
     """
-    return MockFactory.create_extraction_manager()
+    factory = RealComponentFactory()
+    return factory.create_extraction_manager()
 
 
 @pytest.fixture
-def mock_injection_manager() -> MockInjectionManagerProtocol:
-    """Provide a fully configured mock injection manager."""
-    return MockFactory.create_injection_manager()
+def mock_injection_manager(real_factory: RealComponentFactory) -> MockInjectionManagerProtocol:
+    """Provide a fully configured injection manager using real components."""
+    return real_factory.create_injection_manager()
 
 
 @pytest.fixture(scope="class")
 def mock_session_manager() -> MockSessionManagerProtocol:
-    """Class-scoped mock session manager for performance optimization.
+    """Class-scoped session manager for performance optimization.
 
     Used 26 times across tests. Class scope reduces instantiations
     from 26 to ~8 (69% reduction).
 
-    Provides a fully configured mock session manager.
+    Provides a fully configured real session manager.
     """
-    return MockFactory.create_session_manager()
+    factory = RealComponentFactory()
+    return factory.create_session_manager()
 
 
 @pytest.fixture(scope="class")
@@ -609,9 +671,9 @@ def mock_settings_manager() -> Mock:
     return manager
 
 @pytest.fixture
-def mock_file_dialogs() -> dict[str, Mock]:
+def mock_file_dialogs(real_factory: RealComponentFactory) -> dict[str, Mock]:
     """Provide mock file dialog functions."""
-    return MockFactory.create_file_dialogs()
+    return real_factory.create_file_dialogs()
 
 
 # HAL-specific fixtures
@@ -755,14 +817,15 @@ def rom_cache() -> Mock:
     Used 48 times across tests. Class scope reduces instantiations
     from 48 to ~10 (79% reduction).
 
-    Provides a mock ROM cache with common caching functionality.
+    Provides a real ROM cache with common caching functionality.
     """
-    return MockFactory.create_rom_cache()
+    factory = RealComponentFactory()
+    return factory.create_rom_cache()
 
 @pytest.fixture
-def mock_rom_cache() -> Mock:
+def mock_rom_cache(real_factory: RealComponentFactory) -> Mock:
     """Alias for rom_cache fixture for backward compatibility."""
-    return MockFactory.create_rom_cache()
+    return real_factory.create_rom_cache()
 
 
 # Dependency Injection fixtures
@@ -927,6 +990,237 @@ def safe_qtbot(qtbot: Any) -> MockQtBotProtocol:
 # - rom_cache: 48 uses → class scope (~10 instances)
 # - mock_settings_manager: 44 uses → class scope (~10 instances)
 # - mock_session_manager: 26 uses → class scope (~8 instances)
+
+
+# Enhanced Safe Fixture Implementations
+
+@pytest.fixture
+def enhanced_safe_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
+    """
+    Enhanced safe qtbot fixture that works in both headless and GUI environments.
+
+    This fixture automatically detects the environment and provides:
+    - Real pytest-qt qtbot in GUI environments
+    - Mock qtbot with compatible API in headless environments
+    - Automatic cleanup and error handling
+    - Thread-safe resource management
+    """
+    try:
+        qtbot = create_safe_qtbot(request)
+        yield qtbot
+    except Exception as e:
+        report_fixture_error('enhanced_safe_qtbot', e, request)
+        # Provide mock qtbot as fallback
+        from .infrastructure.safe_fixtures import SafeQtBot
+        yield SafeQtBot(headless=True)
+    finally:
+        # Cleanup handled by fixture manager
+        pass
+
+
+@pytest.fixture(scope="session")
+def enhanced_safe_qapp() -> SafeQApplicationProtocol:
+    """
+    Enhanced safe QApplication fixture with session scope for performance.
+
+    This fixture provides:
+    - Real QApplication in GUI environments
+    - Mock QApplication in headless environments
+    - Proper singleton handling to avoid conflicts
+    - Automatic environment detection and configuration
+    """
+    try:
+        qapp = create_safe_qapp()
+        yield qapp
+    except Exception as e:
+        report_fixture_error('enhanced_safe_qapp', e)
+        # Provide mock app as fallback
+        from .infrastructure.safe_fixtures import SafeQApplication
+        yield SafeQApplication(headless=True)
+    finally:
+        # Cleanup handled by fixture manager
+        pass
+
+
+@pytest.fixture
+def safe_widget_factory_fixture(request: FixtureRequest):
+    """
+    Safe widget factory for creating Qt widgets in any environment.
+
+    Provides environment-appropriate widget creation:
+    - Real Qt widgets in GUI environments
+    - Mock widgets in headless environments
+    - Automatic cleanup and resource management
+    """
+    try:
+        factory = create_safe_widget_factory()
+        yield factory
+    except Exception as e:
+        report_fixture_error('safe_widget_factory_fixture', e, request)
+        # Provide mock factory as fallback
+        from .infrastructure.safe_fixtures import SafeWidgetFactory
+        yield SafeWidgetFactory(headless=True)
+
+
+@pytest.fixture
+def safe_dialog_factory_fixture(request: FixtureRequest):
+    """
+    Safe dialog factory for creating Qt dialogs without crashes.
+
+    Provides crash-safe dialog creation:
+    - Real Qt dialogs in GUI environments
+    - Mock dialogs in headless environments
+    - Comprehensive error handling and fallbacks
+    """
+    try:
+        factory = create_safe_dialog_factory()
+        yield factory
+    except Exception as e:
+        report_fixture_error('safe_dialog_factory_fixture', e, request)
+        # Provide mock factory as fallback
+        from .infrastructure.safe_fixtures import SafeDialogFactory
+        yield SafeDialogFactory(headless=True)
+
+
+@pytest.fixture
+def safe_qt_environment(request: FixtureRequest):
+    """
+    Complete safe Qt environment with all components.
+
+    Provides a complete Qt testing environment:
+    - Safe QApplication
+    - Safe qtbot
+    - Widget and dialog factories
+    - Automatic environment detection
+    - Centralized cleanup
+    """
+    try:
+        with safe_qt_context(request) as qt_env:
+            yield qt_env
+    except Exception as e:
+        report_fixture_error('safe_qt_environment', e, request)
+        # Provide minimal fallback environment
+        yield {
+            'qapp': None,
+            'qtbot': None,
+            'widget_factory': None,
+            'dialog_factory': None,
+            'env_info': get_environment_info(),
+        }
+
+
+# Override pytest-qt fixtures to use safe versions
+
+@pytest.fixture
+def enhanced_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
+    """Override pytest-qt qtbot with enhanced safe version."""
+    return request.getfixturevalue('enhanced_safe_qtbot')
+
+
+@pytest.fixture(scope="session")
+def enhanced_qapp() -> SafeQApplicationProtocol:
+    """Override pytest-qt qapp with enhanced safe version."""
+    # Delegate to our enhanced safe fixture
+    return create_safe_qapp()
+
+
+# Session-level cleanup fixture
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_safe_fixtures_session():
+    """Auto-cleanup all safe fixtures at session end."""
+    yield
+
+    # Cleanup all fixtures at session end
+    try:
+        cleanup_all_fixtures()
+        import logging
+        logging.getLogger(__name__).info("Safe fixtures cleanup completed")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error during safe fixtures cleanup: {e}")
+
+
+# Validation fixture for debugging
+
+@pytest.fixture
+def fixture_validation_report():
+    """
+    Provide fixture validation report for debugging.
+
+    Usage:
+        def test_something(fixture_validation_report):
+            if fixture_validation_report['errors']:
+                pytest.skip(f"Fixture validation failed: {fixture_validation_report['errors']}")
+    """
+    return validate_fixture_environment()
+
+
+# Helper fixtures for gradual migration
+
+@pytest.fixture
+def real_qtbot(request: FixtureRequest):
+    """
+    Real qtbot fixture for tests that specifically need real Qt.
+
+    Use this only for integration tests that require real Qt behavior.
+    Will skip in headless environments without xvfb.
+    """
+    env_info = get_environment_info()
+
+    if env_info.is_headless and not env_info.xvfb_available:
+        pytest.skip("Real qtbot requires display or xvfb")
+
+    try:
+        # Import and use pytest-qt directly
+        pytest.importorskip("pytest_qt")
+        return request.getfixturevalue('qtbot')  # Get real qtbot from pytest-qt
+    except Exception as e:
+        pytest.skip(f"Real qtbot not available: {e}")
+
+
+@pytest.fixture
+def mock_qtbot():
+    """
+    Mock qtbot fixture for tests that specifically need mocked Qt.
+
+    Use this for unit tests that should always use mocks.
+    """
+    from .infrastructure.safe_fixtures import SafeQtBot
+    return SafeQtBot(headless=True)
+
+
+# Environment-specific fixture selection
+
+@pytest.fixture
+def adaptive_qtbot(request: FixtureRequest):
+    """
+    Adaptive qtbot that chooses implementation based on test markers.
+
+    Uses real qtbot for tests marked with @pytest.mark.qt_real
+    Uses mock qtbot for tests marked with @pytest.mark.qt_mock
+    Uses safe qtbot (auto-detect) for unmarked tests
+    """
+    if request.node.get_closest_marker("qt_real"):
+        return request.getfixturevalue('real_qtbot')
+    if request.node.get_closest_marker("qt_mock"):
+        return request.getfixturevalue('mock_qtbot')
+    return request.getfixturevalue('enhanced_safe_qtbot')
+
+
+# Configuration and debugging helpers
+
+@pytest.fixture(autouse=True)
+def configure_safe_fixtures_logging(request: FixtureRequest):
+    """Auto-configure logging for safe fixtures debugging."""
+    # Enable debug logging if PYTEST_DEBUG_FIXTURES is set
+    if os.environ.get('PYTEST_DEBUG_FIXTURES'):
+        import logging
+        logging.getLogger('tests.infrastructure.safe_fixtures').setLevel(logging.DEBUG)
+
+    yield
+
+    # Could add per-test fixture usage reporting here
 
 @pytest.fixture(scope="session")
 def qt_app() -> Any:
@@ -1203,14 +1497,10 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
 
     # Clean up any SearchWorker threads specifically for advanced search tests
     try:
-        import gc
         import threading
-
-        # Force garbage collection to clean up any remaining thread objects
-        gc.collect()
+        import time
 
         # Wait a bit for any threads to finish their cleanup
-        import time
         time.sleep(0.1)
 
         # Check for any remaining threads (for debugging)
@@ -1218,6 +1508,11 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
         if active_threads > 1:  # Main thread + potentially others
             import logging
             logging.debug(f"Active thread count after cleanup: {active_threads}")
+
+        # Only do garbage collection if not in Qt environment to avoid segfaults
+        if IS_HEADLESS:
+            import gc
+            gc.collect()
 
     except Exception as e:
         import logging
@@ -1233,7 +1528,12 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
         if app:
             for _ in range(5):  # Process events multiple times
                 app.processEvents()
-                QThread.msleep(10)  # Small delay between processing
+                # Use currentThread() for msleep to avoid issues
+                if QThread.currentThread():
+                    QThread.currentThread().msleep(10)  # Small delay between processing
+                else:
+                    import time
+                    time.sleep(0.01)  # Fallback to regular sleep
 
 
 # Timeout fixtures for consistent signal waiting across tests

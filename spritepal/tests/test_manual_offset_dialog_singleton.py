@@ -16,7 +16,12 @@ from ui.rom_extraction_panel import (
 
 pytestmark = [
     pytest.mark.serial,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.rom_data,
 ]
 
 
@@ -121,4 +126,3 @@ class TestManualOffsetDialogSingleton:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
-

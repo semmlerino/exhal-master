@@ -5,6 +5,7 @@ Handles queue management and priority-based generation.
 
 import mmap
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,7 +100,8 @@ class LRUCache:
     def clear(self) -> None:
         """Clear all cached items."""
         with QMutexLocker(self._mutex):
-            self._cache.clear()
+            if self._cache:
+                self._cache.clear()
             self._hits = 0
             self._misses = 0
 
@@ -173,6 +175,11 @@ class BatchThumbnailWorker(QObject):
         # Memory-mapped ROM data
         self._rom_file = None
         self._rom_mmap = None
+
+        # Multi-threading for parallel thumbnail generation
+        self._use_multithreading = True
+        self._thread_pool = None
+        self._max_workers = 4  # Optimal for I/O + CPU bound tasks
 
     def queue_thumbnail(
         self,
@@ -256,13 +263,45 @@ class BatchThumbnailWorker(QObject):
             max_idle_iterations = 100  # Stop after 10 seconds of idle (100 * 100ms)
             last_log_count = -1  # Track last logged count to avoid spam
 
+            # Initialize thread pool if multi-threading is enabled
+            if self._use_multithreading:
+                self._thread_pool = ThreadPoolExecutor(max_workers=self._max_workers)
+                logger.info(f"Initialized thread pool with {self._max_workers} workers")
+
             while not self._stop_requested:
                 # Check for pause
                 if self._pause_requested:
                     QThread.currentThread().msleep(100)
                     continue
 
-                # Get next request
+                # Collect batch of requests for parallel processing
+                if self._use_multithreading and not self._request_queue.empty():
+                    batch_requests = []
+                    batch_size = min(self._max_workers * 2, 8)  # Process up to 8 at once
+
+                    for _ in range(batch_size):
+                        request = self._get_next_request()
+                        if request:
+                            # Check cache first
+                            cache_key = (request.offset, request.size)
+                            cached_image = self._get_cached_image(cache_key)
+                            if cached_image:
+                                self.thumbnail_ready.emit(request.offset, cached_image)
+                                self._completed_count += 1
+                                self._emit_progress()
+                            else:
+                                batch_requests.append(request)
+                        else:
+                            break
+
+                    # Process batch in parallel
+                    if batch_requests:
+                        self._process_batch_parallel(batch_requests)
+                        processed_count += len(batch_requests)
+                        idle_iterations = 0
+                        continue
+
+                # Single-threaded fallback or when queue is getting empty
                 request = self._get_next_request()
                 if not request:
                     # Log only once when we finish processing
@@ -419,6 +458,58 @@ class BatchThumbnailWorker(QObject):
         """Thread-safe cache read with LRU."""
         return self._cache.get(key)
 
+    def _process_batch_parallel(self, batch_requests: list[ThumbnailRequest]) -> None:
+        """
+        Process a batch of thumbnail requests in parallel.
+
+        Args:
+            batch_requests: List of thumbnail requests to process
+        """
+        if not self._thread_pool:
+            return
+
+        # Submit all requests to thread pool
+        futures = []
+        for request in batch_requests:
+            future = self._thread_pool.submit(self._generate_thumbnail_thread_safe, request)
+            futures.append((future, request))
+
+        # Collect results as they complete
+        for future, request in futures:
+            try:
+                qimage = future.result(timeout=2.0)  # 2 second timeout per thumbnail
+                if qimage:
+                    # Cache the result
+                    cache_key = (request.offset, request.size)
+                    self._add_to_cache(cache_key, qimage)
+
+                    # Emit result (thread-safe)
+                    self.thumbnail_ready.emit(request.offset, qimage)
+                    self._completed_count += 1
+                    self._emit_progress()
+
+                    logger.debug(f"Generated thumbnail for offset 0x{request.offset:06X} (parallel)")
+            except Exception as e:
+                logger.warning(f"Parallel thumbnail generation failed for 0x{request.offset:06X}: {e}")
+                self._completed_count += 1
+                self._emit_progress()
+
+    def _generate_thumbnail_thread_safe(self, request: ThumbnailRequest) -> Optional[QImage]:
+        """
+        Thread-safe version of thumbnail generation for parallel processing.
+
+        Args:
+            request: Thumbnail request
+
+        Returns:
+            Generated QImage or None
+        """
+        # This runs in a thread pool thread, not the main worker thread
+        # Need to ensure thread safety for ROM data access
+
+        # The ROM data is read-only mmap, safe for concurrent reads
+        return self._generate_thumbnail(request)
+
     def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QImage]:
         """
         Generate a thumbnail for a sprite.
@@ -509,7 +600,7 @@ class BatchThumbnailWorker(QObject):
 
     def _pil_to_qimage(self, image: Image.Image) -> QImage:
         """
-        Convert PIL Image to QImage (thread-safe).
+        Convert PIL Image to QImage (thread-safe and optimized).
 
         Args:
             image: PIL Image
@@ -517,23 +608,34 @@ class BatchThumbnailWorker(QObject):
         Returns:
             QImage (thread-safe alternative to QPixmap)
         """
-        # Convert to RGBA if needed
-        if image.mode != "RGBA":
-            image = image.convert("RGBA")
-
-        # Get image data
         width, height = image.size
-        bytes_data = image.tobytes("raw", "RGBA")
 
-        # Create QImage (thread-safe)
-        qimage = QImage(
-            bytes_data,
-            width,
-            height,
-            QImage.Format.Format_RGBA8888
-        )
+        # Optimize based on image mode to avoid unnecessary conversions
+        if image.mode == "RGBA":
+            # Already in RGBA - most efficient path
+            bytes_data = image.tobytes("raw", "RGBA")
+            qimage = QImage(bytes_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
+        elif image.mode == "RGB":
+            # RGB - convert directly without alpha
+            bytes_data = image.tobytes("raw", "RGB")
+            qimage = QImage(bytes_data, width, height, width * 3, QImage.Format.Format_RGB888)
+        elif image.mode == "L":
+            # Grayscale - use native grayscale format
+            bytes_data = image.tobytes("raw", "L")
+            qimage = QImage(bytes_data, width, height, width, QImage.Format.Format_Grayscale8)
+        elif image.mode == "P":
+            # Palette mode - convert to RGB (more efficient than RGBA)
+            image = image.convert("RGB")
+            bytes_data = image.tobytes("raw", "RGB")
+            qimage = QImage(bytes_data, width, height, width * 3, QImage.Format.Format_RGB888)
+        else:
+            # Fallback for other modes
+            image = image.convert("RGBA")
+            bytes_data = image.tobytes("raw", "RGBA")
+            qimage = QImage(bytes_data, width, height, width * 4, QImage.Format.Format_RGBA8888)
 
-        # Make a copy to ensure the data is owned by the QImage
+        # Use copy() only when necessary - if the bytes_data might be garbage collected
+        # Since we're in a worker thread and the data is from tobytes(), we need the copy
         return qimage.copy()
 
     def _add_to_cache(self, key: tuple[int, int], qimage: QImage):
@@ -552,13 +654,15 @@ class BatchThumbnailWorker(QObject):
 
     def clear_cache(self) -> None:
         """Clear the thumbnail cache (thread-safe)."""
-        self._cache.clear()
+        if self._cache:
+            self._cache.clear()
 
     def _clear_cache_memory(self) -> None:
         """Clear cache memory with logging."""
         if hasattr(self, '_cache') and self._cache:
             cache_size = self._cache.size()
-            self._cache.clear()
+            if self._cache:
+                self._cache.clear()
             if cache_size > 0:
                 logger.debug(f"Cleared thumbnail cache: freed {cache_size} cached images")
                 # Log cache statistics before clearing
@@ -595,6 +699,16 @@ class BatchThumbnailWorker(QObject):
 
         # Request stop
         self.stop()
+
+        # Shutdown thread pool if it exists
+        if self._thread_pool:
+            try:
+                self._thread_pool.shutdown(wait=True, cancel_futures=True)
+                logger.debug("Thread pool shutdown complete")
+            except Exception as e:
+                logger.warning(f"Error shutting down thread pool: {e}")
+            finally:
+                self._thread_pool = None
 
         # Clear resources thoroughly with error protection
         try:

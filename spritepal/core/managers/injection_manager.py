@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 

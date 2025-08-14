@@ -112,7 +112,8 @@ class TabManagerComponent:
 
     def _apply_enhanced_tab_styling(self) -> None:
         """Apply enhanced visual styling to tab widget."""
-        self.tab_widget.setStyleSheet("""
+        if self.tab_widget:
+            self.tab_widget.setStyleSheet("""
             QTabWidget::pane {
                 border: 1px solid #c0c0c0;
                 border-radius: 6px;

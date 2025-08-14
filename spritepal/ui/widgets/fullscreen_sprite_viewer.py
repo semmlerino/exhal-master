@@ -16,7 +16,7 @@ behavior across different platforms and window managers:
 
 2. STRATEGIES USED:
    - Primary: Standard Qt showFullScreen() (recommended)
-   - Fallback 1: setWindowState(WindowFullScreen) 
+   - Fallback 1: setWindowState(WindowFullScreen)
    - Fallback 2: Manual geometry + show() for problematic platforms
    - Recovery: Platform-specific recovery attempts
 
@@ -28,7 +28,7 @@ behavior across different platforms and window managers:
 
 4. PLATFORM HANDLING:
    - Windows: Uses window state transitions for recovery
-   - Linux: Uses show state cycling for recovery  
+   - Linux: Uses show state cycling for recovery
    - Generic: Fallback approach for other platforms
 
 This should resolve the "partial screen coverage" issue that was caused by
@@ -113,7 +113,8 @@ class FullscreenSpriteViewer(QWidget):
 
         self.sprite_label = QLabel()
         self.sprite_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.sprite_label.setStyleSheet("""
+        if self.sprite_label:
+            self.sprite_label.setStyleSheet("""
             QLabel {
                 background-color: transparent;
                 border: 2px solid #444444;
@@ -132,7 +133,8 @@ class FullscreenSpriteViewer(QWidget):
         # Info overlay (bottom area)
         self.info_overlay = QLabel()
         self.info_overlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.info_overlay.setStyleSheet("""
+        if self.info_overlay:
+            self.info_overlay.setStyleSheet("""
             QLabel {
                 background-color: rgba(0, 0, 0, 180);
                 color: #ffffff;
@@ -150,7 +152,8 @@ class FullscreenSpriteViewer(QWidget):
         font = QFont()
         font.setPointSize(12)
         self.status_label.setFont(font)
-        self.status_label.setStyleSheet("""
+        if self.status_label:
+            self.status_label.setStyleSheet("""
             QLabel {
                 background-color: rgba(0, 0, 0, 150);
                 color: #cccccc;
@@ -255,11 +258,14 @@ class FullscreenSpriteViewer(QWidget):
         if sprite_pixmap and not sprite_pixmap.isNull():
             # Scale sprite to fit screen while maintaining aspect ratio
             scaled_pixmap = self._scale_sprite_to_screen(sprite_pixmap)
-            self.sprite_label.setPixmap(scaled_pixmap)
+            if self.sprite_label:
+                self.sprite_label.setPixmap(scaled_pixmap)
         else:
             # Show placeholder
-            self.sprite_label.setText(f"Loading sprite...\n0x{offset:06X}")
-            self.sprite_label.setStyleSheet("""
+            if self.sprite_label:
+                self.sprite_label.setText(f"Loading sprite...\n0x{offset:06X}")
+            if self.sprite_label:
+                self.sprite_label.setStyleSheet("""
                 QLabel {
                     background-color: #2d2d2d;
                     border: 2px solid #444444;
@@ -309,7 +315,7 @@ class FullscreenSpriteViewer(QWidget):
     def _get_target_screen(self) -> QScreen:
         """
         Get the screen where this fullscreen viewer should appear.
-        
+
         Returns:
             QScreen: The screen to use for fullscreen display
         """
@@ -388,7 +394,8 @@ class FullscreenSpriteViewer(QWidget):
             info_text += f"Tiles: {tiles}\n"
         info_text += f"Sprite {self.current_index + 1} of {len(self.sprites_data)}"
 
-        self.info_overlay.setText(info_text)
+        if self.info_overlay:
+            self.info_overlay.setText(info_text)
 
         # Show/hide based on setting
         if self.show_info:

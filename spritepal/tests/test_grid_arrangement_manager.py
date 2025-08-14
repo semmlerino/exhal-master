@@ -8,14 +8,6 @@ import pytest
 
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.headless,
-    pytest.mark.mock_only,
-    pytest.mark.no_qt,
-    pytest.mark.parallel_safe,
-    pytest.mark.rom_data,
-    pytest.mark.unit,
-]
 
 
     ArrangementType,
@@ -25,6 +17,18 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.mock_only,
+    pytest.mark.no_qt,
+    pytest.mark.parallel_safe,
+    pytest.mark.rom_data,
+    pytest.mark.unit,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+]
 class TestTilePosition:
     """Test the TilePosition dataclass"""
 

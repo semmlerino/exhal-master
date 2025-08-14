@@ -23,11 +23,6 @@ from PySide6.QtWidgets import QSlider
 
 from ui.common.smart_preview_coordinator import (
 # Serial execution required: QApplication management, Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.qt_application
-]
 
 
     SmartPreviewCoordinator,
@@ -37,6 +32,22 @@ pytestmark = [
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.qt_application,
+    pytest.mark.cache,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.memory,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+]
 class MockPreviewCache:
     """Mock PreviewCache for testing"""
     def __init__(self):

@@ -137,9 +137,11 @@ class SimpleSmartTab(QWidget):
         self._sprite_regions = sprites
 
         # Update combo box
-        self.region_combo.clear()
+        if self.region_combo:
+            self.region_combo.clear()
         for i, (offset, quality) in enumerate(sprites):
-            self.region_combo.addItem(f"Region {i+1}: 0x{offset:06X} (Q: {quality:.2f})")
+            if self.region_combo:
+                self.region_combo.addItem(f"Region {i+1}: 0x{offset:06X} (Q: {quality:.2f})")
 
     def get_sprite_regions(self) -> list[SpriteRegion]:
         """

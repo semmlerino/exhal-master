@@ -12,11 +12,6 @@ import time
 
 from core.managers.context import (
 # Serial execution required: Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     ManagerContext, 
@@ -40,6 +35,15 @@ from core.managers import (
 from core.managers.exceptions import ManagerError
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.integration,
+]
 class TestManagerContext:
     """Test the ManagerContext class functionality."""
     

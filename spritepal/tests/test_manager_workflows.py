@@ -7,13 +7,6 @@ from pathlib import Path
 import pytest
 from tests.fixtures.test_managers import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.no_qt,
-    pytest.mark.rom_data,
-]
 
 
     create_extraction_manager_fixture,
@@ -30,6 +23,14 @@ from core.managers import (
 from core.managers.exceptions import ValidationError
 
 
+
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 @pytest.fixture(autouse=True)
 def setup_managers():
     """Setup managers for all tests"""

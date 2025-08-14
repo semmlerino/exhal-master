@@ -21,7 +21,10 @@ from utils.image_utils import pil_to_qpixmap
 # Serial execution required: Real Qt components
 pytestmark = [
     
-    pytest.mark.serial
+    pytest.mark.serial,
+    pytest.mark.dialog,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
 ]
 
 

@@ -49,8 +49,10 @@ class SpriteSelectorWidget(BaseExtractionWidget):
 
         self.sprite_combo = QComboBox()
         self.sprite_combo.setMinimumWidth(300)
-        self.sprite_combo.addItem("Select ROM file first...", None)
-        self.sprite_combo.setEnabled(False)
+        if self.sprite_combo:
+            self.sprite_combo.addItem("Select ROM file first...", None)
+        if self.sprite_combo:
+            self.sprite_combo.setEnabled(False)
         self.sprite_combo.currentIndexChanged.connect(self._on_sprite_changed)
         sprite_row.addWidget(self.sprite_combo, 1)
 
@@ -66,7 +68,8 @@ class SpriteSelectorWidget(BaseExtractionWidget):
         offset_row.addWidget(offset_label)
 
         self.offset_label = QLabel("--")
-        self.offset_label.setStyleSheet("font-family: monospace; color: #0078d4; font-size: 14px;")
+        if self.offset_label:
+            self.offset_label.setStyleSheet("font-family: monospace; color: #0078d4; font-size: 14px;")
         self.offset_label.setMinimumWidth(100)
         offset_row.addWidget(self.offset_label)
 
@@ -78,7 +81,8 @@ class SpriteSelectorWidget(BaseExtractionWidget):
         self.find_sprites_btn.setFixedWidth(BUTTON_MAX_WIDTH)
         self.find_sprites_btn.setToolTip("Scan ROM for valid sprite offsets")
         _ = self.find_sprites_btn.clicked.connect(self.find_sprites_clicked.emit)
-        self.find_sprites_btn.setEnabled(False)
+        if self.find_sprites_btn:
+            self.find_sprites_btn.setEnabled(False)
         offset_row.addWidget(self.find_sprites_btn)
 
         sprite_layout.addLayout(offset_row)
@@ -93,15 +97,21 @@ class SpriteSelectorWidget(BaseExtractionWidget):
 
     def clear(self):
         """Clear sprite selection"""
-        self.sprite_combo.clear()
-        self.sprite_combo.addItem("Select ROM file first...", None)
-        self.sprite_combo.setEnabled(False)
-        self.offset_label.setText("--")
-        self.find_sprites_btn.setEnabled(False)
+        if self.sprite_combo:
+            self.sprite_combo.clear()
+        if self.sprite_combo:
+            self.sprite_combo.addItem("Select ROM file first...", None)
+        if self.sprite_combo:
+            self.sprite_combo.setEnabled(False)
+        if self.offset_label:
+            self.offset_label.setText("--")
+        if self.find_sprites_btn:
+            self.find_sprites_btn.setEnabled(False)
 
     def add_sprite(self, name: str, data):
         """Add a sprite to the combo box"""
-        self.sprite_combo.addItem(name, data)
+        if self.sprite_combo:
+            self.sprite_combo.addItem(name, data)
 
     def insert_separator(self, index: int):
         """Insert a separator at the given index"""
@@ -109,7 +119,8 @@ class SpriteSelectorWidget(BaseExtractionWidget):
 
     def set_enabled(self, enabled: bool):
         """Enable/disable the sprite combo"""
-        self.sprite_combo.setEnabled(enabled)
+        if self.sprite_combo:
+            self.sprite_combo.setEnabled(enabled)
 
     def get_current_index(self) -> int:
         """Get current selection index"""
@@ -121,7 +132,8 @@ class SpriteSelectorWidget(BaseExtractionWidget):
 
     def set_current_index(self, index: int):
         """Set current selection index"""
-        self.sprite_combo.setCurrentIndex(index)
+        if self.sprite_combo:
+            self.sprite_combo.setCurrentIndex(index)
 
     def count(self) -> int:
         """Get number of items"""
@@ -137,15 +149,18 @@ class SpriteSelectorWidget(BaseExtractionWidget):
 
     def set_offset_text(self, text: str):
         """Update the offset label"""
-        self.offset_label.setText(text)
+        if self.offset_label:
+            self.offset_label.setText(text)
 
     def set_find_button_enabled(self, enabled: bool):
         """Enable/disable find sprites button"""
-        self.find_sprites_btn.setEnabled(enabled)
+        if self.find_sprites_btn:
+            self.find_sprites_btn.setEnabled(enabled)
 
     def set_find_button_text(self, text: str):
         """Update find sprites button text"""
-        self.find_sprites_btn.setText(text)
+        if self.find_sprites_btn:
+            self.find_sprites_btn.setText(text)
 
     def set_find_button_tooltip(self, tooltip: str):
         """Update find sprites button tooltip"""

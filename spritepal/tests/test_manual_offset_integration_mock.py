@@ -20,6 +20,8 @@ pytestmark = [
     pytest.mark.parallel_safe,  # Safe for parallel execution
     pytest.mark.dialog,  # Tests involving dialogs
     pytest.mark.mock_dialogs,  # Tests that mock dialog exec() methods
+    pytest.mark.ci_safe,
+    pytest.mark.rom_data,
 ]
 
 

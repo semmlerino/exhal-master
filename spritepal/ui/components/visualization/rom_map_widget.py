@@ -7,7 +7,7 @@ Visual representation of ROM with sprite locations for manual offset exploration
 from __future__ import annotations
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 

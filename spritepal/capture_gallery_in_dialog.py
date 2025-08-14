@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 try:
     from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
-    from PySide6.QtWidgets import QApplication, QMessageBox
+    from PySide6.QtWidgets import QApplication
 
     # Import the main dialog
     from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
@@ -62,7 +62,8 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
                 break
 
         if gallery_index >= 0:
-            self.tab_widget.setCurrentIndex(gallery_index)
+            if self.tab_widget:
+                self.tab_widget.setCurrentIndex(gallery_index)
             print(f"✅ Switched to Gallery tab (index {gallery_index})")
 
         if self.gallery_tab:

@@ -40,6 +40,10 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.widget,
     pytest.mark.worker_threads,
+    pytest.mark.ci_safe,
+    pytest.mark.memory,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
 ]
 
 

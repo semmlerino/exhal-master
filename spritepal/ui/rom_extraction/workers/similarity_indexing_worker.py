@@ -227,7 +227,7 @@ class SimilarityIndexingWorker(BaseWorker):
             # Process pending sprites
             sprites_to_process = list(self._pending_sprites.items())
             total_sprites = len(sprites_to_process)
-            
+
             # Handle case where no sprites to index
             if total_sprites == 0:
                 logger.info("No sprites to index")

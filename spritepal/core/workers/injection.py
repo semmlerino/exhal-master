@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict, cast
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 

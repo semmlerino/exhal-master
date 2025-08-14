@@ -59,13 +59,13 @@ class SpriteScanWorker(BaseWorker):
         else:
             # Get ROM size to scan the entire ROM by default
             rom_size = os.path.getsize(self.rom_path)
-            
+
             # Default to scanning the entire ROM with reasonable limits
             # Start from 0x40000 to skip headers and early data
             # End at ROM size or reasonable max (4MB for SNES ROMs)
             start_offset = 0x40000  # Skip headers and early data
             end_offset = min(rom_size, 0x400000)  # Cap at 4MB for safety
-            
+
             logger.info(f"Scanning entire ROM: 0x{start_offset:X} to 0x{end_offset:X} (ROM size: 0x{rom_size:X})")
 
         found_sprites = {}  # Track unique sprites by offset

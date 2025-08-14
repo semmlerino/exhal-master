@@ -8,7 +8,7 @@ used across the test suite, eliminating duplication and inconsistencies.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
 if TYPE_CHECKING:
@@ -818,7 +818,7 @@ def create_unified_dialog_services() -> dict[str, Mock]:
     return MockFactory.create_unified_dialog_services()
 
 
-def create_signal_coordinator(services: Optional[dict[str, Mock | None]] = None) -> MockSignalCoordinatorProtocol:
+def create_signal_coordinator(services: dict[str, Mock | None] | None = None) -> MockSignalCoordinatorProtocol:
     """Convenience function for signal coordinator mock."""
     return MockFactory.create_signal_coordinator(services)
 

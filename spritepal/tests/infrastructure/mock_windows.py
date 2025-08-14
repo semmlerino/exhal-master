@@ -10,32 +10,34 @@ Following Qt Testing Best Practices:
 - No heavy initialization or resource loading
 """
 
-from typing import Optional
+import contextlib
+from typing import Any, Callable, Optional
 from unittest.mock import Mock
 
-from PySide6.QtCore import QObject, QThread, Signal
-from PySide6.QtWidgets import QMainWindow, QWidget
+from .mock_dialogs_base import CallbackSignal
 
 
-class MockMainWindow(QMainWindow):
+class TestMainWindow:
     """
-    Mock MainWindow that provides real Qt signals without heavy initialization.
+    Pure Python test MainWindow that provides callback-based signals without Qt dependencies.
 
-    Inherits from QMainWindow for compatibility with qtbot and Qt tests
-    while avoiding controller creation, panel loading, and resource initialization.
+    Avoids QMainWindow inheritance to prevent metaclass conflicts and crashes.
+    For integration tests that require real Qt, use RealMainWindow instead.
     """
 
-    # Real Qt signals
-    extraction_started = Signal()
-    extraction_completed = Signal()
-    extraction_error = Signal(str)
-    injection_started = Signal()
-    injection_completed = Signal()
-    file_opened = Signal(str)
-    window_closing = Signal()
+    def __init__(self, parent: Optional[Any] = None):
+        self.parent_widget = parent
 
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
+        # Callback-based signals
+        self.extraction_started_callbacks: list[Callable[[], None]] = []
+        self.extraction_completed_callbacks: list[Callable[[], None]] = []
+        self.extraction_error_callbacks: list[Callable[[str], None]] = []
+        self.injection_started_callbacks: list[Callable[[], None]] = []
+        self.injection_completed_callbacks: list[Callable[[], None]] = []
+        self.file_opened_callbacks: list[Callable[[str], None]] = []
+        self.window_closing_callbacks: list[Callable[[], None]] = []
+
+        # Remove super().__init__(parent) call
 
         # Lazy controller initialization (not created until accessed)
         self._controller = None
@@ -79,7 +81,9 @@ class MockMainWindow(QMainWindow):
 
     def show_error(self, message: str):
         """Show error message."""
-        self.extraction_error.emit(message)
+        for callback in self.extraction_error_callbacks:
+            with contextlib.suppress(Exception):
+                callback(message)
 
     def update_status(self, message: str):
         """Update status bar."""
@@ -87,35 +91,76 @@ class MockMainWindow(QMainWindow):
 
     def extraction_complete(self, extracted_files):
         """Handle extraction completion."""
-        self.extraction_completed.emit()
+        for callback in self.extraction_completed_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
 
     def injection_complete(self, success: bool):
         """Handle injection completion."""
-        self.injection_completed.emit()
+        for callback in self.injection_completed_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
 
     def closeEvent(self, event):
         """Handle close event."""
-        self.window_closing.emit()
-        super().closeEvent(event)
+        for callback in self.window_closing_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
+        # No super().closeEvent(event) since we don't inherit from QWidget
+
+    # Signal-like properties for compatibility
+    @property
+    def extraction_started(self):
+        """Extraction started signal interface."""
+        return CallbackSignal(self.extraction_started_callbacks)
+
+    @property
+    def extraction_completed(self):
+        """Extraction completed signal interface."""
+        return CallbackSignal(self.extraction_completed_callbacks)
+
+    @property
+    def extraction_error(self):
+        """Extraction error signal interface."""
+        return CallbackSignal(self.extraction_error_callbacks)
+
+    @property
+    def injection_started(self):
+        """Injection started signal interface."""
+        return CallbackSignal(self.injection_started_callbacks)
+
+    @property
+    def injection_completed(self):
+        """Injection completed signal interface."""
+        return CallbackSignal(self.injection_completed_callbacks)
+
+    @property
+    def file_opened(self):
+        """File opened signal interface."""
+        return CallbackSignal(self.file_opened_callbacks)
+
+    @property
+    def window_closing(self):
+        """Window closing signal interface."""
+        return CallbackSignal(self.window_closing_callbacks)
 
 
-class MockWorkerBase(QThread):
+class TestWorkerBase:
     """
-    Mock base worker that provides real Qt signals without actual thread execution.
+    Pure Python test worker that provides callback-based signals without Qt dependencies.
 
-    This mock prevents "QThread: Destroyed while thread is still running" errors
-    by not actually starting threads but still providing signal behavior.
+    This avoids QThread inheritance to prevent metaclass conflicts and thread cleanup issues.
     """
 
-    # Standard worker signals
-    started = Signal()
-    finished = Signal()
-    progress = Signal(int, str)
-    error = Signal(str, object)
-    warning = Signal(str)
+    def __init__(self, parent: Optional[Any] = None):
+        self.parent_widget = parent
 
-    def __init__(self, parent: Optional[QObject] = None):
-        super().__init__(parent)
+        # Callback-based signals
+        self.started_callbacks: list[Callable[[], None]] = []
+        self.finished_callbacks: list[Callable[[], None]] = []
+        self.progress_callbacks: list[Callable[[int, str], None]] = []
+        self.error_callbacks: list[Callable[[str, object], None]] = []
+        self.warning_callbacks: list[Callable[[str], None]] = []
         self.is_cancelled = False
         self.is_paused = False
         self._is_running = False
@@ -123,11 +168,17 @@ class MockWorkerBase(QThread):
     def start(self):
         """Mock start that doesn't actually create a thread."""
         self._is_running = True
-        self.started.emit()
+        # Emit started signal
+        for callback in self.started_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
         # Simulate immediate completion for tests
         self.run()
         self._is_running = False
-        self.finished.emit()
+        # Emit finished signal
+        for callback in self.finished_callbacks:
+            with contextlib.suppress(Exception):
+                callback()
 
     def run(self):
         """Mock run method - override in subclasses."""
@@ -158,40 +209,82 @@ class MockWorkerBase(QThread):
         """Resume the worker."""
         self.is_paused = False
 
+    # Signal-like properties for compatibility
+    @property
+    def started(self):
+        """Started signal interface."""
+        return CallbackSignal(self.started_callbacks)
 
-class MockExtractionWorker(MockWorkerBase):
-    """Mock extraction worker for testing."""
+    @property
+    def finished(self):
+        """Finished signal interface."""
+        return CallbackSignal(self.finished_callbacks)
 
-    extraction_completed = Signal(dict)
+    @property
+    def progress(self):
+        """Progress signal interface."""
+        return CallbackSignal(self.progress_callbacks)
 
-    def __init__(self, params: dict, parent: Optional[QObject] = None):
+    @property
+    def error(self):
+        """Error signal interface."""
+        return CallbackSignal(self.error_callbacks)
+
+    @property
+    def warning(self):
+        """Warning signal interface."""
+        return CallbackSignal(self.warning_callbacks)
+
+
+class TestExtractionWorker(TestWorkerBase):
+    """Test extraction worker for testing."""
+
+    def __init__(self, params: dict, parent: Optional[Any] = None):
         super().__init__(parent)
+        self.extraction_completed_callbacks: list[Callable[[dict], None]] = []
         self.params = params
         self.result = {'sprites': [], 'metadata': {}}
 
     def run(self):
         """Mock extraction operation."""
         # Emit progress
-        self.progress.emit(50, "Extracting sprites...")
+        for callback in self.progress_callbacks:
+            with contextlib.suppress(Exception):
+                callback(50, "Extracting sprites...")
         # Emit completion with mock result
-        self.extraction_completed.emit(self.result)
+        for callback in self.extraction_completed_callbacks:
+            with contextlib.suppress(Exception):
+                callback(self.result)
+
+    @property
+    def extraction_completed(self):
+        """Extraction completed signal interface."""
+        return CallbackSignal(self.extraction_completed_callbacks)
 
 
-class MockInjectionWorker(MockWorkerBase):
-    """Mock injection worker for testing."""
+class TestInjectionWorker(TestWorkerBase):
+    """Test injection worker for testing."""
 
-    injection_completed = Signal(bool)
-
-    def __init__(self, params: dict, parent: Optional[QObject] = None):
+    def __init__(self, params: dict, parent: Optional[Any] = None):
         super().__init__(parent)
+        self.injection_completed_callbacks: list[Callable[[bool], None]] = []
         self.params = params
 
     def run(self):
         """Mock injection operation."""
         # Emit progress
-        self.progress.emit(50, "Injecting sprites...")
+        for callback in self.progress_callbacks:
+            with contextlib.suppress(Exception):
+                callback(50, "Injecting sprites...")
         # Emit completion
-        self.injection_completed.emit(True)
+        for callback in self.injection_completed_callbacks:
+            with contextlib.suppress(Exception):
+                callback(True)
+
+    @property
+    def injection_completed(self):
+        """Injection completed signal interface."""
+        return CallbackSignal(self.injection_completed_callbacks)
 
 
 class MockWorkerManager:
@@ -234,14 +327,14 @@ class MockWorkerManager:
         pass  # Mock implementation
 
 
-def create_mock_main_window() -> MockMainWindow:
+def create_test_main_window() -> TestMainWindow:
     """
-    Factory function to create a properly configured MockMainWindow.
+    Factory function to create a properly configured TestMainWindow.
 
     Returns:
-        MockMainWindow instance ready for testing
+        TestMainWindow instance ready for testing
     """
-    window = MockMainWindow()
+    window = TestMainWindow()
 
     # Set up any additional mocking needed
     window.extraction_manager = Mock()
@@ -255,14 +348,22 @@ def create_mock_main_window() -> MockMainWindow:
 
 def patch_main_window_creation(monkeypatch):
     """
-    Patch MainWindow creation to use MockMainWindow.
+    Patch MainWindow creation to use TestMainWindow.
 
     Args:
         monkeypatch: pytest monkeypatch fixture
     """
-    monkeypatch.setattr('ui.main_window.MainWindow', MockMainWindow)
+    monkeypatch.setattr('ui.main_window.MainWindow', TestMainWindow)
 
     # Also patch any direct imports
     import sys
     if 'ui.main_window' in sys.modules:
-        sys.modules['ui.main_window'].MainWindow = MockMainWindow
+        sys.modules['ui.main_window'].MainWindow = TestMainWindow
+
+
+# Backward compatibility aliases
+MockMainWindow = TestMainWindow
+MockWorkerBase = TestWorkerBase
+MockExtractionWorker = TestExtractionWorker
+MockInjectionWorker = TestInjectionWorker
+create_mock_main_window = create_test_main_window

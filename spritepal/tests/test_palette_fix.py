@@ -1,3 +1,9 @@
+import pytest
+
+
+pytestmark = [
+    pytest.mark.headless,
+]
 #!/usr/bin/env python3
 """
 Test palette application to see why we get black boxes.

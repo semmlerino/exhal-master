@@ -43,6 +43,11 @@ pytestmark = [
     pytest.mark.serial,
     pytest.mark.singleton,
     pytest.mark.widget,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.thread_safety,
+    pytest.mark.worker_threads,
 ]
 
 

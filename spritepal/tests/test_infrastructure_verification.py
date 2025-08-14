@@ -13,7 +13,10 @@ pytestmark = [
     
     pytest.mark.serial,
     pytest.mark.qt_application,
-    pytest.mark.process_pool
+    pytest.mark.process_pool,
+    pytest.mark.performance,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
 ]
 
 

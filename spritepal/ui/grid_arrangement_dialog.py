@@ -5,7 +5,6 @@ Flexible sprite arrangement supporting rows, columns, and custom tile groups
 
 from __future__ import annotations
 
-import os
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -133,12 +132,14 @@ class GridGraphicsView(QGraphicsView):
 
     def clear_selection(self):
         """Clear current selection"""
-        self.current_selection.clear()
+        if self.current_selection:
+            self.current_selection.clear()
         scene = self.scene()
         if scene:
             for rect in self.selection_rects.values():
                 scene.removeItem(rect)
-        self.selection_rects.clear()
+        if self.selection_rects:
+            self.selection_rects.clear()
 
     def highlight_arranged_tiles(
         self, tiles: list[TilePosition], color: QColor | None = None
@@ -548,7 +549,8 @@ class GridGraphicsView(QGraphicsView):
         for rect in self.selection_rects.values():
             if rect.scene():
                 scene.removeItem(rect)
-        self.selection_rects.clear()
+        if self.selection_rects:
+            self.selection_rects.clear()
 
         # Add new selection rects
         for tile_pos in self.current_selection:
@@ -579,7 +581,8 @@ class GridGraphicsView(QGraphicsView):
             for line in self.grid_lines:
                 if line.scene():
                     scene.removeItem(line)
-        self.grid_lines.clear()
+        if self.grid_lines:
+            self.grid_lines.clear()
 
         if not scene:
             return
@@ -634,7 +637,8 @@ class GridGraphicsView(QGraphicsView):
             for rect in self.selection_rects.values():
                 if rect.scene():
                     scene.removeItem(rect)
-        self.selection_rects.clear()
+        if self.selection_rects:
+            self.selection_rects.clear()
 
         # Add new selection rects
         if scene:
@@ -749,7 +753,8 @@ class GridArrangementDialog(SplitterDialog):
 
         # Add custom buttons using SplitterDialog's button system
         self.export_btn = self.add_button("&Export Arrangement", callback=self._export_arrangement)
-        self.export_btn.setEnabled(False)
+        if self.export_btn:
+            self.export_btn.setEnabled(False)
         AccessibilityHelper.make_accessible(
             self.export_btn,
             "Export Arrangement",
@@ -1114,14 +1119,16 @@ class GridArrangementDialog(SplitterDialog):
 
     def _clear_arrangement(self):
         """Clear all arrangements"""
-        self.arrangement_manager.clear()
+        if self.arrangement_manager:
+            self.arrangement_manager.clear()
         self.grid_view.clear_selection()
         self._update_status("Cleared all arrangements")
 
     def _on_arrangement_changed(self):
         """Handle arrangement change"""
         self._update_displays()
-        self.export_btn.setEnabled(self.arrangement_manager.get_arranged_count() > 0)
+        if self.export_btn:
+            self.export_btn.setEnabled(self.arrangement_manager.get_arranged_count() > 0)
 
     def _on_palette_mode_changed(self, enabled: bool):
         """Handle palette mode change"""
@@ -1141,7 +1148,8 @@ class GridArrangementDialog(SplitterDialog):
 
     def _update_arrangement_list(self):
         """Update the arrangement list widget"""
-        self.arrangement_list.clear()
+        if self.arrangement_list:
+            self.arrangement_list.clear()
 
         for arr_type, key in self.arrangement_manager.get_arrangement_order():
             if arr_type == ArrangementType.ROW:
@@ -1157,7 +1165,8 @@ class GridArrangementDialog(SplitterDialog):
             else:
                 item_text = str(key)
 
-            self.arrangement_list.addItem(item_text)
+            if self.arrangement_list:
+                self.arrangement_list.addItem(item_text)
 
     def _update_preview(self):
         """Update the arrangement preview"""
@@ -1174,10 +1183,13 @@ class GridArrangementDialog(SplitterDialog):
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.FastTransformation,
             )
-            self.preview_label.setPixmap(scaled)
+            if self.preview_label:
+                self.preview_label.setPixmap(scaled)
         else:
-            self.preview_label.clear()
-            self.preview_label.setText("No arrangement")
+            if self.preview_label:
+                self.preview_label.clear()
+            if self.preview_label:
+                self.preview_label.setText("No arrangement")
 
     def _create_pixmap_from_image(self, image: Image.Image) -> QPixmap:
         """Convert PIL Image to QPixmap"""
@@ -1274,7 +1286,8 @@ class GridArrangementDialog(SplitterDialog):
         """Update the zoom level display"""
         if hasattr(self, "zoom_level_label"):
             zoom_percent = int(self.grid_view.get_zoom_level() * 100)
-            self.zoom_level_label.setText(f"{zoom_percent}%")
+            if self.zoom_level_label:
+                self.zoom_level_label.setText(f"{zoom_percent}%")
 
     def _on_zoom_changed(self, zoom_level):
         """Handle zoom level change"""
@@ -1324,7 +1337,7 @@ class GridArrangementDialog(SplitterDialog):
             self.colorizer.clear_cache()
 
         # Clear graphics scene items
-        if hasattr(self, "scene"):
+        if hasattr(self, "scene") and self.scene:
             self.scene.clear()
 
         # Clear grid view selections
@@ -1339,5 +1352,5 @@ class GridArrangementDialog(SplitterDialog):
             self.processor.original_image = None
 
         # Clear arrangement manager
-        if hasattr(self, "arrangement_manager"):
+        if hasattr(self, "arrangement_manager") and self.arrangement_manager:
             self.arrangement_manager.clear()

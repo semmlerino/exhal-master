@@ -205,7 +205,9 @@ class ParallelSpriteFinder:
         # Use adaptive step sizing based on chunk characteristics
         step = self._calculate_adaptive_step(rom_data, chunk)
 
-        for offset in range(chunk.start, chunk.end, step):
+        # Use a while loop to ensure we check up to and including the last valid offset
+        offset = chunk.start
+        while offset < chunk.end:
             # Check cancellation
             if cancellation_token and cancellation_token.is_set():
                 break
@@ -216,6 +218,7 @@ class ParallelSpriteFinder:
 
             # Quick validation checks
             if not self._quick_sprite_check(rom_data, offset):
+                offset += step
                 continue
 
             # Try to find sprite at this offset
@@ -237,7 +240,10 @@ class ParallelSpriteFinder:
                     sprite_info.get("compressed_size", self.step_size),
                     self.step_size
                 )
-                offset += skip_distance - step
+                offset += skip_distance
+            else:
+                # Move to next offset
+                offset += step
 
         return results
 

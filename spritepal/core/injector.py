@@ -6,13 +6,9 @@ Handles reinsertion of edited sprites back into VRAM
 import json
 from typing import Any
 
-try:
-    from typing import override
-except ImportError:
-    from typing_extensions import override
-
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
+from typing_extensions import override
 
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,

@@ -25,7 +25,14 @@ pytestmark = [
         reason="Requires GUI environment - this is a real Qt integration test"
     ),
     pytest.mark.serial,
-    pytest.mark.qt_integration
+    pytest.mark.qt_integration,
+    pytest.mark.dialog,
+    pytest.mark.gui,
+    pytest.mark.integration,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 

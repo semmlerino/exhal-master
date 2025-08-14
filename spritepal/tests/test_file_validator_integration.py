@@ -1,3 +1,11 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.rom_data,
+]
 """
 Integration test to verify refactored FileValidator maintains backward compatibility.
 """

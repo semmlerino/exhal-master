@@ -22,10 +22,6 @@ from PySide6.QtWidgets import QApplication
 # Import real testing infrastructure
 from tests.infrastructure import (
 # Serial execution required: Real Qt components
-pytestmark = [
-    
-    pytest.mark.serial
-]
 
 
     QtTestingFramework,
@@ -42,6 +38,17 @@ from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.cache,
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.integration,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+]
 @pytest.mark.gui
 class TestRealCrossDialogIntegration:
     """

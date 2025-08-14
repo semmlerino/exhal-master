@@ -15,7 +15,7 @@ except ImportError:
     from typing_extensions import NotRequired
 
 try:
-    from typing import override
+    from typing_extensions import override
 except ImportError:
     from typing_extensions import override
 

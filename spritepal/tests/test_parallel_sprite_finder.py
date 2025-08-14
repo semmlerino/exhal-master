@@ -15,11 +15,6 @@ from unittest.mock import Mock, patch
 import pytest
 from core.parallel_sprite_finder import (
 # Serial execution required: Thread safety concerns
-pytestmark = [
-    
-    pytest.mark.serial,
-    pytest.mark.thread_safety
-]
 
 
     AdaptiveSpriteFinder,
@@ -33,6 +28,16 @@ from utils.constants import DEFAULT_SCAN_STEP
 logger = logging.getLogger(__name__)
 
 
+
+pytestmark = [
+    
+    pytest.mark.serial,
+    pytest.mark.thread_safety,
+    pytest.mark.ci_safe,
+    pytest.mark.headless,
+    pytest.mark.performance,
+    pytest.mark.rom_data,
+]
 @pytest.fixture
 def sample_rom_data():
     """Create sample ROM data for testing."""

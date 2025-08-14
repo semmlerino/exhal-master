@@ -1,3 +1,10 @@
+
+pytestmark = [
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_real,
+]
 """
 Simple unit tests for ComposedDialog architecture components.
 

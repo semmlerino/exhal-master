@@ -443,7 +443,8 @@ class ROMExtractionPanel(QWidget):
             layout: Layout to add indicators to
         """
         self.similarity_status = QLabel("Similarity search ready")
-        self.similarity_status.setStyleSheet(self._get_similarity_status_style())
+        if self.similarity_status:
+            self.similarity_status.setStyleSheet(self._get_similarity_status_style())
         self.similarity_status.setWordWrap(True)
         self.similarity_status.setVisible(False)  # Hidden until ROM is loaded
         layout.addWidget(self.similarity_status)
@@ -688,13 +689,15 @@ class ROMExtractionPanel(QWidget):
         self._manual_offset = offset
         # Preview now handled in manual offset dialog
         # Update status label
-        self.manual_offset_status.setText(f"Current offset: 0x{offset:06X}")
+        if self.manual_offset_status:
+            self.manual_offset_status.setText(f"Current offset: 0x{offset:06X}")
 
     def _on_dialog_sprite_found(self, offset: int, sprite_name: str):
         """Handle sprite found signal from dialog"""
         self._manual_offset = offset
         # Update status to show sprite was selected
-        self.manual_offset_status.setText(f"Selected sprite at 0x{offset:06X}")
+        if self.manual_offset_status:
+            self.manual_offset_status.setText(f"Selected sprite at 0x{offset:06X}")
         # Check extraction readiness
         self._check_extraction_ready()
 
@@ -722,7 +725,8 @@ class ROMExtractionPanel(QWidget):
 
     def _load_rom_sprites(self):
         """Load known sprite locations from ROM"""
-        self.sprite_selector_widget.clear()
+        if self.sprite_selector_widget:
+            self.sprite_selector_widget.clear()
         self.sprite_locations = {}
 
         if not self.rom_path:
@@ -809,16 +813,19 @@ class ROMExtractionPanel(QWidget):
             self.similarity_status.setVisible(True)
             indexed_count = self.similarity_indexing_worker.get_indexed_count()
             if indexed_count > 0:
-                self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites loaded)")
-            else:
+                if self.similarity_status:
+                    self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites loaded)")
+            elif self.similarity_status:
                 self.similarity_status.setText("Similarity indexing ready - sprites will be indexed as found")
 
             logger.info(f"Initialized similarity indexing worker for ROM: {Path(self.rom_path).name}")
 
         except Exception as e:
             logger.exception(f"Failed to initialize similarity indexing worker: {e}")
-            self.similarity_status.setText(f"Similarity indexing error: {e}")
-            self.similarity_status.setStyleSheet("""
+            if self.similarity_status:
+                self.similarity_status.setText(f"Similarity indexing error: {e}")
+            if self.similarity_status:
+                self.similarity_status.setStyleSheet("""
                 padding: 6px;
                 background: #3d1a1a;
                 border: 1px solid #f44336;
@@ -829,7 +836,8 @@ class ROMExtractionPanel(QWidget):
 
     def _on_similarity_progress(self, percent: int, message: str):
         """Handle similarity indexing progress updates"""
-        self.similarity_status.setText(f"Indexing sprites: {percent}% - {message}")
+        if self.similarity_status:
+            self.similarity_status.setText(f"Indexing sprites: {percent}% - {message}")
 
     def _on_sprite_indexed(self, offset: int):
         """Handle individual sprite indexing completion"""
@@ -847,16 +855,20 @@ class ROMExtractionPanel(QWidget):
         """Handle similarity indexing completion"""
         if success:
             indexed_count = self.similarity_indexing_worker.get_indexed_count()
-            self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites)")
+            if self.similarity_status:
+                self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites)")
             logger.info(f"Similarity indexing complete: {message}")
         else:
-            self.similarity_status.setText(f"Similarity indexing failed: {message}")
+            if self.similarity_status:
+                self.similarity_status.setText(f"Similarity indexing failed: {message}")
             logger.error(f"Similarity indexing failed: {message}")
 
     def _on_similarity_error(self, error_message: str, exception: Exception):
         """Handle similarity indexing errors"""
-        self.similarity_status.setText(f"Similarity error: {error_message}")
-        self.similarity_status.setStyleSheet("""
+        if self.similarity_status:
+            self.similarity_status.setText(f"Similarity error: {error_message}")
+        if self.similarity_status:
+            self.similarity_status.setStyleSheet("""
             padding: 6px;
             background: #3d1a1a;
             border: 1px solid #f44336;
@@ -963,10 +975,14 @@ class ROMExtractionPanel(QWidget):
     def clear_files(self):
         """Clear all file selections"""
         self.rom_path = ""
-        self.rom_file_widget.clear()
-        self.cgram_selector_widget.clear()
-        self.output_name_widget.clear()
-        self.sprite_selector_widget.clear()
+        if self.rom_file_widget:
+            self.rom_file_widget.clear()
+        if self.cgram_selector_widget:
+            self.cgram_selector_widget.clear()
+        if self.output_name_widget:
+            self.output_name_widget.clear()
+        if self.sprite_selector_widget:
+            self.sprite_selector_widget.clear()
         self.sprite_locations = {}
         self._check_extraction_ready()
         self.rom_file_widget.set_info_text("No ROM loaded")
@@ -1465,7 +1481,8 @@ class ROMExtractionPanel(QWidget):
     def _on_navigator_offset_changed(self, offset: int):
         """Handle offset change from navigator"""
         self._manual_offset = offset
-        self.manual_offset_status.setText(f"Navigator: 0x{offset:06X}")
+        if self.manual_offset_status:
+            self.manual_offset_status.setText(f"Navigator: 0x{offset:06X}")
 
         # Update manual offset dialog if open
         current_dialog = ManualOffsetDialogSingleton.get_current_dialog()
@@ -1487,8 +1504,8 @@ class ROMExtractionPanel(QWidget):
                 if data and len(data) >= 2 and data[1] == offset:
                     self.sprite_selector_widget.set_current_index(i)
                     break
-        else:
-            # In manual mode, just update the offset
+        # In manual mode, just update the offset
+        elif self.manual_offset_status:
             self.manual_offset_status.setText(f"Selected sprite at 0x{offset:06X}")
 
         # Update extraction readiness
@@ -1518,7 +1535,8 @@ class ROMExtractionPanel(QWidget):
     def _on_search_sprite_found(self, offset: int, quality: float):
         """Handle sprite found during search"""
         self._manual_offset = offset
-        self.manual_offset_status.setText(
+        if self.manual_offset_status:
+            self.manual_offset_status.setText(
             f"Found sprite at 0x{offset:06X} (quality: {quality:.2f})"
         )
         # Update dialog if open
@@ -1532,9 +1550,9 @@ class ROMExtractionPanel(QWidget):
 
     def _on_search_complete(self, found: bool):
         """Handle search completion"""
-        if not found:
+        if not found and self.manual_offset_status:
             self.manual_offset_status.setText(
-                "No valid sprites found in search range. Try a different area."
+            "No valid sprites found in search range. Try a different area."
             )
 
     def _on_state_changed(self, old_state: ExtractionState, new_state: ExtractionState):
@@ -1542,17 +1560,23 @@ class ROMExtractionPanel(QWidget):
         # Update UI elements based on state
         if new_state == ExtractionState.IDLE:
             # Re-enable all controls
-            self.rom_file_widget.setEnabled(True)
-            self.mode_selector_widget.setEnabled(True)
+            if self.rom_file_widget:
+                self.rom_file_widget.setEnabled(True)
+            if self.mode_selector_widget:
+                self.mode_selector_widget.setEnabled(True)
             self.sprite_selector_widget.set_find_button_enabled(True)
-            self.manual_offset_button.setEnabled(True)
+            if self.manual_offset_button:
+                self.manual_offset_button.setEnabled(True)
 
         elif new_state in {ExtractionState.LOADING_ROM, ExtractionState.EXTRACTING}:
             # Disable all controls during critical operations
-            self.rom_file_widget.setEnabled(False)
-            self.mode_selector_widget.setEnabled(False)
+            if self.rom_file_widget:
+                self.rom_file_widget.setEnabled(False)
+            if self.mode_selector_widget:
+                self.mode_selector_widget.setEnabled(False)
             self.sprite_selector_widget.set_find_button_enabled(False)
-            self.manual_offset_button.setEnabled(False)
+            if self.manual_offset_button:
+                self.manual_offset_button.setEnabled(False)
 
         elif new_state == ExtractionState.SCANNING_SPRITES:
             # Disable sprite selection during scan
@@ -1560,7 +1584,8 @@ class ROMExtractionPanel(QWidget):
 
         elif new_state == ExtractionState.SEARCHING_SPRITE:
             # Disable navigation during search
-            self.manual_offset_button.setEnabled(False)
+            if self.manual_offset_button:
+                self.manual_offset_button.setEnabled(False)
 
         # Log state transitions for debugging
         logger.debug(f"State transition: {old_state.name} -> {new_state.name}")

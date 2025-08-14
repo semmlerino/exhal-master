@@ -1,3 +1,13 @@
+
+pytestmark = [
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.qt_real,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.unit,
+]
 """
 Unit tests for ComposedDialog architecture components.
 

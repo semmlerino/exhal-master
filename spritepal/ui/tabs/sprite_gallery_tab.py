@@ -14,6 +14,7 @@ from typing import Any, Optional
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QPixmap
 from PySide6.QtWidgets import (
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -109,6 +110,12 @@ class SpriteGalleryTab(QWidget):
         scan_action.triggered.connect(self._scan_for_sprites)
         toolbar.addAction(scan_action)
 
+        # Custom range scan
+        custom_scan_action = QAction("🎯 Custom Range Scan", self)
+        custom_scan_action.setToolTip("Scan a specific range of the ROM")
+        custom_scan_action.triggered.connect(self._scan_custom_range)
+        toolbar.addAction(custom_scan_action)
+
         toolbar.addSeparator()
 
         # Export actions
@@ -160,14 +167,16 @@ class SpriteGalleryTab(QWidget):
 
         # Quick actions with responsive sizing
         self.compare_btn = QPushButton("Compare")
-        self.compare_btn.setEnabled(False)
+        if self.compare_btn:
+            self.compare_btn.setEnabled(False)
         self.compare_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.compare_btn.setFixedHeight(BUTTON_HEIGHT)
         self.compare_btn.clicked.connect(self._compare_sprites)
         layout.addWidget(self.compare_btn)
 
         self.palette_btn = QPushButton("Apply Palette")
-        self.palette_btn.setEnabled(False)
+        if self.palette_btn:
+            self.palette_btn.setEnabled(False)
         self.palette_btn.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.palette_btn.setFixedHeight(BUTTON_HEIGHT)
         self.palette_btn.clicked.connect(self._apply_palette)
@@ -197,7 +206,8 @@ class SpriteGalleryTab(QWidget):
 
         # Update info
         rom_name = Path(rom_path).name
-        self.info_label.setText(f"ROM: {rom_name} ({rom_size / 1024 / 1024:.1f}MB)")
+        if self.info_label:
+            self.info_label.setText(f"ROM: {rom_name} ({rom_size / 1024 / 1024:.1f}MB)")
 
         # Try to load cached scan results for this ROM
         cache_loaded = self._load_scan_cache(rom_path)
@@ -260,7 +270,39 @@ class SpriteGalleryTab(QWidget):
         # Create and start scan worker
         self._start_sprite_scan()
 
-    def _start_sprite_scan(self):
+    def _scan_custom_range(self):
+        """Scan a custom range of the ROM for sprites."""
+        if not self.rom_path:
+            QMessageBox.warning(self, "No ROM", "Please load a ROM first")
+            return
+
+        # Import the dialog
+        from ui.dialogs.scan_range_dialog import ScanRangeDialog
+
+        # Show range dialog
+        dialog = ScanRangeDialog(self.rom_size, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        start_offset, end_offset = dialog.get_range()
+
+        # Show progress dialog
+        range_size = end_offset - start_offset
+        range_size // 0x1000  # Rough estimate
+        self.progress_dialog = QProgressDialog(
+            f"Scanning ROM range 0x{start_offset:X} - 0x{end_offset:X}...",
+            "Cancel",
+            0,
+            100,
+            self
+        )
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.show()
+
+        # Start scan with custom range
+        self._start_sprite_scan(start_offset, end_offset)
+
+    def _start_sprite_scan(self, start_offset: Optional[int] = None, end_offset: Optional[int] = None):
         """Start the sprite scanning process."""
         # Use SpriteFinder to scan
         finder = SpriteFinder()
@@ -275,8 +317,25 @@ class SpriteGalleryTab(QWidget):
 
             sprites = []
 
+            # Use custom range if provided
+            if start_offset is not None and end_offset is not None:
+                # Custom scan range
+                logger.info(f"Using custom scan range: 0x{start_offset:X} - 0x{end_offset:X}")
+
+                # Determine step size based on range size
+                range_size = end_offset - start_offset
+                if range_size < 0x10000:  # < 64KB
+                    step_size = 0x100  # Scan every 256 bytes
+                elif range_size < 0x40000:  # < 256KB
+                    step_size = 0x200  # Scan every 512 bytes
+                elif range_size < 0x100000:  # < 1MB
+                    step_size = 0x400  # Scan every 1024 bytes
+                else:
+                    step_size = 0x800  # Scan every 2048 bytes for large ranges
+
+                scan_ranges = [(start_offset, end_offset, step_size)]
             # Choose scan ranges based on scan mode
-            if hasattr(self, 'scan_mode') and self.scan_mode == "thorough":
+            elif hasattr(self, 'scan_mode') and self.scan_mode == "thorough":
                 # Thorough scan - smaller step sizes, more areas
                 scan_ranges = [
                     (0x200000, 0x280000, 0x100),  # Main sprite area - scan every 256 bytes
@@ -292,7 +351,8 @@ class SpriteGalleryTab(QWidget):
                     (0x100000, 0x180000, 0x1000),  # Secondary area - scan every 4096 bytes
                 ]
 
-            total_steps = sum((end - start) // step for start, end, step in scan_ranges)
+            # Calculate total steps, avoiding division by zero
+            total_steps = sum(max(1, (end - start) // step) for start, end, step in scan_ranges)
             current_step = 0
             max_sprites = 200  # Limit to prevent overwhelming the gallery
 
@@ -418,8 +478,10 @@ class SpriteGalleryTab(QWidget):
         count = len(selected_offsets)
 
         # Enable/disable actions based on selection
-        self.compare_btn.setEnabled(count >= 2)
-        self.palette_btn.setEnabled(count >= 1)
+        if self.compare_btn:
+            self.compare_btn.setEnabled(count >= 2)
+        if self.palette_btn:
+            self.palette_btn.setEnabled(count >= 1)
 
         # Update toolbar actions
         for action in self.toolbar.actions():
@@ -700,7 +762,8 @@ class SpriteGalleryTab(QWidget):
                 if hasattr(self, 'info_label'):
                     rom_name = Path(rom_path).name
                     age_str = f" ({cache_age_hours:.1f}h old)" if cache_age_hours >= 0 else ""
-                    self.info_label.setText(
+                    if self.info_label:
+                        self.info_label.setText(
                         f"Loaded {len(self.sprites_data)} cached sprites from {rom_name}{age_str}"
                     )
 

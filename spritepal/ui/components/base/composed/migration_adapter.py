@@ -314,7 +314,8 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
         # Set default tab if specified
         if hasattr(self, "_default_tab") and self._default_tab is not None:
-            self._tab_widget.setCurrentIndex(self._default_tab)
+            if self._tab_widget:
+                self._tab_widget.setCurrentIndex(self._default_tab)
 
     def set_current_tab(self, index: int) -> None:
         """

@@ -29,7 +29,16 @@ from tests.infrastructure.real_component_factory import RealComponentFactory
 pytestmark = [
     pytest.mark.serial,
     pytest.mark.qt_application,
-    pytest.mark.thread_safety
+    pytest.mark.thread_safety,
+    pytest.mark.cache,
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
 ]
 
 

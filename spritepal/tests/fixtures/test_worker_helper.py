@@ -6,6 +6,7 @@ Test worker helpers for synchronous execution in tests
 from pathlib import Path
 from typing import Any
 
+import pytest
 from core.workers import ROMExtractionWorker, VRAMExtractionWorker
 
 
@@ -18,6 +19,8 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.serial,
     pytest.mark.worker_threads,
+    pytest.mark.ci_safe,
+    pytest.mark.signals_slots,
 ]
 
 

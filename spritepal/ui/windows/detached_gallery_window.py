@@ -9,6 +9,7 @@ from typing import Any, Optional
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QKeyEvent
 from PySide6.QtWidgets import (
+    QDialog,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -363,6 +364,12 @@ class DetachedGalleryWindow(QMainWindow):
         scan_action.triggered.connect(self._scan_rom)
         toolbar.addAction(scan_action)
 
+        # Custom range scan action
+        custom_scan_action = QAction("🎯 Custom Range", self)
+        custom_scan_action.setToolTip("Scan a specific range of the ROM")
+        custom_scan_action.triggered.connect(self._scan_custom_range)
+        toolbar.addAction(custom_scan_action)
+
         # Refresh thumbnails action
         refresh_action = QAction("🔄 Refresh", self)
         refresh_action.setToolTip("Refresh sprite thumbnails")
@@ -601,7 +608,8 @@ class DetachedGalleryWindow(QMainWindow):
         if not hasattr(self, 'recent_roms_menu'):
             return
 
-        self.recent_roms_menu.clear()
+        if self.recent_roms_menu:
+            self.recent_roms_menu.clear()
 
         try:
             settings = get_settings_manager()
@@ -737,7 +745,45 @@ class DetachedGalleryWindow(QMainWindow):
 
         self._start_scan()
 
-    def _start_scan(self):
+    def _scan_custom_range(self):
+        """Scan a custom range of the ROM for sprites."""
+        if not self.rom_path:
+            QMessageBox.information(
+                self,
+                "No ROM Loaded",
+                "Please load a ROM file first using File > Load ROM."
+            )
+            return
+
+        if self.scanning:
+            QMessageBox.information(
+                self,
+                "Scan in Progress",
+                "A ROM scan is already in progress. Please wait for it to complete."
+            )
+            return
+
+        # Import and show the range dialog
+        from ui.dialogs.scan_range_dialog import ScanRangeDialog
+
+        # Get ROM size
+        try:
+            rom_size = Path(self.rom_path).stat().st_size
+        except Exception as e:
+            logger.error(f"Error getting ROM size: {e}")
+            rom_size = 0
+
+        dialog = ScanRangeDialog(rom_size, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        start_offset, end_offset = dialog.get_range()
+        logger.info(f"Starting custom range scan: 0x{start_offset:X} - 0x{end_offset:X}")
+
+        # Start scan with custom range
+        self._start_scan(start_offset, end_offset)
+
+    def _start_scan(self, start_offset: Optional[int] = None, end_offset: Optional[int] = None):
         """Start the ROM scanning process."""
         if not self.rom_path:
             self.status_bar.showMessage("No ROM loaded - cannot start scan")
@@ -756,11 +802,18 @@ class DetachedGalleryWindow(QMainWindow):
         self.status_bar.showMessage("Scanning ROM for sprites...")
 
         # Create and start scan worker
-        logger.info("Creating new SpriteScanWorker for ROM scan")
+        if start_offset is not None and end_offset is not None:
+            logger.info(f"Creating SpriteScanWorker for custom range: 0x{start_offset:X} - 0x{end_offset:X}")
+            self.status_bar.showMessage(f"Scanning ROM range 0x{start_offset:X} - 0x{end_offset:X}...")
+        else:
+            logger.info("Creating new SpriteScanWorker for full ROM scan")
+
         self.scan_worker = SpriteScanWorker(
             self.rom_path,
             self.rom_extractor,
             use_cache=True,
+            start_offset=start_offset,
+            end_offset=end_offset,
             parent=self
         )
 

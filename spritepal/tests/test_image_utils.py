@@ -18,8 +18,6 @@ except ImportError:
     QT_AVAILABLE = False
 
 
-def is_headless_environment():
-    """Check if we're in a headless environment"""
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -27,9 +25,12 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
 ]
 
 
+def is_headless_environment():
+    """Check if we're in a headless environment"""
     import os
     import sys
 

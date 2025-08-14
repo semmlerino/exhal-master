@@ -11,9 +11,6 @@ from core.injector import InjectionWorker, SpriteInjector
 from core.palette_manager import PaletteManager
 
 
-class TestInjectionWorkflowIntegration:
-    """Test complete injection workflow integration"""
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -21,8 +18,12 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.no_qt,
     pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
+
+class TestInjectionWorkflowIntegration:
+    """Test complete injection workflow integration"""
 
     @pytest.fixture
     def temp_workspace(self):

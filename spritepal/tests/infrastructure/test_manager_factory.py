@@ -26,6 +26,7 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.rom_data,
     pytest.mark.unit,
+    pytest.mark.ci_safe,
 ]
 
 

@@ -439,7 +439,8 @@ class SpriteGalleryWidget(QWidget):
     def _on_size_changed(self, value: int):
         """Handle thumbnail size change."""
         self.thumbnail_size = value
-        self.size_label.setText(f"{value}px")
+        if self.size_label:
+            self.size_label.setText(f"{value}px")
 
         # Update model and delegate
         if self.model:
@@ -492,7 +493,8 @@ class SpriteGalleryWidget(QWidget):
     def _update_status(self):
         """Update the status label."""
         if not self.model:
-            self.status_label.setText("0 sprites")
+            if self.status_label:
+                self.status_label.setText("0 sprites")
             return
 
         visible_count, total_count, selected_count = self.model.get_sprite_count_info()
@@ -506,7 +508,8 @@ class SpriteGalleryWidget(QWidget):
         if selected_count > 0:
             status += f" ({selected_count} selected)"
 
-        self.status_label.setText(status)
+        if self.status_label:
+            self.status_label.setText(status)
 
     def resizeEvent(self, event):
         """Handle resize event."""

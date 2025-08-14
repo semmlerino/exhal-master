@@ -9,13 +9,6 @@ import pytest
 from core.rom_validator import ROMValidator
 from utils.rom_exceptions import (
 # Systematic pytest markers applied based on test content analysis
-pytestmark = [
-    pytest.mark.file_io,
-    pytest.mark.headless,
-    pytest.mark.integration,
-    pytest.mark.no_qt,
-    pytest.mark.rom_data,
-]
 
 
     InvalidROMError,
@@ -25,6 +18,14 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.file_io,
+    pytest.mark.headless,
+    pytest.mark.integration,
+    pytest.mark.no_qt,
+    pytest.mark.rom_data,
+]
 def create_valid_rom_header(
     title="TEST ROM",
     checksum=0x1234,

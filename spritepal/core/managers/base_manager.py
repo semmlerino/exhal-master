@@ -10,11 +10,11 @@ from typing import Any, Callable
 from PySide6.QtCore import QObject, Signal
 
 try:
-    from utils.logging_config import get_logger
+    from utils.logging_config import get_logger  # type: ignore[import]
 except ImportError:
     # Fallback for when the module path is not available
     try:
-        from utils.logging_config import get_logger
+        from utils.logging_config import get_logger  # type: ignore[import]
     except ImportError:
         # Final fallback to standard logging
         import logging

@@ -42,6 +42,13 @@ pytestmark = [
     pytest.mark.integration,  # End-to-end testing
     pytest.mark.serial,  # No parallel execution due to Qt singleton
     pytest.mark.slow,  # UI tests take time
+    pytest.mark.dialog,
+    pytest.mark.file_io,
+    pytest.mark.mock_dialogs,
+    pytest.mark.qt_real,
+    pytest.mark.requires_display,
+    pytest.mark.rom_data,
+    pytest.mark.signals_slots,
 ]
 
 # Add project root to path
@@ -211,8 +218,6 @@ class TestCompleteUIWorkflowsIntegration:
         end_time = time.time()
         assert end_time - start_time < 1.0, "UI should remain responsive"
 
-EOF < /dev/null
-
     @pytest.mark.gui
     def test_manual_offset_dialog_interaction_workflow(self, qtbot):
         """
@@ -305,7 +310,7 @@ EOF < /dev/null
                 
                 # Verify slider moved and signal emitted
                 current_value = slider.value()
-                assert current_value \!= original_value, "Slider value should change"
+                assert current_value != original_value, "Slider value should change"
                 
                 # Step 7: Test direct value setting
                 test_offset = 75000
@@ -779,4 +784,3 @@ EOF < /dev/null
 if __name__ == "__main__":
     # Run tests when executed directly
     pytest.main([__file__, "-v", "--tb=short"])
-EOF < /dev/null

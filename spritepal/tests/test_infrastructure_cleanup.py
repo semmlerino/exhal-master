@@ -14,6 +14,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import pytest
+
 # Add parent directory for imports
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -25,6 +27,8 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
+    pytest.mark.ci_safe,
+    pytest.mark.integration,
 ]
 
 

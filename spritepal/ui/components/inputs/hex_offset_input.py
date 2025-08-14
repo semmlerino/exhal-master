@@ -84,7 +84,7 @@ class HexOffsetInput(QWidget):
         if placeholder and with_decimal_display:
             try:
                 initial_value = self._parse_hex_offset(placeholder)
-                if initial_value is not None:
+                if initial_value is not None and self.decimal_label:
                     self.decimal_label.setText(str(initial_value))
             except Exception:
                 pass
@@ -147,12 +147,14 @@ class HexOffsetInput(QWidget):
                 if value is not None:
                     decimal_str = str(value)
                     logger.debug(f"Setting decimal label to: {decimal_str}")
-                    self.decimal_label.setText(decimal_str)
+                    if self.decimal_label:
+                        self.decimal_label.setText(decimal_str)
                     logger.debug(f"Valid hex offset: 0x{value:X} ({value} decimal)")
                 else:
                     display_text = "Invalid" if text.strip() else ""
                     logger.debug(f"Setting decimal label to: '{display_text}'")
-                    self.decimal_label.setText(display_text)
+                    if self.decimal_label:
+                        self.decimal_label.setText(display_text)
                     if text.strip():
                         logger.warning(f"Invalid hex offset format: '{text}'")
 
@@ -174,7 +176,8 @@ class HexOffsetInput(QWidget):
             # Try to set error state
             if self._with_decimal_display and self.decimal_label:
                 with contextlib.suppress(builtins.BaseException):
-                    self.decimal_label.setText("Error")
+                    if self.decimal_label:
+                        self.decimal_label.setText("Error")
             # Don't re-raise to prevent crash
 
     def get_value(self) -> int | None:
@@ -195,7 +198,8 @@ class HexOffsetInput(QWidget):
             # Convert any other type to string
             converted_text = str(text)
 
-        self.hex_edit.setText(converted_text)
+        if self.hex_edit:
+            self.hex_edit.setText(converted_text)
 
     def set_placeholder(self, placeholder: str):
         """Set the placeholder text"""
@@ -203,7 +207,8 @@ class HexOffsetInput(QWidget):
 
     def clear(self):
         """Clear the input"""
-        self.hex_edit.clear()
+        if self.hex_edit:
+            self.hex_edit.clear()
 
     def is_valid(self) -> bool:
         """Check if current value is valid"""

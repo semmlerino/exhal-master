@@ -1,3 +1,12 @@
+
+import pytest
+
+pytestmark = [
+    pytest.mark.ci_safe,
+    pytest.mark.dialog,
+    pytest.mark.headless,
+    pytest.mark.unit,
+]
 """
 Test suite for ConsoleErrorHandler implementation.
 

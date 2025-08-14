@@ -17,15 +17,6 @@ import pytest
 from ui.common import WorkerManager
 from ui.common.timing_constants import (
 # Test characteristics: Real GUI components requiring display, Thread safety concerns
-pytestmark = [
-    pytest.mark.gui,
-    pytest.mark.qt_app,
-    pytest.mark.qt_real,
-    pytest.mark.rom_data,
-    pytest.mark.serial,
-    pytest.mark.slow,
-    pytest.mark.worker_threads,
-]
 
 
     SLEEP_MEDIUM,
@@ -35,6 +26,19 @@ pytestmark = [
 )
 
 
+
+pytestmark = [
+    pytest.mark.gui,
+    pytest.mark.qt_app,
+    pytest.mark.qt_real,
+    pytest.mark.rom_data,
+    pytest.mark.serial,
+    pytest.mark.slow,
+    pytest.mark.worker_threads,
+    pytest.mark.headless,
+    pytest.mark.requires_display,
+    pytest.mark.signals_slots,
+]
 class RealTestWorker(QThread):
     """Real test worker that performs actual work."""
     
