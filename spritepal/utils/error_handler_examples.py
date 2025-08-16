@@ -9,6 +9,7 @@ integration strategies.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal
@@ -54,7 +55,7 @@ class ExampleWorker(QObject):
         self.progress.emit(25)
 
         # This would be real extraction logic
-        with open(rom_path, "rb") as f:
+        with Path(rom_path).open("rb") as f:
             data = f.read()
 
         self.progress.emit(75)
@@ -95,7 +96,7 @@ class ExampleWidget(QWidget, ErrorHandlerMixin):
         """Load sprite file with enhanced error handling"""
         self.file_path = file_path
 
-        with open(file_path, "rb") as f:
+        with Path(file_path).open("rb") as f:
             return f.read()
 
     @validation_handler("validating sprite parameters")
@@ -142,7 +143,7 @@ class ExampleManager:
                     raise ValidationError("ROM path is required")
 
                 # Perform extraction
-                with open(rom_path, "rb") as f:
+                with Path(rom_path).open("rb") as f:
                     data = f.read()
 
                 if len(data) < 1024:
@@ -235,7 +236,7 @@ class LegacyIntegrationExample:
 
         # File operation error
         try:
-            with open("nonexistent.file") as f:
+            with Path("nonexistent.file").open() as f:
                 f.read()
         except Exception as e:
             self._error_handler.handle_file_error(

@@ -108,7 +108,7 @@ class SpritePreviewWorker(BaseWorker):
 
             # Read ROM data with file size validation
             try:
-                with open(self.rom_path, "rb") as f:
+                with Path(self.rom_path).open("rb") as f:
                     rom_data = f.read()
             except (PermissionError, OSError) as e:
                 _validate_rom_file_access(self.rom_path, e)

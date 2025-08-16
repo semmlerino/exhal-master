@@ -74,7 +74,7 @@ class SpriteSearchWorker(BaseWorker):
         current_step = 0
 
         # Open ROM file
-        with open(self.rom_path, "rb") as rom_file:
+        with Path(self.rom_path).open("rb") as rom_file:
             rom_data = rom_file.read()
 
         # Search loop

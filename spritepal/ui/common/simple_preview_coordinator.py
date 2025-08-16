@@ -8,6 +8,7 @@ robust, avoiding the complex signal lifecycle management that was causing crashe
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -39,7 +40,7 @@ class SimplePreviewWorker(QThread):
             logger.debug(f"[SIMPLE] Generating preview for offset 0x{self.offset:X}")
 
             # Read ROM data
-            with open(self.rom_path, "rb") as f:
+            with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
 
             # For manual browsing, try decompression first (most sprites are compressed)

@@ -38,7 +38,7 @@ class PaletteManager:
         if not is_valid:
             raise ValueError(f"Invalid CGRAM file: {error_msg}")
 
-        with open(cgram_path, "rb") as f:
+        with Path(cgram_path).open("rb") as f:
             self.cgram_data = f.read()
 
         # Extract all palettes
@@ -133,7 +133,7 @@ class PaletteManager:
             }
 
         # Save file
-        with open(output_path, "w") as f:
+        with Path(output_path).Path("w").open() as f:
             json.dump(palette_data, f, indent=2)
 
         return output_path
@@ -200,7 +200,7 @@ class PaletteManager:
 
         # Save metadata file
         metadata_path = f"{output_base}.metadata.json"
-        with open(metadata_path, "w") as f:
+        with Path(metadata_path).Path("w").open() as f:
             json.dump(metadata, f, indent=2)
 
         return metadata_path
@@ -215,7 +215,7 @@ class PaletteManager:
             if not is_valid:
                 self._raise_invalid_oam(error_msg)
 
-            with open(oam_path, "rb") as f:
+            with Path(oam_path).open("rb") as f:
                 oam_data = f.read()
 
             # Parse OAM entries

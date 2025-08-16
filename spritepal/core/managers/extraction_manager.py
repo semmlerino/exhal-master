@@ -74,6 +74,24 @@ class ExtractionManager(BaseManager):
             self._active_operations.clear()
         # Currently no other resources to cleanup
 
+    def _ensure_sprite_extractor(self) -> SpriteExtractor:
+        """Ensure sprite extractor is initialized and return it."""
+        if self._sprite_extractor is None:
+            raise ExtractionError("ExtractionManager not properly initialized - sprite extractor is None")
+        return self._sprite_extractor
+
+    def _ensure_rom_extractor(self) -> ROMExtractor:
+        """Ensure ROM extractor is initialized and return it."""
+        if self._rom_extractor is None:
+            raise ExtractionError("ExtractionManager not properly initialized - ROM extractor is None")
+        return self._rom_extractor
+
+    def _ensure_palette_manager(self) -> PaletteManager:
+        """Ensure palette manager is initialized and return it."""
+        if self._palette_manager is None:
+            raise ExtractionError("ExtractionManager not properly initialized - palette manager is None")
+        return self._palette_manager
+
     def extract_from_vram(self, vram_path: str, output_base: str,
                          cgram_path: str | None = None,
                          oam_path: str | None = None,
@@ -131,7 +149,7 @@ class ExtractionManager(BaseManager):
             self.extraction_progress.emit("Extracting sprites from VRAM...")
 
             output_file = f"{output_base}.png"
-            img, num_tiles = self._sprite_extractor.extract_sprites_grayscale(
+            img, num_tiles = self._ensure_sprite_extractor().extract_sprites_grayscale(
                 vram_path, output_file, offset=vram_offset
             )
             extracted_files.append(output_file)
@@ -226,7 +244,7 @@ class ExtractionManager(BaseManager):
 
             output_file = f"{output_base}.png"
             try:
-                result = self._rom_extractor.extract_sprite_from_rom(
+                result = self._ensure_rom_extractor().extract_sprite_from_rom(
                     rom_path, offset, output_file
                 )
 
@@ -323,7 +341,7 @@ class ExtractionManager(BaseManager):
             tile_count = (width * height) // (8 * 8)
 
             # Read raw data from ROM
-            with open(rom_path, "rb") as f:
+            with Path(rom_path).open("rb") as f:
                 f.seek(offset)
                 # 4bpp = 32 bytes per tile
                 tile_data = f.read(tile_count * BYTES_PER_TILE)
@@ -416,10 +434,11 @@ class ExtractionManager(BaseManager):
         created_files = []
 
         self.extraction_progress.emit("Extracting palettes...")
-        self._palette_manager.load_cgram(cgram_path)
+        palette_manager = self._ensure_palette_manager()
+        palette_manager.load_cgram(cgram_path)
 
         # Get sprite palettes
-        sprite_palettes = self._palette_manager.get_sprite_palettes()
+        sprite_palettes = palette_manager.get_sprite_palettes()
         self.palettes_extracted.emit(sprite_palettes)
 
         # Create palette files
@@ -428,14 +447,14 @@ class ExtractionManager(BaseManager):
 
             # Create main palette file (default to palette 8)
             main_pal_file = f"{output_base}.pal.json"
-            self._palette_manager.create_palette_json(8, main_pal_file, png_file)
+            palette_manager.create_palette_json(8, main_pal_file, png_file)
             created_files.append(main_pal_file)
 
             # Create individual palette files
             palette_files = {}
             for pal_idx in range(SPRITE_PALETTE_START, SPRITE_PALETTE_END):
                 pal_file = f"{output_base}_pal{pal_idx}.pal.json"
-                self._palette_manager.create_palette_json(pal_idx, pal_file, png_file)
+                palette_manager.create_palette_json(pal_idx, pal_file, png_file)
                 created_files.append(pal_file)
                 palette_files[pal_idx] = pal_file
 
@@ -451,7 +470,7 @@ class ExtractionManager(BaseManager):
                     "extraction_size": num_tiles * BYTES_PER_TILE,
                 }
 
-                metadata_file = self._palette_manager.create_metadata_json(
+                metadata_file = palette_manager.create_metadata_json(
                     output_base, palette_files, extraction_params
                 )
                 created_files.append(metadata_file)
@@ -459,7 +478,7 @@ class ExtractionManager(BaseManager):
         # Analyze OAM if available
         if oam_path:
             self.extraction_progress.emit("Analyzing sprite palette usage...")
-            active_palettes = self._palette_manager.analyze_oam_palettes(oam_path)
+            active_palettes = palette_manager.analyze_oam_palettes(oam_path)
             self.active_palettes_found.emit(active_palettes)
 
         return created_files
@@ -482,13 +501,14 @@ class ExtractionManager(BaseManager):
 
         try:
             # Load VRAM
-            self._sprite_extractor.load_vram(vram_path)
+            sprite_extractor = self._ensure_sprite_extractor()
+            sprite_extractor.load_vram(vram_path)
 
             # Extract tiles with new offset
-            tiles, num_tiles = self._sprite_extractor.extract_tiles(offset=offset)
+            tiles, num_tiles = sprite_extractor.extract_tiles(offset=offset)
 
             # Create grayscale image
-            img = self._sprite_extractor.create_grayscale_image(tiles)
+            img = sprite_extractor.create_grayscale_image(tiles)
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, "preview_generation", "generating preview")
         except (ValueError, TypeError) as e:
@@ -588,7 +608,7 @@ class ExtractionManager(BaseManager):
             # Cache miss - scan ROM file
             self._logger.debug(f"Cache miss, scanning ROM for sprite locations: {rom_path}")
             self.cache_miss.emit("sprite_locations")
-            locations = self._rom_extractor.get_known_sprite_locations(rom_path)
+            locations = self._ensure_rom_extractor().get_known_sprite_locations(rom_path)
             scan_time = time.time() - start_time
 
             # Save to cache for future use
@@ -629,7 +649,7 @@ class ExtractionManager(BaseManager):
             # Use FileValidator for ROM file validation
             self._validate_rom_file_exists(rom_path)
 
-            header = self._rom_extractor.rom_injector.read_rom_header(rom_path)
+            header = self._ensure_rom_extractor().rom_injector.read_rom_header(rom_path)
             return asdict(header)
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, "read_rom_header", "reading ROM header")

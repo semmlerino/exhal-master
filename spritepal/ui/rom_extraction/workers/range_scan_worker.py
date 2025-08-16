@@ -66,7 +66,7 @@ class RangeScanWorker(BaseWorker):
         """Scan the entire specified range for valid sprites"""
         try:
             # Load ROM data once
-            with open(self.rom_path, "rb") as f:
+            with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
 
             # Check for cached partial results

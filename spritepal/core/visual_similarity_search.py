@@ -277,7 +277,7 @@ class VisualSimilarityEngine:
             "index_built": self.index_built
         }
 
-        with open(path, "wb") as f:
+        with Path(path).Path("wb").open() as f:
             pickle.dump(export_data, f)
 
         logger.info(f"Exported similarity index to {path}")
@@ -285,7 +285,7 @@ class VisualSimilarityEngine:
     def import_index(self, path: Path):
         """Import previously saved similarity index."""
 
-        with open(path, "rb") as f:
+        with Path(path).open("rb") as f:
             data = pickle.load(f)
 
         self.hash_size = data["hash_size"]

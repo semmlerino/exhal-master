@@ -72,7 +72,7 @@ class SimilarityIndexingWorker(BaseWorker):
     def _calculate_rom_hash(self, rom_path: str) -> str:
         """Calculate a hash of the ROM file for cache identification."""
         try:
-            with open(rom_path, "rb") as f:
+            with Path(rom_path).open("rb") as f:
                 # Hash first 64KB for performance while maintaining uniqueness
                 chunk = f.read(65536)
                 return hashlib.sha256(chunk).hexdigest()[:16]
@@ -104,7 +104,7 @@ class SimilarityIndexingWorker(BaseWorker):
             return
 
         try:
-            with open(self.index_file, "rb") as f:
+            with Path(self.index_file).open("rb") as f:
                 index_data = pickle.load(f)
 
             # Validate index format
@@ -159,7 +159,7 @@ class SimilarityIndexingWorker(BaseWorker):
 
             # Write to temporary file first for atomic operation
             temp_file = self.index_file.with_suffix(".tmp")
-            with open(temp_file, "wb") as f:
+            with Path(temp_file).open("wb") as f:
                 pickle.dump(index_data, f, protocol=pickle.HIGHEST_PROTOCOL)
 
             # Atomic rename

@@ -51,7 +51,7 @@ class SpriteSearchWorker(QThread):
             if self._cancellation_token:
                 self._cancellation_token.clear()
 
-            with open(self.rom_path, "rb") as f:
+            with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
 
             # Search parameters

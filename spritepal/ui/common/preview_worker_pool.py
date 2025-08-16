@@ -109,7 +109,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                 logger.debug(f"Request {self._current_request_id} interrupted before file read")
                 return
 
-            with open(self.rom_path, "rb") as f:
+            with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
         except Exception as e:
             raise OSError(f"Error reading ROM file: {e}") from e

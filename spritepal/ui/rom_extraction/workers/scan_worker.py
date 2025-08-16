@@ -1,7 +1,7 @@
 """Worker thread for scanning ROM for sprite offsets"""
 
-import os
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -58,7 +58,7 @@ class SpriteScanWorker(BaseWorker):
             logger.info(f"Using custom scan range: 0x{start_offset:X} - 0x{end_offset:X}")
         else:
             # Get ROM size to scan the entire ROM by default
-            rom_size = os.path.getsize(self.rom_path)
+            rom_size = Path(self.rom_path).stat().st_size
 
             # Default to scanning the entire ROM with reasonable limits
             # Start from 0x40000 to skip headers and early data

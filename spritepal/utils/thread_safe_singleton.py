@@ -24,6 +24,7 @@ T = TypeVar("T")
 TSingleton = TypeVar("TSingleton")
 TQt = TypeVar("TQt")
 TLazy = TypeVar("TLazy")
+TFactory = TypeVar("TFactory")
 
 
 class ThreadSafeSingleton(Generic[T]):
@@ -293,7 +294,7 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
 
 # Convenience functions for common patterns
 
-def create_simple_singleton(instance_type: "type[TSingleton]") -> "type[ThreadSafeSingleton[TSingleton]]":
+def create_simple_singleton(instance_type: "type[TFactory]") -> "type[ThreadSafeSingleton[TFactory]]":
     """
     Create a simple thread-safe singleton class for a given type.
 
@@ -308,19 +309,20 @@ def create_simple_singleton(instance_type: "type[TSingleton]") -> "type[ThreadSa
         MyManagerSingleton = create_simple_singleton(MyManager)
         manager = MyManagerSingleton.get()
     """
-    class SimpleSingleton(ThreadSafeSingleton[TSingleton]):
-        _instance: TSingleton | None = None
+    
+    class SimpleSingleton(ThreadSafeSingleton[TFactory]):  # type: ignore[misc]
+        _instance: TFactory | None = None
         _lock = threading.Lock()
 
         @classmethod
-        def _create_instance(cls, *args, **kwargs) -> TSingleton:
+        def _create_instance(cls, *args, **kwargs) -> TFactory:  # type: ignore[misc]
             return instance_type(*args, **kwargs)
 
     SimpleSingleton.__name__ = f"{instance_type.__name__}Singleton"
     return SimpleSingleton
 
 
-def create_qt_singleton(qt_type: "type[TQt]") -> "type[QtThreadSafeSingleton[TQt]]":
+def create_qt_singleton(qt_type: "type[TFactory]") -> "type[QtThreadSafeSingleton[TFactory]]":
     """
     Create a thread-safe Qt singleton class for a given Qt type.
 
@@ -335,12 +337,13 @@ def create_qt_singleton(qt_type: "type[TQt]") -> "type[QtThreadSafeSingleton[TQt
         MyDialogSingleton = create_qt_singleton(MyDialog)
         dialog = MyDialogSingleton.get()
     """
-    class QtSingleton(QtThreadSafeSingleton[TQt]):
-        _instance: TQt | None = None
+    
+    class QtSingleton(QtThreadSafeSingleton[TFactory]):  # type: ignore[misc]
+        _instance: TFactory | None = None
         _lock = threading.Lock()
 
         @classmethod
-        def _create_instance(cls, *args, **kwargs) -> TQt:
+        def _create_instance(cls, *args, **kwargs) -> TFactory:  # type: ignore[misc]
             cls._ensure_main_thread()
             return qt_type(*args, **kwargs)
 

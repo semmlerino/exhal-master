@@ -9,6 +9,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from core.sprite_finder import SpriteFinder
@@ -101,7 +102,7 @@ class ParallelSpriteFinder:
             List of found sprites sorted by offset
         """
         # Read ROM data
-        with open(rom_path, "rb") as f:
+        with Path(rom_path).open("rb") as f:
             rom_data = f.read()
 
         rom_size = len(rom_data)
