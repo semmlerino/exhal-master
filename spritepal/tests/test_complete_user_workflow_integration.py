@@ -726,16 +726,16 @@ class TestCompleteUserWorkflow:
                 # REAL SIGNAL TESTING: Verify actual signal emissions and content
 
                 # Verify progress signals were emitted
-                assert len(progress_spy) > 0, "Progress signals should be emitted"
+                assert progress_spy.count() > 0, "Progress signals should be emitted"
                 # Check progress signal content (percent, message)
-                first_progress = progress_spy[0]
+                first_progress = progress_spy.at(0)
                 assert len(first_progress) == 2, "Progress signal should have percent and message"
                 assert isinstance(first_progress[0], int), "Progress percent should be int"
                 assert isinstance(first_progress[1], str), "Progress message should be string"
 
                 # Verify extraction completion signal
-                assert len(extraction_finished_spy) == 1, "Should have exactly one completion signal"
-                output_files = extraction_finished_spy[0][0]  # First arg of first emission
+                assert extraction_finished_spy.count() == 1, "Should have exactly one completion signal"
+                output_files = extraction_finished_spy.at(0)[0]  # First arg of first emission
                 assert isinstance(output_files, list), "Output files should be a list"
                 assert len(output_files) > 0, "Should have output files"
 
@@ -749,18 +749,18 @@ class TestCompleteUserWorkflow:
                 assert 8 in active_palettes, "Should detect palette 8 from OAM analysis"
 
                 # Verify no errors occurred
-                assert len(error_spy) == 0, "No error signals should be emitted"
+                assert error_spy.count() == 0, "No error signals should be emitted"
 
                 # Verify palette signals for multi-file workflow
                 if sample_files["cgram_path"]:  # If CGRAM provided
-                    assert len(palettes_ready_spy) > 0, "Palette signals should be emitted"
+                    assert palettes_ready_spy.count() > 0, "Palette signals should be emitted"
 
                 print("✓ Real signal testing passed:")
-                print(f"  - Progress signals: {len(progress_spy)}")
-                print(f"  - Palette signals: {len(palettes_ready_spy)}")
-                print(f"  - Active palette signals: {len(active_palettes_ready_spy)}")
-                print(f"  - Completion signals: {len(extraction_finished_spy)}")
-                print(f"  - Error signals: {len(error_spy)}")
+                print(f"  - Progress signals: {progress_spy.count()}")
+                print(f"  - Palette signals: {palettes_ready_spy.count()}")
+                print(f"  - Active palette signals: {active_palettes_ready_spy.count()}")
+                print(f"  - Completion signals: {extraction_finished_spy.count()}")
+                print(f"  - Error signals: {error_spy.count()}")
                 print(f"  - Output files: {len(output_files)}")
 
         finally:

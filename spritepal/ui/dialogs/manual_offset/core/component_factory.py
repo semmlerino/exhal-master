@@ -6,7 +6,7 @@ Handles creation, dependency injection, and lifecycle management of all dialog c
 
 from typing import TYPE_CHECKING, Any
 
-from spritepal.ui.dialogs.manual_offset.components import (
+from ui.dialogs.manual_offset.components import (
     LayoutManagerComponent,
     ROMCacheComponent,
     SignalRouterComponent,

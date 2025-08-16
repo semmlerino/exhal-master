@@ -131,7 +131,7 @@ class InitOrderDetector(ast.NodeVisitor):
 def analyze_file(filepath: Path) -> list[dict[str, Any]]:
     """Analyze a single Python file for initialization order issues."""
     try:
-        with open(filepath, encoding="utf-8") as f:
+        with Path(filepath).open(encoding="utf-8") as f:
             content = f.read()
 
         tree = ast.parse(content, filename=str(filepath))
@@ -201,7 +201,7 @@ def main():
     # Save detailed report
     if all_issues:
         report_path = project_root / "init_order_issues.json"
-        with open(report_path, "w") as f:
+        with Path(report_path).open("w") as f:
             json.dump(all_issues, f, indent=2)
         print(f"\nDetailed report saved to: {report_path}")
 

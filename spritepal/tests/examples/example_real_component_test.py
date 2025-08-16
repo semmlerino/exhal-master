@@ -110,7 +110,7 @@ class TestRealComponentExamples:
         qtbot.mouseClick(button, Qt.MouseButton.LeftButton)
         
         # Verify real signal was emitted
-        assert len(clicked_spy) == 1
+        assert clicked_spy.count() == 1
 
     def test_manager_context_for_integrated_testing(self):
         """Example: Use manager contexts for integration testing."""
@@ -328,7 +328,7 @@ class TestRealComponentExamples:
             # Verify signal emissions
             if 'started_spy' in locals():
                 # Allow for various signal emission patterns
-                assert len(started_spy) >= 0
+                assert started_spy.count() >= 0
 
 
 # Fixtures demonstrating real component fixture patterns

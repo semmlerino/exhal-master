@@ -111,7 +111,7 @@ class PySide6ToPySide6Migrator:
                 continue
 
             try:
-                with open(py_file, encoding='utf-8') as f:
+                with Path(py_file).open(encoding='utf-8') as f:
                     content = f.read()
 
                 if 'PySide6' in content:
@@ -198,7 +198,7 @@ class PySide6ToPySide6Migrator:
         try:
             logger.info(f"Migrating: {file_path}")
 
-            with open(file_path, encoding='utf-8') as f:
+            with Path(file_path).open(encoding='utf-8') as f:
                 original_content = f.read()
 
             modified_content = original_content
@@ -219,7 +219,7 @@ class PySide6ToPySide6Migrator:
 
             # Only write if there are changes
             if modified_content != original_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with Path(file_path).open('w', encoding='utf-8') as f:
                     f.write(modified_content)
 
                 self.changes_log.append({
@@ -274,7 +274,7 @@ class PySide6ToPySide6Migrator:
 
         for file_path in file_paths:
             try:
-                with open(file_path, encoding='utf-8') as f:
+                with Path(file_path).open(encoding='utf-8') as f:
                     content = f.read()
 
                 # Try to parse the AST
@@ -386,7 +386,7 @@ class PySide6ToPySide6Migrator:
         report = self.generate_migration_report()
         report_path = self.root_path / 'migration_report.txt'
 
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with Path(report_path).open('w', encoding='utf-8') as f:
             f.write(report)
 
         logger.info(f"Migration report written to: {report_path}")

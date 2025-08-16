@@ -7,6 +7,7 @@ Handles importing and exporting sprite offsets to/from JSON files.
 import json
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Signal
@@ -112,7 +113,7 @@ class ImportExportPanel(QWidget):
 
         def _validate_export_permissions(file_path: str) -> None:
             """Validate export directory write permissions"""
-            target_dir = os.path.dirname(file_path)
+            target_dir = Path(file_path).parent
             if target_dir and not os.access(target_dir, os.W_OK):
                 raise PermissionError(f"Cannot write to directory: {target_dir}")
 
@@ -153,7 +154,7 @@ class ImportExportPanel(QWidget):
             # Write to file with atomic operation
             temp_file = file_path + ".tmp"
             try:
-                with open(temp_file, "w", encoding="utf-8") as f:
+                with Path(temp_file).open("w", encoding="utf-8") as f:
                     json.dump(export_data, f, indent=2, ensure_ascii=False)
                 # Atomic move to final location
                 os.replace(temp_file, file_path)
@@ -165,7 +166,7 @@ class ImportExportPanel(QWidget):
 
             # Success message
             sprite_count = len(self.found_sprites)
-            self.status_changed.emit(f"Exported {sprite_count} sprite offsets to {os.path.basename(file_path)}")
+            self.status_changed.emit(f"Exported {sprite_count} sprite offsets to {Path(file_path).name}")
 
             _ = QMessageBox.information(
                 self,
@@ -224,7 +225,7 @@ class ImportExportPanel(QWidget):
 
         def _validate_import_file_size(file_path: str) -> None:
             """Validate import file size limits"""
-            file_size = os.path.getsize(file_path)
+            file_size = Path(file_path).stat().st_size
             if file_size > 10 * 1024 * 1024:  # 10MB limit
                 raise ValueError(f"File too large: {file_size / 1024 / 1024:.1f}MB (max 10MB)")
 
@@ -245,7 +246,7 @@ class ImportExportPanel(QWidget):
             _validate_import_file_size(file_path)
 
             # Read and parse JSON file
-            with open(file_path, encoding="utf-8") as f:
+            with Path(file_path).open(encoding="utf-8") as f:
                 import_data = json.load(f)
 
             # Validate file format
@@ -325,7 +326,7 @@ class ImportExportPanel(QWidget):
                 _ = QMessageBox.information(
                     self,
                     "Import Successful",
-                    f"Successfully imported {imported_count} sprite offsets from:\n{os.path.basename(file_path)}\n\n"
+                    f"Successfully imported {imported_count} sprite offsets from:\n{Path(file_path).name}\n\n"
                     f"{skipped_count} entries were skipped due to invalid data or out-of-bounds offsets.",
                     QMessageBox.StandardButton.Ok
                 )

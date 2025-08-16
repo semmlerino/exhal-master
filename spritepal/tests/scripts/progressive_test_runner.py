@@ -526,7 +526,7 @@ class ProgressiveTestRunner:
             data["stages"].append(stage_data)
 
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        with open(filepath, 'w') as f:
+        with Path(filepath).open('w') as f:
             json.dump(data, f, indent=2)
 
         return filepath

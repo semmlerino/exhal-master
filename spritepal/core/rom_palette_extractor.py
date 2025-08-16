@@ -4,7 +4,7 @@ Extracts sprite palettes directly from ROM files
 """
 
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 from utils.logging_config import get_logger
@@ -40,7 +40,7 @@ class ROMPaletteExtractor:
         created_files = []
 
         try:
-            with open(rom_path, "rb") as f:
+            with Path(rom_path).open("rb") as f:
                 # Seek to palette offset
                 f.seek(palette_offset)
 
@@ -69,12 +69,12 @@ class ROMPaletteExtractor:
                     "colors": palette_colors,
                 }
 
-                with open(palette_path, "w") as f:
+                with Path(palette_path).open("w") as f:
                     json.dump(palette_json, f, indent=2)
 
                 created_files.append(palette_path)
                 logger.info(
-                    f"Extracted palette {palette_idx} to {os.path.basename(palette_path)}"
+                    f"Extracted palette {palette_idx} to {Path(palette_path).name}"
                 )
 
         except Exception:
@@ -178,7 +178,7 @@ class ROMPaletteExtractor:
         palettes = {}
 
         try:
-            with open(rom_path, "rb") as f:
+            with Path(rom_path).open("rb") as f:
                 f.seek(palette_offset)
                 palette_data = f.read(512)
 

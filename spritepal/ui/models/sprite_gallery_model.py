@@ -107,7 +107,7 @@ class SpriteGalleryModel(QAbstractListModel):
         if role == self.TileCountRole:
             return sprite.get('tile_count', 0)
 
-        if role == Qt.SizeHintRole:
+        if role == Qt.ItemDataRole.SizeHintRole:
             # Return size hint for item
             return QSize(self._thumbnail_size, self._thumbnail_size + 40)
 
@@ -322,7 +322,7 @@ class SpriteGalleryModel(QAbstractListModel):
             self.dataChanged.emit(
                 self.index(0, 0),
                 self.index(self.rowCount() - 1, 0),
-                [Qt.SizeHintRole]
+                [Qt.ItemDataRole.SizeHintRole]
             )
 
     def set_columns(self, columns: int):

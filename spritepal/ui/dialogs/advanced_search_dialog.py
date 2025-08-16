@@ -247,7 +247,7 @@ class SearchWorker(QThread):
                 return
 
             # Use memory-mapped file for large ROMs
-            with open(rom_path, "rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as rom_data:
+            with Path(rom_path).open("rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as rom_data:
                     rom_size = len(rom_data)
 
                     if operation == "Single Pattern" or len(patterns) == 1:
@@ -959,7 +959,7 @@ class AdvancedSearchDialog(QDialog):
         self.step_size_spin.setPrefix("0x")
         self.step_size_spin.setDisplayIntegerBase(16)
         range_layout.addWidget(QLabel("Step Size:"), 2, 0)
-        range_layout.addWidget(self.step_size_spin, 2, 1)
+        range_layout.addWidget(self.step_size_spin.value(), 2, 1)
 
         range_group.setLayout(range_layout)
         layout.addWidget(range_group)
@@ -973,7 +973,7 @@ class AdvancedSearchDialog(QDialog):
         self.workers_spin.setRange(1, 16)
         self.workers_spin.setValue(4)
         perf_layout.addWidget(QLabel("Worker Threads:"), 0, 0)
-        perf_layout.addWidget(self.workers_spin, 0, 1)
+        perf_layout.addWidget(self.workers_spin.value(), 0, 1)
 
         # Adaptive stepping
         self.adaptive_check = QCheckBox("Adaptive Step Sizing")
@@ -1107,7 +1107,7 @@ class AdvancedSearchDialog(QDialog):
         self.context_size_spin.setValue(32)
         self.context_size_spin.setSuffix(" bytes")
         self.context_size_spin.setToolTip("Number of bytes to show around each match")
-        options_layout.addWidget(self.context_size_spin, 2, 1)
+        options_layout.addWidget(self.context_size_spin.value(), 2, 1)
 
         # Maximum results
         options_layout.addWidget(QLabel("Max Results:"), 3, 0)
@@ -1115,7 +1115,7 @@ class AdvancedSearchDialog(QDialog):
         self.max_results_spin.setRange(1, 10000)
         self.max_results_spin.setValue(1000)
         self.max_results_spin.setToolTip("Maximum number of matches to find")
-        options_layout.addWidget(self.max_results_spin, 3, 1)
+        options_layout.addWidget(self.max_results_spin.value(), 3, 1)
 
         # Multiple pattern operation
         options_layout.addWidget(QLabel("Multiple Patterns:"), 4, 0)
@@ -1199,9 +1199,9 @@ class AdvancedSearchDialog(QDialog):
         self.max_size_spin.setSingleStep(0x100)
 
         layout.addWidget(QLabel("Size Range:"), 0, 0)
-        layout.addWidget(self.min_size_spin, 0, 1)
+        layout.addWidget(self.min_size_spin.value(), 0, 1)
         layout.addWidget(QLabel("-"), 0, 2)
-        layout.addWidget(self.max_size_spin, 0, 3)
+        layout.addWidget(self.max_size_spin.value(), 0, 3)
 
         # Tile count filter
         self.min_tiles_spin = QSpinBox()
@@ -1213,9 +1213,9 @@ class AdvancedSearchDialog(QDialog):
         self.max_tiles_spin.setValue(1024)
 
         layout.addWidget(QLabel("Tile Count:"), 1, 0)
-        layout.addWidget(self.min_tiles_spin, 1, 1)
+        layout.addWidget(self.min_tiles_spin.value(), 1, 1)
         layout.addWidget(QLabel("-"), 1, 2)
-        layout.addWidget(self.max_tiles_spin, 1, 3)
+        layout.addWidget(self.max_tiles_spin.value(), 1, 3)
 
         # Compression filter
         self.compressed_check = QCheckBox("Include Compressed")
@@ -1296,10 +1296,10 @@ class AdvancedSearchDialog(QDialog):
 
         # Create filters
         filters = SearchFilter(
-            min_size=self.min_size_spin,
-            max_size=self.max_size_spin,
-            min_tiles=self.min_tiles_spin,
-            max_tiles=self.max_tiles_spin,
+            min_size=self.min_size_spin.value(),
+            max_size=self.max_size_spin.value(),
+            min_tiles=self.min_tiles_spin.value(),
+            max_tiles=self.max_tiles_spin.value(),
             alignment=self._get_alignment_value(),
             include_compressed=self.compressed_check.isChecked(),
             include_uncompressed=self.uncompressed_check.isChecked(),
@@ -1311,8 +1311,8 @@ class AdvancedSearchDialog(QDialog):
             "rom_path": self.rom_path,
             "start_offset": start,
             "end_offset": end,
-            "num_workers": self.workers_spin,
-            "step_size": self.step_size_spin,
+            "num_workers": self.workers_spin.value(),
+            "step_size": self.step_size_spin.value(),
             "filters": filters
         }
 
@@ -1457,8 +1457,8 @@ class AdvancedSearchDialog(QDialog):
             "pattern_type": pattern_type,
             "case_sensitive": case_sensitive,
             "alignment": alignment,
-            "context_bytes": self.context_size_spin,
-            "max_results": self.max_results_spin,
+            "context_bytes": self.context_size_spin.value(),
+            "max_results": self.max_results_spin.value(),
             "whole_word": self.whole_word_check.isChecked(),
             "operation": self.pattern_operation_combo.currentText()
         }
@@ -1548,15 +1548,16 @@ class AdvancedSearchDialog(QDialog):
 
     def _connect_worker_signals(self):
         """Connect search worker signals."""
-        self.search_worker.progress.connect(self._update_progress)
-        self.search_worker.result_found.connect(self._add_result)
-        self.search_worker.search_complete.connect(self._search_complete)
-        self.search_worker.error.connect(self._search_error)
+        if self.search_worker:
+            self.search_worker.progress.connect(self._update_progress)
+            self.search_worker.result_found.connect(self._add_result)
+            self.search_worker.search_complete.connect(self._search_complete)
+            self.search_worker.error.connect(self._search_error)
 
-        # Connect thread-safe user interaction signals
-        self.search_worker.input_requested.connect(self._handle_worker_input_request)
-        self.search_worker.question_requested.connect(self._handle_worker_question_request)
-        self.search_worker.info_requested.connect(self._handle_worker_info_request)
+            # Connect thread-safe user interaction signals
+            self.search_worker.input_requested.connect(self._handle_worker_input_request)
+            self.search_worker.question_requested.connect(self._handle_worker_question_request)
+            self.search_worker.info_requested.connect(self._handle_worker_info_request)
 
     def _update_progress(self, current: int, total: int):
         """Update progress bar."""
@@ -1964,7 +1965,7 @@ class AdvancedSearchDialog(QDialog):
                 }
             })
 
-        with open(history_file, "w") as f:
+        with Path(history_file).open("w") as f:
             json.dump(data, f, indent=2)
 
     def _load_history(self):
@@ -1974,7 +1975,7 @@ class AdvancedSearchDialog(QDialog):
             return
 
         try:
-            with open(history_file) as f:
+            with Path(history_file).open() as f:
                 data = json.load(f)
 
             for item in data:

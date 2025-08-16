@@ -13,6 +13,7 @@ pytestmark = [
     pytest.mark.parallel_safe,
     pytest.mark.file_io,  # Involves file operations
     pytest.mark.validation,  # Validation tests
+    pytest.mark.no_manager_setup,  # Pure unit tests for validation functions
 ]
 
 from utils.validation import (

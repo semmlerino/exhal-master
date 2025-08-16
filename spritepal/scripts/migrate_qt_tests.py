@@ -89,7 +89,7 @@ class QtTestMigrator:
     def analyze_test_file(self, file_path: Path) -> dict:
         """Analyze a single test file for Qt usage patterns."""
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with Path(file_path).open(encoding='utf-8') as f:
                 content = f.read()
 
             tree = ast.parse(content)
@@ -218,7 +218,7 @@ class QtTestMigrator:
     def migrate_test_file(self, file_path: Path, dry_run: bool = True) -> tuple[bool, str]:
         """Migrate a single test file to use proper qtbot fixtures."""
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with Path(file_path).open(encoding='utf-8') as f:
                 content = f.read()
 
             original_content = content
@@ -232,11 +232,11 @@ class QtTestMigrator:
             if not dry_run:
                 # Create backup
                 backup_path = file_path.with_suffix(file_path.suffix + '.bak')
-                with open(backup_path, 'w', encoding='utf-8') as f:
+                with Path(backup_path).open('w', encoding='utf-8') as f:
                     f.write(original_content)
 
                 # Write migrated content
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with Path(file_path).open('w', encoding='utf-8') as f:
                     f.write(content)
 
                 return True, f"Migrated successfully (backup: {backup_path.name})"
@@ -313,7 +313,7 @@ def main():
 
         # Save report to file
         report_file = project_root / 'QT_MIGRATION_REPORT.md'
-        with open(report_file, 'w') as f:
+        with Path(report_file).open('w') as f:
             f.write(report)
         print(f"\nDetailed report saved to: {report_file}")
 

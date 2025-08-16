@@ -309,7 +309,7 @@ def create_simple_singleton(instance_type: "type[TFactory]") -> "type[ThreadSafe
         MyManagerSingleton = create_simple_singleton(MyManager)
         manager = MyManagerSingleton.get()
     """
-    
+
     class SimpleSingleton(ThreadSafeSingleton[TFactory]):  # type: ignore[misc]
         _instance: TFactory | None = None
         _lock = threading.Lock()
@@ -337,7 +337,7 @@ def create_qt_singleton(qt_type: "type[TFactory]") -> "type[QtThreadSafeSingleto
         MyDialogSingleton = create_qt_singleton(MyDialog)
         dialog = MyDialogSingleton.get()
     """
-    
+
     class QtSingleton(QtThreadSafeSingleton[TFactory]):  # type: ignore[misc]
         _instance: TFactory | None = None
         _lock = threading.Lock()

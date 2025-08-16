@@ -53,11 +53,12 @@ def is_headless_environment() -> bool:
         app = QApplication.instance()
         if app:
             # Check if we can get screen info
-            if not app.primaryScreen():
+            qapp = cast(QApplication, app)
+            if not qapp.primaryScreen():
                 return True
             # Check if screen geometry is valid
-            screen = app.primaryScreen()
-            if screen.geometry().width() == 0 or screen.geometry().height() == 0:
+            screen = qapp.primaryScreen()
+            if screen and (screen.geometry().width() == 0 or screen.geometry().height() == 0):
                 return True
     except Exception:
         # If we can't even check, assume headless

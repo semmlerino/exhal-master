@@ -105,16 +105,16 @@ class TestBaseWorker:
 
         # Test normal progress
         worker.emit_progress(50, "Half done")
-        assert len(progress_spy) == 1
-        assert progress_spy[0] == [50, "Half done"]
+        assert progress_spy.count() == 1
+        assert progress_spy.at(0) == [50, "Half done"]
 
         # Test clamping - values below 0
         worker.emit_progress(-10, "Negative")
-        assert progress_spy[-1] == [0, "Negative"]
+        assert progress_spy.at(progress_spy.count() - 1) == [0, "Negative"]
 
         # Test clamping - values above 100
         worker.emit_progress(150, "Over 100")
-        assert progress_spy[-1] == [100, "Over 100"]
+        assert progress_spy.at(progress_spy.count() - 1) == [100, "Over 100"]
 
     def test_error_emission(self, qtbot):
         """Test error signal emission."""
@@ -130,15 +130,15 @@ class TestBaseWorker:
 
         # Test error emission with message only
         worker.emit_error("Test error")
-        assert len(error_spy) == 1
-        assert error_spy[0][0] == "Test error"
-        assert isinstance(error_spy[0][1], Exception)
+        assert error_spy.count() == 1
+        assert error_spy.at(0)[0] == "Test error"
+        assert isinstance(error_spy.at(0)[1], Exception)
 
         # Test error emission with custom exception
         custom_exception = ValueError("Custom error")
         worker.emit_error("Custom error message", custom_exception)
-        assert error_spy[-1][0] == "Custom error message"
-        assert error_spy[-1][1] is custom_exception
+        assert error_spy.at(error_spy.count() - 1)[0] == "Custom error message"
+        assert error_spy.at(error_spy.count() - 1)[1] is custom_exception
 
     def test_warning_emission(self, qtbot):
         """Test warning signal emission."""
@@ -153,8 +153,8 @@ class TestBaseWorker:
         warning_spy = QSignalSpy(worker.warning)
 
         worker.emit_warning("Test warning")
-        assert len(warning_spy) == 1
-        assert warning_spy[0] == ["Test warning"]
+        assert warning_spy.count() == 1
+        assert warning_spy.at(0) == ["Test warning"]
 
     def test_wait_if_paused_with_cancellation(self, qtbot):
         """Test that wait_if_paused exits when cancelled."""
@@ -265,8 +265,8 @@ class TestManagedWorker:
         assert worker.operation_called
         assert worker.signals_connected
         assert worker.signals_disconnected
-        assert len(finished_spy) == 1
-        assert finished_spy[0] == [True, "Operation completed"]
+        assert finished_spy.count() == 1
+        assert finished_spy.at(0) == [True, "Operation completed"]
 
     def test_error_handling_in_operation(self, qtbot):
         """Test error handling during operation."""
@@ -290,13 +290,13 @@ class TestManagedWorker:
         worker.wait(1000)
 
         # Verify error handling
-        assert len(error_spy) == 1
-        assert "Data format error during managed operation: Test error" in error_spy[0][0]
-        assert isinstance(error_spy[0][1], ValueError)
+        assert error_spy.count() == 1
+        assert "Data format error during managed operation: Test error" in error_spy.at(0)[0]
+        assert isinstance(error_spy.at(0)[1], ValueError)
 
-        assert len(finished_spy) == 1
-        assert finished_spy[0][0] is False  # Success = False
-        assert "Data format error during managed operation: Test error" in finished_spy[0][1]
+        assert finished_spy.count() == 1
+        assert finished_spy.at(0)[0] is False  # Success = False
+        assert "Data format error during managed operation: Test error" in finished_spy.at(0)[1]
 
     def test_cancellation_handling(self, qtbot):
         """Test cancellation handling in managed worker."""
@@ -322,8 +322,8 @@ class TestManagedWorker:
         worker.wait(1000)
 
         # Verify cancellation handling
-        assert len(finished_spy) == 1
-        assert finished_spy[0] == [False, "Operation cancelled"]
+        assert finished_spy.count() == 1
+        assert finished_spy.at(0) == [False, "Operation cancelled"]
 
     def test_cleanup_on_exception(self, qtbot):
         """Test that cleanup occurs even when operation raises exception."""

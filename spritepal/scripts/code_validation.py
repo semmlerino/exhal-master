@@ -85,6 +85,7 @@ class CodeValidator:
             return True, code
 
         try:
+            import black  # Re-import for type checker
             mode = black.FileMode(line_length=line_length)
             formatted = black.format_str(code, mode=mode)
             return True, formatted
@@ -110,6 +111,7 @@ class CodeValidator:
             return True, code
 
         try:
+            import isort  # Re-import for type checker
             # Configure isort to match Black compatibility
             sorted_code = isort.code(
                 code,

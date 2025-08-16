@@ -112,7 +112,7 @@ class StrategyPlugin(NavigationPlugin):
                     continue
 
                 # Create and register strategy instance
-                strategy = strategy_class()
+                strategy = strategy_class(strategy_class.__name__)
                 registry.register_strategy(strategy)
                 self.registered_strategies.append(strategy)
 
@@ -276,7 +276,7 @@ class PluginManager:
         try:
             if plugin_class:
                 # Direct class instantiation
-                plugin = plugin_class()
+                plugin = plugin_class(plugin_name)
             else:
                 # Dynamic module loading
                 plugin = self._load_plugin_from_module(plugin_name)
@@ -439,7 +439,7 @@ class PluginManager:
                     obj != NavigationPlugin):
 
                     # Found a plugin class, instantiate it
-                    return obj()
+                    return obj(module_name)
 
             logger.warning(f"No plugin class found in module: {module_name}")
             return None

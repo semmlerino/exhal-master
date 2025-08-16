@@ -6,6 +6,7 @@ pytestmark = [
     pytest.mark.file_io,
     pytest.mark.headless,
     pytest.mark.rom_data,
+    pytest.mark.no_manager_setup,  # Pure unit tests for file validation
 ]
 """
 Test suite for the refactored FileValidator with separated concerns.

@@ -28,7 +28,7 @@ class QualityReportGenerator:
         """Load a JSON report file safely."""
         try:
             if os.path.exists(file_path):
-                with open(file_path) as f:
+                with Path(file_path).open() as f:
                     return json.load(f)
             return {}
         except Exception as e:
@@ -457,7 +457,7 @@ def main():
 
     # Save or print report
     if args.output:
-        with open(args.output, 'w') as f:
+        with Path(args.output).open('w') as f:
             f.write(report_content)
         print(f"Quality report saved to {args.output}")
     else:

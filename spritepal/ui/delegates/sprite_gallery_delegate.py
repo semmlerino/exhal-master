@@ -139,7 +139,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
 
         # Draw centered offset
         text_rect = QRectF(label_rect)
-        painter.drawText(text_rect, Qt.AlignCenter, offset_text)
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, offset_text)
 
         # Draw additional info if available
         if sprite_info:
@@ -218,7 +218,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
             Size hint for the item
         """
         # Use size from model if available
-        size_hint = index.data(Qt.SizeHintRole)
+        size_hint = index.data(Qt.ItemDataRole.SizeHintRole)
         if size_hint:
             return size_hint
 

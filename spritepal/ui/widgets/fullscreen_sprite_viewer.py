@@ -398,10 +398,11 @@ class FullscreenSpriteViewer(QWidget):
             self.info_overlay.setText(info_text)
 
         # Show/hide based on setting
-        if self.show_info:
-            self.info_overlay.show()
-        else:
-            self.info_overlay.hide()
+        if self.info_overlay:
+            if self.show_info:
+                self.info_overlay.show()
+            else:
+                self.info_overlay.hide()
 
     def _navigate_to_sprite(self, direction: int):
         """

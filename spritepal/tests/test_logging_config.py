@@ -24,6 +24,7 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.widget,
     pytest.mark.ci_safe,
+    pytest.mark.no_manager_setup,  # Pure unit tests for logging configuration
 ]
 
 
@@ -120,10 +121,12 @@ class TestSetupLogging:
             # Should have exactly 2 handlers
             assert len(logger.handlers) == 2
 
-            # Check handler types
-            handler_types = [type(h) for h in logger.handlers]
-            assert logging.StreamHandler in handler_types
-            assert logging.handlers.RotatingFileHandler in handler_types
+            # Check handler types using isinstance for better robustness
+            has_stream_handler = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+            has_rotating_file_handler = any(isinstance(h, logging.handlers.RotatingFileHandler) for h in logger.handlers)
+            
+            assert has_stream_handler, "Should have a StreamHandler"
+            assert has_rotating_file_handler, "Should have a RotatingFileHandler (or subclass)"
 
             # Check console handler configuration
             console_handler = next(

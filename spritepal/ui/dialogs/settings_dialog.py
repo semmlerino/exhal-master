@@ -85,8 +85,9 @@ class SettingsDialog(BaseDialog):
         self.tab_widget = QTabWidget()
 
         # Add tabs
-        self.tab_widget.addTab(self._create_general_tab(), "General")
-        self.tab_widget.addTab(self._create_cache_tab(), "Cache")
+        if self.tab_widget:
+            self.tab_widget.addTab(self._create_general_tab(), "General")
+            self.tab_widget.addTab(self._create_cache_tab(), "Cache")
 
         # Set the tab widget as content
         layout = QVBoxLayout()
@@ -120,13 +121,15 @@ class SettingsDialog(BaseDialog):
         # Default dumps directory
         dumps_layout = QHBoxLayout()
         self.dumps_dir_edit = QLineEdit(self)
-        self.dumps_dir_edit.setReadOnly(True)
+        if self.dumps_dir_edit:
+            self.dumps_dir_edit.setReadOnly(True)
         dumps_layout.addWidget(self.dumps_dir_edit, 1)
 
         self.dumps_dir_button = QPushButton("Browse...", self)
         if self.dumps_dir_button:
             self.dumps_dir_button.setStyleSheet(get_button_style())
-        self.dumps_dir_button.clicked.connect(self._browse_dumps_directory)
+        if self.dumps_dir_button:
+            self.dumps_dir_button.clicked.connect(self._browse_dumps_directory)
         dumps_layout.addWidget(self.dumps_dir_button)
 
         file_layout.addRow("Default dumps directory:", dumps_layout)
@@ -151,22 +154,26 @@ class SettingsDialog(BaseDialog):
 
         # Enable cache checkbox
         self.cache_enabled_check = QCheckBox("Enable ROM scan caching", self)
-        self.cache_enabled_check.setToolTip(
-            "Cache ROM scan results to speed up subsequent operations"
-        )
-        self.cache_enabled_check.toggled.connect(self._on_cache_enabled_changed)
+        if self.cache_enabled_check:
+            self.cache_enabled_check.setToolTip(
+                "Cache ROM scan results to speed up subsequent operations"
+            )
+        if self.cache_enabled_check:
+            self.cache_enabled_check.toggled.connect(self._on_cache_enabled_changed)
         cache_layout.addRow("Status:", self.cache_enabled_check)
 
         # Cache location
         location_layout = QHBoxLayout()
         self.cache_location_edit = QLineEdit(self)
-        self.cache_location_edit.setPlaceholderText("Default: ~/.spritepal_rom_cache")
+        if self.cache_location_edit:
+            self.cache_location_edit.setPlaceholderText("Default: ~/.spritepal_rom_cache")
         location_layout.addWidget(self.cache_location_edit, 1)
 
         self.cache_location_button = QPushButton("Browse...", self)
         if self.cache_location_button:
             self.cache_location_button.setStyleSheet(get_button_style())
-        self.cache_location_button.clicked.connect(self._browse_cache_location)
+        if self.cache_location_button:
+            self.cache_location_button.clicked.connect(self._browse_cache_location)
         location_layout.addWidget(self.cache_location_button)
 
         cache_layout.addRow("Location:", location_layout)
@@ -174,10 +181,11 @@ class SettingsDialog(BaseDialog):
         # Cache size limit
         size_layout = QHBoxLayout()
         self.cache_size_spin = QSpinBox(self)
-        self.cache_size_spin.setRange(10, 10000)
-        self.cache_size_spin.setSuffix(" MB")
-        self.cache_size_spin.setToolTip("Maximum cache size in megabytes")
-        size_layout.addWidget(self.cache_size_spin)
+        if self.cache_size_spin:
+            self.cache_size_spin.setRange(10, 10000)
+            self.cache_size_spin.setSuffix(" MB")
+            self.cache_size_spin.setToolTip("Maximum cache size in megabytes")
+        size_layout.addWidget(self.cache_size_spin.value())
         size_layout.addStretch()
 
         cache_layout.addRow("Size limit:", size_layout)
@@ -185,10 +193,11 @@ class SettingsDialog(BaseDialog):
         # Cache expiration
         expiry_layout = QHBoxLayout()
         self.cache_expiry_spin = QSpinBox(self)
-        self.cache_expiry_spin.setRange(1, 365)
-        self.cache_expiry_spin.setSuffix(" days")
-        self.cache_expiry_spin.setToolTip("Cache entries older than this will be removed")
-        expiry_layout.addWidget(self.cache_expiry_spin)
+        if self.cache_expiry_spin:
+            self.cache_expiry_spin.setRange(1, 365)
+            self.cache_expiry_spin.setSuffix(" days")
+            self.cache_expiry_spin.setToolTip("Cache entries older than this will be removed")
+        expiry_layout.addWidget(self.cache_expiry_spin.value())
         expiry_layout.addStretch()
 
         cache_layout.addRow("Expiration:", expiry_layout)
@@ -229,13 +238,15 @@ class SettingsDialog(BaseDialog):
         self.refresh_stats_button = QPushButton("Refresh", self)
         if self.refresh_stats_button:
             self.refresh_stats_button.setStyleSheet(get_button_style())
-        self.refresh_stats_button.clicked.connect(self._update_cache_stats)
+        if self.refresh_stats_button:
+            self.refresh_stats_button.clicked.connect(self._update_cache_stats)
         actions_layout.addWidget(self.refresh_stats_button)
 
         self.clear_cache_button = QPushButton("Clear Cache", self)
         if self.clear_cache_button:
             self.clear_cache_button.setStyleSheet(get_button_style("danger"))
-        self.clear_cache_button.clicked.connect(self._clear_cache)
+        if self.clear_cache_button:
+            self.clear_cache_button.clicked.connect(self._clear_cache)
         actions_layout.addWidget(self.clear_cache_button)
 
         actions_layout.addStretch()
@@ -288,8 +299,10 @@ class SettingsDialog(BaseDialog):
             self.cache_enabled_check.setChecked(self.settings_manager.get_cache_enabled())
         if self.cache_location_edit:
             self.cache_location_edit.setText(self.settings_manager.get_cache_location())
-        self.cache_size_spin.setValue(self.settings_manager.get_cache_max_size_mb())
-        self.cache_expiry_spin.setValue(self.settings_manager.get_cache_expiration_days())
+        if self.cache_size_spin:
+            self.cache_size_spin.setValue(self.settings_manager.get_cache_max_size_mb())
+        if self.cache_expiry_spin:
+            self.cache_expiry_spin.setValue(self.settings_manager.get_cache_expiration_days())
         if self.auto_cleanup_check:
             self.auto_cleanup_check.setChecked(
             self.settings_manager.get("cache", "auto_cleanup", True)
@@ -305,17 +318,24 @@ class SettingsDialog(BaseDialog):
     def _save_settings(self):
         """Save settings from UI"""
         # General settings
-        self.settings_manager.set("ui", "restore_position", self.restore_window_check.isChecked())
-        self.settings_manager.set("session", "auto_save", self.auto_save_session_check.isChecked())
-        self.settings_manager.set("paths", "default_dumps_dir", self.dumps_dir_edit.text())
+        if self.restore_window_check:
+            self.settings_manager.set("ui", "restore_position", self.restore_window_check.isChecked())
+        if self.auto_save_session_check:
+            self.settings_manager.set("session", "auto_save", self.auto_save_session_check.isChecked())
+        if self.dumps_dir_edit:
+            self.settings_manager.set("paths", "default_dumps_dir", self.dumps_dir_edit.text())
 
         # Cache settings
-        self.settings_manager.set_cache_enabled(self.cache_enabled_check.isChecked())
-        self.settings_manager.set_cache_location(self.cache_location_edit.text())
-        self.settings_manager.set_cache_max_size_mb(self.cache_size_spin)
-        self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin)
-        self.settings_manager.set("cache", "auto_cleanup", self.auto_cleanup_check.isChecked())
-        self.settings_manager.set("cache", "show_indicators", self.show_indicators_check.isChecked())
+        if self.cache_enabled_check:
+            self.settings_manager.set_cache_enabled(self.cache_enabled_check.isChecked())
+        if self.cache_location_edit:
+            self.settings_manager.set_cache_location(self.cache_location_edit.text())
+        self.settings_manager.set_cache_max_size_mb(self.cache_size_spin.value())
+        self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin.value())
+        if self.auto_cleanup_check:
+            self.settings_manager.set("cache", "auto_cleanup", self.auto_cleanup_check.isChecked())
+        if self.show_indicators_check:
+            self.settings_manager.set("cache", "show_indicators", self.show_indicators_check.isChecked())
 
         # Save to disk
         self.settings_manager.save()
@@ -375,7 +395,7 @@ class SettingsDialog(BaseDialog):
 
     def _update_cache_controls_state(self):
         """Update the enabled state of cache controls"""
-        enabled = self.cache_enabled_check.isChecked()
+        enabled = self.cache_enabled_check.isChecked() if self.cache_enabled_check else False
 
         # Enable/disable cache controls
         if self.cache_location_edit:
@@ -395,7 +415,7 @@ class SettingsDialog(BaseDialog):
 
     def _browse_dumps_directory(self):
         """Browse for default dumps directory"""
-        current_dir = self.dumps_dir_edit.text() or str(Path.home())
+        current_dir = (self.dumps_dir_edit.text() if self.dumps_dir_edit else "") or str(Path.home())
 
         dir_path = QFileDialog.getExistingDirectory(
             self,
@@ -409,7 +429,7 @@ class SettingsDialog(BaseDialog):
 
     def _browse_cache_location(self):
         """Browse for cache directory"""
-        current_dir = self.cache_location_edit.text()
+        current_dir = self.cache_location_edit.text() if self.cache_location_edit else ""
         if not current_dir:
             current_dir = str(Path.home())
 
@@ -473,15 +493,15 @@ class SettingsDialog(BaseDialog):
     def _has_settings_changed(self) -> bool:
         """Check if any settings have changed"""
         current = {
-            "restore_window": self.restore_window_check.isChecked(),
-            "auto_save_session": self.auto_save_session_check.isChecked(),
-            "dumps_dir": self.dumps_dir_edit.text(),
-            "cache_enabled": self.cache_enabled_check.isChecked(),
-            "cache_location": self.cache_location_edit.text(),
-            "cache_max_size": self.cache_size_spin,
-            "cache_expiry": self.cache_expiry_spin,
-            "auto_cleanup": self.auto_cleanup_check.isChecked(),
-            "show_indicators": self.show_indicators_check.isChecked(),
+            "restore_window": self.restore_window_check.isChecked() if self.restore_window_check else False,
+            "auto_save_session": self.auto_save_session_check.isChecked() if self.auto_save_session_check else False,
+            "dumps_dir": self.dumps_dir_edit.text() if self.dumps_dir_edit else "",
+            "cache_enabled": self.cache_enabled_check.isChecked() if self.cache_enabled_check else False,
+            "cache_location": self.cache_location_edit.text() if self.cache_location_edit else "",
+            "cache_max_size": self.cache_size_spin.value(),
+            "cache_expiry": self.cache_expiry_spin.value(),
+            "auto_cleanup": self.auto_cleanup_check.isChecked() if self.auto_cleanup_check else False,
+            "show_indicators": self.show_indicators_check.isChecked() if self.show_indicators_check else False,
         }
 
         return current != self._original_settings

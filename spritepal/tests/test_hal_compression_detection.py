@@ -23,6 +23,8 @@ from unittest.mock import Mock, patch
 
 from core.hal_compression import HALCompressor, HALCompressionError
 
+# Mark as no_manager_setup - pure unit tests for HAL compression
+pytestmark = [pytest.mark.no_manager_setup, pytest.mark.unit]
 
 class TestHALToolDetection(unittest.TestCase):
     """Test HAL tool detection from various working directories"""
@@ -271,7 +273,7 @@ class TestHALToolDetectionRegression(unittest.TestCase):
 
     def test_manager_initialization_robustness(self):
         """Test that manager initialization works regardless of working directory"""
-        from core.managers import get_injection_manager
+        from core.managers import get_injection_manager, initialize_managers, cleanup_managers
         
         # Test from different directories
         test_dirs = [
@@ -285,13 +287,25 @@ class TestHALToolDetectionRegression(unittest.TestCase):
                 
             os.chdir(test_dir)
             
-            # Manager initialization should work
+            # Actually test manager initialization from this directory
             # (This was failing before the fix when working directory was wrong)
             try:
+                # Initialize managers - this is what we're testing
+                initialize_managers(app_name="SpritePal_Test")
+                
+                # Verify initialization succeeded by getting a manager
                 manager = get_injection_manager()
                 self.assertIsNotNone(manager)
+                
             except Exception as e:
                 self.fail(f"Manager initialization failed from {test_dir}: {e}")
+            finally:
+                # Clean up managers to prevent interference with other tests
+                # This test class has no_manager_setup marker, so other tests expect no managers
+                try:
+                    cleanup_managers()
+                except Exception:
+                    pass  # Ignore cleanup errors
 
 
 if __name__ == '__main__':

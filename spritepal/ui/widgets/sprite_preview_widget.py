@@ -79,16 +79,17 @@ class SpritePreviewWidget(QWidget):
 
         # Preview label - maximum space usage with 100x100 minimum
         self.preview_label = QLabel(self)
-        self.preview_label.setMinimumSize(100, 100)  # UX-validated minimum
-        self.preview_label.setMaximumSize(16777215, 16777215)  # Use all available space
-        self.preview_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding  # Use ALL available space
-        )
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        if self.preview_label:
+            self.preview_label.setMinimumSize(100, 100)  # UX-validated minimum
+            self.preview_label.setMaximumSize(16777215, 16777215)  # Use all available space
+            self.preview_label.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding  # Use ALL available space
+            )
+            self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Enable context menu for similarity search
-        self.preview_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.preview_label.customContextMenuRequested.connect(self._show_context_menu)
+            # Enable context menu for similarity search
+            self.preview_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.preview_label.customContextMenuRequested.connect(self._show_context_menu)
 
         # Start with visible empty state style
         self._apply_empty_state_style()
@@ -105,7 +106,8 @@ class SpritePreviewWidget(QWidget):
                 margin: 0px;
             }}
         """)
-        self.essential_info_label.setFixedHeight(COMPACT_BUTTON_HEIGHT // 2)  # 16px height
+        if self.essential_info_label:
+            self.essential_info_label.setFixedHeight(COMPACT_BUTTON_HEIGHT // 2)  # 16px height
         layout.addWidget(self.essential_info_label)
 
         # Collapsible controls group - starts collapsed for space efficiency
@@ -126,9 +128,10 @@ class SpritePreviewWidget(QWidget):
         palette_layout.addWidget(palette_label)
 
         self.palette_combo = QComboBox(self)
-        self.palette_combo.setMinimumWidth(120)  # Compact width
-        self.palette_combo.setFixedHeight(COMPACT_BUTTON_HEIGHT)  # 32px for accessibility
-        self.palette_combo.currentIndexChanged.connect(self._on_palette_changed)
+        if self.palette_combo:
+            self.palette_combo.setMinimumWidth(120)  # Compact width
+            self.palette_combo.setFixedHeight(COMPACT_BUTTON_HEIGHT)  # 32px for accessibility
+            self.palette_combo.currentIndexChanged.connect(self._on_palette_changed)
         palette_layout.addWidget(self.palette_combo)
 
         palette_layout.addStretch()  # Push everything left
@@ -137,7 +140,8 @@ class SpritePreviewWidget(QWidget):
         self.info_label = QLabel("No sprite loaded")
         if self.info_label:
             self.info_label.setStyleSheet(get_muted_text_style(color_level="dark"))
-        self.info_label.setWordWrap(True)
+        if self.info_label:
+            self.info_label.setWordWrap(True)
 
         # Add to collapsible group
         self.controls_group.add_widget(palette_widget)
@@ -158,8 +162,8 @@ class SpritePreviewWidget(QWidget):
         original_height = pixmap.height()
 
         # Get available space in the preview label
-        max_width = self.preview_label.maximumWidth()
-        max_height = self.preview_label.maximumHeight()
+        max_width = self.preview_label.maximumWidth() if self.preview_label else 400
+        max_height = self.preview_label.maximumHeight() if self.preview_label else 400
 
         # Determine scale size based on available space and sprite size
         if original_width <= 32 and original_height <= 32:
@@ -383,7 +387,11 @@ class SpritePreviewWidget(QWidget):
                 img_rgba = grayscale_img.convert("RGBA")
             else:
                 # Apply palette
-                palette_colors = self.palettes[self.current_palette_index]
+                if 0 <= self.current_palette_index < len(self.palettes):
+                    palette_colors = self.palettes[self.current_palette_index]
+                else:
+                    # Fallback to first palette if index is out of bounds
+                    palette_colors = self.palettes[0] if self.palettes else []
 
                 # Create indexed image
                 indexed = Image.new("P", grayscale_img.size)
@@ -429,7 +437,7 @@ class SpritePreviewWidget(QWidget):
             logger.debug(f"[DEBUG_SPRITE] Scaled pixmap: {scaled.width()}x{scaled.height()}, null={scaled.isNull()}")
 
             logger.info(f"[DEBUG_SPRITE] Setting pixmap on preview_label: original={pixmap.width()}x{pixmap.height()}, scaled={scaled.width()}x{scaled.height()}")
-            logger.info(f"[DEBUG_SPRITE] Widget visibility state: widget={self.isVisible()}, label={self.preview_label.isVisible()}")
+            logger.info(f"[DEBUG_SPRITE] Widget visibility state: widget={self.isVisible()}, label={self.preview_label.isVisible() if self.preview_label else 'N/A'}")
 
             # Check label state before setting pixmap
             logger.debug("[DEBUG_SPRITE] preview_label state BEFORE setPixmap:")
@@ -449,18 +457,19 @@ class SpritePreviewWidget(QWidget):
             self.sprite_pixmap = pixmap
 
             # Verify pixmap was actually set
-            actual_pixmap = self.preview_label.pixmap()
+            actual_pixmap = self.preview_label.pixmap() if self.preview_label else None
             if actual_pixmap is None:
                 logger.error("[DEBUG_SPRITE] CRITICAL: Pixmap was NOT set on preview_label!")
-                logger.error(f"[DEBUG_SPRITE] Label text after failed setPixmap: '{self.preview_label.text()}'")
-                logger.error(f"[DEBUG_SPRITE] Label stylesheet: {self.preview_label.styleSheet()[:200]}..." if self.preview_label.styleSheet() else "[DEBUG_SPRITE] No stylesheet")
+                logger.error(f"[DEBUG_SPRITE] Label text after failed setPixmap: '{self.preview_label.text() if self.preview_label else 'N/A'}'")
+                logger.error(f"[DEBUG_SPRITE] Label stylesheet: {self.preview_label.styleSheet()[:200] if self.preview_label and self.preview_label.styleSheet() else '[DEBUG_SPRITE] No stylesheet'}...")
                 # Try to understand why
                 logger.error(f"[DEBUG_SPRITE] QApplication instance: {QApplication.instance()}")
                 logger.error(f"[DEBUG_SPRITE] Current thread: {QThread.currentThread()}")
-                logger.error(f"[DEBUG_SPRITE] Main thread: {QApplication.instance().thread() if QApplication.instance() else 'NO APP'}")
+                app = QApplication.instance()
+                logger.error(f"[DEBUG_SPRITE] Main thread: {app.thread() if app else 'NO APP'}")
             else:
                 logger.info(f"[DEBUG_SPRITE] Pixmap successfully set: {actual_pixmap.width()}x{actual_pixmap.height()}")
-                logger.info(f"[DEBUG_SPRITE] Label size after setting pixmap: {self.preview_label.size()}")
+                logger.info(f"[DEBUG_SPRITE] Label size after setting pixmap: {self.preview_label.size() if self.preview_label else 'N/A'}")
                 logger.debug("[DEBUG_SPRITE] Actual pixmap properties:")
                 logger.debug(f"  - size: {actual_pixmap.size()}")
                 logger.debug(f"  - depth: {actual_pixmap.depth()}")
@@ -475,7 +484,7 @@ class SpritePreviewWidget(QWidget):
             self._force_visibility()
 
             # Final check
-            final_pixmap = self.preview_label.pixmap()
+            final_pixmap = self.preview_label.pixmap() if self.preview_label else None
             if final_pixmap and not final_pixmap.isNull():
                 logger.info(f"[DEBUG_SPRITE] SUCCESS: Final pixmap is displayed: {final_pixmap.width()}x{final_pixmap.height()}")
             else:
@@ -491,7 +500,7 @@ class SpritePreviewWidget(QWidget):
         """Handle palette selection change"""
         if index >= 0 and self.sprite_data:
             # Get the actual palette index from combo box data (could be None for grayscale)
-            palette_data = self.palette_combo.itemData(index)
+            palette_data = self.palette_combo.itemData(index) if self.palette_combo else None
             self.current_palette_index = palette_data
             # Recreate image from grayscale data
             # Assume square sprite for now
@@ -543,7 +552,7 @@ class SpritePreviewWidget(QWidget):
 
                     # Place each palette at its correct index
                     for idx, palette in default_palettes.items():
-                        if isinstance(palette, list) and idx < len(palette_list):
+                        if isinstance(palette, list) and isinstance(idx, int) and 0 <= idx < len(palette_list):
                             palette_list[idx] = palette
 
                     # Remove None entries and use a simple list if indices are sparse
@@ -631,7 +640,7 @@ class SpritePreviewWidget(QWidget):
                 for y in range(8):
                     for x in range(8):
                         if decode_method == "rom_extractor":
-                            pixel = extractor._get_4bpp_pixel(tile_bytes, x, y)
+                            pixel = extractor._get_4bpp_pixel(tile_bytes, x, y) if extractor else 0
                         else:
                             # Fallback 4bpp decoding method
                             pixel = self._decode_4bpp_pixel_fallback(tile_bytes, x, y)
@@ -704,12 +713,14 @@ class SpritePreviewWidget(QWidget):
         logger.debug("[DEBUG] SpritePreviewWidget.clear() called")
         # Only clear if there's actually content to clear
         # This prevents unnecessary flashing during rapid updates
-        if self.sprite_pixmap is not None or self.preview_label.pixmap() is not None:
-            self.preview_label.clear()
+        if self.sprite_pixmap is not None or (self.preview_label and self.preview_label.pixmap() is not None):
+            if self.preview_label:
+                self.preview_label.clear()
             if self.preview_label:
                 self.preview_label.setText("No preview available\n\nLoad a ROM and select an offset\nto view sprite data")
             # Reset to minimum size for visibility when empty
-            self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
+            if self.preview_label:
+                self.preview_label.setMinimumSize(100, 100)  # Space-efficient minimum
 
             # Apply visible empty state style
             self._apply_empty_state_style()
@@ -879,7 +890,9 @@ class SpritePreviewWidget(QWidget):
         """Calculate optimal height for given width"""
         if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
             # Calculate height based on aspect ratio of current sprite
-            preview_size = self.preview_label.pixmap().size()
+            preview_pixmap = self.preview_label.pixmap() if self.preview_label else None
+            if preview_pixmap:
+                preview_size = preview_pixmap.size()
             if preview_size.width() > 0:
                 aspect_ratio = preview_size.height() / preview_size.width()
                 preview_height = int((width - 20) * aspect_ratio)  # 20px margin
@@ -908,7 +921,7 @@ class SpritePreviewWidget(QWidget):
         menu.addAction(similar_action)
 
         # Show menu at cursor position
-        global_pos = self.preview_label.mapToGlobal(position)
+        global_pos = self.preview_label.mapToGlobal(position) if self.preview_label else self.mapToGlobal(position)
         menu.exec(global_pos)
 
     def _find_similar_sprites(self) -> None:
@@ -1058,8 +1071,9 @@ class SpritePreviewWidget(QWidget):
     def _setup_update_timer(self) -> None:
         """Setup timer for guaranteed Qt widget updates."""
         self._update_timer = QTimer(self)
-        self._update_timer.setSingleShot(True)
-        self._update_timer.timeout.connect(self._force_widget_update)
+        if self._update_timer:
+            self._update_timer.setSingleShot(True)
+            self._update_timer.timeout.connect(self._force_widget_update)
 
     def _force_widget_update(self) -> None:
         """Force complete widget update using Qt-specific methods."""
@@ -1130,7 +1144,8 @@ class SpritePreviewWidget(QWidget):
             self.preview_label.setPixmap(scaled)
         if self.info_label:
             self.info_label.setText("No sprite data at this offset (all zeros)")
-        self.info_label.setVisible(True)
+        if self.info_label:
+            self.info_label.setVisible(True)
 
         # Ensure it's displayed
         self._guarantee_pixmap_display()
@@ -1269,15 +1284,17 @@ class SpritePreviewWidget(QWidget):
             self.show()
 
         # Stage 1: Immediate widget update
-        self.preview_label.update()
+        if self.preview_label:
+            self.preview_label.update()
 
         # Stage 2: Force repaint if widget is visible
         if self.preview_label.isVisible():
             self.preview_label.repaint()
 
         # Stage 3: Ensure parent layout is updated
-        if self.layout() is not None:
-            self.layout().update()
+        layout = self.layout()
+        if layout is not None:
+            layout.update()
 
         # Stage 4: Process any pending paint events
         QApplication.processEvents()

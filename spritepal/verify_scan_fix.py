@@ -6,8 +6,9 @@ This demonstrates that the scan now includes the end offset.
 
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, Path(os.path.abspath(__file__).parent))
 
 from unittest.mock import Mock
 

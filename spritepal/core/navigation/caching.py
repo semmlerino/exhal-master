@@ -54,7 +54,7 @@ class CacheLevel:
 
     def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics."""
-        stats = self._statistics.copy()
+        stats: dict[str, Any] = self._statistics.copy()
         if stats["hits"] + stats["misses"] > 0:
             stats["hit_rate"] = stats["hits"] / (stats["hits"] + stats["misses"])
         else:
@@ -263,7 +263,7 @@ class DiskCache(CacheLevel):
         """Load cache index from disk."""
         try:
             if self._index_file.exists():
-                with open(self._index_file) as f:
+                with Path(self._index_file).open() as f:
                     self._index = json.load(f)
                 self._statistics["size"] = len(self._index)
         except Exception as e:
@@ -273,7 +273,7 @@ class DiskCache(CacheLevel):
     def _save_index(self) -> None:
         """Save cache index to disk."""
         try:
-            with open(self._index_file, "w") as f:
+            with Path(self._index_file).open("w") as f:
                 json.dump(self._index, f, indent=2)
         except Exception as e:
             logger.exception(f"Could not save disk cache index: {e}")

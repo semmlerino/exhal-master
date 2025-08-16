@@ -67,7 +67,7 @@ def save_gallery_cache(sprites):
         'sprites': sprites
     }
 
-    with open(cache_path, 'w') as f:
+    with Path(cache_path).open('w') as f:
         json.dump(cache_data, f, indent=2)
 
     print(f"✓ Created gallery cache with {len(sprites)} sprites")
@@ -89,7 +89,7 @@ def main():
     cache_path = save_gallery_cache(sprites)
 
     # Verify it was saved
-    with open(cache_path) as f:
+    with Path(cache_path).open() as f:
         loaded = json.load(f)
 
     print(f"✓ Verified cache contains {loaded['sprite_count']} sprites")

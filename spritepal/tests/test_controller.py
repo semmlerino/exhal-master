@@ -109,19 +109,27 @@ class TestExtractionController:
     @pytest.fixture
     def controller(self, main_window: Any) -> ExtractionController:
         """Create REAL controller instance with mock managers"""
-        from unittest.mock import Mock
+        from unittest.mock import Mock, patch
         # Create mock managers for dependency injection
         extraction_manager = Mock(spec=ExtractionManager)
         injection_manager = Mock(spec=InjectionManager)
         session_manager = Mock(spec=SessionManager)
         
-        # Create a REAL controller with mock dependencies
-        controller = ExtractionController(
-            main_window=main_window,
-            extraction_manager=extraction_manager,
-            injection_manager=injection_manager,
-            session_manager=session_manager
-        )
+        # Patch get_error_handler to return a mock to avoid QWidget issues
+        with patch('core.controller.get_error_handler') as mock_get_error_handler:
+            mock_error_handler = Mock()
+            mock_get_error_handler.return_value = mock_error_handler
+            
+            # Create a REAL controller with mock dependencies
+            controller = ExtractionController(
+                main_window=main_window,
+                extraction_manager=extraction_manager,
+                injection_manager=injection_manager,
+                session_manager=session_manager
+            )
+            
+            # Store the mock error handler for tests to access if needed
+            controller.mock_error_handler = mock_error_handler
         
         # The controller is real and will execute real code
         # Only the dependencies are mocked
@@ -454,8 +462,9 @@ class TestExtractionController:
         sprite_file = tmp_path / "sprite.png"
         sprite_file.write_text("fake png data")
 
-        # Patch the search paths to include our tmp directory
-        with patch("core.controller.os.path.dirname", return_value=str(tmp_path)):
+        # Patch __file__ to make it appear that controller.py is in tmp_path/core
+        mock_controller_file = tmp_path / "core" / "controller.py"
+        with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
         # Verify Popen was called with the correct arguments
@@ -484,8 +493,9 @@ class TestExtractionController:
         sprite_file = tmp_path / "sprite.png"
         sprite_file.write_text("fake png data")
 
-        # Patch the search paths to include our tmp directory
-        with patch("core.controller.os.path.dirname", return_value=str(tmp_path)):
+        # Patch __file__ to make it appear that controller.py is in tmp_path/core
+        mock_controller_file = tmp_path / "core" / "controller.py"
+        with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
         # Verify Popen was called with the correct arguments
@@ -536,10 +546,11 @@ class TestExtractionController:
         sprite_file = tmp_path / "sprite.png"
         sprite_file.write_text("fake png data")
 
-        # Patch search paths to use empty directory
+        # Patch __file__ to use empty directory
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
-        with patch("core.controller.os.path.dirname", return_value=str(empty_dir)):
+        mock_controller_file = empty_dir / "core" / "controller.py"
+        with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
         # Verify status bar message was shown
@@ -560,7 +571,8 @@ class TestExtractionController:
         mock_popen.side_effect = Exception("Subprocess failed")
 
         # Should not raise exception and should show error message
-        with patch("core.controller.os.path.dirname", return_value=str(tmp_path)):
+        mock_controller_file = tmp_path / "core" / "controller.py"
+        with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
         # Verify status bar message was shown
@@ -633,9 +645,9 @@ class TestVRAMExtractionWorker:
             )
 
             # Verify signals were emitted
-            assert len(extraction_spy) == 1
-            assert extraction_spy[0][0] == ["output.png", "output.pal.json", "output.metadata.json"]
-            assert len(error_spy) == 0
+            assert extraction_spy.count() == 1
+            assert extraction_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
+            assert error_spy.count() == 0
 
     def test_run_error_handling(self, worker):
         """Test error handling in worker"""
@@ -652,12 +664,12 @@ class TestVRAMExtractionWorker:
             worker.run()
 
             # Verify error signal was emitted
-            assert len(error_spy) == 1
+            assert error_spy.count() == 1
             expected_error = "VRAM extraction failed: Test error"
-            assert expected_error in error_spy[0][0]
+            assert expected_error in error_spy.at(0)[0]
             
             # Verify finished signal was not emitted
-            assert len(finished_spy) == 0
+            assert finished_spy.count() == 0
 
     def test_run_without_cgram(self, worker):
         """Test running without CGRAM file"""
@@ -677,8 +689,8 @@ class TestVRAMExtractionWorker:
             assert call_args["cgram_path"] is None
 
             # Verify signals
-            assert len(finished_spy) == 1
-            assert len(error_spy) == 0
+            assert finished_spy.count() == 1
+            assert error_spy.count() == 0
 
     def test_run_without_oam(self, worker):
         """Test running without OAM file"""
@@ -700,8 +712,8 @@ class TestVRAMExtractionWorker:
             assert call_args.get("oam_path") is None
 
             # Verify signals
-            assert len(finished_spy) == 1
-            assert len(error_spy) == 0
+            assert finished_spy.count() == 1
+            assert error_spy.count() == 0
 
     def test_run_without_metadata_creation(self, worker):
         """Test running without metadata creation"""
@@ -723,8 +735,8 @@ class TestVRAMExtractionWorker:
             assert call_args["create_metadata"] is False
 
             # Verify signals
-            assert len(finished_spy) == 1
-            assert len(error_spy) == 0
+            assert finished_spy.count() == 1
+            assert error_spy.count() == 0
 
     def test_run_without_grayscale_creation(self, worker):
         """Test running without grayscale palette creation"""
@@ -744,8 +756,8 @@ class TestVRAMExtractionWorker:
             assert call_args["create_grayscale"] is False
 
             # Verify signals
-            assert len(finished_spy) == 1
-            assert len(error_spy) == 0
+            assert finished_spy.count() == 1
+            assert error_spy.count() == 0
 
     def test_signal_emission_order(self, worker):
         """Test that finished signal is emitted after successful extraction"""
@@ -760,11 +772,11 @@ class TestVRAMExtractionWorker:
             worker.run()
 
             # Verify finished signal was emitted with correct files
-            assert len(finished_spy) == 1
-            assert finished_spy[0][0] == ["output.png", "output.pal.json", "output.metadata.json"]
+            assert finished_spy.count() == 1
+            assert finished_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
             
             # Verify error signal was not emitted
-            assert len(error_spy) == 0
+            assert error_spy.count() == 0
 
 
 @pytest.mark.no_manager_setup
@@ -1083,8 +1095,8 @@ class TestControllerWorkerIntegration:
         integration_controller._on_extraction_finished(["sprite.png", "palette.json"])
 
         # Verify signal was emitted
-        assert len(complete_spy) == 1
-        assert complete_spy[0][0] == ["sprite.png", "palette.json"]
+        assert complete_spy.count() == 1
+        assert complete_spy.at(0)[0] == ["sprite.png", "palette.json"]
         
         # For real components, verify they exist and were potentially updated
         assert integration_main_window.sprite_preview is not None
@@ -1113,8 +1125,8 @@ class TestControllerWorkerIntegration:
         integration_controller._on_extraction_error("Failed to read file")
 
         # Verify error signal was emitted
-        assert len(failed_spy) == 1
-        assert failed_spy[0][0] == "Failed to read file"
+        assert failed_spy.count() == 1
+        assert failed_spy.at(0)[0] == "Failed to read file"
         assert integration_controller.worker is None  # Worker should be cleaned up
         
         # Verify error dialog was called

@@ -364,6 +364,8 @@ def get_current_context() -> ManagerContext | None:
     Returns:
         Current context or None if no context is set
     """
+    if _context_manager is None:
+        return None
     return _context_manager.get_current_context()
 
 
@@ -374,6 +376,8 @@ def set_current_context(context: ManagerContext | None) -> None:
     Args:
         context: Context to set as current, or None to clear
     """
+    if _context_manager is None:
+        return
     _context_manager.set_current_context(context)
 
 
@@ -441,7 +445,7 @@ class ContextValidator:
 
         for manager_name in required_managers:
             try:
-                manager = context.get_manager(manager_name, object)
+                manager = context.get_manager(manager_name, Any)
 
                 # Check if manager has is_initialized method and is initialized
                 if hasattr(manager, 'is_initialized'):
@@ -464,6 +468,8 @@ class ContextValidator:
         Returns:
             Human-readable debug information
         """
+        if _context_manager is None:
+            return "Context manager is None (during shutdown?)"
         return _context_manager.debug_context_stack()
 
     @staticmethod

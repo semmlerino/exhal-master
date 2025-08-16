@@ -95,31 +95,34 @@ class SpriteGalleryWidget(QWidget):
 
         # Create list view with grid layout
         self.list_view = QListView(self)
-        self.list_view.setModel(self.model)
-        self.list_view.setItemDelegate(self.delegate)
+        if self.list_view:
+            self.list_view.setModel(self.model)
+            self.list_view.setItemDelegate(self.delegate)
 
-        # Configure for grid layout
-        self.list_view.setViewMode(QListView.IconMode)
-        self.list_view.setResizeMode(QListView.Adjust)
-        self.list_view.setLayoutMode(QListView.Batched)
-        self.list_view.setBatchSize(20)  # Process items in batches for performance
-        self.list_view.setUniformItemSizes(True)  # All items same size for performance
-        self.list_view.setSpacing(self.spacing)
+            # Configure for grid layout
+            self.list_view.setViewMode(QListView.IconMode)
+            self.list_view.setResizeMode(QListView.Adjust)
+            self.list_view.setLayoutMode(QListView.Batched)
+            self.list_view.setBatchSize(20)  # Process items in batches for performance
+            self.list_view.setUniformItemSizes(True)  # All items same size for performance
+            self.list_view.setSpacing(self.spacing)
 
-        # Selection mode
-        self.list_view.setSelectionMode(QListView.NoSelection)  # We handle selection in delegate
+            # Selection mode
+            self.list_view.setSelectionMode(QListView.NoSelection)  # We handle selection in delegate
 
-        # Performance optimizations
-        self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
-        self.list_view.setHorizontalScrollMode(QListView.ScrollPerPixel)
+            # Performance optimizations
+            self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
+            self.list_view.setHorizontalScrollMode(QListView.ScrollPerPixel)
 
         # Connect scroll events to trigger thumbnail loading
-        scrollbar = self.list_view.verticalScrollBar()
-        scrollbar.valueChanged.connect(self._on_scroll)
+        if self.list_view:
+            scrollbar = self.list_view.verticalScrollBar()
+            if scrollbar:
+                scrollbar.valueChanged.connect(self._on_scroll)
 
-        # Connect click events
-        self.list_view.clicked.connect(self._on_item_clicked)
-        self.list_view.doubleClicked.connect(self._on_item_double_clicked)
+            # Connect click events
+            self.list_view.clicked.connect(self._on_item_clicked)
+            self.list_view.doubleClicked.connect(self._on_item_double_clicked)
 
         layout.addWidget(self.list_view, 1)  # Give it stretch
 

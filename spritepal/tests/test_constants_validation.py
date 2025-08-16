@@ -23,6 +23,7 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.widget,
     pytest.mark.ci_safe,
+    pytest.mark.no_manager_setup,  # Pure unit tests for constants validation
 ]
 
 

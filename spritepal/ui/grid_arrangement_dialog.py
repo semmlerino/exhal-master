@@ -1015,7 +1015,7 @@ class GridArrangementDialog(SplitterDialog):
         list_group = QGroupBox("Current Arrangement", parent)
         list_layout = QVBoxLayout()
 
-        self.arrangement_list = QListWidget(self)
+        self.arrangement_list: QListWidget = QListWidget(self)
         list_layout.addWidget(self.arrangement_list)
 
         list_group.setLayout(list_layout)

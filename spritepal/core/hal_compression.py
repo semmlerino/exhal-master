@@ -40,6 +40,7 @@ from utils.logging_config import get_logger
 from utils.safe_logging import (
     safe_debug,
     safe_info,
+    safe_warning,
     suppress_logging_errors,
 )
 
@@ -719,7 +720,7 @@ class HALProcessPool:
         Use with caution - mainly for test cleanup or error recovery scenarios.
         """
         with self._pool_lock:
-            logger.warning("Force resetting HAL process pool")
+            safe_warning(logger, "Force resetting HAL process pool")
 
             # Mark as shutdown first to prevent new operations
             self._shutdown = True
@@ -735,7 +736,7 @@ class HALProcessPool:
                             if p.is_alive():
                                 p.kill()
                     except Exception as e:
-                        logger.debug(f"Error force terminating process {getattr(p, 'pid', 'unknown')}: {e}")
+                        safe_debug(logger, f"Error force terminating process {getattr(p, 'pid', 'unknown')}: {e}")
 
             # Direct manager shutdown with minimal timeout
             if self._manager is not None:
@@ -755,7 +756,7 @@ class HALProcessPool:
                     shutdown_thread.start()
                     shutdown_thread.join(timeout=0.2)  # Very short timeout for force reset
                 except Exception as e:
-                    logger.debug(f"Error force shutting down manager: {e}")
+                    safe_debug(logger, f"Error force shutting down manager: {e}")
 
             # Clear all state including weak references
             self._processes.clear()
@@ -771,7 +772,7 @@ class HALProcessPool:
             # Force garbage collection to help with cleanup
             gc.collect()
 
-            logger.debug("HAL process pool force reset complete")
+            safe_debug(logger, "HAL process pool force reset complete")
 
     @classmethod
     def reset_singleton(cls) -> None:
@@ -784,7 +785,7 @@ class HALProcessPool:
                 try:
                     cls._instance.force_reset()
                 except Exception as e:
-                    logger.debug(f"Error during singleton reset: {e}")
+                    safe_debug(logger, f"Error during singleton reset: {e}")
                 cls._instance = None
                 logger.debug("HAL process pool singleton reset")
 

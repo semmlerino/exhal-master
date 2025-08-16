@@ -3,7 +3,7 @@ Row Arrangement Dialog for SpritePal
 Intuitive drag-and-drop interface for arranging sprite rows
 """
 
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
@@ -519,7 +519,7 @@ class RowArrangementDialog(SplitterDialog):
 
             self._update_status(
                 f"Exported {self.arrangement_manager.get_arranged_count()} rows to "
-                f"{os.path.basename(self.output_path)}"
+                f"{Path(self.output_path).name}"
             )
 
             # Accept dialog

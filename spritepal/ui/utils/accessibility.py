@@ -93,8 +93,11 @@ class AccessibilityHelper:
             widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         # Add keyboard shortcut if provided
-        if shortcut and hasattr(widget, 'setShortcut'):
-            widget.setShortcut(shortcut)
+        if shortcut:
+            try:
+                widget.setShortcut(shortcut)  # type: ignore[attr-defined]
+            except AttributeError:
+                pass  # Widget doesn't support shortcuts
 
         # Add tooltip with shortcut info
         if shortcut:

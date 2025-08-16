@@ -4,7 +4,6 @@ Main controller for SpritePal extraction workflow
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -384,7 +383,7 @@ class ExtractionController(QObject):
     def open_in_editor(self, sprite_file: str) -> None:
         """Open the extracted sprites in the pixel editor"""
         # Get the directory where this spritepal package is located
-        spritepal_dir = Path(os.path.dirname(os.path.dirname(__file__)))
+        spritepal_dir = Path(__file__).parent.parent
         exhal_dir = spritepal_dir.parent
 
         # Look for pixel editor launcher using absolute paths

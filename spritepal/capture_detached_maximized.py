@@ -5,7 +5,7 @@ Shows the final solution working without stretching issues.
 """
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -116,8 +116,9 @@ class DetachedGalleryCapture:
         print("🗖 Opening detached gallery window...")
 
         # Open detached gallery
-        self.gallery_tab._open_detached_gallery()
-        self.detached_window = self.gallery_tab.detached_window
+        if self.gallery_tab:
+            self.gallery_tab._open_detached_gallery()
+            self.detached_window = self.gallery_tab.detached_window
 
         if self.detached_window:
             print("✅ Detached gallery window opened")
@@ -131,7 +132,6 @@ class DetachedGalleryCapture:
             print("❌ No detached window to capture")
             return
 
-        datetime.now().strftime("%Y%m%d_%H%M%S")
         save_dir = Path(__file__).parent / "test_screenshots"
         save_dir.mkdir(exist_ok=True)
 
@@ -145,7 +145,11 @@ class DetachedGalleryCapture:
 
     def capture_normal(self):
         """Capture normal size screenshot."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if not self.detached_window:
+            print("❌ No detached window to capture")
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         save_dir = Path(__file__).parent / "test_screenshots"
 
         # Capture normal size
@@ -162,7 +166,11 @@ class DetachedGalleryCapture:
 
     def capture_maximized(self):
         """Capture maximized screenshot."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if not self.detached_window:
+            print("❌ No detached window to capture")
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         save_dir = Path(__file__).parent / "test_screenshots"
 
         # Capture maximized
@@ -179,6 +187,10 @@ class DetachedGalleryCapture:
         """Analyze the layout of the maximized window."""
         print("\n📊 ANALYZING MAXIMIZED LAYOUT")
         print("=" * 50)
+
+        if not self.detached_window:
+            print("❌ No detached window to analyze")
+            return
 
         gallery = self.detached_window.gallery_widget
 

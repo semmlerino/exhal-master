@@ -86,7 +86,8 @@ class SpriteRegionMap:
                 self.remove_sprite(sprite.offset)
 
             # Insert in sorted order
-            insert_pos = bisect.bisect_left(self._sprites, sprite, key=lambda s: s.offset)
+            offsets = [s.offset for s in self._sprites]
+            insert_pos = bisect.bisect_left(offsets, sprite.offset)
             self._sprites.insert(insert_pos, sprite)
 
             # Update indices
@@ -403,7 +404,7 @@ class SpriteRegionMap:
         """
         try:
             data = self.to_dict()
-            with open(filepath, "w") as f:
+            with Path(filepath).open("w") as f:
                 json.dump(data, f, indent=2)
 
             logger.info(f"Saved region map to {filepath}")
@@ -424,7 +425,7 @@ class SpriteRegionMap:
             Loaded region map
         """
         try:
-            with open(filepath) as f:
+            with Path(filepath).open() as f:
                 data = json.load(f)
 
             region_map = cls.from_dict(data)

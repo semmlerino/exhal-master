@@ -26,6 +26,7 @@ pytestmark = [
     pytest.mark.qt_mock,
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
+    pytest.mark.no_manager_setup,  # Pure unit tests for image utility functions
 ]
 
 

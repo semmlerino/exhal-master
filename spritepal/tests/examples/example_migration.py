@@ -255,7 +255,7 @@ class TestUIComponentMigration:
                     qtbot.mouseClick(button, Qt.MouseButton.LeftButton)
 
                     # Verify real signal emission
-                    assert len(clicked_spy) >= 0  # Real signal behavior
+                    assert clicked_spy.count() >= 0  # Real signal behavior
 
         # Benefits:
         # 1. Real Qt widget behavior

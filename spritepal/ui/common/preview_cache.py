@@ -12,6 +12,7 @@ import hashlib
 import os
 import threading
 from collections import OrderedDict
+from pathlib import Path
 
 from utils.logging_config import get_logger
 
@@ -61,8 +62,8 @@ class PreviewCache:
         """
         # Use filename and size for ROM identity (faster than full path hash)
         try:
-            rom_name = os.path.basename(rom_path)
-            rom_size = os.path.getsize(rom_path) if os.path.exists(rom_path) else 0
+            rom_name = Path(rom_path).name
+            rom_size = Path(rom_path).stat().st_size if os.path.exists(rom_path) else 0
         except OSError:
             rom_name = rom_path
             rom_size = 0

@@ -4,6 +4,7 @@ Handles reinsertion of edited sprites back into VRAM
 """
 
 import json
+from pathlib import Path
 from typing import Any
 
 from PIL import Image
@@ -70,7 +71,7 @@ class SpriteInjector:
     def load_metadata(self, metadata_path: str) -> dict[str, Any]:
         """Load extraction metadata from JSON file"""
         logger.debug(f"Loading metadata from {metadata_path}")
-        with open(metadata_path) as f:
+        with Path(metadata_path).open() as f:
             self.metadata = json.load(f)
         if self.metadata:
             logger.info(f"Loaded metadata with {len(self.metadata)} entries")
@@ -216,7 +217,7 @@ class SpriteInjector:
 
             # Read original VRAM
             logger.debug(f"Loading VRAM from {vram_path}")
-            with open(vram_path, "rb") as f:
+            with Path(vram_path).open("rb") as f:
                 self.vram_data = bytearray(f.read())
             logger.debug(f"Loaded {len(self.vram_data)} bytes of VRAM data")
 
@@ -238,7 +239,7 @@ class SpriteInjector:
             logger.debug(f"Modified {bytes_changed}/{len(tile_data)} bytes in VRAM")
 
             # Write modified VRAM
-            with open(output_path, "wb") as f:
+            with Path(output_path).open("wb") as f:
                 f.write(self.vram_data)
             logger.info(f"Successfully wrote modified VRAM to {output_path}")
 

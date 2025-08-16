@@ -50,18 +50,18 @@ class TestErrorHandler:
 
         # Test critical error
         handler.handle_critical_error("Test Error", "This is a test error")
-        assert len(critical_spy) == 1
-        assert critical_spy[0] == ["Test Error", "This is a test error"]
+        assert critical_spy.count() == 1
+        assert critical_spy.at(0) == ["Test Error", "This is a test error"]
 
         # Test warning
         handler.handle_warning("Test Warning", "This is a test warning")
-        assert len(warning_spy) == 1
-        assert warning_spy[0] == ["Test Warning", "This is a test warning"]
+        assert warning_spy.count() == 1
+        assert warning_spy.at(0) == ["Test Warning", "This is a test warning"]
 
         # Test info
         handler.handle_info("Test Info", "This is test info")
-        assert len(info_spy) == 1
-        assert info_spy[0] == ["Test Info", "This is test info"]
+        assert info_spy.count() == 1
+        assert info_spy.at(0) == ["Test Info", "This is test info"]
 
     def test_error_handler_handles_exceptions(self, qtbot):
         """Test that error handler can handle exceptions"""
@@ -77,9 +77,9 @@ class TestErrorHandler:
         test_exception = ValueError("Test exception")
         handler.handle_exception(test_exception, "Test context")
 
-        assert len(critical_spy) == 1
-        assert critical_spy[0][0] == "Error"
-        assert "Test context: Test exception" in critical_spy[0][1]
+        assert critical_spy.count() == 1
+        assert critical_spy.at(0)[0] == "Error"
+        assert "Test context: Test exception" in critical_spy.at(0)[1]
 
     def test_error_handler_singleton(self):
         """Test that get_error_handler returns singleton"""

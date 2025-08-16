@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal
 
 if TYPE_CHECKING:
-    from spritepal.ui.dialogs.manual_offset.components.tab_manager_component import (
+    from ui.dialogs.manual_offset.components.tab_manager_component import (
         TabManagerComponent,
     )
-    from spritepal.ui.dialogs.manual_offset.components.worker_coordinator_component import (
+    from ui.dialogs.manual_offset.components.worker_coordinator_component import (
         WorkerCoordinatorComponent,
     )
 

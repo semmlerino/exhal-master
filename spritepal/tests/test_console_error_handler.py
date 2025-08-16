@@ -20,6 +20,8 @@ from unittest.mock import patch
 
 from core.console_error_handler import ConsoleErrorHandler
 
+# Mark as no_manager_setup - pure unit tests for console error handling
+pytestmark = [pytest.mark.no_manager_setup, pytest.mark.unit]
 
 class TestConsoleErrorHandler(unittest.TestCase):
     """Test the ConsoleErrorHandler implementation"""

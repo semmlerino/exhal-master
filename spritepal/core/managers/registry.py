@@ -350,9 +350,16 @@ import atexit
 atexit.register(_cleanup_global_registry)
 
 
+def _ensure_registry() -> ManagerRegistry:
+    """Ensure the global registry is available and return it."""
+    if _registry is None:
+        raise ManagerError("Manager registry has been cleaned up or not initialized")
+    return _registry
+
+
 def get_registry() -> ManagerRegistry:
     """Get the global manager registry instance"""
-    return _registry
+    return _ensure_registry()
 
 
 def get_session_manager() -> SessionManager:
@@ -375,7 +382,7 @@ def get_session_manager() -> SessionManager:
         return context.get_manager("session", SessionManager)
 
     # Fallback to global registry
-    return _registry.get_session_manager()
+    return _ensure_registry().get_session_manager()
 
 
 def get_extraction_manager() -> ExtractionManager:
@@ -398,7 +405,7 @@ def get_extraction_manager() -> ExtractionManager:
         return context.get_manager("extraction", ExtractionManager)
 
     # Fallback to global registry
-    return _registry.get_extraction_manager()
+    return _ensure_registry().get_extraction_manager()
 
 
 def get_injection_manager() -> InjectionManager:
@@ -421,7 +428,7 @@ def get_injection_manager() -> InjectionManager:
         return context.get_manager("injection", InjectionManager)
 
     # Fallback to global registry
-    return _registry.get_injection_manager()
+    return _ensure_registry().get_injection_manager()
 
 
 def get_navigation_manager():
@@ -434,7 +441,7 @@ def get_navigation_manager():
     Raises:
         ManagerError: If managers not initialized
     """
-    return _registry.get_navigation_manager()
+    return _ensure_registry().get_navigation_manager()
 
 
 def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None) -> None:
@@ -445,17 +452,17 @@ def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None) 
         app_name: Application name for settings
         settings_path: Optional custom settings path (for testing)
     """
-    _registry.initialize_managers(app_name, settings_path)
+    _ensure_registry().initialize_managers(app_name, settings_path)
 
 
 def cleanup_managers() -> None:
     """Cleanup all managers"""
-    _registry.cleanup_managers()
+    _ensure_registry().cleanup_managers()
 
 
 def are_managers_initialized() -> bool:
     """Check if managers are initialized"""
-    return _registry.is_initialized()
+    return _ensure_registry().is_initialized()
 
 
 def validate_manager_dependencies() -> bool:
@@ -465,4 +472,4 @@ def validate_manager_dependencies() -> bool:
     Returns:
         True if all dependencies are valid, False otherwise
     """
-    return _registry.validate_manager_dependencies()
+    return _ensure_registry().validate_manager_dependencies()

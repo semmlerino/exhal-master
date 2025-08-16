@@ -590,7 +590,7 @@ class SmartPreviewCoordinator(QObject):
 
                 # Use ROM cache batch save for efficiency
                 if len(batch_data) > 1:
-                    success = self._rom_cache.save_preview_batch(rom_path, batch_data)
+                    success = self._rom_cache.save_preview_batch(rom_path, batch_data) if self._rom_cache else False
                     if success:
                         total_saved += len(batch_data)
                         logger.debug(f"Batch saved {len(batch_data)} previews to ROM cache for {rom_path}")
@@ -604,7 +604,7 @@ class SmartPreviewCoordinator(QObject):
                     success = self._rom_cache.save_preview_data(
                         rom_path, offset, data["tile_data"],
                         data["width"], data["height"], data["params"]
-                    )
+                    ) if self._rom_cache else False
                     if success:
                         total_saved += 1
                     else:

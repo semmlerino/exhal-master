@@ -6,7 +6,7 @@ and position persistence. Extracted from ManualOffsetDialog to separate window
 management concerns from business logic.
 """
 
-import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -106,7 +106,7 @@ class ViewStateManager(QObject):
     def update_title_with_rom(self, rom_path: str) -> None:
         """Update window title with ROM name"""
         if rom_path:
-            rom_name = os.path.basename(rom_path)
+            rom_name = Path(rom_path).name
             title = f"Manual Offset Control - {rom_name}"
         else:
             title = self._base_title

@@ -140,6 +140,8 @@ class InjectionManager(BaseManager):
             self._connect_worker_signals()
 
             # Start the worker
+            if self._current_worker is None:
+                raise RuntimeError("Failed to create injection worker")
             self._current_worker.start()
 
             mode_text = "VRAM" if params["mode"] == "vram" else "ROM"
@@ -566,7 +568,7 @@ class InjectionManager(BaseManager):
             Suggested VRAM path or empty string if none found
         """
         # If we already have a suggestion, use it
-        if suggested_vram and os.path.exists(suggested_vram):
+        if suggested_vram and Path(suggested_vram).exists():
             return suggested_vram
 
         # Try metadata first
@@ -574,15 +576,15 @@ class InjectionManager(BaseManager):
             vram_source = metadata["extraction"].get("vram_source", "")
             if vram_source and sprite_path:
                 # Look for the file in the sprite's directory
-                sprite_dir = os.path.dirname(sprite_path)
-                possible_path = os.path.join(sprite_dir, vram_source)
-                if os.path.exists(possible_path):
-                    return possible_path
+                sprite_dir = Path(sprite_path).parent
+                possible_path = Path(sprite_dir) / vram_source
+                if possible_path.exists():
+                    return str(possible_path)
 
         # Try to find VRAM file with same base name as sprite
         if sprite_path:
-            sprite_dir = os.path.dirname(sprite_path)
-            sprite_base = os.path.splitext(os.path.basename(sprite_path))[0]
+            sprite_dir = Path(sprite_path).parent
+            sprite_base = Path(sprite_path).stem
 
             # Remove common sprite suffixes to find original base
             for suffix in ["_sprites_editor", "_sprites", "_editor", "Edited"]:
@@ -600,9 +602,9 @@ class InjectionManager(BaseManager):
             ]
 
             for pattern in vram_patterns:
-                possible_path = os.path.join(sprite_dir, pattern)
-                if os.path.exists(possible_path):
-                    return possible_path
+                possible_path = Path(sprite_dir) / pattern
+                if possible_path.exists():
+                    return str(possible_path)
 
         # Check session data from settings manager
         session_manager = self._get_session_manager()
@@ -616,7 +618,7 @@ class InjectionManager(BaseManager):
         last_injection_vram = session_manager.get(
             SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_VRAM, ""
         )
-        if last_injection_vram and os.path.exists(last_injection_vram):
+        if last_injection_vram and Path(last_injection_vram).exists():
             return last_injection_vram
 
         return ""
@@ -631,7 +633,7 @@ class InjectionManager(BaseManager):
         Returns:
             Suggested output path
         """
-        base = os.path.splitext(input_vram_path)[0]
+        base = Path(input_vram_path).stem
 
         # Check if base already ends with "_injected" to avoid duplication
         if base.endswith("_injected"):
@@ -639,14 +641,14 @@ class InjectionManager(BaseManager):
 
         # Try _injected first
         suggested_path = f"{base}_injected.dmp"
-        if not os.path.exists(suggested_path):
+        if not Path(suggested_path).exists():
             return suggested_path
 
         # If _injected exists, try _injected2, _injected3, etc.
         counter = 2
         while counter <= 10:  # Reasonable limit
             suggested_path = f"{base}_injected{counter}.dmp"
-            if not os.path.exists(suggested_path):
+            if not Path(suggested_path).exists():
                 return suggested_path
             counter += 1
 
@@ -664,8 +666,8 @@ class InjectionManager(BaseManager):
         Returns:
             Suggested output path
         """
-        base = os.path.splitext(input_rom_path)[0]
-        ext = os.path.splitext(input_rom_path)[1]
+        base = Path(input_rom_path).stem
+        ext = Path(input_rom_path).suffix
 
         # Check if base already ends with "_modified" to avoid duplication
         if base.endswith("_modified"):
@@ -673,14 +675,14 @@ class InjectionManager(BaseManager):
 
         # Try _modified first
         suggested_path = f"{base}_modified{ext}"
-        if not os.path.exists(suggested_path):
+        if not Path(suggested_path).exists():
             return suggested_path
 
         # If _modified exists, try _modified2, _modified3, etc.
         counter = 2
         while counter <= 10:  # Reasonable limit
             suggested_path = f"{base}_modified{counter}{ext}"
-            if not os.path.exists(suggested_path):
+            if not Path(suggested_path).exists():
                 return suggested_path
             counter += 1
 
@@ -801,10 +803,10 @@ class InjectionManager(BaseManager):
 
             # Look for the ROM file in the sprite's directory
             if rom_source and sprite_path:
-                sprite_dir = os.path.dirname(sprite_path)
-                possible_rom_path = os.path.join(sprite_dir, rom_source)
-                if os.path.exists(possible_rom_path):
-                    result["input_rom"] = possible_rom_path
+                sprite_dir = Path(sprite_path).parent
+                possible_rom_path = Path(sprite_dir) / rom_source
+                if possible_rom_path.exists():
+                    result["input_rom"] = str(possible_rom_path)
                     result["output_rom"] = self.suggest_output_rom_path(possible_rom_path)
 
                     # Parse the ROM offset
@@ -823,7 +825,7 @@ class InjectionManager(BaseManager):
         last_input_rom = session_manager.get(
             SETTINGS_NS_ROM_INJECTION, SETTINGS_KEY_LAST_INPUT_ROM, ""
         )
-        if last_input_rom and os.path.exists(last_input_rom):
+        if last_input_rom and Path(last_input_rom).exists():
             result["input_rom"] = last_input_rom
             result["output_rom"] = self.suggest_output_rom_path(last_input_rom)
 

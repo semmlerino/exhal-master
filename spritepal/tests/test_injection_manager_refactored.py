@@ -251,8 +251,8 @@ class TestInjectionManagerReal:
         injection_manager.injection_progress.emit(50, "Test progress")
         
         # Verify signal was emitted
-        assert len(progress_spy) == 1
-        assert progress_spy[0] == [50, "Test progress"]
+        assert progress_spy.count() == 1
+        assert progress_spy.at(0) == [50, "Test progress"]
 
     def test_metadata_handling_real(self, injection_manager, test_files):
         """Test metadata validation with real files."""

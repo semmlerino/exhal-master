@@ -6,14 +6,13 @@ This script ONLY analyzes and reports, does NOT auto-fix.
 
 import subprocess
 import sys
-from pathlib import Path
-from collections import defaultdict
+
 
 def check_git_status():
     """Check for uncommitted changes."""
     result = subprocess.run(
         "git status --short | wc -l",
-        shell=True,
+        check=False, shell=True,
         capture_output=True,
         text=True
     )
@@ -33,7 +32,7 @@ def analyze_import_issues():
     # Find non-top-level imports
     result = subprocess.run(
         "grep -n '^    import \\|^        import ' $(find . -name '*.py') | wc -l",
-        shell=True,
+        check=False, shell=True,
         capture_output=True,
         text=True
     )
@@ -45,7 +44,7 @@ def analyze_import_issues():
     # Find conditional imports
     result = subprocess.run(
         "grep -l 'if.*:.*import\\|try:.*import' $(find . -name '*.py') | wc -l",
-        shell=True,
+        check=False, shell=True,
         capture_output=True,
         text=True
     )
@@ -70,7 +69,7 @@ def identify_safe_fixes():
     for rule, description in safe_rules.items():
         result = subprocess.run(
             f"../venv/bin/ruff check . --select {rule} 2>&1 | grep 'Found' | awk '{{print $2}}'",
-            shell=True,
+            check=False, shell=True,
             capture_output=True,
             text=True
         )
@@ -94,7 +93,7 @@ def identify_risky_fixes():
     for rule, description in risky_rules.items():
         result = subprocess.run(
             f"../venv/bin/ruff check . --select {rule} 2>&1 | grep 'Found' | awk '{{print $2}}'",
-            shell=True,
+            check=False, shell=True,
             capture_output=True,
             text=True
         )
@@ -111,25 +110,25 @@ def suggest_manual_approach():
     print("""
 1. FIRST: Commit or stash current changes
    git add -A && git commit -m "WIP: Save current fixes"
-   
+
 2. Fix ONLY whitespace issues (completely safe):
    ../venv/bin/ruff check --select W --fix .
-   
+
 3. Review and commit:
    git diff
    git add -A && git commit -m "fix: Clean whitespace issues"
-   
+
 4. Fix unused imports ONE FILE at a time:
    # Check each file individually
    ../venv/bin/ruff check --select F401 path/to/file.py
    # Review if the import is really unused
    # Some imports are for side effects!
-   
+
 5. For complex issues (PLR0915 - too many statements):
    - Open file in editor
    - Extract methods manually
    - Test after each extraction
-   
+
 6. Run tests after EACH type of fix:
    ../venv/bin/python -m pytest tests/ -x --tb=short
     """)
@@ -141,7 +140,7 @@ def analyze_by_file():
 
     result = subprocess.run(
         "../venv/bin/ruff check . 2>&1 | grep '.py:' | cut -d: -f1 | sort | uniq -c | sort -rn | head -10",
-        shell=True,
+        check=False, shell=True,
         capture_output=True,
         text=True
     )

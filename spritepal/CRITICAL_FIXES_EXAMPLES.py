@@ -7,6 +7,7 @@ Copy and adapt these patterns throughout the codebase.
 
 import mmap
 import weakref
+from pathlib import Path
 from typing import Optional, Protocol, runtime_checkable
 
 import numpy as np
@@ -127,7 +128,8 @@ def safe_ui_update(func):
     """
     def wrapper(self, *args, **kwargs):
         # Check if we're in the main thread
-        if QThread.currentThread() != QApplication.instance().thread():
+        app = QApplication.instance()
+        if app and QThread.currentThread() != app.thread():
             # Queue the update for the main thread
             QMetaObject.invokeMethod(
                 self,
@@ -215,7 +217,7 @@ class MemoryEfficientROMReader:
 
     def __enter__(self):
         """Context manager entry - open and memory-map file."""
-        self._file = open(self.rom_path, 'rb')
+        self._file = Path(self.rom_path).open('rb')
         self._mmap = mmap.mmap(self._file.fileno(), 0, access=mmap.ACCESS_READ)
         return self
 
@@ -310,8 +312,11 @@ def make_accessible_widget(widget: QWidget,
     """)
 
     # Add keyboard shortcut if provided
-    if shortcut and hasattr(widget, 'setShortcut'):
-        widget.setShortcut(shortcut)
+    if shortcut:
+            try:
+                widget.setShortcut(shortcut)  # type: ignore[attr-defined]
+            except AttributeError:
+                pass  # Widget doesn't support shortcuts
 
     # Add tooltip with shortcut info
     tooltip = description

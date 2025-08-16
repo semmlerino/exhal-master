@@ -32,7 +32,7 @@ def scan_rom_for_sprites(rom_path: Path, limit: int = 50) -> list[dict[str, Any]
     print(f"Scanning ROM: {rom_path}")
 
     # Load ROM data for size check
-    with open(rom_path, 'rb') as f:
+    with Path(rom_path).open('rb') as f:
         rom_data = f.read()
 
     print(f"ROM size: {len(rom_data):,} bytes")
@@ -130,7 +130,7 @@ def save_sprite_cache(sprites: list[dict[str, Any]], cache_path: Path):
         'sprites': sprites
     }
 
-    with open(cache_path, 'w') as f:
+    with Path(cache_path).open('w') as f:
         json.dump(cache_data, f, indent=2)
 
     print(f"Saved sprite cache to: {cache_path}")
@@ -145,7 +145,7 @@ def load_sprite_cache(cache_path: Path) -> list[dict[str, Any]]:
     Returns:
         List of sprite data dictionaries
     """
-    with open(cache_path) as f:
+    with Path(cache_path).open() as f:
         cache_data = json.load(f)
 
     print(f"Loaded {cache_data['sprite_count']} sprites from cache")

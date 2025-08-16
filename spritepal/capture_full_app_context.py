@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from PySide6.QtCore import Qt, QTimer
+from typing import cast
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication
 
@@ -72,7 +73,7 @@ class FullContextCapture:
                 rom_path = test_path
                 break
 
-        if rom_path and hasattr(self.main_window, 'rom_extraction_panel'):
+        if rom_path and self.main_window and hasattr(self.main_window, 'rom_extraction_panel'):
             try:
                 print(f"Loading ROM: {rom_path.name}")
                 panel = self.main_window.rom_extraction_panel
@@ -95,14 +96,15 @@ class FullContextCapture:
         self.manual_offset_dialog.resize(1000, 700)
 
         # Center it over the main window
-        main_pos = self.main_window.pos()
-        main_size = self.main_window.size()
-        dialog_size = self.manual_offset_dialog.size()
+        if self.main_window:
+            main_pos = self.main_window.pos()
+            main_size = self.main_window.size()
+            dialog_size = self.manual_offset_dialog.size()
 
-        x = main_pos.x() + (main_size.width() - dialog_size.width()) // 2
-        y = main_pos.y() + (main_size.height() - dialog_size.height()) // 2
+            x = main_pos.x() + (main_size.width() - dialog_size.width()) // 2
+            y = main_pos.y() + (main_size.height() - dialog_size.height()) // 2
 
-        self.manual_offset_dialog.move(x, y)
+            self.manual_offset_dialog.move(x, y)
 
         # Find and switch to Gallery tab
         self.switch_to_gallery_tab()
@@ -119,10 +121,11 @@ class FullContextCapture:
         if hasattr(self.manual_offset_dialog, 'tab_widget'):
             tab_widget = self.manual_offset_dialog.tab_widget
 
-            for i in range(tab_widget.count()):
-                tab = tab_widget.widget(i)
-                if isinstance(tab, SpriteGalleryTab):
-                    tab_widget.setCurrentIndex(i)
+            if tab_widget:
+                for i in range(tab_widget.count()):
+                    tab = tab_widget.widget(i)
+                    if isinstance(tab, SpriteGalleryTab):
+                        tab_widget.setCurrentIndex(i)
                     print(f"Switched to Gallery tab (index {i})")
 
                     # Populate with mock sprites
@@ -176,15 +179,15 @@ class FullContextCapture:
             painter.fillRect(10, 10, 108, 108, color)
 
             # Draw sprite number
-            painter.setPen(QPen(Qt.white, 2))
-            painter.setFont(QFont("Arial", 24, QFont.Bold))
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, f"#{i+1}")
+            painter.setPen(QPen(Qt.GlobalColor.white, 2))
+            painter.setFont(QFont("Arial", 24, QFont.Weight.Bold))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, f"#{i+1}")
 
             # HAL indicator for compressed sprites
             if sprite['compressed']:
                 painter.fillRect(95, 5, 28, 18, QColor(0, 150, 0, 200))
                 painter.setFont(QFont("Arial", 9))
-                painter.setPen(Qt.white)
+                painter.setPen(Qt.GlobalColor.white)
                 painter.drawText(98, 18, "HAL")
 
             painter.end()
@@ -207,8 +210,9 @@ class FullContextCapture:
             print("\n📸 Capturing full application context...")
 
             # Capture entire screen area containing both windows
-            screen = self.app.primaryScreen()
-            if screen:
+            app = QApplication.instance()
+            screen = cast(QApplication, app).primaryScreen() if app else None
+            if screen and self.main_window and self.manual_offset_dialog:
                 # Calculate combined area of both windows
                 main_rect = self.main_window.geometry()
                 dialog_rect = self.manual_offset_dialog.geometry()
@@ -241,18 +245,20 @@ class FullContextCapture:
                 print("   Shows: Main window with Manual Offset dialog (Gallery tab)")
 
             # Also capture just the dialog
-            dialog_pixmap = self.manual_offset_dialog.grab()
-            dialog_filename = f"manual_offset_dialog_gallery_{timestamp}.png"
-            dialog_filepath = save_path / dialog_filename
-            dialog_pixmap.save(str(dialog_filepath))
-            print(f"✅ Also captured dialog only: {dialog_filename}")
+            if self.manual_offset_dialog:
+                dialog_pixmap = self.manual_offset_dialog.grab()
+                dialog_filename = f"manual_offset_dialog_gallery_{timestamp}.png"
+                dialog_filepath = save_path / dialog_filename
+                dialog_pixmap.save(str(dialog_filepath))
+                print(f"✅ Also captured dialog only: {dialog_filename}")
 
         def capture_maximized():
             """Capture with maximized dialog."""
             print("\n📸 Capturing maximized dialog context...")
 
             # Maximize the dialog
-            self.manual_offset_dialog.showMaximized()
+            if self.manual_offset_dialog:
+                self.manual_offset_dialog.showMaximized()
             self.app.processEvents()
 
             QTimer.singleShot(100, lambda: capture_maximized_shot())
@@ -260,17 +266,19 @@ class FullContextCapture:
         def capture_maximized_shot():
             """Take the maximized screenshot."""
             # Capture the maximized dialog
-            pixmap = self.manual_offset_dialog.grab()
-            filename = f"full_context_maximized_{timestamp}.png"
-            filepath = save_path / filename
-            pixmap.save(str(filepath))
+            if self.manual_offset_dialog:
+                pixmap = self.manual_offset_dialog.grab()
+                filename = f"full_context_maximized_{timestamp}.png"
+                filepath = save_path / filename
+                pixmap.save(str(filepath))
 
-            print(f"✅ Captured maximized: {filename}")
-            print(f"   Size: {pixmap.width()}x{pixmap.height()}")
+                print(f"✅ Captured maximized: {filename}")
+                print(f"   Size: {pixmap.width()}x{pixmap.height()}")
 
             # Restore dialog
-            self.manual_offset_dialog.showNormal()
-            self.manual_offset_dialog.resize(1000, 700)
+            if self.manual_offset_dialog:
+                self.manual_offset_dialog.showNormal()
+                self.manual_offset_dialog.resize(1000, 700)
 
             # Finish
             QTimer.singleShot(500, self.finish)

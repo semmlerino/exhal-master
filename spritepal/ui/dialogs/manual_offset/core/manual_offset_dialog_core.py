@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget
 
-from spritepal.ui.dialogs.manual_offset.components import (
+from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
+from ui.dialogs.manual_offset.components import (
     LayoutManagerComponent,
     ROMCacheComponent,
     SignalRouterComponent,
     TabManagerComponent,
     WorkerCoordinatorComponent,
 )
-from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
 
 from .component_factory import ComponentFactory
 
@@ -115,28 +115,31 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
     def _setup_ui_structure(self):
         """Set up the dialog UI structure."""
         # Create left and right panels
-        left_panel = self._tab_manager.create_left_panel()
-        right_panel = self._worker_coordinator.create_right_panel()
+        left_panel = self._tab_manager.create_left_panel() if self._tab_manager else None
+        right_panel = self._worker_coordinator.create_right_panel() if self._worker_coordinator else None
 
         # Configure splitter through layout manager
-        self._layout_manager.configure_splitter(
-            self.main_splitter,
-            left_panel,
-            right_panel
-        )
+        if self._layout_manager:
+            self._layout_manager.configure_splitter(
+                self.main_splitter,
+                left_panel,
+                right_panel
+            )
 
         # Add panels to dialog with better proportions (2:3 instead of 1:3)
         self.add_panel(left_panel, stretch_factor=2)
         self.add_panel(right_panel, stretch_factor=3)
 
         # Set up custom buttons
-        self._tab_manager.setup_custom_buttons(self.button_box)
+        if self._tab_manager:
+            self._tab_manager.setup_custom_buttons(self.button_box)
 
         # Note: UI components are accessible via properties that delegate
         # to the appropriate components, so no need to update references here
 
         # Apply initial layout fixes
-        self._layout_manager.fix_empty_space_issue()
+        if self._layout_manager:
+            self._layout_manager.fix_empty_space_issue()
 
     def _connect_signals(self):
         """Connect component signals to external signals."""

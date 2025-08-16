@@ -191,11 +191,11 @@ class TestWorkerManagerReal:
         assert worker.isRunning()
         
         # Wait for some progress
-        qtbot.waitUntil(lambda: len(progress_spy) > 0, timeout=1000)
+        qtbot.waitUntil(lambda: progress_spy.count() > 0, timeout=1000)
         
         # Verify progress signals were emitted
-        assert len(progress_spy) > 0
-        first_progress = progress_spy[0]
+        assert progress_spy.count() > 0
+        first_progress = progress_spy.at(0)
         assert isinstance(first_progress[0], int)  # percent
         assert isinstance(first_progress[1], str)  # message
         
@@ -262,11 +262,11 @@ class TestWorkerManagerReal:
         worker.start()
         
         # Wait for error signal
-        qtbot.waitUntil(lambda: len(error_spy) > 0, timeout=1000)
+        qtbot.waitUntil(lambda: error_spy.count() > 0, timeout=1000)
         
         # Verify error was emitted
-        assert len(error_spy) == 1
-        error_msg, error_exc = error_spy[0]
+        assert error_spy.count() == 1
+        error_msg, error_exc = error_spy.at(0)
         assert "Test error" in error_msg
         assert isinstance(error_exc, ValueError)
         
@@ -311,12 +311,12 @@ class TestWorkerManagerReal:
         worker.start()
         
         # Wait for natural completion
-        qtbot.waitUntil(lambda: len(finished_spy) > 0, timeout=1000)
+        qtbot.waitUntil(lambda: finished_spy.count() > 0, timeout=1000)
         
         # Worker should complete and stop naturally
         qtbot.waitUntil(lambda: not worker.isRunning(), timeout=1000)
         
-        assert len(finished_spy) == 1
+        assert finished_spy.count() == 1
         assert not worker.isRunning()
     
     def test_worker_priority_handling_real(self, qtbot):

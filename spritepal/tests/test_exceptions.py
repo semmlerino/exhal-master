@@ -21,6 +21,7 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.rom_data,
     pytest.mark.unit,
+    pytest.mark.no_manager_setup,  # Skip heavy manager initialization for simple exception tests
 ]
 
 

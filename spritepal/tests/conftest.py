@@ -1340,12 +1340,12 @@ def mock_manager_registry() -> Mock:
 
     return registry
 
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="class")
 def reset_main_window_state(main_window: MockMainWindowProtocol) -> Generator[None, None, None]:
-    """Auto-reset main window state between tests within the same class.
+    """Reset main window state between tests within the same class.
 
     This fixture ensures state isolation when using class-scoped main_window.
-    Runs automatically to reset state before each test method.
+    Must be explicitly requested by test classes that need it.
     """
     # Reset state before test
     if hasattr(main_window, '_output_path'):
@@ -1364,12 +1364,12 @@ def reset_main_window_state(main_window: MockMainWindowProtocol) -> Generator[No
     # Additional cleanup after test if needed
     pass
 
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="class")
 def reset_controller_state(controller: Mock) -> Generator[None, None, None]:
-    """Auto-reset controller state between tests within the same class.
+    """Reset controller state between tests within the same class.
 
     This fixture ensures state isolation when using class-scoped controller.
-    Runs automatically to reset state before each test method.
+    Must be explicitly requested by test classes that need it.
     """
     # Reset controller state if it's a real controller
     if hasattr(controller, 'reset_state'):
@@ -1482,6 +1482,12 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     are left running, preventing "QThread: Destroyed while thread
     is still running" errors.
     """
+    # Skip cleanup for tests that don't use workers
+    markers = [m.name for m in request.node.iter_markers()]
+    if 'no_manager_setup' in markers or 'no_qt' in markers:
+        yield
+        return
+
     yield
 
     # Import here to avoid circular imports
@@ -1498,10 +1504,12 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     # Clean up any SearchWorker threads specifically for advanced search tests
     try:
         import threading
-        import time
 
-        # Wait a bit for any threads to finish their cleanup
-        time.sleep(0.1)
+        # Only sleep if there are actually worker threads running
+        active_threads = threading.active_count()
+        if active_threads > 2:  # Main thread + pytest thread
+            import time
+            time.sleep(0.1)  # Only sleep if cleanup is needed
 
         # Check for any remaining threads (for debugging)
         active_threads = threading.active_count()

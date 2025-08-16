@@ -230,16 +230,16 @@ class TestExtractionControllerReal:
         mock_main_window.offset_changed.emit(0x1000)
         
         # Verify signals were emitted (proves connections work)
-        assert len(extract_spy) == 1
-        assert len(editor_spy) == 1
-        assert editor_spy[0][0] == "test_file.png"
-        assert len(rows_spy) == 1
-        assert rows_spy[0][0] == "test_file.png"
-        assert len(grid_spy) == 1
-        assert grid_spy[0][0] == "test_file.png"
-        assert len(inject_spy) == 1
-        assert len(offset_spy) == 1
-        assert offset_spy[0][0] == 0x1000
+        assert extract_spy.count() == 1
+        assert editor_spy.count() == 1
+        assert editor_spy.at(0)[0] == "test_file.png"
+        assert rows_spy.count() == 1
+        assert rows_spy.at(0)[0] == "test_file.png"
+        assert grid_spy.count() == 1
+        assert grid_spy.at(0)[0] == "test_file.png"
+        assert inject_spy.count() == 1
+        assert offset_spy.count() == 1
+        assert offset_spy.at(0)[0] == 0x1000
 
     def test_extraction_parameter_validation_real(self, mock_main_window, real_managers, test_files):
         """Test parameter validation with real managers."""

@@ -75,18 +75,18 @@ class TestExtractionWorkerBase:
         # Emit signals with test data - UPDATED FOR BUG #26: Workers emit PIL Image, not QPixmap
         mock_pil_image = Mock()  # Mock PIL Image instead of QPixmap for Qt threading safety
         worker.preview_ready.emit(mock_pil_image, 10)
-        assert len(preview_spy) == 1
-        assert preview_spy[0] == [mock_pil_image, 10]
+        assert preview_spy.count() == 1
+        assert preview_spy.at(0) == [mock_pil_image, 10]
 
         mock_palettes = {"palette1": [1, 2, 3]}
         worker.palettes_ready.emit(mock_palettes)
-        assert len(palettes_spy) == 1
-        assert palettes_spy[0] == [mock_palettes]
+        assert palettes_spy.count() == 1
+        assert palettes_spy.at(0) == [mock_palettes]
 
         mock_files = ["file1.png", "file2.pal.json"]
         worker.extraction_finished.emit(mock_files)
-        assert len(extraction_spy) == 1
-        assert extraction_spy[0] == [mock_files]
+        assert extraction_spy.count() == 1
+        assert extraction_spy.at(0) == [mock_files]
 
 
 class TestInjectionWorkerBase:
@@ -129,17 +129,17 @@ class TestInjectionWorkerBase:
 
         # Emit signals with test data
         worker.progress_percent.emit(75)
-        assert len(progress_spy) == 1
-        assert progress_spy[0] == [75]
+        assert progress_spy.count() == 1
+        assert progress_spy.at(0) == [75]
 
         mock_compression = {"original_size": 1000, "compressed_size": 500}
         worker.compression_info.emit(mock_compression)
-        assert len(compression_spy) == 1
-        assert compression_spy[0] == [mock_compression]
+        assert compression_spy.count() == 1
+        assert compression_spy.at(0) == [mock_compression]
 
         worker.injection_finished.emit(True, "Injection successful")
-        assert len(injection_spy) == 1
-        assert injection_spy[0] == [True, "Injection successful"]
+        assert injection_spy.count() == 1
+        assert injection_spy.at(0) == [True, "Injection successful"]
 
 
 class TestScanWorkerBase:
@@ -186,29 +186,29 @@ class TestScanWorkerBase:
         # Emit signals with test data
         mock_item = {"name": "sprite1", "offset": 0x1000}
         worker.item_found.emit(mock_item)
-        assert len(item_spy) == 1
-        assert item_spy[0] == [mock_item]
+        assert item_spy.count() == 1
+        assert item_spy.at(0) == [mock_item]
 
         mock_stats = {"total_found": 5, "scan_time": 2.5}
         worker.scan_stats.emit(mock_stats)
-        assert len(stats_spy) == 1
-        assert stats_spy[0] == [mock_stats]
+        assert stats_spy.count() == 1
+        assert stats_spy.at(0) == [mock_stats]
 
         worker.scan_progress.emit(3, 10)
-        assert len(progress_spy) == 1
-        assert progress_spy[0] == [3, 10]
+        assert progress_spy.count() == 1
+        assert progress_spy.at(0) == [3, 10]
 
         worker.scan_finished.emit(True)
-        assert len(finished_spy) == 1
-        assert finished_spy[0] == [True]
+        assert finished_spy.count() == 1
+        assert finished_spy.at(0) == [True]
 
         worker.cache_status.emit("Loading from cache...")
-        assert len(cache_status_spy) == 1
-        assert cache_status_spy[0] == ["Loading from cache..."]
+        assert cache_status_spy.count() == 1
+        assert cache_status_spy.at(0) == ["Loading from cache..."]
 
         worker.cache_progress.emit(50)
-        assert len(cache_progress_spy) == 1
-        assert cache_progress_spy[0] == [50]
+        assert cache_progress_spy.count() == 1
+        assert cache_progress_spy.at(0) == [50]
 
     def test_scan_helper_methods(self, qtbot):
         """Test scan worker helper methods."""
@@ -227,17 +227,17 @@ class TestScanWorkerBase:
         # Test emit_item_found
         test_item = {"sprite": "test", "size": 100}
         worker.emit_item_found(test_item)
-        assert len(item_spy) == 1
-        assert item_spy[0] == [test_item]
+        assert item_spy.count() == 1
+        assert item_spy.at(0) == [test_item]
 
         # Test emit_scan_progress
         worker.emit_scan_progress(5, 20)
-        assert len(progress_spy) == 1
-        assert progress_spy[0] == [5, 20]
+        assert progress_spy.count() == 1
+        assert progress_spy.at(0) == [5, 20]
 
         # Should also emit standard progress percentage
-        assert len(standard_progress_spy) == 1
-        assert standard_progress_spy[0] == [25, "Scanning 5/20"]  # 5/20 * 100 = 25%
+        assert standard_progress_spy.count() == 1
+        assert standard_progress_spy.at(0) == [25, "Scanning 5/20"]  # 5/20 * 100 = 25%
 
     def test_scan_progress_edge_cases(self, qtbot):
         """Test scan progress with edge cases."""
@@ -254,12 +254,12 @@ class TestScanWorkerBase:
         # Test with zero total (should not crash)
         worker.emit_scan_progress(0, 0)
         # Should not emit standard progress when total is 0
-        assert len(standard_progress_spy) == 0
+        assert standard_progress_spy.count() == 0
 
         # Test with current > total
         worker.emit_scan_progress(15, 10)
-        assert len(standard_progress_spy) == 1
-        assert standard_progress_spy[0] == [100, "Scanning 15/10"]  # Should cap at 100%
+        assert standard_progress_spy.count() == 1
+        assert standard_progress_spy.at(0) == [100, "Scanning 15/10"]  # Should cap at 100%
 
 
 class TestPreviewWorkerBase:
@@ -298,12 +298,12 @@ class TestPreviewWorkerBase:
         # Emit signals with test data - UPDATED FOR BUG #26: Workers emit PIL Image, not QPixmap
         mock_preview = Mock()  # Mock PIL Image for Qt threading safety
         worker.preview_ready.emit(mock_preview)
-        assert len(ready_spy) == 1
-        assert ready_spy[0] == [mock_preview]
+        assert ready_spy.count() == 1
+        assert ready_spy.at(0) == [mock_preview]
 
         worker.preview_failed.emit("Preview generation failed")
-        assert len(failed_spy) == 1
-        assert failed_spy[0] == ["Preview generation failed"]
+        assert failed_spy.count() == 1
+        assert failed_spy.at(0) == ["Preview generation failed"]
 
     def test_preview_helper_methods(self, qtbot):
         """Test preview worker helper methods."""
@@ -322,17 +322,17 @@ class TestPreviewWorkerBase:
         # Test emit_preview_ready - UPDATED FOR BUG #26: Workers emit PIL Image, not QPixmap
         mock_preview = Mock()  # Mock PIL Image for Qt threading safety
         worker.emit_preview_ready(mock_preview)
-        assert len(ready_spy) == 1
-        assert ready_spy[0] == [mock_preview]
+        assert ready_spy.count() == 1
+        assert ready_spy.at(0) == [mock_preview]
 
         # Test emit_preview_failed
         worker.emit_preview_failed("Test error")
-        assert len(failed_spy) == 1
-        assert failed_spy[0] == ["Test error"]
+        assert failed_spy.count() == 1
+        assert failed_spy.at(0) == ["Test error"]
 
         # Should also emit standard error signal
-        assert len(error_spy) == 1
-        assert error_spy[0][0] == "Test error"
+        assert error_spy.count() == 1
+        assert error_spy.at(0)[0] == "Test error"
 
 
 @pytest.fixture

@@ -168,7 +168,8 @@ class SmartPreviewExample(QWidget):
     def _on_preview_error(self, error_msg: str):
         """Handle preview error."""
         self.preview_widget.clear()
-        self.preview_widget.info_label.setText("No sprite found")
+        if self.preview_widget.info_label:
+            self.preview_widget.info_label.setText("No sprite found")
         self.perf_label.setText(f"Preview Error: {error_msg}")
         self.perf_label.setStyleSheet("color: #F44336;")  # Red
 

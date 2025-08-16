@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from PySide6.QtGui import QPixmap
 
     from core.async_rom_cache import AsyncROMCache
-    from core.preview_worker_pool import PreviewWorkerPool
+    from ui.common.preview_worker_pool import PreviewWorkerPool
     from utils.rom_cache import ROMCache
 
 from utils.logging_config import get_logger
@@ -332,7 +332,7 @@ class PreviewOrchestrator(QObject):
     def _generate_preview(self, request: PreviewRequest) -> None:
         """Generate preview using worker pool"""
         if not self._worker_pool:
-            from core.preview_worker_pool import PreviewWorkerPool
+            from ui.common.preview_worker_pool import PreviewWorkerPool
             self._worker_pool = PreviewWorkerPool()
             self._worker_pool.preview_ready.connect(self._on_preview_ready)
             self._worker_pool.preview_error.connect(self._on_preview_error)

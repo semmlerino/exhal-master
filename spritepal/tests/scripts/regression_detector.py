@@ -142,7 +142,7 @@ class RegressionDetector:
         }
 
         baseline_file = self.results_dir / f"baseline_{tag}.json"
-        with open(baseline_file, 'w') as f:
+        with Path(baseline_file).open('w') as f:
             json.dump(baseline_data, f, indent=2)
 
         print(f"Baseline created: {baseline_file}")
@@ -152,10 +152,10 @@ class RegressionDetector:
         """Compare two test result files and generate regression report."""
 
         # Load test results
-        with open(before_file) as f:
+        with Path(before_file).open() as f:
             before_data = json.load(f)
 
-        with open(after_file) as f:
+        with Path(after_file).open() as f:
             after_data = json.load(f)
 
         # Create comparison ID
@@ -226,7 +226,7 @@ class RegressionDetector:
 
             # Save results
             result_file = self.results_dir / f"{run_id}_{start_time.strftime('%Y%m%d_%H%M%S')}.json"
-            with open(result_file, 'w') as f:
+            with Path(result_file).open('w') as f:
                 json.dump(test_data, f, indent=2)
 
             return result_file
@@ -246,7 +246,7 @@ class RegressionDetector:
             }
 
             result_file = self.results_dir / f"{run_id}_timeout.json"
-            with open(result_file, 'w') as f:
+            with Path(result_file).open('w') as f:
                 json.dump(test_data, f, indent=2)
 
             return result_file
@@ -610,7 +610,7 @@ class RegressionDetector:
             "overall_health_change": report.overall_health_change,
         }
 
-        with open(report_file, 'w') as f:
+        with Path(report_file).open('w') as f:
             json.dump(report_data, f, indent=2)
 
         return report_file

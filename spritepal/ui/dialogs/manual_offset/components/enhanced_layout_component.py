@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    from spritepal.ui.dialogs.manual_offset.core.manual_offset_dialog_core import (
+    from ui.dialogs.manual_offset.core.manual_offset_dialog_core import (
         ManualOffsetDialogCore,
     )
 
@@ -248,7 +248,8 @@ class EnhancedLayoutComponent:
         ratio = self.constants.TAB_RATIOS.get(tab_index, self.constants.LEFT_PANEL_RATIO)
 
         # Apply with smooth animation-like effect
-        self._resize_timer.start(150)  # Debounced resize
+        if self._resize_timer:
+            self._resize_timer.start(150)  # Debounced resize
 
         # Calculate new sizes
         total_width = self.dialog.width()

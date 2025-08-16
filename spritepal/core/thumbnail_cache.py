@@ -47,7 +47,7 @@ class ThumbnailCache:
         """Load cache metadata from disk."""
         if self.metadata_file.exists():
             try:
-                with open(self.metadata_file) as f:
+                with Path(self.metadata_file).open() as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load cache metadata: {e}")
@@ -56,7 +56,7 @@ class ThumbnailCache:
     def _save_metadata(self):
         """Save cache metadata to disk."""
         try:
-            with open(self.metadata_file, 'w') as f:
+            with Path(self.metadata_file).open('w') as f:
                 json.dump(self.metadata, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save cache metadata: {e}")
@@ -261,7 +261,7 @@ class ThumbnailCache:
         hasher = hashlib.sha256()
 
         try:
-            with open(rom_path, 'rb') as f:
+            with Path(rom_path).open('rb') as f:
                 # Read in chunks for large files
                 while chunk := f.read(8192):
                     hasher.update(chunk)

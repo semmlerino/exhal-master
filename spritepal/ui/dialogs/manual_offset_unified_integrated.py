@@ -15,9 +15,9 @@ This dialog provides:
 from __future__ import annotations
 
 import contextlib
-import os
 import time
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 try:
@@ -67,6 +67,12 @@ from ui.common.collapsible_group_box import CollapsibleGroupBox
 
 # Use SimplePreviewCoordinator to avoid worker pool crashes
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator
+
+
+def get_main_thread():
+    """Get main thread safely."""
+    app = QApplication.instance()
+    return app.thread() if app else None
 
 
 # Smart DialogBase selection based on environment
@@ -498,29 +504,45 @@ class UnifiedManualOffsetDialog(DialogBase):
             self.preview_widget.set_current_offset(offset)
             logger.debug("[OFFSET_CHANGED] Updated preview widget offset")
 
-        # Emit signal immediately for external listeners (with safety check)
+        # Emit signal immediately for external listeners (with robust safety checks)
         try:
-            # Debug the dialog state before emitting
-            logger.debug(f"[OFFSET_CHANGED] Dialog object: {self}")
-            logger.debug(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
-            logger.debug(f"[OFFSET_CHANGED] Signal object: {self.offset_changed}")
-            logger.debug("[OFFSET_CHANGED] About to emit offset_changed signal")
+            # Check if dialog and signal are still valid before emitting
+            if not hasattr(self, 'offset_changed'):
+                logger.warning("[OFFSET_CHANGED] Signal attribute missing, skipping emit")
+                return
 
-            # Emit signal directly
+            # Check if the underlying Qt object is still valid
+            try:
+                from PySide6.QtCore import QObject
+                if not isinstance(self, QObject):
+                    logger.warning("[OFFSET_CHANGED] Dialog is not a valid QObject, skipping emit")
+                    return
+
+                # Additional check for Qt object validity
+                if hasattr(self, 'isWidgetType') and not self.isWidgetType():
+                    logger.warning("[OFFSET_CHANGED] Dialog widget type invalid, skipping emit")
+                    return
+
+            except Exception as validity_check_error:
+                logger.warning(f"[OFFSET_CHANGED] Validity check failed: {validity_check_error}, skipping emit")
+                return
+
+            logger.debug(f"[OFFSET_CHANGED] About to emit offset_changed signal for offset 0x{offset:06X}")
+
+            # Emit signal with additional safety wrapper
             self.offset_changed.emit(offset)
             logger.debug("[OFFSET_CHANGED] Successfully emitted offset_changed signal")
         except RuntimeError as e:
-            if "Signal source has been deleted" in str(e):
+            if "Signal source has been deleted" in str(e) or "deleted" in str(e).lower():
                 logger.error(f"[OFFSET_CHANGED] CRITICAL: Signal source deleted during emit: {e}")
-                logger.error(f"[OFFSET_CHANGED] Dialog still exists: {self}")
-                logger.error(f"[OFFSET_CHANGED] Dialog type: {type(self)}")
-                logger.error(f"[OFFSET_CHANGED] Dialog has signal attr: {hasattr(self, 'offset_changed')}")
-
-                # This indicates a serious Qt lifecycle issue with composed architecture
-                # For now, skip the emit to prevent crashes
+                logger.error(f"[OFFSET_CHANGED] Dialog state - exists: {self is not None}, type: {type(self)}")
                 logger.warning("[OFFSET_CHANGED] Skipping signal emit to prevent crash")
             else:
+                logger.error(f"[OFFSET_CHANGED] Unexpected RuntimeError during signal emit: {e}")
                 raise
+        except Exception as e:
+            logger.error(f"[OFFSET_CHANGED] Unexpected error during signal emit: {e}")
+            # Don't re-raise to prevent crashes, just log the error
 
         # CRITICAL FIX: Request preview when offset changes!
         # Use request_manual_preview for immediate response without debounce
@@ -668,7 +690,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         """Handle preview error."""
         # Don't clear the preview widget on errors - keep the last valid preview visible
         # This prevents black flashing when rapidly moving the slider
-        if self.preview_widget is not None:
+        if self.preview_widget is not None and self.preview_widget.info_label:
             self.preview_widget.info_label.setText("No sprite found")
 
         current_offset = self.get_current_offset()
@@ -800,7 +822,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         # Update window title
         self.view_state_manager.update_title_with_rom(rom_path)
 
-        logger.debug(f"ROM data updated: {os.path.basename(rom_path)} ({rom_size} bytes)")
+        logger.debug(f"ROM data updated: {Path(rom_path).name} ({rom_size} bytes)")
 
         # Initialize cache for this ROM
         self._initialize_rom_cache(rom_path)
@@ -834,7 +856,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             finder = SpriteFinder()
 
             # Read ROM data
-            with open(self.rom_path, "rb") as f:
+            with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
 
             # Track found sprites
@@ -947,7 +969,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # CRITICAL: Verify we're on main thread before calling widget methods
         current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
+        main_thread = get_main_thread()
         logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
 
         if current_thread != main_thread:
@@ -1004,7 +1026,7 @@ class UnifiedManualOffsetDialog(DialogBase):
         logger.debug(f"[SIGNAL_RECEIVED] cached tile_data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
 
         # CRITICAL: Verify we're on main thread before calling widget methods
-        if QThread.currentThread() != QApplication.instance().thread():
+        if QThread.currentThread() != get_main_thread():
             logger.warning("[THREAD_SAFETY] _on_smart_preview_cached called from worker thread!")
             return
 
@@ -1040,7 +1062,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
         # CRITICAL: Verify we're on main thread before calling widget methods
         current_thread = QThread.currentThread()
-        main_thread = QApplication.instance().thread()
+        main_thread = get_main_thread()
         logger.debug(f"[THREAD_CHECK] Current thread: {current_thread}, Main thread: {main_thread}, Same: {current_thread == main_thread}")
 
         if current_thread != main_thread:
@@ -1051,7 +1073,8 @@ class UnifiedManualOffsetDialog(DialogBase):
             logger.info("[PREVIEW_ERROR] Updating info label only (not clearing preview)")
             try:
                 # Don't clear - keep last valid preview visible to prevent black flashing
-                self.preview_widget.info_label.setText("No sprite found")
+                if self.preview_widget.info_label:
+                    self.preview_widget.info_label.setText("No sprite found")
 
                 # Force widget updates
                 logger.debug("[PREVIEW_ERROR] Calling widget.update()...")
@@ -1105,7 +1128,7 @@ class UnifiedManualOffsetDialog(DialogBase):
 
             # Log cache status
             if self.rom_cache.cache_enabled:
-                logger.debug(f"ROM cache initialized for {os.path.basename(rom_path)}")
+                logger.debug(f"ROM cache initialized for {Path(rom_path).name}")
             else:
                 logger.debug("ROM cache is disabled")
 
@@ -1262,7 +1285,7 @@ class UnifiedManualOffsetDialog(DialogBase):
             menu.addAction(clear_action)
 
             # Show at cursor position
-            global_pos = self.status_collapsible.mapToGlobal(position)
+            global_pos = self.status_collapsible.mapToGlobal(position) if self.status_collapsible else self.mapToGlobal(position)
             menu.exec(global_pos)
 
         except Exception as e:

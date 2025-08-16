@@ -157,20 +157,20 @@ class TestWorkerOwnedInjectionPattern:
 
             # The main success criteria: no Qt lifecycle errors occurred
             qt_lifecycle_error = False
-            if len(error_spy) > 0:
-                error_msg = error_spy[0][0]  # First error message
+            if error_spy.count() > 0:
+                error_msg = error_spy.at(0)[0]  # First error message
                 if "wrapped C/C++ object" in error_msg:
                     qt_lifecycle_error = True
 
-            assert not qt_lifecycle_error, f"Qt lifecycle error occurred: {error_spy[0] if error_spy else 'None'}"
+            assert not qt_lifecycle_error, f"Qt lifecycle error occurred: {error_spy.at(0) if error_spy else 'None'}"
 
             # Progress signal should have been emitted (shows manager is responsive)
-            assert len(progress_spy) >= 1, "No progress signals emitted - manager may not be working"
+            assert progress_spy.count() >= 1, "No progress signals emitted - manager may not be working"
 
             print("✅ Worker-owned injection pattern test PASSED:")
             print(f"   - Manager created with proper Qt parent: {worker.manager.parent() is worker}")
             print("   - No Qt lifecycle errors detected")
-            print(f"   - Manager responsive (progress signals: {len(progress_spy)})")
+            print(f"   - Manager responsive (progress signals: {progress_spy.count()})")
             print("   - Worker isolation proven (no global registry needed)")
 
         except Exception as e:
@@ -229,8 +229,8 @@ class TestWorkerOwnedInjectionPattern:
 
         # The core test: verify no Qt lifecycle errors occurred (architectural success)
         for error_spy, worker_name in [(error_spy1, "Worker1"), (error_spy2, "Worker2")]:
-            if len(error_spy) > 0:
-                error_msg = error_spy[0][0]
+            if error_spy.count() > 0:
+                error_msg = error_spy.at(0)[0]
                 assert "wrapped C/C++ object" not in error_msg, f"{worker_name} Qt lifecycle error: {error_msg}"
 
         print("✅ Concurrent injection workers test PASSED:")
@@ -277,12 +277,12 @@ class TestWorkerOwnedInjectionPattern:
 
         # Verify no Qt lifecycle errors (the main architectural test)
         qt_lifecycle_error = False
-        if len(error_spy) > 0:
-            error_msg = error_spy[0][0]
+        if error_spy.count() > 0:
+            error_msg = error_spy.at(0)[0]
             if "wrapped C/C++ object" in error_msg:
                 qt_lifecycle_error = True
 
-        assert not qt_lifecycle_error, f"Qt lifecycle error: {error_spy[0] if error_spy else 'None'}"
+        assert not qt_lifecycle_error, f"Qt lifecycle error: {error_spy.at(0) if error_spy else 'None'}"
 
         print("✅ Custom factory injection test PASSED - no Qt lifecycle errors")
 
@@ -327,12 +327,12 @@ class TestWorkerOwnedInjectionPattern:
 
             # Verify no Qt lifecycle errors (the main architectural test)
             qt_lifecycle_error = False
-            if len(error_spy) > 0:
-                error_msg = error_spy[0][0]
+            if error_spy.count() > 0:
+                error_msg = error_spy.at(0)[0]
                 if "wrapped C/C++ object" in error_msg:
                     qt_lifecycle_error = True
 
-            assert not qt_lifecycle_error, f"Qt lifecycle error: {error_spy[0] if error_spy else 'None'}"
+            assert not qt_lifecycle_error, f"Qt lifecycle error: {error_spy.at(0) if error_spy else 'None'}"
 
             print("✅ ROM injection worker test PASSED - no Qt lifecycle errors")
 

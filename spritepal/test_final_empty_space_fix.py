@@ -64,7 +64,7 @@ class TestWindow(QMainWindow):
             offset = sprite['offset']
             if offset in self.gallery_tab.gallery_widget.thumbnails:
                 pixmap = QPixmap(128, 128)
-                pixmap.fill(Qt.darkGray)
+                pixmap.fill(Qt.GlobalColor.darkGray)
                 thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
                 thumbnail.set_sprite_data(pixmap, sprite)
         

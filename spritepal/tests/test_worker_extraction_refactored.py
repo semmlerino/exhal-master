@@ -113,7 +113,7 @@ class TestVRAMExtractionWorker:
         
         # Verify signal was received through the connection
         # Note: The worker converts the string message to int/string for progress signal
-        assert len(progress_spy) >= 0  # May or may not emit depending on conversion logic
+        assert progress_spy.count() >= 0  # May or may not emit depending on conversion logic
         
         # Clean up connections
         worker.disconnect_manager_signals()
@@ -145,13 +145,13 @@ class TestVRAMExtractionWorker:
         
         # Verify signals were emitted with PIL image objects directly
         # (No QPixmap conversion should happen in worker thread)
-        assert len(preview_spy) == 1
-        emitted_image, emitted_count = preview_spy[0]
+        assert preview_spy.count() == 1
+        emitted_image, emitted_count = preview_spy.at(0)
         assert isinstance(emitted_image, Image.Image)
         assert emitted_count == tile_count
         
-        assert len(preview_image_spy) == 1
-        assert isinstance(preview_image_spy[0][0], Image.Image)
+        assert preview_image_spy.count() == 1
+        assert isinstance(preview_image_spy.at(0)[0], Image.Image)
         
         # Clean up
         worker.disconnect_manager_signals()
@@ -179,10 +179,10 @@ class TestVRAMExtractionWorker:
         worker.perform_operation()
         
         # Check if operation succeeded or had expected errors
-        if len(error_spy) == 0:
+        if error_spy.count() == 0:
             # Success case - verify real extraction results
-            assert len(extraction_spy) == 1
-            output_files = extraction_spy[0][0]
+            assert extraction_spy.count() == 1
+            output_files = extraction_spy.at(0)[0]
             assert isinstance(output_files, list)
             
             # Verify real files were created
@@ -190,17 +190,17 @@ class TestVRAMExtractionWorker:
             assert output_path.exists()
             
             # Check operation finished successfully
-            assert len(operation_spy) == 1
-            success, message = operation_spy[0]
+            assert operation_spy.count() == 1
+            success, message = operation_spy.at(0)
             assert success is True
             assert "extracted" in message.lower()
             
             # Verify progress signals were emitted
-            assert len(progress_spy) > 0
+            assert progress_spy.count() > 0
         else:
             # Error case - verify proper error handling
-            assert len(operation_spy) == 1
-            success, message = operation_spy[0]
+            assert operation_spy.count() == 1
+            success, message = operation_spy.at(0)
             assert success is False
             assert "failed" in message.lower()
 
@@ -223,14 +223,14 @@ class TestVRAMExtractionWorker:
         worker.perform_operation()
         
         # Verify real error handling
-        assert len(error_spy) == 1
-        error_message = error_spy[0][0]
+        assert error_spy.count() == 1
+        error_message = error_spy.at(0)[0]
         assert "VRAM extraction failed" in error_message
-        assert isinstance(error_spy[0][1], Exception)
+        assert isinstance(error_spy.at(0)[1], Exception)
         
         # Verify operation finished with failure
-        assert len(operation_spy) == 1
-        success, message = operation_spy[0]
+        assert operation_spy.count() == 1
+        success, message = operation_spy.at(0)
         assert success is False
         assert "failed" in message.lower()
 
@@ -351,7 +351,7 @@ class TestROMExtractionWorker:
         worker.manager.extraction_progress.emit("ROM extraction progress: 75%")
         
         # Verify signal connection works (exact behavior depends on conversion logic)
-        assert len(progress_spy) >= 0
+        assert progress_spy.count() >= 0
         
         # Clean up
         worker.disconnect_manager_signals()
@@ -378,20 +378,20 @@ class TestROMExtractionWorker:
         worker.perform_operation()
         
         # Check results
-        if len(error_spy) == 0:
+        if error_spy.count() == 0:
             # Success case
-            assert len(extraction_spy) == 1
-            output_files = extraction_spy[0][0]
+            assert extraction_spy.count() == 1
+            output_files = extraction_spy.at(0)[0]
             assert isinstance(output_files, list)
             
-            assert len(operation_spy) == 1
-            success, message = operation_spy[0]
+            assert operation_spy.count() == 1
+            success, message = operation_spy.at(0)
             assert success is True
             assert "extracted" in message.lower()
         else:
             # Error case (expected for minimal test ROM)
-            assert len(operation_spy) == 1
-            success, message = operation_spy[0]
+            assert operation_spy.count() == 1
+            success, message = operation_spy.at(0)
             assert success is False
 
     def test_rom_operation_error_handling_real(self, managers, tmp_path):
@@ -414,12 +414,12 @@ class TestROMExtractionWorker:
         worker.perform_operation()
         
         # Verify error handling
-        assert len(error_spy) == 1
-        error_message = error_spy[0][0]
+        assert error_spy.count() == 1
+        error_message = error_spy.at(0)[0]
         assert "ROM extraction failed" in error_message
         
-        assert len(operation_spy) == 1
-        success, message = operation_spy[0]
+        assert operation_spy.count() == 1
+        success, message = operation_spy.at(0)
         assert success is False
 
     def test_rom_operation_cancellation_real(self, managers, test_rom_files):

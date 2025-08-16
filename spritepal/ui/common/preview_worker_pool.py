@@ -44,6 +44,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
         self._current_request_id = 0
         self._cancel_requested = threading.Event()
         self._is_processing = False
+        self._signals_connected = False
 
     def setup_request(self, request, extractor, rom_cache=None) -> None:
         """Setup worker for new request with optional ROM cache."""

@@ -47,14 +47,15 @@ def inspect_gallery_tab():
         print(f"  {i+1}. {type(child).__name__}: {child.objectName() or '(unnamed)'}")
 
     # Check layout
-    if gallery_tab.layout():
-        print(f"Layout type: {type(gallery_tab.layout()).__name__}")
-        print(f"Layout item count: {gallery_tab.layout().count()}")
+    layout = gallery_tab.layout()
+    if layout:
+        print(f"Layout type: {type(layout).__name__}")
+        print(f"Layout item count: {layout.count()}")
 
         # Show items in layout
-        for i in range(min(5, gallery_tab.layout().count())):
-            item = gallery_tab.layout().itemAt(i)
-            if item.widget():
+        for i in range(min(5, layout.count())):
+            item = layout.itemAt(i)
+            if item and item.widget():
                 widget = item.widget()
                 print(f"  Layout item {i}: {type(widget).__name__} - {widget.objectName() or '(unnamed)'}")
 

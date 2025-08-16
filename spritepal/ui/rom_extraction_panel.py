@@ -199,7 +199,8 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         with cls._lock:
             if cls._instance is not None:
                 # Schedule deletion on main thread
-                cls.safe_qt_call(lambda: cls._instance.deleteLater())
+                instance = cls._instance  # Capture reference to avoid race condition
+                cls.safe_qt_call(lambda: instance.deleteLater() if instance else None)
                 cls._cleanup_instance(cls._instance)
                 cls._instance = None  # Clear the instance reference
 
@@ -231,7 +232,8 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             return False
 
         # Use safe Qt call to check visibility
-        is_visible = cls.safe_qt_call(lambda: cls._instance.isVisible())
+        instance = cls._instance  # Capture reference to avoid race condition
+        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)
         return is_visible is True  # Handle None return from safe_qt_call
 
     @classmethod
@@ -241,7 +243,8 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             return None
 
         # Check if dialog is visible using thread-safe method
-        is_visible = cls.safe_qt_call(lambda: cls._instance.isVisible())
+        instance = cls._instance  # Capture reference to avoid race condition
+        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)
         return cls._instance if is_visible else None
 
 
@@ -854,7 +857,7 @@ class ROMExtractionPanel(QWidget):
     def _on_similarity_finished(self, success: bool, message: str):
         """Handle similarity indexing completion"""
         if success:
-            indexed_count = self.similarity_indexing_worker.get_indexed_count()
+            indexed_count = self.similarity_indexing_worker.get_indexed_count() if self.similarity_indexing_worker else 0
             if self.similarity_status:
                 self.similarity_status.setText(f"Similarity index ready ({indexed_count} sprites)")
             logger.info(f"Similarity indexing complete: {message}")
@@ -1234,24 +1237,25 @@ class ROMExtractionPanel(QWidget):
             dialog: The scan dialog
             context: Scan context for sharing data
         """
-        self.scan_worker.progress_detailed.connect(
-            lambda c, t: self._on_scan_progress(dialog, c, t)
-        )
-        self.scan_worker.sprite_found.connect(
-            lambda info: self._on_sprite_found(dialog, context, info)
-        )
-        self.scan_worker.finished.connect(
-            lambda: self._on_scan_complete(dialog, context)
-        )
-        self.scan_worker.cache_status.connect(
-            lambda status: self._on_cache_status(dialog, status)
-        )
-        self.scan_worker.cache_progress.connect(
-            lambda progress: self._on_cache_progress(dialog, progress)
-        )
+        if self.scan_worker:
+            self.scan_worker.progress_detailed.connect(
+                lambda c, t: self._on_scan_progress(dialog, c, t)
+            )
+            self.scan_worker.sprite_found.connect(
+                lambda info: self._on_sprite_found(dialog, context, info)
+            )
+            self.scan_worker.finished.connect(
+                lambda: self._on_scan_complete(dialog, context)
+            )
+            self.scan_worker.cache_status.connect(
+                lambda status: self._on_cache_status(dialog, status)
+            )
+            self.scan_worker.cache_progress.connect(
+                lambda progress: self._on_cache_progress(dialog, progress)
+            )
 
         # Connect to similarity indexing if available
-        if self.similarity_indexing_worker is not None:
+        if self.similarity_indexing_worker is not None and self.scan_worker:
             self.scan_worker.sprite_found.connect(self.similarity_indexing_worker.on_sprite_found)
             self.scan_worker.finished.connect(self.similarity_indexing_worker.on_scan_finished)
 

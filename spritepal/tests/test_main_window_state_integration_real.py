@@ -243,24 +243,24 @@ class TestRealMainWindowStateIntegration:
             self.qt_app.processEvents()
 
             # Debug signal capture
-            print(f"Editor spy captured {len(editor_spy)} signals")
+            print(f"Editor spy captured {editor_spy.count()} signals")
 
             # Now the real signal should be emitted (button enabled AND _output_path set)
-            assert len(editor_spy) == 1, "REAL BUG FIXED: Signal should be emitted when both button enabled and _output_path set"
+            assert editor_spy.count() == 1, "REAL BUG FIXED: Signal should be emitted when both button enabled and _output_path set"
 
             # Validate signal args contain real file path
-            editor_signal_args = editor_spy[0]
+            editor_signal_args = editor_spy.at(0)
             assert len(editor_signal_args) == 1, "Signal should have one argument"
             assert "signal_test_sprites.png" in str(editor_signal_args[0]), "Signal should contain real file path"
 
             # Test other real button signals
             QTest.mouseClick(main_window.arrange_rows_button, Qt.MouseButton.LeftButton)
             self.qt_app.processEvents()
-            assert len(rows_spy) == 1, "Arrange rows signal should be emitted"
+            assert rows_spy.count() == 1, "Arrange rows signal should be emitted"
 
             QTest.mouseClick(main_window.arrange_grid_button, Qt.MouseButton.LeftButton)
             self.qt_app.processEvents()
-            assert len(grid_spy) == 1, "Grid arrange signal should be emitted"
+            assert grid_spy.count() == 1, "Grid arrange signal should be emitted"
 
     def test_real_extraction_parameter_gathering_vs_mocked(self):
         """
@@ -548,7 +548,7 @@ class TestBugDiscoveryRealVsMocked:
             QTest.mouseClick(main_window.open_editor_button, Qt.MouseButton.LeftButton)
             self.qt_app.processEvents()
 
-            assert len(editor_spy) == 1, "REAL BUG: Signal should be connected and working"
+            assert editor_spy.count() == 1, "REAL BUG: Signal should be connected and working"
 
     def test_discovered_bug_widget_state_synchronization(self):
         """
@@ -610,7 +610,7 @@ class TestBugDiscoveryRealVsMocked:
             self.qt_app.processEvents()
 
             # FIXED: Button is enabled and signal is properly emitted!
-            assert len(signal_spy) == 1, "FIXED: Signal emitted when button clicked with proper _output_path"
+            assert signal_spy.count() == 1, "FIXED: Signal emitted when button clicked with proper _output_path"
 
             # This demonstrates the architectural bug: UI state (button enabled)
             # is inconsistent with logic state (_output_path empty)

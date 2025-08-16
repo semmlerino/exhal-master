@@ -133,7 +133,7 @@ class PaletteManager:
             }
 
         # Save file
-        with Path(output_path).Path("w").open() as f:
+        with Path(output_path).open("w") as f:
             json.dump(palette_data, f, indent=2)
 
         return output_path
@@ -200,7 +200,7 @@ class PaletteManager:
 
         # Save metadata file
         metadata_path = f"{output_base}.metadata.json"
-        with Path(metadata_path).Path("w").open() as f:
+        with Path(metadata_path).open("w") as f:
             json.dump(metadata, f, indent=2)
 
         return metadata_path

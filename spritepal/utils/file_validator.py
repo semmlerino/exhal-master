@@ -9,6 +9,7 @@ file type support.
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import ClassVar
 
 from utils.constants import (
     CGRAM_PATTERNS,
@@ -468,16 +469,16 @@ class FileValidator:
     """
 
     # File extensions
-    VRAM_EXTENSIONS = {".dmp", ".bin", ".vram"}
-    CGRAM_EXTENSIONS = {".dmp", ".bin", ".cgram", ".pal"}
-    OAM_EXTENSIONS = {".dmp", ".bin", ".oam"}
-    ROM_EXTENSIONS = {".smc", ".sfc", ".bin"}
-    IMAGE_EXTENSIONS = {".png"}
-    JSON_EXTENSIONS = {".json"}
+    VRAM_EXTENSIONS: ClassVar[set[str]] = {".dmp", ".bin", ".vram"}
+    CGRAM_EXTENSIONS: ClassVar[set[str]] = {".dmp", ".bin", ".cgram", ".pal"}
+    OAM_EXTENSIONS: ClassVar[set[str]] = {".dmp", ".bin", ".oam"}
+    ROM_EXTENSIONS: ClassVar[set[str]] = {".smc", ".sfc", ".bin"}
+    IMAGE_EXTENSIONS: ClassVar[set[str]] = {".png"}
+    JSON_EXTENSIONS: ClassVar[set[str]] = {".json"}
 
     # File size limits (for backward compatibility)
-    IMAGE_MAX_SIZE = 10 * 1024 * 1024  # 10MB maximum
-    JSON_MAX_SIZE = 1 * 1024 * 1024  # 1MB maximum
+    IMAGE_MAX_SIZE: ClassVar[int] = 10 * 1024 * 1024  # 10MB maximum
+    JSON_MAX_SIZE: ClassVar[int] = 1 * 1024 * 1024  # 1MB maximum
 
     def __init__(self):
         """Initialize the facade with validator components."""

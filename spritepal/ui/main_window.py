@@ -300,7 +300,8 @@ class MainWindow(QMainWindow):
     def show_cache_manager(self) -> None:
         """Show the cache manager dialog"""
         dialog = SettingsDialog(self)
-        dialog.tab_widget.setCurrentIndex(1)  # Switch to cache tab
+        if dialog.tab_widget:
+            dialog.tab_widget.setCurrentIndex(1)  # Switch to cache tab
         dialog.settings_changed.connect(self._on_settings_changed)
         dialog.cache_cleared.connect(self._on_cache_cleared)
         dialog.exec()

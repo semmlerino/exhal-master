@@ -134,11 +134,11 @@ class TestVRAMExtractionWorker:
 
             # Verify signals were emitted with PIL image objects directly
             # (No QPixmap conversion should happen in worker thread)
-            assert len(preview_spy) == 1
-            assert preview_spy[0] == [mock_image, tile_count]
+            assert preview_spy.count() == 1
+            assert preview_spy.at(0) == [mock_image, tile_count]
 
-            assert len(preview_image_spy) == 1
-            assert preview_image_spy[0] == [mock_image]
+            assert preview_image_spy.count() == 1
+            assert preview_image_spy.at(0) == [mock_image]
 
     def test_vram_successful_operation(self, qtbot):
         """Test successful VRAM extraction operation."""
@@ -176,11 +176,11 @@ class TestVRAMExtractionWorker:
             )
 
             # Verify completion signals
-            assert len(extraction_spy) == 1
-            assert extraction_spy[0] == [["file1.png", "file2.pal.json"]]
+            assert extraction_spy.count() == 1
+            assert extraction_spy.at(0) == [["file1.png", "file2.pal.json"]]
 
-            assert len(operation_spy) == 1
-            assert operation_spy[0] == [True, "Successfully extracted 2 files"]
+            assert operation_spy.count() == 1
+            assert operation_spy.at(0) == [True, "Successfully extracted 2 files"]
 
     def test_vram_operation_error_handling(self, qtbot):
         """Test VRAM extraction error handling."""
@@ -205,13 +205,13 @@ class TestVRAMExtractionWorker:
             worker.perform_operation()
 
             # Verify error handling
-            assert len(error_spy) == 1
-            assert "VRAM extraction failed: Test extraction error" in error_spy[0][0]
-            assert isinstance(error_spy[0][1], Exception)
+            assert error_spy.count() == 1
+            assert "VRAM extraction failed: Test extraction error" in error_spy.at(0)[0]
+            assert isinstance(error_spy.at(0)[1], Exception)
 
-            assert len(operation_spy) == 1
-            assert operation_spy[0][0] is False  # Success = False
-            assert "VRAM extraction failed: Test extraction error" in operation_spy[0][1]
+            assert operation_spy.count() == 1
+            assert operation_spy.at(0)[0] is False  # Success = False
+            assert "VRAM extraction failed: Test extraction error" in operation_spy.at(0)[1]
 
     def test_vram_worker_with_manager_signals(self, qtbot):
         """Test VRAM worker with manager signals using proper mocking."""
@@ -256,11 +256,11 @@ class TestVRAMExtractionWorker:
             mock_manager.extract_vram_sprites.assert_called_once_with(params)
             
             # Verify signals emitted
-            assert len(operation_spy) == 1
-            assert operation_spy[0] == [True, "VRAM extraction completed successfully"]
+            assert operation_spy.count() == 1
+            assert operation_spy.at(0) == [True, "VRAM extraction completed successfully"]
             
-            assert len(extraction_spy) == 1
-            assert extraction_spy[0] == [["output1.png", "output2.png"]]
+            assert extraction_spy.count() == 1
+            assert extraction_spy.at(0) == [["output1.png", "output2.png"]]
             
             # Test disconnection
             worker.disconnect_manager_signals()
@@ -358,11 +358,11 @@ class TestROMExtractionWorker:
             )
 
             # Verify completion signals
-            assert len(extraction_spy) == 1
-            assert extraction_spy[0] == [["sprite.png", "sprite.pal.json"]]
+            assert extraction_spy.count() == 1
+            assert extraction_spy.at(0) == [["sprite.png", "sprite.pal.json"]]
 
-            assert len(operation_spy) == 1
-            assert operation_spy[0] == [True, "Successfully extracted 2 files"]
+            assert operation_spy.count() == 1
+            assert operation_spy.at(0) == [True, "Successfully extracted 2 files"]
 
     def test_rom_operation_error_handling(self, qtbot):
         """Test ROM extraction error handling."""
@@ -389,13 +389,13 @@ class TestROMExtractionWorker:
             worker.perform_operation()
 
             # Verify error handling
-            assert len(error_spy) == 1
-            assert "ROM extraction failed: ROM file not found" in error_spy[0][0]
-            assert isinstance(error_spy[0][1], Exception)
+            assert error_spy.count() == 1
+            assert "ROM extraction failed: ROM file not found" in error_spy.at(0)[0]
+            assert isinstance(error_spy.at(0)[1], Exception)
 
-            assert len(operation_spy) == 1
-            assert operation_spy[0][0] is False  # Success = False
-            assert "ROM extraction failed: ROM file not found" in operation_spy[0][1]
+            assert operation_spy.count() == 1
+            assert operation_spy.at(0)[0] is False  # Success = False
+            assert "ROM extraction failed: ROM file not found" in operation_spy.at(0)[1]
 
     def test_rom_operation_cancellation(self, qtbot):
         """Test ROM extraction cancellation handling."""

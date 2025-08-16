@@ -140,7 +140,8 @@ class PaletteColorizer(QObject):
                         pixels[x, y] = (0, 0, 0, 0)
                     elif palette_index < len(palette_colors):
                         # Get RGB color from palette
-                        r, g, b = palette_colors[palette_index]
+                        color_tuple = palette_colors[palette_index]
+                        r, g, b = color_tuple
                         pixels[x, y] = (r, g, b, 255)
                     else:
                         # Use black for out of range indices

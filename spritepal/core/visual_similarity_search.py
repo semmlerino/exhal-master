@@ -277,7 +277,7 @@ class VisualSimilarityEngine:
             "index_built": self.index_built
         }
 
-        with Path(path).Path("wb").open() as f:
+        with Path(path).open("wb") as f:
             pickle.dump(export_data, f)
 
         logger.info(f"Exported similarity index to {path}")

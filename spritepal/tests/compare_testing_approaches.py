@@ -260,7 +260,7 @@ def main():
 
         # Save results to file
         output_file = Path("qt_testing_comparison_results.txt")
-        with open(output_file, "w") as f:
+        with Path(output_file).open("w") as f:
             f.write("Qt Testing Approach Comparison Results\n")
             f.write("=" * 70 + "\n\n")
 

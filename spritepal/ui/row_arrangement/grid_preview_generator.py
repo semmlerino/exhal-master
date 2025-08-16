@@ -2,7 +2,7 @@
 Grid-based preview generation for flexible sprite arrangements
 """
 
-import os
+from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw
@@ -297,7 +297,7 @@ class GridPreviewGenerator(PreviewGenerator):
         Returns:
             Path to exported file
         """
-        base_name = os.path.splitext(sprite_path)[0]
+        base_name = Path(sprite_path).stem
         output_path = f"{base_name}_{arrangement_type}_arranged.png"
 
         arranged_image.save(output_path)

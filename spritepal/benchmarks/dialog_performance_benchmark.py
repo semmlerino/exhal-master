@@ -54,8 +54,10 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Local imports (after sys.path setup)
-from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
-from ui.components.base.dialog_base import DialogBase
+from ui.components.base.composed.migration_adapter import (
+    DialogBaseMigrationAdapter,
+)
+from ui.components.base.dialog_base import DialogBase  # noqa: E402
 
 
 # Performance thresholds
@@ -794,7 +796,7 @@ def main():
     if "DISPLAY" not in os.environ and sys.platform.startswith("linux"):
         print("⚠️  No display found. Setting up virtual display...")
         try:
-            from pyvirtualdisplay import Display
+            from pyvirtualdisplay import Display  # noqa: PLC0415
             display = Display(visible=0, size=(800, 600))
             display.start()
         except ImportError:
@@ -808,7 +810,7 @@ def main():
         app = QApplication(sys.argv)
 
     # Set up application for benchmarking
-    app.setQuitOnLastWindowClosed(False)
+    cast(QApplication, app).setQuitOnLastWindowClosed(False)
 
     try:
         # Run benchmarks with different iteration counts for testing

@@ -54,12 +54,13 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
         self.gallery_tab = None
         gallery_index = -1
 
-        for i in range(self.tab_widget.count()):
-            tab = self.tab_widget.widget(i)
-            if isinstance(tab, SpriteGalleryTab):
-                self.gallery_tab = tab
-                gallery_index = i
-                break
+        if self.tab_widget:
+            for i in range(self.tab_widget.count()):
+                tab = self.tab_widget.widget(i)
+                if isinstance(tab, SpriteGalleryTab):
+                    self.gallery_tab = tab
+                    gallery_index = i
+                    break
 
         if gallery_index >= 0:
             if self.tab_widget:
@@ -92,9 +93,13 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
 
     def populate_gallery_with_sprites(self):
         """Add realistic-looking sprite thumbnails."""
+        if not self.gallery_tab:
+            return
+
         sprites = create_visual_sprites(25)
         self.gallery_tab.sprites_data = sprites
-        self.gallery_tab.gallery_widget.set_sprites(sprites)
+        if self.gallery_tab.gallery_widget:
+            self.gallery_tab.gallery_widget.set_sprites(sprites)
 
         # Generate colorful thumbnails
         for i, sprite in enumerate(sprites):
@@ -124,12 +129,12 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
                                    tile_size - 1, tile_size - 1, color)
 
             # Draw sprite info overlay
-            painter.setPen(QPen(Qt.white, 2))
+            painter.setPen(QPen(Qt.GlobalColor.white, 2))
             painter.fillRect(0, 100, 128, 28, QColor(0, 0, 0, 180))
 
             font = QFont("Arial", 10)
             painter.setFont(font)
-            painter.setPen(Qt.white)
+            painter.setPen(Qt.GlobalColor.white)
             painter.drawText(5, 120, f"Sprite #{i+1:02d}")
 
             # Add a HAL compression indicator for some sprites
@@ -141,14 +146,16 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
             painter.end()
 
             # Set the thumbnail
-            if offset in self.gallery_tab.gallery_widget.thumbnails:
-                thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
-                thumbnail.set_sprite_data(pixmap, sprite)
+            if self.gallery_tab and self.gallery_tab.gallery_widget:
+                if offset in self.gallery_tab.gallery_widget.thumbnails:
+                    thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
+                    thumbnail.set_sprite_data(pixmap, sprite)
 
         # Update status
-        self.gallery_tab.info_label.setText(
-            f"Found {len(sprites)} sprites in Kirby_Super_Star.smc"
-        )
+        if self.gallery_tab and self.gallery_tab.info_label:
+            self.gallery_tab.info_label.setText(
+                f"Found {len(sprites)} sprites in Kirby_Super_Star.smc"
+            )
 
     def capture_normal(self):
         """Capture normal window state."""
@@ -169,10 +176,14 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
         """Capture with more sprites to show scrolling."""
         print("\n📸 Capturing with scrollable content...")
 
+        if not self.gallery_tab:
+            return
+
         # Add more sprites
         sprites = create_visual_sprites(60)
         self.gallery_tab.sprites_data = sprites
-        self.gallery_tab.gallery_widget.set_sprites(sprites)
+        if self.gallery_tab.gallery_widget:
+            self.gallery_tab.gallery_widget.set_sprites(sprites)
 
         # Regenerate thumbnails for new sprites
         for i, sprite in enumerate(sprites):
@@ -186,19 +197,21 @@ class ScreenshotDialog(UnifiedManualOffsetDialog):
             painter.fillRect(0, 0, 128, 128, color)
 
             # Draw number
-            painter.setPen(Qt.white)
-            painter.setFont(QFont("Arial", 24, QFont.Bold))
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, str(i + 1))
+            painter.setPen(Qt.GlobalColor.white)
+            painter.setFont(QFont("Arial", 24, QFont.Weight.Bold))
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, str(i + 1))
 
             painter.end()
 
-            if offset in self.gallery_tab.gallery_widget.thumbnails:
-                thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
-                thumbnail.set_sprite_data(pixmap, sprite)
+            if self.gallery_tab and self.gallery_tab.gallery_widget:
+                if offset in self.gallery_tab.gallery_widget.thumbnails:
+                    thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
+                    thumbnail.set_sprite_data(pixmap, sprite)
 
-        self.gallery_tab.info_label.setText(
-            f"Found {len(sprites)} sprites in Kirby_Super_Star.smc (scrollable)"
-        )
+        if self.gallery_tab and self.gallery_tab.info_label:
+            self.gallery_tab.info_label.setText(
+                f"Found {len(sprites)} sprites in Kirby_Super_Star.smc (scrollable)"
+            )
 
         QApplication.processEvents()
         QTimer.singleShot(50, lambda: self.take_screenshot("scrollable",

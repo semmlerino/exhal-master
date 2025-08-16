@@ -73,7 +73,7 @@ def audit_file(file_path: Path) -> list[tuple[int, str, str, str]]:
     issues = []
 
     try:
-        with open(file_path, encoding="utf-8") as f:
+        with Path(file_path).open(encoding="utf-8") as f:
             lines = f.readlines()
     except Exception as e:
         print(f"Error reading {file_path}: {e}")

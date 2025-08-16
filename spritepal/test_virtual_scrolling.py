@@ -51,9 +51,9 @@ def create_test_thumbnail(offset: int) -> QPixmap:
     painter.fillRect(10, 10, 108, 108, gradient_color)
     
     # Draw offset text
-    painter.setPen(Qt.white)
-    painter.setFont(QFont("Arial", 10, QFont.Bold))
-    painter.drawText(pixmap.rect(), Qt.AlignCenter, f"0x{offset:06X}")
+    painter.setPen(Qt.GlobalColor.white)
+    painter.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, f"0x{offset:06X}")
     
     painter.end()
     

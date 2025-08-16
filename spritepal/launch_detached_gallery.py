@@ -223,8 +223,9 @@ class StandaloneGalleryLauncher:
         self.create_gallery_window()
 
         # Show the window
-        self.gallery_window.show()
-        self.gallery_window.resize(1200, 800)  # Nice initial size
+        if self.gallery_window:
+            self.gallery_window.show()
+            self.gallery_window.resize(1200, 800)  # Nice initial size
 
         # Welcome message removed - direct to functionality
 

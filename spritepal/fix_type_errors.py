@@ -98,7 +98,7 @@ def fix_optional_member_access(content: str) -> str:
 
 def fix_qt_constants(content: str) -> str:
     """Fix Qt constant access issues."""
-    # Fix Qt.UserRole to Qt.ItemDataRole.UserRole
+    # Fix Qt.ItemDataRole.UserRole to Qt.ItemDataRole.UserRole
     content = re.sub(
         r'Qt\.UserRole',
         r'Qt.ItemDataRole.UserRole',

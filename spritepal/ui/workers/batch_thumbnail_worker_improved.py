@@ -4,6 +4,7 @@ This demonstrates the correct Qt threading architecture.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from queue import PriorityQueue
 from typing import Optional
 
@@ -271,7 +272,7 @@ class BatchThumbnailWorker(QObject):
     def _load_rom_data(self):
         """Load ROM data into memory."""
         try:
-            with open(self.rom_path, 'rb') as f:
+            with Path(self.rom_path).open('rb') as f:
                 self._rom_data = f.read()
             logger.info(f"Loaded ROM data: {len(self._rom_data)} bytes")
         except Exception as e:

@@ -413,7 +413,7 @@ class SimpleBrowseTab(QWidget):
         Returns:
             Current step size value
         """
-        return self.step_spinbox
+        return self.step_spinbox.value()
 
     def set_rom_size(self, size: int) -> None:
         """

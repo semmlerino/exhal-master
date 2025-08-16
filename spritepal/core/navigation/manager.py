@@ -241,6 +241,10 @@ class NavigationManager(BaseManager):
             all_hints = []
 
             for strategy in active_strategies:
+                if strategy is None:
+                    logger.warning("Skipping None strategy in active_strategies")
+                    continue
+
                 try:
                     strategy_hints = strategy.find_next_sprites(
                         self._navigation_context,

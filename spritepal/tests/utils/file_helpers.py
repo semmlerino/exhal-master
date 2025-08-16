@@ -91,7 +91,7 @@ def create_test_files(
             )
 
             filename = base_path_obj / "test_palette.pal.json"
-            with open(filename, "w") as f:
+            with Path(filename).open("w") as f:
                 json.dump(palettes[0], f)  # Save first palette
 
             file_paths[file_type] = str(filename)
@@ -114,7 +114,7 @@ def create_test_files(
             }
 
             filename = base_path_obj / "test_sprite.metadata.json"
-            with open(filename, "w") as f:
+            with Path(filename).open("w") as f:
                 json.dump(metadata, f, indent=2)
 
             file_paths[file_type] = str(filename)
@@ -124,7 +124,7 @@ def create_test_files(
             raise ValueError(f"Unknown file type: {file_type}")
 
         # Write binary data files
-        with open(filename, "wb") as f:
+        with Path(filename).open("wb") as f:
             f.write(data)
 
         file_paths[file_type] = str(filename)

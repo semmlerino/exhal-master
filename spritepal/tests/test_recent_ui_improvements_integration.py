@@ -527,9 +527,9 @@ class TestCompleteUserWorkflowIntegration:
                     qtbot.wait(200)
                     
                     # Step 8: Verify workflow completed successfully
-                    assert len(offset_spy) > 0, "Offset change should emit signal"
+                    assert offset_spy.count() > 0, "Offset change should emit signal"
                     
-                    final_offset = offset_spy[-1][0] if len(offset_spy) > 0 else None
+                    final_offset = offset_spy.at(offset_spy.count() - 1)[0] if offset_spy.count() > 0 else None
                     assert final_offset == test_offset, f"Final offset should be {test_offset}"
                 
                 # Step 9: Test dialog can be closed properly

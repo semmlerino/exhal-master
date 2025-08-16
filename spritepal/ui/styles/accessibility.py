@@ -3,6 +3,7 @@ Global accessibility styles for SpritePal application.
 Provides consistent focus indicators, keyboard navigation hints, and WCAG 2.1 compliance.
 """
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 
@@ -243,12 +244,23 @@ def apply_global_accessibility_styles() -> None:
     app.setStyleSheet(current_style + global_style)
 
     # Set application-wide attributes for better accessibility
-    app.setEffectEnabled(app.UI_AnimateCombo, False)  # Disable animations that can be distracting
-    app.setEffectEnabled(app.UI_AnimateTooltip, False)
+    # Note: UI animation effects are controlled by Qt's UIEffect enum
+    try:
+        # These are Qt5/Qt6 specific - may not be available in all versions
+        app.setEffectEnabled(Qt.UIEffect.UI_AnimateCombo, False)  # Disable animations that can be distracting
+        app.setEffectEnabled(Qt.UIEffect.UI_AnimateTooltip, False)
+    except (AttributeError, TypeError):
+        # UIEffect may not be available in this Qt version
+        pass
 
     # Ensure high DPI support for better readability
-    app.setAttribute(app.AA_UseHighDpiPixmaps, True)
-    app.setAttribute(app.AA_EnableHighDpiScaling, True)
+    try:
+        # These attributes may vary between Qt versions
+        app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+        app.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
+    except (AttributeError, TypeError):
+        # Some attributes may not be available in this Qt version
+        pass
 
 
 def configure_accessibility_settings() -> None:
@@ -258,21 +270,28 @@ def configure_accessibility_settings() -> None:
         return
 
     # Set default font size for better readability
-
     font = app.font()
     if font.pointSize() < 10:
         font.setPointSize(10)
         app.setFont(font)
 
-    # Ensure keyboard navigation is enabled
-    app.setNavigationMode(app.NavigationModeKeypadTabOrder)
+    # Note: setNavigationMode is not available in Qt6/PySide6
+    # Keyboard navigation is enabled by default in modern Qt
 
     # Set double-click interval for users with motor impairments
-    app.setDoubleClickInterval(600)  # 600ms instead of default 400ms
+    try:
+        app.setDoubleClickInterval(600)  # 600ms instead of default 400ms
+    except AttributeError:
+        # This method might not be available in all Qt versions
+        pass
 
-    # Enable tooltips by default
-    from PySide6.QtCore import Qt
-    app.setAttribute(Qt.AA_DisableWindowContextHelpButton, False)
+    # Set additional accessibility attributes if available
+    try:
+        # Disable context help button which can be confusing
+        app.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton, False)
+    except (AttributeError, TypeError):
+        # Attribute may not be available in this Qt version
+        pass
 
 
 def initialize_accessibility() -> None:

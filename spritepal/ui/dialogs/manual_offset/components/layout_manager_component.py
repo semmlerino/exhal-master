@@ -17,7 +17,7 @@ from utils.logging_config import get_logger
 from .enhanced_layout_component import EnhancedLayoutComponent
 
 if TYPE_CHECKING:
-    from spritepal.ui.dialogs.manual_offset.core.manual_offset_dialog_core import (
+    from ui.dialogs.manual_offset.core.manual_offset_dialog_core import (
         ManualOffsetDialogCore,
     )
 
@@ -80,7 +80,7 @@ class LayoutManagerComponent:
         if self._enhanced_layout:
             # Enhanced layout applies modern design
             self._enhanced_layout.create_enhanced_layout()
-        else:
+        elif self._layout_manager:
             self._layout_manager.fix_empty_space_issue()
 
     def on_dialog_show(self) -> None:
@@ -88,7 +88,7 @@ class LayoutManagerComponent:
         if self._enhanced_layout:
             # Apply enhanced sizing when dialog is shown
             self._enhanced_layout._apply_enhanced_sizing()
-        else:
+        elif self._layout_manager:
             self._layout_manager.on_dialog_show()
 
     def handle_resize(self, width: int) -> None:
@@ -96,7 +96,7 @@ class LayoutManagerComponent:
         if self._enhanced_layout:
             # Enhanced responsive resize handling
             self._enhanced_layout.handle_dialog_resize(width, self.dialog.height())
-        else:
+        elif self._layout_manager:
             self._layout_manager.handle_resize(width)
 
     def update_for_tab(self, tab_index: int, dialog_width: int = 0) -> None:
@@ -104,7 +104,7 @@ class LayoutManagerComponent:
         if self._enhanced_layout:
             # Enhanced tab-specific proportions
             self._enhanced_layout.update_for_tab(tab_index)
-        else:
+        elif self._layout_manager:
             self._layout_manager.update_for_tab(tab_index, dialog_width or self.dialog.width())
 
     def create_section_header(self, title: str, subtitle: str = "") -> QWidget:
@@ -138,7 +138,7 @@ class LayoutManagerComponent:
                     self._enhanced_layout.constants.PANEL_MARGINS,
                     self._enhanced_layout.constants.PANEL_MARGINS
                 )
-        else:
+        elif self._layout_manager:
             # Delegate to legacy layout manager
             self._layout_manager.apply_standard_layout(layout, spacing_type)
 
@@ -147,7 +147,7 @@ class LayoutManagerComponent:
         if self._enhanced_layout:
             # Enhanced layout handles stretches automatically
             pass
-        else:
+        elif self._layout_manager:
             # Delegate to legacy layout manager
             self._layout_manager.remove_all_stretches(layout)
 
@@ -157,7 +157,7 @@ class LayoutManagerComponent:
             # Use enhanced header creation
             return self._enhanced_layout.create_section_header(title, subtitle)
         # Delegate to legacy layout manager (only supports title, ignore subtitle)
-        return self._layout_manager.create_section_title(title)
+        return self._layout_manager.create_section_title(title) if self._layout_manager else None
 
     def cleanup(self) -> None:
         """Clean up layout manager resources."""

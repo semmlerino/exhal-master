@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 try:
     from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
-    from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+    from PySide6.QtWidgets import QApplication, QWidget
 
     from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 
@@ -49,18 +49,20 @@ class GalleryTestDialog(UnifiedManualOffsetDialog):
         self.setWindowTitle("Gallery Layout Test - Visual")
 
         # Switch to Gallery tab
-        for i in range(self.tab_widget.count()):
-            if self.tab_widget.tabText(i) == "Gallery":
-                self.tab_widget.setCurrentIndex(i)
-                break
+        if self.tab_widget:
+            for i in range(self.tab_widget.count()):
+                if self.tab_widget.tabText(i) == "Gallery":
+                    self.tab_widget.setCurrentIndex(i)
+                    break
 
         # Get the gallery tab
         self.gallery_tab = None
-        for i in range(self.tab_widget.count()):
-            tab = self.tab_widget.widget(i)
-            if isinstance(tab, SpriteGalleryTab):
-                self.gallery_tab = tab
-                break
+        if self.tab_widget:
+            for i in range(self.tab_widget.count()):
+                tab = self.tab_widget.widget(i)
+                if isinstance(tab, SpriteGalleryTab):
+                    self.gallery_tab = tab
+                    break
 
         if self.gallery_tab:
             # Set up mock data
@@ -85,9 +87,13 @@ class GalleryTestDialog(UnifiedManualOffsetDialog):
 
     def add_visual_sprites(self, count):
         """Add sprites with actual visual thumbnails."""
+        if not self.gallery_tab:
+            return
+
         sprites = create_mock_sprites(count)
         self.gallery_tab.sprites_data = sprites
-        self.gallery_tab.gallery_widget.set_sprites(sprites)
+        if self.gallery_tab.gallery_widget:
+            self.gallery_tab.gallery_widget.set_sprites(sprites)
 
         # Generate visual thumbnails for each sprite
         for i, sprite in enumerate(sprites):
@@ -105,17 +111,18 @@ class GalleryTestDialog(UnifiedManualOffsetDialog):
             painter.fillRect(10, 10, 108, 108, color)
 
             # Draw sprite number
-            painter.setPen(QPen(Qt.white, 2))
-            font = QFont("Arial", 20, QFont.Bold)
+            painter.setPen(QPen(Qt.GlobalColor.white, 2))
+            font = QFont("Arial", 20, QFont.Weight.Bold)
             painter.setFont(font)
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, f"#{i+1}")
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, f"#{i+1}")
 
             painter.end()
 
             # Set the pixmap on the thumbnail widget
-            if offset in self.gallery_tab.gallery_widget.thumbnails:
-                thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
-                thumbnail.set_sprite_data(pixmap, sprite)
+            if self.gallery_tab and self.gallery_tab.gallery_widget:
+                if offset in self.gallery_tab.gallery_widget.thumbnails:
+                    thumbnail = self.gallery_tab.gallery_widget.thumbnails[offset]
+                    thumbnail.set_sprite_data(pixmap, sprite)
 
     def capture_normal(self):
         """Capture normal window state."""

@@ -426,8 +426,8 @@ class TestButtonBoxFunctionality:
             qt_app.processEvents()
             
             # Should trigger accepted signal
-            assert len(accepted_spy) == 1
-            assert len(rejected_spy) == 0
+            assert accepted_spy.count() == 1
+            assert rejected_spy.count() == 0
             
             dialog.close()
             qt_app.processEvents()
@@ -612,8 +612,8 @@ class TestSignalSlotConnections:
             ok_button.click()
             qt_app.processEvents()
             
-            assert len(accepted_spy) == 1
-            assert len(rejected_spy) == 0
+            assert accepted_spy.count() == 1
+            assert rejected_spy.count() == 0
             
             # Reset and test Cancel button
             accepted_spy.clear()
@@ -623,8 +623,8 @@ class TestSignalSlotConnections:
             cancel_button.click()
             qt_app.processEvents()
             
-            assert len(accepted_spy) == 0
-            assert len(rejected_spy) == 1
+            assert accepted_spy.count() == 0
+            assert rejected_spy.count() == 1
             
             dialog.close()
             qt_app.processEvents()
@@ -647,8 +647,8 @@ class TestSignalSlotConnections:
             qt_app.processEvents()
             
             # Should have emitted signal
-            assert len(tab_spy) == 1
-            assert tab_spy[0][0] == 1  # New tab index
+            assert tab_spy.count() == 1
+            assert tab_spy.at(0)[0] == 1  # New tab index
             
             dialog.close()
             qt_app.processEvents()
@@ -666,8 +666,8 @@ class TestSignalSlotConnections:
             qt_app.processEvents()
             
             # Should have emitted finished signal
-            assert len(finished_spy) == 1
-            assert finished_spy[0][0] == QDialog.DialogCode.Accepted
+            assert finished_spy.count() == 1
+            assert finished_spy.at(0)[0] == QDialog.DialogCode.Accepted
             
             qt_app.processEvents()
 

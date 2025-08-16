@@ -2,7 +2,7 @@
 Preview generation for arranged sprite rows
 """
 
-import os
+from pathlib import Path
 from typing import Any
 
 from PIL import Image
@@ -127,7 +127,7 @@ class PreviewGenerator:
             Path to the exported file
         """
         # Generate output path
-        base_name = os.path.splitext(sprite_path)[0]
+        base_name = Path(sprite_path).stem
         output_path = f"{base_name}_arranged.png"
 
         # Save arranged image
@@ -147,5 +147,5 @@ class PreviewGenerator:
         Returns:
             Generated output filename
         """
-        base_name = os.path.splitext(sprite_path)[0]
+        base_name = Path(sprite_path).stem
         return f"{base_name}{suffix}.png"

@@ -204,8 +204,8 @@ class TestCompleteUIWorkflowsIntegration:
                     qtbot.wait(100)
                     
                     # Verify ROM loading signal (if available)
-                    if hasattr(main_window, 'rom_loaded') and len(rom_loaded_spy) > 0:
-                        assert len(rom_loaded_spy) == 1, "ROM loaded signal should be emitted"
+                    if hasattr(main_window, 'rom_loaded') and rom_loaded_spy.count() > 0:
+                        assert rom_loaded_spy.count() == 1, "ROM loaded signal should be emitted"
         
         # Step 6: Verify UI responsiveness
         original_size = main_window.size()
@@ -318,11 +318,11 @@ class TestCompleteUIWorkflowsIntegration:
                 qtbot.wait(50)
                 
                 assert slider.value() == test_offset, "Slider should accept direct value setting"
-                assert len(offset_changed_spy) > 0, "Offset changed signal should be emitted"
+                assert offset_changed_spy.count() > 0, "Offset changed signal should be emitted"
                 
                 # Verify signal contains correct value
-                if len(offset_changed_spy) > 0:
-                    last_signal_value = offset_changed_spy[-1][0]  # Get last emitted value
+                if offset_changed_spy.count() > 0:
+                    last_signal_value = offset_changed_spy.at(offset_changed_spy.count() - 1)[0]  # Get last emitted value
                     assert last_signal_value == test_offset, "Signal should contain correct offset value"
 
     @pytest.mark.gui
@@ -488,15 +488,15 @@ class TestCompleteUIWorkflowsIntegration:
         dialog.browse_slider.setValue(new_slider_value)
         qtbot.wait(50)
         
-        assert len(offset_changed_spy) > 0, "Offset changed signal should work on Browse tab"
+        assert offset_changed_spy.count() > 0, "Offset changed signal should work on Browse tab"
         
         # Step 5: Switch to Smart tab
         dialog.tab_widget.setCurrentIndex(1)
         qtbot.wait(50)
         
         assert dialog.tab_widget.currentIndex() == 1, "Should switch to Smart tab"
-        assert len(tab_changed_spy) > 0, "Tab changed signal should be emitted"
-        assert tab_changed_spy[-1][0] == 1, "Tab changed signal should indicate Smart tab"
+        assert tab_changed_spy.count() > 0, "Tab changed signal should be emitted"
+        assert tab_changed_spy.at(tab_changed_spy.count() - 1)[0] == 1, "Tab changed signal should indicate Smart tab"
         
         # Step 6: Verify Browse tab state is preserved
         dialog.tab_widget.setCurrentIndex(0)
@@ -512,8 +512,8 @@ class TestCompleteUIWorkflowsIntegration:
         dialog.browse_slider.setValue(final_slider_value)
         qtbot.wait(50)
         
-        assert len(offset_changed_spy) > 0, "Offset changed signal should still work after tab switching"
-        assert offset_changed_spy[-1][0] == final_slider_value, "Signal should contain correct value"
+        assert offset_changed_spy.count() > 0, "Offset changed signal should still work after tab switching"
+        assert offset_changed_spy.at(offset_changed_spy.count() - 1)[0] == final_slider_value, "Signal should contain correct value"
         
         # Step 8: Test Smart tab state preservation
         dialog.tab_widget.setCurrentIndex(1)

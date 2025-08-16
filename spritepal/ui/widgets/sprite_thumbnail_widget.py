@@ -5,7 +5,7 @@ Compact version of SpritePreviewWidget optimized for grid layouts.
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -132,8 +132,9 @@ class SpriteThumbnailWidget(QWidget):
 
         # Scale pixmap to fit thumbnail
         if pixmap and not pixmap.isNull():
+            label_size = self.thumbnail_label.size() if self.thumbnail_label else QSize(128, 128)
             scaled = pixmap.scaled(
-                self.thumbnail_label.size(),
+                label_size,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
@@ -145,7 +146,8 @@ class SpriteThumbnailWidget(QWidget):
 
     def _show_placeholder(self):
         """Show a placeholder when no sprite is loaded."""
-        placeholder = QPixmap(self.thumbnail_label.size())
+        label_size = self.thumbnail_label.size() if self.thumbnail_label else QSize(128, 128)
+        placeholder = QPixmap(label_size)
         placeholder.fill(QColor(35, 35, 35))
 
         painter = QPainter(placeholder)

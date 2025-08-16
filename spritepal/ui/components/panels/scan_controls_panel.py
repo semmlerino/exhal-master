@@ -6,6 +6,7 @@ pause/stop controls, and worker management.
 """
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -560,7 +561,7 @@ class ScanControlsPanel(QWidget):
                 cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
                 if cached_progress and not cached_progress.get("completed", False):
                     # Found incomplete cached scan - emit signal for parent to handle
-                    logger.info(f"Found cached partial scan for ROM: {os.path.basename(self.rom_path)}")
+                    logger.info(f"Found cached partial scan for ROM: {Path(self.rom_path).name}")
                     self._update_cache_status(f"Found cached scan with {len(cached_progress.get('found_sprites', []))} sprites")
                     self.partial_scan_detected.emit(cached_progress)
                     return

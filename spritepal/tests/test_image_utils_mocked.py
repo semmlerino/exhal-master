@@ -21,6 +21,7 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.unit,
     pytest.mark.ci_safe,
+    pytest.mark.no_manager_setup,  # Pure unit tests with mocked dependencies
 ]
 
 

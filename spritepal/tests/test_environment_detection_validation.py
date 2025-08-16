@@ -36,6 +36,7 @@ pytestmark = [
     pytest.mark.infrastructure,
     pytest.mark.validation,
     pytest.mark.ci_safe,
+    pytest.mark.no_manager_setup,  # Pure utility functions for environment detection
 ]
 
 
