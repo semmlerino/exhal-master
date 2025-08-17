@@ -2,7 +2,7 @@
 -- Features: On-screen HUD, hotkey controls, better file management, visual feedback
 
 emu.log("=== Enhanced Sprite Finder Starting ===")
-emu.log("Controls: 1=Start/Resume, 2=Pause, 3=Export, 4=Reset, 5=Toggle HUD")
+emu.log("Controls: 1=Start/Resume, 2=Pause, 3=Export, 4=Reset, 5=Toggle HUD, 6=Toggle Offsets")
 
 -- Configuration
 local config = {
@@ -13,6 +13,9 @@ local config = {
     hud_bg_color = 0x80000000,  -- Semi-transparent black
     hud_text_color = 0xFFFFFFFF, -- White
     highlight_sprites = true,
+    show_offsets = true,  -- Display ROM offsets next to sprites
+    offset_text_color = 0xFFFFFFFF,  -- White text for offsets
+    offset_bg_color = 0xC0000000,  -- Semi-transparent black background
     
     -- Colors for sprite highlighting
     color_captured = 0x8000FF00,   -- Green (captured)
@@ -25,6 +28,7 @@ local config = {
     key_export = "3",
     key_reset = "4",
     key_toggle_hud = "5",
+    key_toggle_offsets = "6",
     
     -- File settings
     use_timestamp = true,
@@ -352,8 +356,9 @@ local function draw_sprite_highlights()
     
     for _, sprite in ipairs(state.active_sprites) do
         local color = config.color_missing  -- Default red
+        local rom_offset = state.sprite_rom_map[sprite.id]
         
-        if state.sprite_rom_map[sprite.id] then
+        if rom_offset then
             color = config.color_captured  -- Green if captured
         elseif sprite.vram_addr then
             color = config.color_detected  -- Yellow if detected
@@ -364,6 +369,24 @@ local function draw_sprite_highlights()
             emu.drawRectangle(sprite.x, sprite.y, 
                 sprite.width or 8, sprite.height or 8, 
                 color, false)
+            
+            -- Draw ROM offset next to captured sprites
+            if config.show_offsets and rom_offset then
+                local offset_text = string.format("$%06X", rom_offset)
+                local text_x = sprite.x + (sprite.width or 8) + 2
+                local text_y = sprite.y
+                
+                -- Ensure text stays on screen
+                if text_x + 40 > 256 then
+                    text_x = sprite.x - 42
+                end
+                if text_x < 0 then
+                    text_x = 0
+                end
+                
+                emu.drawString(text_x, text_y, offset_text, 
+                    config.offset_text_color, config.offset_bg_color)
+            end
         end
     end
 end
@@ -531,6 +554,12 @@ local function handle_hotkeys()
         config.hud_enabled = not config.hud_enabled
         add_message(config.hud_enabled and "HUD ON" or "HUD OFF")
     end
+    
+    -- 6: Toggle Offset Display
+    if emu.isKeyPressed(config.key_toggle_offsets) then
+        config.show_offsets = not config.show_offsets
+        add_message(config.show_offsets and "Offsets ON" or "Offsets OFF")
+    end
 end
 
 -- Frame callback
@@ -584,7 +613,7 @@ function init()
     update_obsel()
     
     add_message("Enhanced Sprite Finder Ready!", 300)
-    add_message("1=Start 2=Pause 3=Export", 300)
+    add_message("1=Start 2=Pause 3=Export 6=Offsets", 300)
 end
 
 -- Start
