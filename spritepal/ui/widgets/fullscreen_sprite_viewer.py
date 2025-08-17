@@ -293,10 +293,10 @@ class FullscreenSpriteViewer(QWidget):
         """
         # Try to get from parent gallery if available
         if self.parent():
-            gallery_window = self.parent()
-            if (hasattr(gallery_window, 'gallery_widget') and
-                    gallery_window.gallery_widget):
-                gallery = gallery_window.gallery_widget
+            gallery_window = self.parent()  # type: ignore[assignment]
+            if (hasattr(gallery_window, "gallery_widget")  # type: ignore[arg-type] and
+                    gallery_window.gallery_widget)  # type: ignore[attr-defined]:
+                gallery = gallery_window.gallery_widget  # type: ignore[attr-defined]
 
                 # New API - check if gallery has get_sprite_pixmap method
                 if hasattr(gallery, 'get_sprite_pixmap'):
@@ -321,7 +321,7 @@ class FullscreenSpriteViewer(QWidget):
         """
         # Try to get screen based on parent window position
         if self.parent() and hasattr(self.parent(), 'geometry'):
-            parent_center = self.parent().geometry().center()
+            parent_center = self.parent().geometry().center()  # type: ignore[union-attr]
             logger.debug(f"Parent window center: {parent_center}")
 
             app = QApplication.instance()

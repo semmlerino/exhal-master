@@ -164,7 +164,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
             # Insert splitter before button box if it exists
             button_manager = self.get_component("button_box")
             if button_manager and hasattr(button_manager, "button_box"):
-                insert_index = self.main_layout.indexOf(button_manager.button_box)
+                insert_index = self.main_layout.indexOf(button_manager.button_box)  # type: ignore[attr-defined]
                 self.main_layout.insertWidget(insert_index, self.main_splitter)
             else:
                 self.main_layout.addWidget(self.main_splitter)
@@ -190,7 +190,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         # Map status_bar property
         status_manager = self.get_component("status_bar")
         if status_manager and hasattr(status_manager, "status_bar"):
-            self.status_bar = status_manager.status_bar
+            self.status_bar = status_manager.status_bar  # type: ignore[attr-defined]
             # Mock setStatusBar for dialogs (DialogBase compatibility)
             self.setStatusBar = lambda: self.status_bar
         else:
@@ -199,7 +199,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         # Map button_box property
         button_manager = self.get_component("button_box")
         if button_manager and hasattr(button_manager, "button_box"):
-            self.button_box = button_manager.button_box
+            self.button_box = button_manager.button_box  # type: ignore[attr-defined]
         else:
             self.button_box = None
 
@@ -408,7 +408,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         # If we have a button box manager, add to it
         button_manager = self.get_component("button_box")
         if button_manager and hasattr(button_manager, "add_button"):
-            button_manager.add_button(
+            button_manager.add_button(  # type: ignore[attr-defined]
                 button, QDialogButtonBox.ButtonRole.ActionRole
             )
 
@@ -423,7 +423,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         """
         status_manager = self.get_component("status_bar")
         if status_manager and hasattr(status_manager, "update_status"):
-            status_manager.update_status(message)
+            status_manager.update_status(message)  # type: ignore[attr-defined]
         elif hasattr(self, "status_bar") and self.status_bar:
             # Fallback to direct status bar access
             self.status_bar.showMessage(message)

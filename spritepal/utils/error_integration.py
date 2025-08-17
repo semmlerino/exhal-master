@@ -187,7 +187,7 @@ def file_operation_handler(
                         e, file_path, operation
                     )
                 else:
-                    result = error_handler.handle_error(
+                    result = error_handler.handle_error(  # type: ignore[attr-defined]
                         e, operation
                     )
 

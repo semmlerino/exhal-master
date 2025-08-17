@@ -94,7 +94,7 @@ class PreviewCache:
         """
         with self._lock:
             if key not in self._cache:
-                return None
+                return (b"", 0, 0, None)
 
             # Move to end (mark as recently used)
             entry = self._cache.pop(key)

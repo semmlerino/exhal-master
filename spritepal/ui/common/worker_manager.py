@@ -31,7 +31,8 @@ class WorkerManager:
 
     CRITICAL: Never uses QThread.terminate() which can corrupt Qt's internal state.
     Instead uses a multi-stage shutdown process:
-    1. Call worker.cancel() if available (BaseWorker pattern)
+    1. Call if hasattr(worker, "cancel"):
+     worker.cancel()  # type: ignore[attr-defined] if available (BaseWorker pattern)
     2. Use Qt's requestInterruption() mechanism
     3. Call quit() and wait() for clean shutdown
     4. Log warnings for unresponsive workers
@@ -47,7 +48,8 @@ class WorkerManager:
         Safely clean up a worker thread without using dangerous terminate().
 
         Uses a multi-stage approach:
-        1. Request cancellation via worker.cancel() if available
+        1. Request cancellation via if hasattr(worker, "cancel"):
+     worker.cancel()  # type: ignore[attr-defined] if available
         2. Use Qt's requestInterruption() mechanism
         3. Call quit() and wait() for clean shutdown
         4. Log warnings for unresponsive workers (never terminate)
@@ -74,11 +76,11 @@ class WorkerManager:
 
         logger.debug(f"Stopping {worker_name} safely")
 
-        # Stage 1: Request cancellation via worker.cancel() if available (BaseWorker pattern)
+        # Stage 1: Request cancellation via cancel() if available (BaseWorker pattern)
         if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
-            logger.debug(f"{worker_name}: Requesting cancellation via worker.cancel()")
+            logger.debug(f"{worker_name}: Requesting cancellation via cancel()")
             try:
-                worker.cancel()  # Type-safe method call
+                worker.cancel()  # type: ignore[attr-defined]
             except Exception as e:
                 logger.warning(f"{worker_name}: Error calling cancel(): {e}")
 
@@ -195,11 +197,11 @@ class WorkerManager:
 
         logger.debug(f"{worker_name}: Requesting cancellation")
 
-        # Stage 1: Call worker.cancel() if available (BaseWorker pattern)
+        # Stage 1: Call cancel() if available (BaseWorker pattern)
         if hasattr(worker, "cancel") and callable(getattr(worker, "cancel", None)):
-            logger.debug(f"{worker_name}: Calling worker.cancel()")
+            logger.debug(f"{worker_name}: Calling cancel()")
             try:
-                worker.cancel()  # Type-safe method call
+                worker.cancel()  # type: ignore[attr-defined]
             except Exception as e:
                 logger.warning(f"{worker_name}: Error during cancel(): {e}")
 

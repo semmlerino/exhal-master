@@ -130,7 +130,7 @@ class RowArrangementDialog(SplitterDialog):
         left_layout = QVBoxLayout(self.left_panel)
 
         # Available rows list
-        self.available_list: DragDropListWidget = DragDropListWidget(accept_external_drops=False)
+        self.available_list = DragDropListWidget(accept_external_drops=False)
         self.available_list.itemDoubleClicked.connect(self._add_row_to_arrangement)
         _ = self.available_list.itemSelectionChanged.connect(
             self._on_available_selection_changed
@@ -163,7 +163,7 @@ class RowArrangementDialog(SplitterDialog):
         right_layout = QVBoxLayout(self.right_panel)
 
         # Arranged rows list
-        self.arranged_list: DragDropListWidget = DragDropListWidget(accept_external_drops=True)
+        self.arranged_list = DragDropListWidget(accept_external_drops=True)
         self.arranged_list.external_drop.connect(self._add_row_to_arrangement)
         self.arranged_list.item_dropped.connect(self._refresh_arrangement)
         self.arranged_list.itemDoubleClicked.connect(self._remove_row_from_arrangement)
@@ -249,7 +249,7 @@ class RowArrangementDialog(SplitterDialog):
             item.setSizeHint(thumbnail.sizeHint())
             if self.available_list:
                 self.available_list.addItem(item)
-            self.available_list.setItemWidget(item, thumbnail)
+                self.available_list.setItemWidget(item, thumbnail)
 
     def _populate_arranged_rows(self):
         """Populate the arranged rows list"""
@@ -277,7 +277,7 @@ class RowArrangementDialog(SplitterDialog):
                 item.setSizeHint(thumbnail.sizeHint())
                 if self.arranged_list:
                     self.arranged_list.addItem(item)
-                self.arranged_list.setItemWidget(item, thumbnail)
+                    self.arranged_list.setItemWidget(item, thumbnail)
 
     def _on_available_selection_changed(self):
         """Handle selection change in available rows list"""
@@ -511,11 +511,12 @@ class RowArrangementDialog(SplitterDialog):
 
         if arranged_image:
             # Use preview generator to export
-            self.output_path = self.preview_generator.export_arranged_image(
-                self.sprite_path,
-                arranged_image,
-                self.arrangement_manager.get_arranged_count(),
-            )
+            if self.sprite_path:
+                self.output_path = self.preview_generator.export_arranged_image(
+                    self.sprite_path,
+                    arranged_image,
+                    self.arrangement_manager.get_arranged_count(),
+                )
 
             self._update_status(
                 f"Exported {self.arrangement_manager.get_arranged_count()} rows to "
@@ -539,7 +540,8 @@ class RowArrangementDialog(SplitterDialog):
                 row_index = item.data(Qt.ItemDataRole.UserRole)
                 # Get the appropriate display image (grayscale or colorized)
                 display_image = self._get_display_image_for_row(row_index)
-                widget.update_image(display_image)
+                if display_image:
+                    widget.update_image(display_image)
 
         # Update arranged rows list
         for i in range(self.arranged_list.count()):
@@ -549,7 +551,8 @@ class RowArrangementDialog(SplitterDialog):
                 row_index = item.data(Qt.ItemDataRole.UserRole)
                 # Get the appropriate display image (grayscale or colorized)
                 display_image = self._get_display_image_for_row(row_index)
-                widget.update_image(display_image)
+                if display_image:
+                    widget.update_image(display_image)
 
     def _update_panel_titles(self):
         """Update panel titles with item counts"""

@@ -210,7 +210,7 @@ class ComposedDialog(QDialog):
         # Call cleanup on all components that support it
         for component in self.components:
             if hasattr(component, 'cleanup') and callable(component.cleanup):
-                component.cleanup()
+                component.cleanup()  # type: ignore[attr-defined]
 
         # Call parent close event
         super().closeEvent(event)

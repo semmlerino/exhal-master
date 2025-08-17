@@ -275,17 +275,17 @@ def configure_accessibility_settings() -> None:
         return
 
     # Set default font size for better readability
-    font = app.font()
+    font = app.font()  # type: ignore[attr-defined]
     if font.pointSize() < 10:
         font.setPointSize(10)
-        app.setFont(font)
+        app.setFont(  # type: ignore[attr-defined]font)
 
     # Note: setNavigationMode is not available in Qt6/PySide6
     # Keyboard navigation is enabled by default in modern Qt
 
     # Set double-click interval for users with motor impairments
     try:
-        app.setDoubleClickInterval(600)  # 600ms instead of default 400ms
+        app.setDoubleClickInterval(  # type: ignore[attr-defined]600)  # 600ms instead of default 400ms
     except AttributeError:
         # This method might not be available in all Qt versions
         pass

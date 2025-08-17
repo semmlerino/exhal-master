@@ -182,7 +182,7 @@ class ExampleManager:
                         e, rom_path, f"batch extraction of {rom_path}"
                     )
                 else:
-                    error_result = self._error_handler.handle_error(
+                    error_result = self._error_handler.handle_error(  # type: ignore[attr-defined]
                         e, f"batch extraction of {rom_path}"
                     )
 
@@ -249,7 +249,7 @@ class LegacyIntegrationExample:
                     e, "nonexistent.file", "reading configuration"
                 )
             else:
-                self._error_handler.handle_error(
+                self._error_handler.handle_error(  # type: ignore[attr-defined]
                     e, "reading configuration"
                 )
 

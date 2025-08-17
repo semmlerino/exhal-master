@@ -469,7 +469,7 @@ class SmartPreviewCoordinator(QObject):
             Optional tuple of (tile_data, width, height, sprite_name) or None
         """
         if not self._rom_cache or not self._rom_cache.cache_enabled:
-            return None
+            return (b"", 0, 0, None)
 
         try:
             logger.debug(f"Checking ROM cache for preview at 0x{offset:06X}")
@@ -477,7 +477,7 @@ class SmartPreviewCoordinator(QObject):
             # Get preview data from ROM cache
             preview_data = self._rom_cache.get_preview_data(rom_path, offset)
             if not preview_data:
-                return None
+                return (b"", 0, 0, None)
 
             # Extract data components
             tile_data = preview_data["tile_data"]
@@ -493,7 +493,7 @@ class SmartPreviewCoordinator(QObject):
 
         except Exception as e:
             logger.warning(f"Error checking ROM cache: {e}")
-            return None
+            return (b"", 0, 0, None)
 
     def _save_to_rom_cache(self, rom_path: str, offset: int,
                           preview_data: tuple[bytes, int, int, str]) -> bool:

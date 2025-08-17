@@ -140,7 +140,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return False
 
-    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         """Return item flags for the given index."""
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags

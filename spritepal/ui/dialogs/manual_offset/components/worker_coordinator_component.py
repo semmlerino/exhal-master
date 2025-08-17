@@ -85,7 +85,13 @@ class WorkerCoordinatorComponent:
             except ImportError as e:
                 logger.warning(f"SpritePreviewWidget not found: {e}, using placeholder")
                 self.preview_widget = QLabel("Preview Widget Not Available")  # type: ignore[assignment]
-                layout.addWidget(self.preview_widget)
+                if self.preview_widget:
+
+                    layout.addWidget(self.preview_widget)
+
+                else:
+
+                    layout.addWidget(QLabel("Preview not available"))
 
             return panel
 
@@ -108,7 +114,7 @@ class WorkerCoordinatorComponent:
                 # Update preview widget if available
                 if self.preview_widget and hasattr(self.preview_widget, 'set_rom_data'):
                     rom_extractor = extraction_manager.get_rom_extractor()
-                    self.preview_widget.set_rom_data(rom_path, rom_extractor)
+                    self.preview_widget.set_rom_data(  # type: ignore[attr-defined]rom_path, rom_extractor)
 
                 # Update mini ROM map if available
                 if self.mini_rom_map and hasattr(self.mini_rom_map, 'set_rom_data'):
