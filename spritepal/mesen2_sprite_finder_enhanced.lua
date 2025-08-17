@@ -14,9 +14,10 @@ local config = {
     hud_text_color = 0xFFFFFFFF, -- White
     highlight_sprites = true,
     show_offsets = true,  -- Display ROM offsets next to sprites
-    offset_text_color = 0xFF00FFFF,  -- Bright cyan text for offsets
-    offset_bg_color = 0xFF000000,  -- Solid black background
-    offset_border_color = 0xFFFFFFFF,  -- White border for contrast
+    offset_text_color = 0xFFFFFF00,  -- Bright yellow text for maximum visibility
+    offset_bg_color = 0xFF880088,  -- Solid purple background for contrast
+    offset_border_color = 0xFFFFFF00,  -- Yellow border to match text
+    offset_line_color = 0xFFFFFF00,  -- Yellow line connecting to sprite
     
     -- Colors for sprite highlighting
     color_captured = 0x8000FF00,   -- Green (captured)
@@ -371,31 +372,50 @@ local function draw_sprite_highlights()
                 sprite.width or 8, sprite.height or 8, 
                 color, false)
             
-            -- Draw ROM offset next to captured sprites
+            -- Draw ROM offset above captured sprites with prominent label
             if config.show_offsets and rom_offset then
                 local offset_text = string.format("$%06X", rom_offset)
-                local text_x = sprite.x + (sprite.width or 8) + 3
-                local text_y = sprite.y
                 
-                -- Ensure text stays on screen
-                if text_x + 48 > 256 then
-                    text_x = sprite.x - 50
+                -- Position label above sprite
+                local label_width = 56
+                local label_height = 16
+                local text_x = sprite.x + ((sprite.width or 8) / 2) - (label_width / 2)
+                local text_y = sprite.y - label_height - 8
+                
+                -- Ensure label stays on screen
+                if text_x < 2 then
+                    text_x = 2
+                elseif text_x + label_width > 254 then
+                    text_x = 254 - label_width
                 end
-                if text_x < 0 then
-                    text_x = 0
+                
+                if text_y < 2 then
+                    text_y = sprite.y + (sprite.height or 8) + 4
                 end
                 
-                -- Draw background rectangle with border for visibility
-                local text_width = 48
-                local text_height = 10
-                emu.drawRectangle(text_x - 2, text_y - 1, text_width, text_height, 
-                    config.offset_border_color, false)  -- White border
-                emu.drawRectangle(text_x - 1, text_y, text_width - 2, text_height - 2, 
-                    config.offset_bg_color, true)  -- Black fill
+                -- Draw connecting line from sprite to label
+                local sprite_center_x = sprite.x + ((sprite.width or 8) / 2)
+                local sprite_top_y = sprite.y
+                local label_center_x = text_x + (label_width / 2)
+                local label_bottom_y = text_y + label_height
                 
-                -- Draw the offset text
-                emu.drawString(text_x, text_y, offset_text, 
-                    config.offset_text_color, 0x00000000)  -- Transparent bg since we drew our own
+                if text_y < sprite.y then
+                    -- Label is above sprite
+                    emu.drawLine(sprite_center_x, sprite_top_y, label_center_x, label_bottom_y, 
+                        config.offset_line_color)
+                end
+                
+                -- Draw large bordered box with thick border
+                -- Outer border (3 pixels thick)
+                emu.drawRectangle(text_x - 3, text_y - 3, label_width + 6, label_height + 6, 
+                    config.offset_border_color, true)
+                -- Inner background
+                emu.drawRectangle(text_x, text_y, label_width, label_height, 
+                    config.offset_bg_color, true)
+                
+                -- Draw the offset text centered in the box
+                emu.drawString(text_x + 4, text_y + 4, offset_text, 
+                    config.offset_text_color, 0x00000000)
             end
         end
     end
