@@ -57,7 +57,7 @@ class StyledSplitter(QSplitter):
         self.setStretchFactor(index, stretch_factor)
         return index
 
-    def add_widgets(self, widgets: list[QWidget], stretch_factors: list[int | None] | None = None):
+    def add_widgets(self, widgets: list[QWidget], stretch_factors: list[int] | None = None):
         """
         Add multiple widgets with optional stretch factors.
 

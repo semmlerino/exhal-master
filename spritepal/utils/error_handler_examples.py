@@ -177,9 +177,14 @@ class ExampleManager:
                 }
             except Exception as e:
                 # Handle individual failures without stopping batch
-                error_result = self._error_handler.handle_file_error(
-                    e, rom_path, f"batch extraction of {rom_path}"
-                )
+                if isinstance(e, OSError):
+                    error_result = self._error_handler.handle_file_error(
+                        e, rom_path, f"batch extraction of {rom_path}"
+                    )
+                else:
+                    error_result = self._error_handler.handle_error(
+                        e, f"batch extraction of {rom_path}"
+                    )
 
                 results[rom_path] = {
                     "success": False,
@@ -239,9 +244,14 @@ class LegacyIntegrationExample:
             with Path("nonexistent.file").open() as f:
                 f.read()
         except Exception as e:
-            self._error_handler.handle_file_error(
-                e, "nonexistent.file", "reading configuration"
-            )
+            if isinstance(e, OSError):
+                self._error_handler.handle_file_error(
+                    e, "nonexistent.file", "reading configuration"
+                )
+            else:
+                self._error_handler.handle_error(
+                    e, "reading configuration"
+                )
 
         # Validation error
         try:

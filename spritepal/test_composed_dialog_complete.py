@@ -100,7 +100,7 @@ def test_button_functionality(app):
         ok_button.click()
         final_result = dialog.result()
         
-        assert final_result == 1, f"Expected result=1 after OK click, got {final_result}"  # QDialog.Accepted = 1
+        assert final_result == 1, f"Expected result=1 after OK click, got {final_result}"  # QDialog.DialogCode.Accepted = 1
         print("✓ OK button click works correctly")
         
         print("✓ TEST 2 PASSED: Button functionality works")

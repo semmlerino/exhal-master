@@ -2,7 +2,7 @@
 -- Features: On-screen HUD, hotkey controls, better file management, visual feedback
 
 emu.log("=== Enhanced Sprite Finder Starting ===")
-emu.log("Controls: F1=Start/Resume, F2=Pause, F3=Export, F4=Reset, F5=Toggle HUD")
+emu.log("Controls: 1=Start/Resume, 2=Pause, 3=Export, 4=Reset, 5=Toggle HUD")
 
 -- Configuration
 local config = {
@@ -19,12 +19,12 @@ local config = {
     color_detected = 0x80FFFF00,   -- Yellow (detected)
     color_missing = 0x80FF0000,    -- Red (no DMA)
     
-    -- Hotkeys (F-keys)
-    key_start = "F1",
-    key_pause = "F2", 
-    key_export = "F3",
-    key_reset = "F4",
-    key_toggle_hud = "F5",
+    -- Hotkeys (Number keys to avoid savestate conflicts)
+    key_start = "1",
+    key_pause = "2", 
+    key_export = "3",
+    key_reset = "4",
+    key_toggle_hud = "5",
     
     -- File settings
     use_timestamp = true,
@@ -493,7 +493,7 @@ end
 
 -- Handle hotkeys
 local function handle_hotkeys()
-    -- F1: Start/Resume
+    -- 1: Start/Resume
     if emu.isKeyPressed(config.key_start) then
         if not state.capture_active then
             state.capture_active = true
@@ -502,7 +502,7 @@ local function handle_hotkeys()
         end
     end
     
-    -- F2: Pause
+    -- 2: Pause
     if emu.isKeyPressed(config.key_pause) then
         if state.capture_active then
             state.capture_active = false
@@ -510,12 +510,12 @@ local function handle_hotkeys()
         end
     end
     
-    -- F3: Export
+    -- 3: Export
     if emu.isKeyPressed(config.key_export) then
         export_data()
     end
     
-    -- F4: Reset
+    -- 4: Reset
     if emu.isKeyPressed(config.key_reset) then
         state.dma_captures = {}
         state.unique_rom_offsets = {}
@@ -526,7 +526,7 @@ local function handle_hotkeys()
         add_message("Capture data RESET")
     end
     
-    -- F5: Toggle HUD
+    -- 5: Toggle HUD
     if emu.isKeyPressed(config.key_toggle_hud) then
         config.hud_enabled = not config.hud_enabled
         add_message(config.hud_enabled and "HUD ON" or "HUD OFF")
@@ -565,7 +565,7 @@ end
 -- Initialize
 function init()
     emu.log("Enhanced Sprite Finder initialized!")
-    emu.log("Press F1 to start capture")
+    emu.log("Press 1 to start capture")
     
     -- DMA callback
     state.callbacks.dma = emu.addMemoryCallback(
@@ -584,7 +584,7 @@ function init()
     update_obsel()
     
     add_message("Enhanced Sprite Finder Ready!", 300)
-    add_message("F1=Start F2=Pause F3=Export", 300)
+    add_message("1=Start 2=Pause 3=Export", 300)
 end
 
 -- Start

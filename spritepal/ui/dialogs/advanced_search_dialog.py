@@ -959,7 +959,7 @@ class AdvancedSearchDialog(QDialog):
         self.step_size_spin.setPrefix("0x")
         self.step_size_spin.setDisplayIntegerBase(16)
         range_layout.addWidget(QLabel("Step Size:"), 2, 0)
-        range_layout.addWidget(self.step_size_spin.value(), 2, 1)
+        range_layout.addWidget(self.step_size_spin, 2, 1)
 
         range_group.setLayout(range_layout)
         layout.addWidget(range_group)
@@ -973,7 +973,7 @@ class AdvancedSearchDialog(QDialog):
         self.workers_spin.setRange(1, 16)
         self.workers_spin.setValue(4)
         perf_layout.addWidget(QLabel("Worker Threads:"), 0, 0)
-        perf_layout.addWidget(self.workers_spin.value(), 0, 1)
+        perf_layout.addWidget(self.workers_spin, 0, 1)
 
         # Adaptive stepping
         self.adaptive_check = QCheckBox("Adaptive Step Sizing")
@@ -1107,7 +1107,7 @@ class AdvancedSearchDialog(QDialog):
         self.context_size_spin.setValue(32)
         self.context_size_spin.setSuffix(" bytes")
         self.context_size_spin.setToolTip("Number of bytes to show around each match")
-        options_layout.addWidget(self.context_size_spin.value(), 2, 1)
+        options_layout.addWidget(self.context_size_spin, 2, 1)
 
         # Maximum results
         options_layout.addWidget(QLabel("Max Results:"), 3, 0)
@@ -1115,7 +1115,7 @@ class AdvancedSearchDialog(QDialog):
         self.max_results_spin.setRange(1, 10000)
         self.max_results_spin.setValue(1000)
         self.max_results_spin.setToolTip("Maximum number of matches to find")
-        options_layout.addWidget(self.max_results_spin.value(), 3, 1)
+        options_layout.addWidget(self.max_results_spin, 3, 1)
 
         # Multiple pattern operation
         options_layout.addWidget(QLabel("Multiple Patterns:"), 4, 0)
@@ -1199,9 +1199,9 @@ class AdvancedSearchDialog(QDialog):
         self.max_size_spin.setSingleStep(0x100)
 
         layout.addWidget(QLabel("Size Range:"), 0, 0)
-        layout.addWidget(self.min_size_spin.value(), 0, 1)
+        layout.addWidget(self.min_size_spin, 0, 1)
         layout.addWidget(QLabel("-"), 0, 2)
-        layout.addWidget(self.max_size_spin.value(), 0, 3)
+        layout.addWidget(self.max_size_spin, 0, 3)
 
         # Tile count filter
         self.min_tiles_spin = QSpinBox()
@@ -1213,9 +1213,9 @@ class AdvancedSearchDialog(QDialog):
         self.max_tiles_spin.setValue(1024)
 
         layout.addWidget(QLabel("Tile Count:"), 1, 0)
-        layout.addWidget(self.min_tiles_spin.value(), 1, 1)
+        layout.addWidget(self.min_tiles_spin, 1, 1)
         layout.addWidget(QLabel("-"), 1, 2)
-        layout.addWidget(self.max_tiles_spin.value(), 1, 3)
+        layout.addWidget(self.max_tiles_spin, 1, 3)
 
         # Compression filter
         self.compressed_check = QCheckBox("Include Compressed")
@@ -1367,7 +1367,7 @@ class AdvancedSearchDialog(QDialog):
             return
 
         # Get similarity threshold
-        similarity_threshold = self.similarity_slider  # Already a percentage
+        similarity_threshold = self.similarity_slider.value()  # Get percentage value
 
         # Get search scope
         search_scope = self.visual_scope_combo.currentText()
@@ -1407,7 +1407,7 @@ class AdvancedSearchDialog(QDialog):
                 alignment=1,
                 include_compressed=True,
                 include_uncompressed=True,
-                confidence_threshold=similarity_threshold / 100.0
+                confidence_threshold=self.similarity_slider.value() / 100.0
             ),
             results_count=0
         )

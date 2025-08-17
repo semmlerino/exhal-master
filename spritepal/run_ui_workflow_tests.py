@@ -91,7 +91,7 @@ def run_tests(args):
     # Add parallel execution if supported and not serial
     if not args.serial and not args.test:
         try:
-            import pytest_xdist
+            import xdist
             cmd.extend(["-n", "auto"])
         except ImportError:
             print("pytest-xdist not available, running serially")

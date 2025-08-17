@@ -273,7 +273,7 @@ class TestRunner:
             sys.executable, "-m", "pytest",
             "--tb=short",
             "--quiet",
-            "--junitxml=test_results.xml",
+            "--junitxml=test_results.xml",  # type: ignore[attr-defined]
             "--durations=10",
             "--timeout=120",  # 2 minute timeout per test
         ] + test_args
@@ -291,7 +291,7 @@ class TestRunner:
             total_duration = time.time() - start_time
             
             # Parse results
-            return self._parse_test_results(stage_name, result, total_duration)
+            return self._parse_test_results(stage_name, result, total_duration)  # type: ignore[attr-defined]
             
         except subprocess.TimeoutExpired:
             return TestSuiteMetrics(
@@ -307,7 +307,7 @@ class TestRunner:
                 timeout_failures=1
             )
     
-    def _parse_test_results(self, stage_name: str, result: subprocess.CompletedProcess, duration: float) -> TestSuiteMetrics:
+    def _parse_test_results(self, stage_name: str, result: subprocess.CompletedProcess, duration: float) -> TestSuiteMetrics:  # type: ignore[attr-defined]
         """Parse test results from pytest output and XML."""
         metrics = TestSuiteMetrics(
             timestamp=datetime.now(),
@@ -356,7 +356,7 @@ class TestRunner:
             metrics.median_duration = metrics.average_duration  # Approximation
         
         # Try to parse XML for detailed information
-        xml_path = self.project_root / "test_results.xml"
+        xml_path = self.project_root / "test_results.xml"  # type: ignore[attr-defined]
         if xml_path.exists():
             self._parse_junit_xml(xml_path, metrics)
         

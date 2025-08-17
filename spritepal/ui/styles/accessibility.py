@@ -3,6 +3,8 @@ Global accessibility styles for SpritePal application.
 Provides consistent focus indicators, keyboard navigation hints, and WCAG 2.1 compliance.
 """
 
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
@@ -12,6 +14,9 @@ def apply_global_accessibility_styles() -> None:
     app = QApplication.instance()
     if not app:
         return
+    
+    # Cast to QApplication for type checker
+    app = cast(QApplication, app)
 
     # Global accessibility stylesheet with focus indicators and high contrast
     global_style = """
@@ -288,7 +293,7 @@ def configure_accessibility_settings() -> None:
     # Set additional accessibility attributes if available
     try:
         # Disable context help button which can be confusing
-        app.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton, False)
+        app.setAttribute(Qt.AA_DisableWindowContextHelpButton, False)  # type: ignore[attr-defined]
     except (AttributeError, TypeError):
         # Attribute may not be available in this Qt version
         pass

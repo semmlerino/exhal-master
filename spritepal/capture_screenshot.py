@@ -155,12 +155,12 @@ def capture_manual_offset_dialog(tab_name: Optional[str] = None):
 
 def capture_main_window():
     """Capture screenshot of the main SpritePal window."""
-    from main_window import SpritePalMainWindow
+    from ui.main_window import MainWindow
 
     app = QApplication.instance() or QApplication(sys.argv)
 
     # Create and show main window
-    main_window = SpritePalMainWindow()
+    main_window = MainWindow()
     main_window.show()
 
     def take_screenshot():

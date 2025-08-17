@@ -8,9 +8,10 @@ including execution environment, test type, Qt components, and parallelization m
 
 import re
 from pathlib import Path
+from typing import Any
 
 
-def analyze_test_file(content: str, filename: str) -> dict[str, any]:
+def analyze_test_file(content: str, filename: str) -> dict[str, Any]:
     """
     Analyze a test file and determine all appropriate pytest markers.
 
@@ -122,7 +123,7 @@ def analyze_test_file(content: str, filename: str) -> dict[str, any]:
     return analysis
 
 
-def get_marker_list(analysis: dict[str, any]) -> list[str]:
+def get_marker_list(analysis: dict[str, Any]) -> list[str]:
     """Get comprehensive pytest markers from analysis results."""
     markers = []
 
@@ -143,7 +144,7 @@ def get_marker_list(analysis: dict[str, any]) -> list[str]:
     return sorted(set(markers))
 
 
-def add_pytest_markers(file_path: Path, analysis: dict[str, any]) -> bool:
+def add_pytest_markers(file_path: Path, analysis: dict[str, Any]) -> bool:
     """
     Add comprehensive pytest markers to a test file.
 

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 # Add parent directory to path to import SpritePal modules
 sys.path.insert(0, str(Path(__file__).parent))
 
-from main_window import SpritePalMainWindow
+from ui.main_window import MainWindow
 
 from utils.logging_config import get_logger
 
@@ -23,7 +23,7 @@ def take_screenshot_of_gallery():
     app = QApplication.instance() or QApplication(sys.argv)
 
     # Create and show main window
-    main_window = SpritePalMainWindow()
+    main_window = MainWindow()
     main_window.show()
 
     def open_manual_offset_and_screenshot():

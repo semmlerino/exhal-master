@@ -100,19 +100,19 @@ class SpriteGalleryWidget(QWidget):
             self.list_view.setItemDelegate(self.delegate)
 
             # Configure for grid layout
-            self.list_view.setViewMode(QListView.IconMode)
-            self.list_view.setResizeMode(QListView.Adjust)
-            self.list_view.setLayoutMode(QListView.Batched)
+            self.list_view.setViewMode(QListView.ViewMode.IconMode)
+            self.list_view.setResizeMode(QListView.ResizeMode.Adjust)
+            self.list_view.setLayoutMode(QListView.LayoutMode.Batched)
             self.list_view.setBatchSize(20)  # Process items in batches for performance
             self.list_view.setUniformItemSizes(True)  # All items same size for performance
             self.list_view.setSpacing(self.spacing)
 
             # Selection mode
-            self.list_view.setSelectionMode(QListView.NoSelection)  # We handle selection in delegate
+            self.list_view.setSelectionMode(QListView.SelectionMode.NoSelection)  # We handle selection in delegate
 
             # Performance optimizations
-            self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
-            self.list_view.setHorizontalScrollMode(QListView.ScrollPerPixel)
+            self.list_view.setVerticalScrollMode(QListView.ScrollMode.ScrollPerPixel)
+            self.list_view.setHorizontalScrollMode(QListView.ScrollMode.ScrollPerPixel)
 
         # Connect scroll events to trigger thumbnail loading
         if self.list_view:

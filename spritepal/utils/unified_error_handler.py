@@ -15,11 +15,11 @@ import weakref
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol
 
 if TYPE_CHECKING:
-    from PySide6.QtCore import QObject, Signal
-    from PySide6.QtWidgets import QMessageBox, QWidget
+    from PySide6.QtCore import QObject as _QObject, Signal as _Signal
+    from PySide6.QtWidgets import QMessageBox as _QMessageBox, QWidget as _QWidget
 
 # Import core exceptions - these should always be available
 from core.managers.exceptions import (
@@ -251,7 +251,7 @@ class UnifiedErrorHandler(QObject):
     error_processed = Signal(ErrorResult)
     recovery_suggested = Signal(str, list)  # operation, suggestions
 
-    def __init__(self, parent: QWidget | None = None, error_display: IErrorDisplay | None = None):
+    def __init__(self, parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None):
         """Initialize the unified error handler
 
         Args:
@@ -775,10 +775,10 @@ class _UnifiedErrorHandlerSingleton:
     """Thread-safe singleton holder for UnifiedErrorHandler."""
     _instance: UnifiedErrorHandler | None = None
     _lock = threading.Lock()
-    _error_display: IErrorDisplay | None = None
+    _error_display: Optional[IErrorDisplay] = None
 
     @classmethod
-    def get(cls, parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
+    def get(cls, parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None) -> UnifiedErrorHandler:
         """Get or create the global unified error handler (thread-safe)
 
         Args:
@@ -817,7 +817,7 @@ class _UnifiedErrorHandlerSingleton:
             cls._instance = None
 
 
-def get_unified_error_handler(parent: QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
+def get_unified_error_handler(parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None) -> UnifiedErrorHandler:
     """Get or create the global unified error handler (thread-safe)
 
     Args:

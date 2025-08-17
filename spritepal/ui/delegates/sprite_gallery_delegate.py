@@ -4,7 +4,7 @@ Handles efficient painting of sprites with selection and hover effects.
 """
 
 
-from PySide6.QtCore import QModelIndex, QRect, QRectF, QSize, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -51,7 +51,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         self._offset_font.setBold(True)
         self._info_font = QFont("Arial", 9)
 
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Paint the sprite thumbnail.
 
@@ -87,7 +87,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         )
 
         # Determine colors based on state
-        is_hovered = bool(option.state & QStyle.State_MouseOver)
+        is_hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
 
         if is_selected:
             bg_color = self._bg_selected_color
@@ -117,8 +117,8 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
             # Scale pixmap to fit while maintaining aspect ratio
             scaled_pixmap = pixmap.scaled(
                 thumbnail_rect.size() - QSize(4, 4),  # Leave margin
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
             )
 
             # Center the pixmap in the rectangle
@@ -174,7 +174,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
                     label_rect.height() - 16
                 )
                 painter.setPen(QColor(150, 150, 150))
-                painter.drawText(info_rect, Qt.AlignCenter, info_text)
+                painter.drawText(info_rect, Qt.AlignmentFlag.AlignCenter, info_text)
 
         painter.restore()
 
@@ -204,9 +204,9 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         # Draw "SPRITE" text in center
         painter.setPen(self._placeholder_text)
         painter.setFont(QFont("Arial", 12))
-        painter.drawText(rect, Qt.AlignCenter, "SPRITE")
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "SPRITE")
 
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
         """
         Return size hint for the item.
 
@@ -249,7 +249,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         event,
         model,
         option: QStyleOptionViewItem,
-        index: QModelIndex
+        index: QModelIndex | QPersistentModelIndex
     ) -> bool:
         """
         Handle editor events for selection.
@@ -265,7 +265,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         """
         # Handle mouse clicks for selection
         if event.type() == event.Type.MouseButtonPress:
-            if event.button() == Qt.LeftButton:
+            if event.button() == Qt.MouseButton.LeftButton:
                 # Toggle selection
                 current_selection = index.data(SpriteGalleryModel.SelectedRole)
                 model.setData(index, not current_selection, SpriteGalleryModel.SelectedRole)

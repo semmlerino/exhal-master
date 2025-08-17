@@ -41,7 +41,7 @@ def scan_rom_for_sprites(rom_path: Path, limit: int = 50) -> list[dict[str, Any]
     extractor = ROMExtractor()
 
     # Find sprites using SpriteFinder
-    SpriteFinder(rom_data)
+    finder = SpriteFinder("sprite_candidates")
     sprites = []
 
     print(f"Searching for sprites (limit: {limit})...")

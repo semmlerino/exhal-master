@@ -214,6 +214,9 @@ class HexOffsetInput(QWidget):
         """Check if current value is valid"""
         return self.get_value() is not None or not self.get_text().strip()
 
-    def setFocus(self):
+    def setFocus(self, reason=None):
         """Set focus to the input field"""
-        self.hex_edit.setFocus()
+        if reason is not None:
+            self.hex_edit.setFocus(reason)
+        else:
+            self.hex_edit.setFocus()

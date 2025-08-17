@@ -216,7 +216,7 @@ class SpriteFinder:
                             tile_count=tile_count,
                             confidence=confidence,
                             visual_metrics=metrics,
-                            preview_path=preview_path
+                            preview_path=str(preview_path) if preview_path else None
                         )
 
                         candidates.append(candidate)

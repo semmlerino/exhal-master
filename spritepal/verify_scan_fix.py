@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, Path(os.path.abspath(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 from unittest.mock import Mock
 

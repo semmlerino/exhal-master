@@ -16,6 +16,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -89,7 +90,7 @@ def load_dialog_class(dialog_name: str) -> type[QDialog]:
 
 def run_detailed_dialog_analysis(profiler: MemoryLeakProfiler, dialog_name: str,
                                 dialog_class: type[QDialog], cycles: int,
-                                verbose: bool = False) -> None:
+                                verbose: bool = False) -> dict[str, Any]:
     """Run detailed analysis of a specific dialog."""
     print(f"Running detailed analysis of {dialog_name}")
     print(f"Test cycles: {cycles}")
@@ -332,7 +333,7 @@ def main():
         )
 
         # Save results if output file specified
-        if args.output:
+        if args.output and results:
             with open(args.output, "w") as f:
                 f.write(f"Dialog Memory Leak Analysis: {args.dialog}\n")
                 f.write("=" * 50 + "\n")
@@ -349,9 +350,9 @@ def main():
             print(f"\nResults saved to: {args.output}")
 
         # Return appropriate exit code
-        if results["severity"] == "severe":
+        if results and results["severity"] == "severe":
             return 2
-        if results["severity"] in ["moderate", "minor"]:
+        if results and results["severity"] in ["moderate", "minor"]:
             return 1
         return 0
 

@@ -119,6 +119,9 @@ class PaletteColorizer(QObject):
 
             # Get image data
             pixels = rgba_image.load()
+            if pixels is None:
+                print("Failed to load image pixels")
+                return None
             width, height = rgba_image.size
 
             # Apply palette

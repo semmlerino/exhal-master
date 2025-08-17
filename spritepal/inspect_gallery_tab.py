@@ -63,12 +63,12 @@ def inspect_gallery_tab():
     print("\n=== Checking for Gallery Components ===")
 
     # Look for gallery viewer
-    from ui.widgets.sprite_gallery_viewer import SpriteGalleryViewer
-    viewers = gallery_tab.findChildren(SpriteGalleryViewer)
+    from ui.widgets.sprite_gallery_widget import SpriteGalleryWidget
+    viewers = gallery_tab.findChildren(SpriteGalleryWidget)
     if viewers:
-        print(f"Found SpriteGalleryViewer: {viewers[0]}")
+        print(f"Found SpriteGalleryWidget: {viewers[0]}")
     else:
-        print("No SpriteGalleryViewer found")
+        print("No SpriteGalleryWidget found")
 
     # Look for scroll area
     from PySide6.QtWidgets import QScrollArea

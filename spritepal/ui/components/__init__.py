@@ -98,9 +98,22 @@ class TabbedDialog(DialogBase):
         # Also update private reference for DialogBase compatibility
         self._tab_widget = self._main_tab_widget
 
-    def add_tab(self, widget: QWidget, label: str) -> int:
+    def add_tab(self, widget: QWidget, label: str) -> None:
         """
         Add a tab to the dialog.
+
+        Args:
+            widget: The widget to add as a tab
+            label: The tab label
+        """
+        if self._main_tab_widget is None:
+            raise RuntimeError("TabbedDialog not properly initialized - tab widget is None")
+
+        self._main_tab_widget.addTab(widget, label)
+    
+    def add_tab_with_index(self, widget: QWidget, label: str) -> int:
+        """
+        Add a tab to the dialog and return the index.
 
         Args:
             widget: The widget to add as a tab

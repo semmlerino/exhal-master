@@ -193,7 +193,7 @@ class RegressionDetector:
             "tests/",
             "--tb=short",
             "--quiet",
-            "--junitxml=test_results.xml",
+            "--junitxml=test_results.xml",  # type: ignore[attr-defined]
             "--durations=0",  # Capture all durations
         ]
 

@@ -373,7 +373,11 @@ class SmartPreviewCoordinator(QObject):
 
         try:
             logger.debug("[DEBUG] Getting ROM data from provider...")
-            rom_path, _, _ = self._rom_data_provider()
+            provider_result = self._rom_data_provider()
+            if provider_result is None:
+                logger.debug("[DEBUG] ROM data provider returned None")
+                return False
+            rom_path, _, _ = provider_result
             logger.debug(f"[DEBUG] Got ROM path: {rom_path}")
 
             with QMutexLocker(self._mutex):
@@ -629,7 +633,11 @@ class SmartPreviewCoordinator(QObject):
             return
 
         try:
-            rom_path, extractor, rom_cache = self._rom_data_provider()
+            provider_result = self._rom_data_provider()
+            if provider_result is None:
+                logger.warning("[DEBUG] ROM data provider returned None!")
+                return
+            rom_path, extractor, rom_cache = provider_result
             logger.debug(f"[DEBUG] Got ROM data: path={bool(rom_path)}, extractor={bool(extractor)}, cache={bool(rom_cache)}")
 
             # Check if ROM data is actually valid before proceeding
@@ -680,7 +688,10 @@ class SmartPreviewCoordinator(QObject):
 
             if non_zero_count > 0:  # Has some non-zero data - valid to cache
                 try:
-                    rom_path, _, _ = self._rom_data_provider()
+                    provider_result = self._rom_data_provider()
+                    if provider_result is None:
+                        return preview_pixmap  # Don't cache if provider fails
+                    rom_path, _, _ = provider_result
                     preview_data = (tile_data, width, height, sprite_name)
 
                     # Tier 1: Save to memory cache

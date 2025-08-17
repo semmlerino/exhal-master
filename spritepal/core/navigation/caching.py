@@ -320,7 +320,7 @@ class NavigationCache:
             self.disk_cache = DiskCache("disk", cache_dir, max_size=5000)
 
         # Cache categories
-        self._cache_levels = [self.memory_cache]
+        self._cache_levels: list[CacheLevel] = [self.memory_cache]
         if self.disk_cache:
             self._cache_levels.append(self.disk_cache)
 

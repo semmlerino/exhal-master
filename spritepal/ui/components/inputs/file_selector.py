@@ -198,9 +198,12 @@ class FileSelector(QWidget):
         """Set read-only state of the path input"""
         self.path_edit.setReadOnly(read_only)
 
-    def setFocus(self):
+    def setFocus(self, reason=None):
         """Set focus to the path input field"""
-        self.path_edit.setFocus()
+        if reason is not None:
+            self.path_edit.setFocus(reason)
+        else:
+            self.path_edit.setFocus()
 
     def set_browse_enabled(self, enabled: bool):
         """Enable/disable the browse button"""

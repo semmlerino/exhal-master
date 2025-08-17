@@ -86,7 +86,7 @@ class GalleryLayoutTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        self.test_results: List[TestResult] = []
+        self.test_results: List[TestResult] = []  # type: ignore[attr-defined]
         self.gallery_tab: SpriteGalleryTab = None
         self.mock_rom_extractor = MockRomExtractor()
         
@@ -552,16 +552,16 @@ class GalleryLayoutTestWindow(QMainWindow):
     
     def _show_final_results(self):
         """Show final test results summary."""
-        passed_tests = [r for r in self.test_results if r.passed]
-        failed_tests = [r for r in self.test_results if not r.passed]
+        passed_tests = [r for r in self.test_results if r.passed]  # type: ignore[attr-defined]
+        failed_tests = [r for r in self.test_results if not r.passed]  # type: ignore[attr-defined]
         
         summary = f"\n{'='*50}\n"
         summary += f"FINAL TEST RESULTS\n"
         summary += f"{'='*50}\n"
-        summary += f"Total Tests: {len(self.test_results)}\n"
+        summary += f"Total Tests: {len(self.test_results)}\n"  # type: ignore[attr-defined]
         summary += f"Passed: {len(passed_tests)}\n"
         summary += f"Failed: {len(failed_tests)}\n"
-        summary += f"Success Rate: {len(passed_tests) / len(self.test_results) * 100:.1f}%\n"
+        summary += f"Success Rate: {len(passed_tests) / len(self.test_results) * 100:.1f}%\n"  # type: ignore[attr-defined]
         
         if failed_tests:
             summary += f"\nFAILED TESTS:\n"
@@ -580,11 +580,11 @@ class GalleryLayoutTestWindow(QMainWindow):
         # Show message box with results
         if len(failed_tests) == 0:
             QMessageBox.information(self, "Test Results", 
-                                  f"All {len(self.test_results)} layout tests passed!\n\n"
+                                  f"All {len(self.test_results)} layout tests passed!\n\n"  # type: ignore[attr-defined]
                                   "The sprite gallery layout fix is working correctly.")
         else:
             QMessageBox.warning(self, "Test Results",
-                              f"{len(failed_tests)} of {len(self.test_results)} tests failed.\n\n"
+                              f"{len(failed_tests)} of {len(self.test_results)} tests failed.\n\n"  # type: ignore[attr-defined]
                               "Check the detailed results for issues.")
     
     def _calculate_expected_content_height(self, sprite_count: int, thumbnail_size: int, columns: int) -> int:
@@ -669,7 +669,7 @@ class GalleryLayoutTestWindow(QMainWindow):
     
     def _add_result(self, result: TestResult):
         """Add a test result."""
-        self.test_results.append(result)
+        self.test_results.append(result)  # type: ignore[attr-defined]
         
         status = "✅" if result.passed else "❌"
         message = f"{status} {result.name}: {result.message}"
@@ -687,7 +687,7 @@ class GalleryLayoutTestWindow(QMainWindow):
     
     def _clear_results(self):
         """Clear test results."""
-        self.test_results.clear()
+        self.test_results.clear()  # type: ignore[attr-defined]
         self.results_text.clear()
 
 def main():

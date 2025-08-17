@@ -182,9 +182,14 @@ def file_operation_handler(
             try:
                 return func(self, *args, **kwargs)
             except Exception as e:
-                result = error_handler.handle_file_error(
-                    e, file_path, operation
-                )
+                if isinstance(e, OSError):
+                    result = error_handler.handle_file_error(
+                        e, file_path, operation
+                    )
+                else:
+                    result = error_handler.handle_error(
+                        e, operation
+                    )
 
                 # Re-raise critical errors
                 if result.should_abort:

@@ -167,9 +167,10 @@ class SafeUIWidget(QWidget):
 # ============================================================================
 
 @runtime_checkable
-class MainWindowProtocol(QWidget, Protocol):
+class MainWindowProtocol(Protocol):
     """
-    FIXED: Protocol that properly extends QWidget for Qt compatibility.
+    FIXED: Protocol that defines QWidget interface without inheritance.
+    Protocols should not inherit from concrete classes.
     """
 
     # Properly typed signals

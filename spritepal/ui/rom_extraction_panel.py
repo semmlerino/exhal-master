@@ -95,7 +95,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
     _lock = threading.Lock()
 
     @classmethod
-    def _create_instance(cls, creator_panel: ROMExtractionPanel = None) -> UnifiedManualOffsetDialog:
+    def _create_instance(cls, creator_panel: ROMExtractionPanel | None = None) -> UnifiedManualOffsetDialog:
         """Create a new dialog instance (thread-safe, main thread only)."""
         # Ensure we're on the main thread for Qt object creation
         cls._ensure_main_thread()

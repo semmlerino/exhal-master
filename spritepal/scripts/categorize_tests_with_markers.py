@@ -19,6 +19,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 
 class TestFileAnalyzer:
@@ -130,7 +131,7 @@ class TestFileAnalyzer:
             ['mock_only', 'qt_real']
         ]
 
-    def analyze_file(self, file_path: Path) -> dict[str, any]:
+    def analyze_file(self, file_path: Path) -> dict[str, Any]:
         """Analyze a test file and return categorization info."""
         try:
             content = file_path.read_text(encoding='utf-8')
@@ -290,7 +291,7 @@ class TestCategorizer:
         self.stats = defaultdict(int)
         self.categorization_report = defaultdict(list)
 
-    def categorize_all_tests(self, test_dir: Path) -> dict[str, any]:
+    def categorize_all_tests(self, test_dir: Path) -> dict[str, Any]:
         """Categorize all test files in the directory."""
         test_files = list(test_dir.rglob('test_*.py'))
         print(f"Found {len(test_files)} test files")

@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QKeyEvent, QPixmap, QScreen
+from PySide6.QtGui import QFont, QGuiApplication, QKeyEvent, QPixmap, QScreen
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -326,14 +326,14 @@ class FullscreenSpriteViewer(QWidget):
 
             app = QApplication.instance()
             if app:
-                for i, screen in enumerate(app.screens()):
+                for i, screen in enumerate(QGuiApplication.screens()):
                     screen_geom = screen.geometry()
                     if screen_geom.contains(parent_center):
                         logger.debug(f"Found target screen {i}: {screen_geom}")
                         return screen
 
                 # Log all available screens for debugging
-                logger.debug(f"Available screens: {[s.geometry() for s in app.screens()]}")
+                logger.debug(f"Available screens: {[s.geometry() for s in QGuiApplication.screens()]}")
 
         # Fallback to primary screen
         primary_screen = QApplication.primaryScreen()

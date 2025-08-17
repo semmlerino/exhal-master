@@ -445,7 +445,7 @@ class ContextValidator:
 
         for manager_name in required_managers:
             try:
-                manager = context.get_manager(manager_name, Any)
+                manager = context.get_manager(manager_name, object)
 
                 # Check if manager has is_initialized method and is initialized
                 if hasattr(manager, 'is_initialized'):

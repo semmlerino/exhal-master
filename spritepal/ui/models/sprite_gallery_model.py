@@ -5,7 +5,7 @@ Implements virtual scrolling through QAbstractListModel.
 
 from typing import Any, Optional
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QSize, Qt, Signal
+from PySide6.QtCore import QAbstractListModel, QModelIndex, QPersistentModelIndex, QSize, Qt, Signal
 from PySide6.QtGui import QPixmap
 
 from utils.logging_config import get_logger
@@ -48,20 +48,20 @@ class SpriteGalleryModel(QAbstractListModel):
         self._filter_compressed_only = False
         self._use_filtering = False
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         """Return number of sprites (for virtual view)."""
         if parent.isValid():
             return 0
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
         return len(sprites)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         """Return number of columns for grid layout."""
         if parent.isValid():
             return 0
         return self._columns
 
-    def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
+    def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Return data for the given index and role."""
         if not index.isValid():
             return None
@@ -75,7 +75,7 @@ class SpriteGalleryModel(QAbstractListModel):
         sprite = sprites[row]
         offset = self._get_offset(sprite)
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             # Return offset text for display
             return f"0x{offset:06X}"
 
@@ -113,7 +113,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return None
 
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.EditRole) -> bool:
+    def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         """Set data for the given index and role."""
         if not index.isValid():
             return False
@@ -140,12 +140,12 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return False
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlags:
         """Return item flags for the given index."""
         if not index.isValid():
-            return Qt.NoItemFlags
+            return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def set_sprites(self, sprites: list[dict[str, Any]]):
         """

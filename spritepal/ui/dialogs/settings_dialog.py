@@ -185,7 +185,7 @@ class SettingsDialog(BaseDialog):
             self.cache_size_spin.setRange(10, 10000)
             self.cache_size_spin.setSuffix(" MB")
             self.cache_size_spin.setToolTip("Maximum cache size in megabytes")
-        size_layout.addWidget(self.cache_size_spin.value())
+        size_layout.addWidget(self.cache_size_spin)
         size_layout.addStretch()
 
         cache_layout.addRow("Size limit:", size_layout)
@@ -197,7 +197,7 @@ class SettingsDialog(BaseDialog):
             self.cache_expiry_spin.setRange(1, 365)
             self.cache_expiry_spin.setSuffix(" days")
             self.cache_expiry_spin.setToolTip("Cache entries older than this will be removed")
-        expiry_layout.addWidget(self.cache_expiry_spin.value())
+        expiry_layout.addWidget(self.cache_expiry_spin)
         expiry_layout.addStretch()
 
         cache_layout.addRow("Expiration:", expiry_layout)

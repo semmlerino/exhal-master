@@ -29,7 +29,7 @@ class SimilarityResultWidget(QFrame):
 
     sprite_selected = Signal(int)  # Emitted when sprite is selected
 
-    def __init__(self, match: SimilarityMatch, thumbnail: QPixmap = None, parent=None):
+    def __init__(self, match: SimilarityMatch, thumbnail: QPixmap | None = None, parent=None):
         super().__init__(parent)
         self.match = match
         self.thumbnail = thumbnail

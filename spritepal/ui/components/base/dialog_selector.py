@@ -26,8 +26,14 @@ Usage:
 """
 
 import os
+from typing import TYPE_CHECKING, Union, Type, Any
 
 from utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from .dialog_base import DialogBase as DialogBaseType
+    from .dialog_base import InitializationOrderError as InitializationOrderErrorType
+    from .composed.migration_adapter import DialogBaseMigrationAdapter
 
 logger = get_logger(__name__)
 
@@ -72,8 +78,8 @@ def set_dialog_implementation(use_composed: bool) -> None:
 
 # Import the appropriate implementation based on feature flag
 # Handle import gracefully for testing environments without Qt
-DialogBase = None
-InitializationOrderError = None
+DialogBase: Type[Any] = None  # type: ignore[assignment]
+InitializationOrderError: Type[Any] = None  # type: ignore[assignment]
 _implementation_source = "none"
 
 try:
@@ -81,18 +87,24 @@ try:
         logger.info("Using composed dialog implementation (DialogBaseMigrationAdapter)")
         try:
             from .composed.migration_adapter import (
-                DialogBaseMigrationAdapter as DialogBase,
+                DialogBaseMigrationAdapter,
             )
-            from .composed.migration_adapter import InitializationOrderError
+            from .composed.migration_adapter import InitializationOrderError as ComposedInitializationOrderError
+            DialogBase = DialogBaseMigrationAdapter  # type: ignore[assignment]
+            InitializationOrderError = ComposedInitializationOrderError  # type: ignore[assignment]
             _implementation_source = "composed.migration_adapter"
         except ImportError as e:
             logger.error(f"Failed to import composed dialog implementation: {e}")
             logger.warning("Falling back to legacy dialog implementation")
-            from .dialog_base import DialogBase, InitializationOrderError
+            from .dialog_base import DialogBase as LegacyDialogBase, InitializationOrderError as LegacyInitializationOrderError
+            DialogBase = LegacyDialogBase  # type: ignore[assignment]
+            InitializationOrderError = LegacyInitializationOrderError  # type: ignore[assignment]
             _implementation_source = "dialog_base (fallback)"
     else:
         logger.info("Using legacy dialog implementation (DialogBase)")
-        from .dialog_base import DialogBase, InitializationOrderError
+        from .dialog_base import DialogBase as LegacyDialogBase, InitializationOrderError as LegacyInitializationOrderError
+        DialogBase = LegacyDialogBase  # type: ignore[assignment]
+        InitializationOrderError = LegacyInitializationOrderError  # type: ignore[assignment]
         _implementation_source = "dialog_base"
 except ImportError as e:
     logger.warning(f"Qt dependencies not available: {e}")

@@ -79,6 +79,10 @@ class TileRenderer:
             height_pixels = height_tiles * 8
             image = Image.new('RGBA', (width_pixels, height_pixels), (0, 0, 0, 0))
             pixels = image.load()
+            
+            # Check if pixels is None (can happen if image.load() fails)
+            if pixels is None:
+                raise ValueError("Failed to load image pixels")
 
             # Process each tile
             for tile_y in range(height_tiles):

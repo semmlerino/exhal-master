@@ -177,6 +177,10 @@ def test_exception_in_virtual_method(qtbot):
 - basedpyright with Qt stubs
 - Protocol definitions for testable interfaces
 - TYPE_CHECKING imports for dependencies
+- **IMPORTANT**: Run basedpyright from the spritepal directory to use pyrightconfig.json
+  - Production code check: `cd spritepal && ../venv/bin/basedpyright` (143 errors as of latest check)
+  - Full codebase check: `./venv/bin/basedpyright spritepal` (includes tests, 4000+ errors)
+  - Config excludes test files to focus on production code quality
 
 ### Testing Infrastructure
 - `qtbot` fixture for real Qt interaction

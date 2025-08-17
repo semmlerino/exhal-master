@@ -204,9 +204,9 @@ def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
         f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
         # Test results summary
-        total_tests = len(profiler.test_results)
-        leaked_tests = sum(1 for r in profiler.test_results.values() if r.leak_detected)
-        severe_leaks = sum(1 for r in profiler.test_results.values() if r.leak_severity == "severe")
+        total_tests = len(profiler.test_results)  # type: ignore[attr-defined]
+        leaked_tests = sum(1 for r in profiler.test_results.values() if r.leak_detected)  # type: ignore[attr-defined]
+        severe_leaks = sum(1 for r in profiler.test_results.values() if r.leak_severity == "severe")  # type: ignore[attr-defined]
 
         f.write(f"Total Tests: {total_tests}\n")
         f.write(f"Tests with Leaks: {leaked_tests}\n")
@@ -216,7 +216,7 @@ def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
         f.write("KEY METRICS FOR LEAK TRACKING\n")
         f.write("-" * 30 + "\n")
 
-        for test_name, result in sorted(profiler.test_results.items()):
+        for test_name, result in sorted(profiler.test_results.items()):  # type: ignore[attr-defined]
             per_cycle_kb = result.memory_leaked_per_cycle_mb * 1000
             f.write(f"{test_name}:\n")
             f.write(f"  Memory per cycle: {per_cycle_kb:.1f} KB\n")
@@ -238,7 +238,7 @@ def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
         f.write("-" * 20 + "\n")
 
         critical_issues = []
-        for test_name, result in profiler.test_results.items():
+        for test_name, result in profiler.test_results.items():  # type: ignore[attr-defined]
             per_cycle_kb = result.memory_leaked_per_cycle_mb * 1000
 
             if result.leak_severity == "severe":
@@ -347,9 +347,9 @@ def main():
     print("=" * 50)
 
     # Count results
-    total_tests = len(profiler.test_results)
-    leaked_tests = sum(1 for r in profiler.test_results.values() if r.leak_detected)
-    severe_leaks = sum(1 for r in profiler.test_results.values() if r.leak_severity == "severe")
+    total_tests = len(profiler.test_results)  # type: ignore[attr-defined]
+    leaked_tests = sum(1 for r in profiler.test_results.values() if r.leak_detected)  # type: ignore[attr-defined]
+    severe_leaks = sum(1 for r in profiler.test_results.values() if r.leak_severity == "severe")  # type: ignore[attr-defined]
 
     print(f"Tests completed: {total_tests}")
     print(f"Tests with leaks: {leaked_tests}")

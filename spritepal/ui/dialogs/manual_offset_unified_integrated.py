@@ -1361,7 +1361,6 @@ Cache Misses: {session_stats['misses']}"""
 
     # Event handlers
 
-    @override
     def keyPressEvent(self, event: QKeyEvent | None):
         """Handle keyboard shortcuts."""
         if event:
@@ -1393,7 +1392,6 @@ Cache Misses: {session_stats['misses']}"""
 
         super().keyPressEvent(event)
 
-    @override
     def closeEvent(self, event: QCloseEvent | None):
         """Handle close event."""
         logger.debug(f"Dialog {self._debug_id} closing")
@@ -1401,7 +1399,6 @@ Cache Misses: {session_stats['misses']}"""
         if event:
             super().closeEvent(event)
 
-    @override
     def hideEvent(self, event: QHideEvent | None):
         """Handle hide event."""
         logger.debug(f"Dialog {self._debug_id} hiding")

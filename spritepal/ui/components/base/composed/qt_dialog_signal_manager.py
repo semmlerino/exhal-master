@@ -114,14 +114,14 @@ class QtDialogSignalManager(QObject):
         def enhanced_accept():
             """Enhanced accept that triggers our clean signals."""
             result = original_accept()
-            self.finished.emit(QDialog.Accepted)
+            self.finished.emit(QDialog.DialogCode.Accepted)
             return result
 
         def enhanced_reject():
             """Enhanced reject that triggers our clean signals."""
             result = original_reject()
             self.rejected.emit()
-            self.finished.emit(QDialog.Rejected)
+            self.finished.emit(QDialog.DialogCode.Rejected)
             return result
 
         def enhanced_close_event(event):
@@ -146,7 +146,7 @@ class QtDialogSignalManager(QObject):
         Emit the finished signal safely.
 
         Args:
-            result: The dialog result code (QDialog.Accepted/Rejected)
+            result: The dialog result code (QDialog.DialogCode.Accepted/Rejected)
         """
         try:
             self.finished.emit(result)

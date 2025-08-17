@@ -39,7 +39,7 @@ import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from unittest.mock import Mock
 
 # Third-party imports
@@ -797,7 +797,7 @@ def main():
         print("⚠️  No display found. Setting up virtual display...")
         try:
             from pyvirtualdisplay import Display  # noqa: PLC0415
-            display = Display(visible=0, size=(800, 600))
+            display = Display(visible=False, size=(800, 600))
             display.start()
         except ImportError:
             print("❌ pyvirtualdisplay not available. Install with: pip install pyvirtualdisplay")
@@ -808,6 +808,8 @@ def main():
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    else:
+        app = cast(QApplication, app)
 
     # Set up application for benchmarking
     cast(QApplication, app).setQuitOnLastWindowClosed(False)

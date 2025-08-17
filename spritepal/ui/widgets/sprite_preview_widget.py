@@ -548,7 +548,7 @@ class SpritePreviewWidget(QWidget):
                     # The palettes dict has keys like 8, 9, etc. We need to preserve these indices
                     # Create a list with enough slots to hold the highest index
                     max_index = max(default_palettes.keys()) if default_palettes else 0
-                    palette_list = [None] * (max_index + 1)
+                    palette_list: list[list[tuple[int, int, int]] | None] = [None] * (max_index + 1)
 
                     # Place each palette at its correct index
                     for idx, palette in default_palettes.items():

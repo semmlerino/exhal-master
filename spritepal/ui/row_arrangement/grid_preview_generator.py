@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw
+from PIL.ImageDraw import ImageDraw as ImageDrawType
 
 from .grid_arrangement_manager import (
     ArrangementType,
@@ -248,7 +249,7 @@ class GridPreviewGenerator(PreviewGenerator):
 
     def _draw_grid(
         self,
-        draw: ImageDraw.Draw,
+        draw: ImageDrawType,
         tile_width: int,
         tile_height: int,
         cols: int,
@@ -270,7 +271,7 @@ class GridPreviewGenerator(PreviewGenerator):
 
     def _highlight_tile(
         self,
-        draw: ImageDraw.Draw,
+        draw: ImageDrawType,
         position: TilePosition,
         tile_width: int,
         tile_height: int,

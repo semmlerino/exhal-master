@@ -249,8 +249,8 @@ class AccessibilityHelper:
 
         # Set accessible name
         clean_text = text.replace('&', '')
-        action.setAccessibleName(clean_text)
-        action.setAccessibleDescription(description or clean_text)
+        action.setAccessibleName(clean_text)  # type: ignore[attr-defined]
+        action.setAccessibleDescription(description or clean_text)  # type: ignore[attr-defined]
 
         return action
 
@@ -358,11 +358,15 @@ class AccessibilityHelper:
 
 def apply_global_accessibility_styles():
     """Apply global accessibility styles to the application."""
+    from typing import cast
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if not app:
         return
+    
+    # Cast to QApplication for type checker
+    app = cast(QApplication, app)
 
     # Global focus indicator styles
     global_style = """
