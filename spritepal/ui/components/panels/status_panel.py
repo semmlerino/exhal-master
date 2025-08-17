@@ -7,6 +7,7 @@ Displays detection status, progress information, scanning progress, and cache st
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from ui.styles import get_muted_text_style, get_panel_style
+from utils.rom_cache import get_rom_cache
 
 
 class StatusPanel(QWidget):

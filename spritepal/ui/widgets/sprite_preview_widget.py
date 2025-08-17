@@ -893,11 +893,11 @@ class SpritePreviewWidget(QWidget):
             preview_pixmap = self.preview_label.pixmap() if self.preview_label else None
             if preview_pixmap:
                 preview_size = preview_pixmap.size()
-            if preview_size.width() > 0:
-                aspect_ratio = preview_size.height() / preview_size.width()
-                preview_height = int((width - 20) * aspect_ratio)  # 20px margin
-                controls_height = 60  # For palette controls and info
-                return preview_height + controls_height
+                if preview_size.width() > 0:
+                    aspect_ratio = preview_size.height() / preview_size.width()
+                    preview_height = int((width - 20) * aspect_ratio)  # 20px margin
+                    controls_height = 60  # For palette controls and info
+                    return preview_height + controls_height
 
         # Default calculation for empty state
         return int(width * 0.6)  # Reasonable aspect ratio

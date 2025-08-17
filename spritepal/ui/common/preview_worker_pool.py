@@ -14,6 +14,7 @@ import queue
 import threading
 import time
 import weakref
+from pathlib import Path
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 

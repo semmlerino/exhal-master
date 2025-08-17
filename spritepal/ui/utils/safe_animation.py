@@ -8,7 +8,7 @@ Qt graphics resources may not be available.
 import contextlib
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional, cast
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QEasingCurve, QObject, QPropertyAnimation

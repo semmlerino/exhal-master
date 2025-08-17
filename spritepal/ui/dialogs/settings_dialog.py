@@ -330,8 +330,10 @@ class SettingsDialog(BaseDialog):
             self.settings_manager.set_cache_enabled(self.cache_enabled_check.isChecked())
         if self.cache_location_edit:
             self.settings_manager.set_cache_location(self.cache_location_edit.text())
-        self.settings_manager.set_cache_max_size_mb(self.cache_size_spin.value())
-        self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin.value())
+        if self.cache_size_spin:
+            self.settings_manager.set_cache_max_size_mb(self.cache_size_spin.value())
+        if self.cache_expiry_spin:
+            self.settings_manager.set_cache_expiration_days(self.cache_expiry_spin.value())
         if self.auto_cleanup_check:
             self.settings_manager.set("cache", "auto_cleanup", self.auto_cleanup_check.isChecked())
         if self.show_indicators_check:
@@ -498,8 +500,8 @@ class SettingsDialog(BaseDialog):
             "dumps_dir": self.dumps_dir_edit.text() if self.dumps_dir_edit else "",
             "cache_enabled": self.cache_enabled_check.isChecked() if self.cache_enabled_check else False,
             "cache_location": self.cache_location_edit.text() if self.cache_location_edit else "",
-            "cache_max_size": self.cache_size_spin.value(),
-            "cache_expiry": self.cache_expiry_spin.value(),
+            "cache_max_size": self.cache_size_spin.value() if self.cache_size_spin else 100,
+            "cache_expiry": self.cache_expiry_spin.value() if self.cache_expiry_spin else 30,
             "auto_cleanup": self.auto_cleanup_check.isChecked() if self.auto_cleanup_check else False,
             "show_indicators": self.show_indicators_check.isChecked() if self.show_indicators_check else False,
         }

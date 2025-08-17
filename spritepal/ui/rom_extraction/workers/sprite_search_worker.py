@@ -5,6 +5,7 @@ Worker thread for searching sprites in a specific direction from current positio
 Used for intelligent next/previous navigation that skips empty ROM areas.
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

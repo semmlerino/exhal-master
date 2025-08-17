@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -105,6 +106,7 @@ class SpritePreviewWorker(BaseWorker):
             # Initialize variables to prevent unbound errors
             rom_data: bytes = b""
             tile_data: bytes = b""
+            expected_size: int | None = None
 
             # Read ROM data with file size validation
             try:

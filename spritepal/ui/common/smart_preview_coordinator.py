@@ -690,7 +690,7 @@ class SmartPreviewCoordinator(QObject):
                 try:
                     provider_result = self._rom_data_provider()
                     if provider_result is None:
-                        return preview_pixmap  # Don't cache if provider fails
+                        return  # Don't cache if provider fails
                     rom_path, _, _ = provider_result
                     preview_data = (tile_data, width, height, sprite_name)
 

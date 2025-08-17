@@ -1,5 +1,6 @@
 """Worker thread for comprehensive range scanning of ROM data"""
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
