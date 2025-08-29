@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Safe test runner for SpritePal that handles Qt testing in various environments.
 Automatically detects and configures the best testing strategy.
@@ -8,7 +10,6 @@ import os
 import shutil
 import subprocess
 import sys
-
 
 class TestEnvironment:
     """Detect and configure test environment"""
@@ -50,7 +51,6 @@ class TestEnvironment:
             f")"
         )
 
-
 def run_tests_native(args):
     """Run tests with native display"""
     print("Running tests with native display...")
@@ -61,7 +61,6 @@ def run_tests_native(args):
 
     cmd = [sys.executable, "-m", "pytest", *args]
     return subprocess.run(cmd, check=False, env=env).returncode
-
 
 def run_tests_xvfb(args):
     """Run tests with Xvfb virtual display"""
@@ -82,7 +81,6 @@ def run_tests_xvfb(args):
     cmd = [*xvfb_args, sys.executable, "-m", "pytest", *args]
     return subprocess.run(cmd, check=False, env=env).returncode
 
-
 def run_tests_offscreen(args):
     """Run tests with Qt offscreen platform"""
     print("Running tests with Qt offscreen platform...")
@@ -100,7 +98,6 @@ def run_tests_offscreen(args):
     cmd = [sys.executable, "-m", "pytest", *args]
     return subprocess.run(cmd, check=False, env=env).returncode
 
-
 def install_xvfb_instructions():
     """Print instructions for installing Xvfb"""
     print("\nXvfb not found but recommended for GUI testing in headless environments.")
@@ -110,7 +107,6 @@ def install_xvfb_instructions():
     print("  Arch:          sudo pacman -S xorg-server-xvfb")
     print("\nAlternatively, you can run non-GUI tests only with:")
     print("  python run_tests_safe.py -m 'not gui'")
-
 
 def main():
     """Main entry point"""
@@ -150,7 +146,6 @@ def main():
         install_xvfb_instructions()
         print("=" * 60 + "\n")
     return run_tests_offscreen(args)
-
 
 if __name__ == "__main__":
     sys.exit(main())

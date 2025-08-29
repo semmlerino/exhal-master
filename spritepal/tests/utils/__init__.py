@@ -4,6 +4,7 @@ Test utilities package for SpritePal test suite.
 This package contains common utilities, data generators, and helper functions
 used across multiple test files to eliminate duplication and provide consistency.
 """
+from __future__ import annotations
 
 from .assertions import (
     assert_manager_state,

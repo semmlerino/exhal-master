@@ -4,7 +4,7 @@ Test the defensive validation fix in controller.start_extraction().
 This validates that the fix eliminates the 2+ minute blocking behavior
 with invalid file paths, ensuring fail-fast behavior.
 """
-
+from __future__ import annotations
 
 import sys
 import time
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -45,7 +44,6 @@ from core.managers import (
     initialize_managers,
 )
 from ui.main_window import MainWindow
-
 
 class TestControllerDefensiveValidationFix:
     """Test that the defensive validation fix prevents blocking behavior."""
@@ -254,7 +252,6 @@ class TestControllerDefensiveValidationFix:
                 main_window.get_extraction_params = original_get_params
                 main_window.extraction_failed = original_extraction_failed
                 repo.cleanup()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

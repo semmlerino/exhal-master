@@ -4,6 +4,7 @@ Regression tests for dialog initialization order issues.
 This module ensures all dialogs can be created without InitializationOrderError
 which can occur when instance variables are assigned after super().__init__().
 """
+from __future__ import annotations
 
 import pytest
 from PySide6.QtWidgets import QApplication
@@ -11,7 +12,6 @@ from PySide6.QtWidgets import QApplication
 # Import mock dialog infrastructure
 from tests.infrastructure.mock_dialogs import (
 # Serial execution required: QApplication management
-
 
     MockUnifiedManualOffsetDialog as ManualOffsetDialog,
     MockSettingsDialog as SettingsDialog,
@@ -43,8 +43,6 @@ mock_injection_dialog.output_vram_selector = MagicMock()
 mock_injection_dialog.vram_offset_input = MagicMock()
 mock_injection_dialog.rom_offset_input = MagicMock()
 InjectionDialog = MagicMock(return_value=mock_injection_dialog)
-
-
 
 pytestmark = [
     

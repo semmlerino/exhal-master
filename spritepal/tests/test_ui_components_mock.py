@@ -1,6 +1,7 @@
 """
 Real component tests for UI components using pytest-qt and RealComponentFactory
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -17,7 +18,6 @@ from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
 from ui.row_arrangement_dialog import RowArrangementDialog
 from utils.image_utils import pil_to_qpixmap
 
-
 # Serial execution required: Real Qt components
 pytestmark = [
     
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.requires_display,
 ]
-
 
 @pytest.mark.gui
 class TestZoomablePreviewWidget:
@@ -112,7 +111,6 @@ class TestZoomablePreviewWidget:
         expected_zoom = min(400/200, 300/150) * 0.9
         assert abs(widget._zoom - expected_zoom) < 0.01  # Allow for floating point precision
 
-
 @pytest.mark.gui
 class TestPreviewPanel:
     """Test PreviewPanel with real Qt components"""
@@ -174,7 +172,6 @@ class TestPreviewPanel:
         assert result.height() == 16
         assert not result.isNull()
 
-
 class TestImageUtils:
     """Unit tests for image utilities that don't require GUI"""
 
@@ -208,8 +205,6 @@ class TestImageUtils:
             assert result.width() == 32
             assert result.height() == 32
             assert not result.isNull()
-
-
 
 @pytest.mark.gui
 class TestRowArrangementDialog:

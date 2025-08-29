@@ -4,9 +4,10 @@ Basic signal/slot integration tests that can run in any environment.
 These tests focus on the core signal/slot mechanisms without requiring
 full GUI setup, making them suitable for CI/headless environments.
 """
+from __future__ import annotations
 
 import time
-from typing import List, Any
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,7 +16,6 @@ from PySide6.QtCore import QObject, Signal, Slot, Qt, QThread
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SimpleEmitter(QObject):
     """Simple emitter for testing."""
@@ -35,15 +35,14 @@ class SimpleEmitter(QObject):
         """Emit data_ready signal."""
         self.data_ready.emit(num, text)
 
-
 class SimpleReceiver(QObject):
     """Simple receiver for testing."""
     
     def __init__(self):
         super().__init__()
-        self.received_values: List[int] = []
-        self.received_messages: List[str] = []
-        self.received_data: List[tuple] = []
+        self.received_values: list[int] = []
+        self.received_messages: list[str] = []
+        self.received_data: list[tuple] = []
         
     @Slot(int)
     def on_value_changed(self, value: int):
@@ -68,7 +67,6 @@ class SimpleReceiver(QObject):
         self.received_values.clear()
         self.received_messages.clear()
         self.received_data.clear()
-
 
 @pytest.mark.headless
 class TestBasicSignalSlot:
@@ -183,7 +181,6 @@ class TestBasicSignalSlot:
         assert received['list'] == [1, 2, 3]
         assert received['dict'] == {'key': 'value'}
 
-
 @pytest.mark.headless
 class TestDialogSignalPatterns:
     """Test signal patterns specific to dialogs."""
@@ -210,7 +207,7 @@ class TestDialogSignalPatterns:
             def __init__(self):
                 super().__init__()
                 self.current_offset = 0
-                self.found_sprites: List[tuple] = []
+                self.found_sprites: list[tuple] = []
                 
             @Slot(int)
             def on_offset_changed(self, offset: int):
@@ -326,7 +323,6 @@ class TestDialogSignalPatterns:
         dialog.signal.emit("connected")
         assert received == ["connected"]
 
-
 @pytest.mark.headless
 class TestSignalThreadSafety:
     """Test thread safety aspects of signals."""
@@ -379,7 +375,6 @@ class TestSignalThreadSafety:
             
         # Should be received in order
         assert receiver.received_values == list(range(10))
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

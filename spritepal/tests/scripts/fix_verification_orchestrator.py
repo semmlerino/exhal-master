@@ -25,14 +25,12 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
 import time
 
 # Import our monitoring modules
 from test_health_dashboard import TestHealthMonitor, TestSuiteMetrics
 from progressive_test_runner import ProgressiveTestRunner
 from regression_detector import RegressionDetector
-
 
 @dataclass
 class FixVerificationSession:
@@ -41,13 +39,12 @@ class FixVerificationSession:
     fix_category: str
     description: str
     started: datetime
-    baseline_file: Optional[Path] = None
-    checkpoints: List[Dict] = field(default_factory=list)
-    final_report: Optional[Path] = None
+    baseline_file: Path | None = None
+    checkpoints: list[Dict] = field(default_factory=list)
+    final_report: Path | None = None
     status: str = "active"  # active, completed, abandoned
-    expected_improvements: Dict[str, int] = field(default_factory=dict)
-    actual_improvements: Dict[str, int] = field(default_factory=dict)
-
+    expected_improvements: dict[str, int] = field(default_factory=dict)
+    actual_improvements: dict[str, int] = field(default_factory=dict)
 
 @dataclass
 class FixImpactAnalysis:
@@ -61,7 +58,6 @@ class FixImpactAnalysis:
     risk_score: float
     confidence_level: float
     recommended_action: str
-
 
 class FixVerificationOrchestrator:
     """Orchestrates comprehensive fix verification workflow."""
@@ -113,13 +109,13 @@ class FixVerificationOrchestrator:
         self.regression_detector = RegressionDetector(self.scripts_dir / "history")
         
         # Active sessions
-        self.active_sessions: Dict[str, FixVerificationSession] = {}
+        self.active_sessions: dict[str, FixVerificationSession] = {}
         self._load_active_sessions()
     
     def start_verification_session(self, 
                                   fix_category: str, 
                                   description: str = "",
-                                  expected_improvements: Dict[str, int] = None) -> str:
+                                  expected_improvements: dict[str, int] = None) -> str:
         """Start a new fix verification session."""
         
         session_id = f"{fix_category}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -484,7 +480,7 @@ class FixVerificationOrchestrator:
         return "\n".join(lines)
     
     def _generate_context_recommendations(self, session: FixVerificationSession, 
-                                        metrics: TestSuiteMetrics) -> List[str]:
+                                        metrics: TestSuiteMetrics) -> list[str]:
         """Generate context-aware recommendations based on fix category and results."""
         
         recommendations = []
@@ -639,7 +635,7 @@ class FixVerificationOrchestrator:
         with open(session_file, 'w') as f:
             json.dump(session_data, f, indent=2)
     
-    def _load_session(self, session_id: str) -> Optional[FixVerificationSession]:
+    def _load_session(self, session_id: str) -> FixVerificationSession | None:
         """Load session data from disk."""
         session_file = self.sessions_dir / f"{session_id}.json"
         
@@ -760,7 +756,6 @@ class FixVerificationOrchestrator:
                 for i, fix in enumerate(fix_list, 1):
                     print(f"  {i}. {fix}")
 
-
 def main():
     """Main entry point for fix verification orchestrator."""
     parser = argparse.ArgumentParser(description="Fix Verification Orchestrator")
@@ -838,7 +833,6 @@ def main():
         print("-" * 30)
         for category, info in orchestrator.FIX_CATEGORIES.items():
             print(f"  {category:20} - {info['description']}")
-
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,7 @@
 """
 Dialog components for SpritePal UI
 """
+from __future__ import annotations
 
 # Import dialog components
 # UnifiedManualOffsetDialog has smart selection built-in based on environment variable

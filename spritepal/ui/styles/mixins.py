@@ -1,7 +1,7 @@
 """
 Style mixins and utility functions for SpritePal UI
 """
-
+from __future__ import annotations
 
 from .theme import COLORS, DIMENSIONS
 

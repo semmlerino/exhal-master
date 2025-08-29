@@ -4,6 +4,7 @@ UI managers package
 Contains manager classes that handle specific UI responsibilities,
 following the Single Responsibility Principle.
 """
+from __future__ import annotations
 
 from .keyboard_handler import KeyboardActionsProtocol, KeyboardShortcutHandler
 from .menu_bar_manager import MenuBarActionsProtocol, MenuBarManager

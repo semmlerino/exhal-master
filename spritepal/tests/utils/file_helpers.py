@@ -4,6 +4,7 @@ File handling utilities for SpritePal tests.
 This module provides functions for creating, managing, and cleaning up
 test files and directories, reducing duplication across test files.
 """
+from __future__ import annotations
 
 import shutil
 import tempfile
@@ -23,7 +24,6 @@ def create_temp_directory(prefix: str = "spritepal_test_") -> str:
         Path to the created temporary directory
     """
     return tempfile.mkdtemp(prefix=prefix)
-
 
 def create_test_files(
     base_path: str,
@@ -131,7 +131,6 @@ def create_test_files(
 
     return file_paths
 
-
 def _generate_vram_data(**kwargs) -> bytearray:
     """Generate VRAM data with sprite data at the correct offset."""
     from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
@@ -150,7 +149,6 @@ def _generate_vram_data(**kwargs) -> bytearray:
 
     return data
 
-
 def _generate_rom_data(**kwargs) -> bytearray:
     """Generate ROM data with embedded sprite data."""
     from .data_generators import generate_rom_data
@@ -160,7 +158,6 @@ def _generate_rom_data(**kwargs) -> bytearray:
         add_sprites=kwargs.get("add_sprites", True),
         sprite_count=kwargs.get("sprite_count", 10)
     )
-
 
 def cleanup_test_files(file_paths: list[str] | dict[str, str] | str):
     """
@@ -187,7 +184,6 @@ def cleanup_test_files(file_paths: list[str] | dict[str, str] | str):
         except OSError:
             # File/directory might already be deleted or inaccessible
             pass
-
 
 def create_test_workspace(
     workspace_name: str = "test_workspace",
@@ -218,8 +214,6 @@ def create_test_workspace(
         **file_paths
     }
 
-
-
 def ensure_directory_exists(path: str) -> str:
     """
     Ensure a directory exists, creating it if necessary.
@@ -232,7 +226,6 @@ def ensure_directory_exists(path: str) -> str:
     """
     Path(path).mkdir(parents=True, exist_ok=True)
     return path
-
 
 def copy_test_files(source_files: dict[str, str], destination_dir: str) -> dict[str, str]:
     """
@@ -263,7 +256,6 @@ def copy_test_files(source_files: dict[str, str], destination_dir: str) -> dict[
     new_paths["workspace"] = str(dest_path)
     return new_paths
 
-
 def get_test_data_size(file_path: str) -> int:
     """
     Get the size of a test data file.
@@ -275,7 +267,6 @@ def get_test_data_size(file_path: str) -> int:
         File size in bytes
     """
     return Path(file_path).stat().st_size
-
 
 def verify_test_files(file_paths: dict[str, str]) -> dict[str, bool]:
     """

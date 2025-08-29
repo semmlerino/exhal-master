@@ -8,6 +8,7 @@ GOLDEN RULE: Mock at the system boundary, use real components for internal archi
 
 Run with: pytest tests/examples/example_minimal_mock_test.py -v
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock, call
@@ -19,7 +20,6 @@ from tests.infrastructure.real_component_factory import RealComponentFactory
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
-
 
 class TestMinimalMockingPatterns:
     """Examples of appropriate, minimal mock usage."""
@@ -225,7 +225,6 @@ class TestMinimalMockingPatterns:
                     # Real data transformation occurred
                     assert len(sessions) >= 0
 
-
 class TestProperMockingBoundaries:
     """Examples showing where to draw the mocking boundary."""
 
@@ -304,7 +303,6 @@ class TestProperMockingBoundaries:
                 assert isinstance(extract_valid, bool)
                 assert isinstance(inject_valid, bool)
 
-
 class TestMockingAntiPatterns:
     """Examples of mocking anti-patterns to avoid."""
     
@@ -382,7 +380,6 @@ class TestMockingAntiPatterns:
                 elif isinstance(result, dict):
                     assert "data" in result or "error" in result
 
-
 class TestMockingBestPractices:
     """Best practices for minimal, effective mocking."""
     
@@ -453,14 +450,12 @@ class TestMockingBestPractices:
                 # mock_stat.assert_called_once_with("/fake/file.bin")  # Too specific
                 # assert mock_stat.call_count == 1  # Implementation detail
 
-
 # Fixtures for minimal mock testing
 @pytest.fixture
 def temp_directory():
     """Fixture providing real temporary directory."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
-
 
 @pytest.fixture
 def mock_subprocess():
@@ -471,7 +466,6 @@ def mock_subprocess():
         mock_process.communicate.return_value = (b'success', b'')
         mock_popen.return_value = mock_process
         yield mock_popen
-
 
 # Example of testing external tool integration
 def test_external_tool_integration_with_minimal_mocks(mock_subprocess):
@@ -487,7 +481,6 @@ def test_external_tool_integration_with_minimal_mocks(mock_subprocess):
         
         # Verify real component processed result correctly
         assert result is not None
-
 
 if __name__ == "__main__":
     # Run the minimal mocking examples

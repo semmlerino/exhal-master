@@ -4,20 +4,19 @@ Tests for dark theme accessibility and contrast ratios.
 This module tests the accessibility compliance of the dark theme implementation,
 focusing on WCAG 2.1 AA contrast requirements and visual accessibility.
 """
+from __future__ import annotations
 
 import math
-from typing import List, Tuple
 
 import pytest
 
 from ui.styles.theme import COLORS, Theme
 
-
 class ContrastCalculator:
     """Utility class for calculating color contrast ratios according to WCAG 2.1."""
 
     @staticmethod
-    def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+    def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
         """Convert hex color to RGB tuple."""
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
@@ -94,7 +93,6 @@ class ContrastCalculator:
         ratio = cls.contrast_ratio(color1, color2)
         required_ratio = 4.5 if large_text else 7.0
         return ratio >= required_ratio
-
 
 class TestWCAGContrast:
     """Test WCAG contrast ratios for dark theme color combinations."""
@@ -179,7 +177,6 @@ class TestWCAGContrast:
             f"should be >= 3.0 for readability"
         )
 
-
 class TestButtonContrast:
     """Test contrast ratios for button color combinations."""
 
@@ -232,7 +229,6 @@ class TestButtonContrast:
             f"({text_color} on {hover_bg})"
         )
 
-
 class TestStatusColorContrast:
     """Test contrast ratios for status indicator colors."""
 
@@ -270,7 +266,6 @@ class TestStatusColorContrast:
                 f"Status {status_type} on panel background contrast {ratio:.2f} "
                 f"should be >= 3.0 for visibility ({status_color} on {panel_bg})"
             )
-
 
 class TestBorderContrast:
     """Test contrast ratios for border colors."""
@@ -320,7 +315,6 @@ class TestBorderContrast:
                 f"({error_border} on {bg_color})"
             )
 
-
 class TestPreviewBackgroundContrast:
     """Test contrast for sprite preview backgrounds."""
 
@@ -349,7 +343,6 @@ class TestPreviewBackgroundContrast:
             f"Text on preview background contrast {ratio:.2f} should be >= 4.5 "
             f"({COLORS['text_primary']} on {COLORS['preview_background']})"
         )
-
 
 class TestColorDistinguishability:
     """Test that colors are sufficiently distinguishable from each other."""
@@ -401,7 +394,6 @@ class TestColorDistinguishability:
                 f"background vs {bg_key} (contrast: {ratio:.2f})"
             )
 
-
 class TestAccessibilityGuidelines:
     """Test compliance with additional accessibility guidelines."""
 
@@ -433,7 +425,6 @@ class TestAccessibilityGuidelines:
         # Disabled should be less contrasty but still somewhat visible
         assert disabled_contrast < normal_contrast, "Disabled states should have lower contrast"
         assert disabled_contrast >= 2.0, "Disabled states should still be somewhat visible"
-
 
 class TestContrastCalculatorUtility:
     """Test the contrast calculator utility itself."""
@@ -474,7 +465,6 @@ class TestContrastCalculatorUtility:
         # Light gray on white should not meet standards
         assert not ContrastCalculator.meets_wcag_aa("#cccccc", "#ffffff")
         assert not ContrastCalculator.meets_wcag_aaa("#cccccc", "#ffffff")
-
 
 @pytest.mark.headless
 class TestAccessibilityHeadless:

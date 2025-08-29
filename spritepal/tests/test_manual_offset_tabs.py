@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -32,7 +34,6 @@ try:
 except ImportError as e:
     print(f"✗ Failed to import dialog: {e}")
     sys.exit(1)
-
 
 def test_tab_creation():
     """Test creating individual tab widgets."""
@@ -81,7 +82,6 @@ def test_tab_creation():
     
     return True
 
-
 def test_tab_integration():
     """Test tabs integrated in a window."""
     app = QApplication(sys.argv)
@@ -124,7 +124,6 @@ def test_tab_integration():
     
     return True
 
-
 def test_dialog_integration():
     """Test that the dialog still works with refactored tabs."""
     app = QApplication(sys.argv)
@@ -154,7 +153,6 @@ def test_dialog_integration():
     
     return True
 
-
 def main():
     """Run all tests."""
     print("\n=== Testing Refactored Manual Offset Tabs ===\n")
@@ -180,7 +178,6 @@ def main():
         print("❌ Some tests failed. Please review the refactoring.")
     
     return 0 if all_passed else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

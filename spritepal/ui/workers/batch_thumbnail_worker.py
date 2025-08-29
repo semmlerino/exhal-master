@@ -2,6 +2,7 @@
 Batch thumbnail worker for generating sprite thumbnails asynchronously.
 Handles queue management and priority-based generation.
 """
+from __future__ import annotations
 
 import mmap
 from collections import OrderedDict
@@ -10,7 +11,6 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from queue import PriorityQueue
-from typing import Optional
 
 from PIL import Image
 from PySide6.QtCore import (
@@ -30,7 +30,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class ThumbnailRequest:
     """Request for thumbnail generation."""
@@ -41,7 +40,6 @@ class ThumbnailRequest:
     def __lt__(self, other):
         """For priority queue sorting (lower priority value = higher priority)."""
         return self.priority < other.priority
-
 
 class LRUCache:
     """Thread-safe LRU cache for QImage thumbnails."""
@@ -59,7 +57,7 @@ class LRUCache:
         self._hits = 0
         self._misses = 0
 
-    def get(self, key: tuple[int, int]) -> Optional[QImage]:
+    def get(self, key: tuple[int, int]) -> QImage | None:
         """
         Get item from cache, updating access order.
 
@@ -122,7 +120,6 @@ class LRUCache:
                 'hit_rate': hit_rate
             }
 
-
 class BatchThumbnailWorker(QObject):
     """
     Worker for batch thumbnail generation.
@@ -141,8 +138,8 @@ class BatchThumbnailWorker(QObject):
     def __init__(
         self,
         rom_path: str,
-        rom_extractor: Optional[ROMExtractor] = None,
-        parent: Optional[QObject] = None
+        rom_extractor: ROMExtractor | None = None,
+        parent: QObject | None = None
     ):
         """
         Initialize the batch thumbnail worker.
@@ -427,7 +424,7 @@ class BatchThumbnailWorker(QObject):
             self._rom_file = None
             self.error.emit(f"Failed to load ROM: {e}")
 
-    def _read_rom_chunk(self, offset: int, size: int) -> Optional[bytes]:
+    def _read_rom_chunk(self, offset: int, size: int) -> bytes | None:
         """Read a chunk from memory-mapped ROM."""
         if not self._rom_mmap:
             return None
@@ -443,7 +440,7 @@ class BatchThumbnailWorker(QObject):
             logger.error(f"Failed to read ROM chunk at 0x{offset:06X}: {e}")
             return None
 
-    def _get_next_request(self) -> Optional[ThumbnailRequest]:
+    def _get_next_request(self) -> ThumbnailRequest | None:
         """Get the next request from the queue."""
         with QMutexLocker(self._mutex):
             if not self._request_queue.empty():
@@ -454,7 +451,7 @@ class BatchThumbnailWorker(QObject):
                     pass
         return None
 
-    def _get_cached_image(self, key: tuple[int, int]) -> Optional[QImage]:
+    def _get_cached_image(self, key: tuple[int, int]) -> QImage | None:
         """Thread-safe cache read with LRU."""
         return self._cache.get(key)
 
@@ -494,7 +491,7 @@ class BatchThumbnailWorker(QObject):
                 self._completed_count += 1
                 self._emit_progress()
 
-    def _generate_thumbnail_thread_safe(self, request: ThumbnailRequest) -> Optional[QImage]:
+    def _generate_thumbnail_thread_safe(self, request: ThumbnailRequest) -> QImage | None:
         """
         Thread-safe version of thumbnail generation for parallel processing.
 
@@ -510,7 +507,7 @@ class BatchThumbnailWorker(QObject):
         # The ROM data is read-only mmap, safe for concurrent reads
         return self._generate_thumbnail(request)
 
-    def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QImage]:
+    def _generate_thumbnail(self, request: ThumbnailRequest) -> QImage | None:
         """
         Generate a thumbnail for a sprite.
 
@@ -723,7 +720,6 @@ class BatchThumbnailWorker(QObject):
 
         logger.debug("BatchThumbnailWorker cleanup completed")
 
-
 class ThumbnailWorkerController(QObject):
     """
     Controller for managing BatchThumbnailWorker lifecycle properly.
@@ -735,12 +731,12 @@ class ThumbnailWorkerController(QObject):
     progress = Signal(int, int)
     error = Signal(str)
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self.worker: Optional[BatchThumbnailWorker] = None
-        self._thread: Optional[QThread] = None
+        self.worker: BatchThumbnailWorker | None = None
+        self._thread: QThread | None = None
 
-    def start_worker(self, rom_path: str, rom_extractor: Optional[ROMExtractor] = None) -> None:
+    def start_worker(self, rom_path: str, rom_extractor: ROMExtractor | None = None) -> None:
         """Start worker with proper thread management."""
         if self._thread and self._thread.isRunning():
             logger.warning("Worker already running, stopping first")

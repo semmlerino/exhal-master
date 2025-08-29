@@ -4,6 +4,7 @@ Scan Controls Panel for Manual Offset Dialog
 Handles all scanning functionality including range scanning, full ROM scanning,
 pause/stop controls, and worker management.
 """
+from __future__ import annotations
 
 import os
 from pathlib import Path
@@ -32,7 +33,6 @@ from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
-
 
 class ScanControlsPanel(QWidget):
     """Panel for controlling ROM scanning operations"""
@@ -136,7 +136,7 @@ class ScanControlsPanel(QWidget):
         _ = self.pause_btn.clicked.connect(self._toggle_pause)
         _ = self.stop_btn.clicked.connect(self._stop_scan)
 
-    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: "ExtractionManager"):
+    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: ExtractionManager):
         """Set ROM data for scanning operations"""
         with QMutexLocker(self._manager_mutex):
             self.rom_path = rom_path
@@ -147,7 +147,7 @@ class ScanControlsPanel(QWidget):
         # Check for cached partial scan results
         self._check_for_cached_scans()
 
-    def _get_managers_safely(self) -> tuple["ExtractionManager | None", "ROMExtractor | None"]:
+    def _get_managers_safely(self) -> tuple[ExtractionManager | None, ROMExtractor | None]:
         """Get manager references safely with thread protection.
 
         WARNING: The returned references are only safe to use within the calling
@@ -410,7 +410,7 @@ class ScanControlsPanel(QWidget):
         if self.range_scan_worker is None:
             return
 
-        if self.range_scan_worker.is_paused():
+        if self.range_scan_worker.is_paused:
             self.range_scan_worker.resume_scan()
         else:
             self.range_scan_worker.pause_scan()

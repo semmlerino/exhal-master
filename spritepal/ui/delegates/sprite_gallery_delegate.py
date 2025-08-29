@@ -2,7 +2,7 @@
 Sprite gallery delegate for custom rendering in QListView.
 Handles efficient painting of sprites with selection and hover effects.
 """
-
+from __future__ import annotations
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
@@ -17,7 +17,6 @@ from ui.models.sprite_gallery_model import SpriteGalleryModel
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpriteGalleryDelegate(QStyledItemDelegate):
     """Custom delegate for rendering sprites in gallery view."""
@@ -87,7 +86,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         )
 
         # Determine colors based on state
-        is_hovered = bool(option.state  # type: ignore[attr-defined] & QStyle.StateFlag.State_MouseOver)
+        is_hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)  # type: ignore[attr-defined]
 
         if is_selected:
             bg_color = self._bg_selected_color

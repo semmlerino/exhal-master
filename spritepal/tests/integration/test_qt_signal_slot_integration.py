@@ -9,13 +9,14 @@ and ROMExtractionPanel, ensuring proper:
 - Thread safety
 - Connection lifecycle management
 """
+from __future__ import annotations
 
 import os
 import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -30,12 +31,10 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 @pytest.fixture
 def qt_framework():
     """Provide Qt testing framework."""
     return QtTestingFramework()
-
 
 @pytest.fixture
 def temp_rom_file():
@@ -50,10 +49,9 @@ def temp_rom_file():
     # Cleanup
     try:
         os.unlink(temp_path)
-    except:
+    except Exception as e:
+        # Caught exception during operation
         pass
-
-
 @pytest.fixture
 def mock_extraction_manager():
     """Create a mock extraction manager."""
@@ -62,13 +60,12 @@ def mock_extraction_manager():
     manager.get_sprite_at_offset = MagicMock(return_value=None)
     return manager
 
-
 class SignalRecorder(QObject):
     """Helper class to record signal emissions with parameters."""
     
     def __init__(self):
         super().__init__()
-        self.emissions: List[Tuple[str, tuple, float]] = []
+        self.emissions: list[tuple[str, tuple, float]] = []
         self.lock = QThread.currentThread()  # Thread safety check
         
     @Slot(int)
@@ -96,18 +93,17 @@ class SignalRecorder(QObject):
         """Clear recorded emissions."""
         self.emissions.clear()
         
-    def get_emissions(self, signal_name: Optional[str] = None) -> List[Tuple[tuple, float]]:
+    def get_emissions(self, signal_name: str | None = None) -> list[tuple[tuple, float]]:
         """Get emissions for a specific signal or all."""
         if signal_name:
             return [(args, ts) for name, args, ts in self.emissions if name == signal_name]
         return [(args, ts) for _, args, ts in self.emissions]
         
-    def count(self, signal_name: Optional[str] = None) -> int:
+    def count(self, signal_name: str | None = None) -> int:
         """Count emissions for a specific signal or all."""
         if signal_name:
             return sum(1 for name, _, _ in self.emissions if name == signal_name)
         return len(self.emissions)
-
 
 @pytest.mark.gui
 class TestDialogSignalConnections:
@@ -202,7 +198,6 @@ class TestDialogSignalConnections:
         assert recorder.count('offset_changed') == 1
         assert recorder.count('sprite_found') == 1
 
-
 @pytest.mark.gui
 class TestPanelSignalReception:
     """Test ROMExtractionPanel signal reception and handling."""
@@ -285,7 +280,6 @@ class TestPanelSignalReception:
         assert "Selected sprite" in panel.manual_offset_status.text()
         assert f"0x{test_offset:06X}" in panel.manual_offset_status.text()
 
-
 @pytest.mark.gui
 class TestSignalConnectionLifecycle:
     """Test signal connection lifecycle and cleanup."""
@@ -311,7 +305,7 @@ class TestSignalConnectionLifecycle:
             # Connect our recorder (simulating what might happen with duplicate connections)
             try:
                 dialog.offset_changed.disconnect()
-            except:
+            except Exception:
                 pass  # No connections to disconnect
             dialog.offset_changed.connect(recorder.record_offset_changed)
             
@@ -379,7 +373,6 @@ class TestSignalConnectionLifecycle:
         
         # Recorder should still exist but no more signals
         assert recorder.count() == 1  # No new signals after deletion
-
 
 @pytest.mark.gui
 class TestCrossWidgetCoordination:
@@ -463,7 +456,6 @@ class TestCrossWidgetCoordination:
                 # Both should receive the signal
                 mock1.assert_called_with(test_offset)
                 mock2.assert_called_with(test_offset)
-
 
 @pytest.mark.gui
 class TestThreadSafetyAndTiming:
@@ -603,7 +595,6 @@ class TestThreadSafetyAndTiming:
         # All signals should be received
         assert received_count == emission_count
 
-
 @pytest.mark.gui
 class TestSignalBlockingAndError:
     """Test signal blocking and error conditions."""
@@ -702,7 +693,6 @@ class TestSignalBlockingAndError:
         
         # Should not have been received
         assert not Receiver.received
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

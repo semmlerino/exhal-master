@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class NavigationPlugin(ABC):
     """
     Abstract base class for navigation plugins.
@@ -82,7 +81,6 @@ class NavigationPlugin(ABC):
     def set_metadata(self, key: str, value: Any) -> None:
         """Set plugin metadata."""
         self._metadata[key] = value
-
 
 class StrategyPlugin(NavigationPlugin):
     """Plugin that provides navigation strategies."""
@@ -138,7 +136,6 @@ class StrategyPlugin(NavigationPlugin):
         except Exception as e:
             logger.exception(f"Error cleaning up strategy plugin {self.name}: {e}")
 
-
 class FormatAdapterPlugin(NavigationPlugin):
     """Plugin that provides format-specific adapters."""
 
@@ -170,7 +167,6 @@ class FormatAdapterPlugin(NavigationPlugin):
         """Unregister format adapters."""
         logger.info(f"Cleaned up format adapter plugin: {self.name}")
 
-
 class ScoringAlgorithmPlugin(NavigationPlugin):
     """Plugin that provides custom scoring algorithms."""
 
@@ -200,7 +196,6 @@ class ScoringAlgorithmPlugin(NavigationPlugin):
     def cleanup(self) -> None:
         """Unregister scoring algorithms."""
         logger.info(f"Cleaned up scoring plugin: {self.name}")
-
 
 class PluginManager:
     """
@@ -466,7 +461,6 @@ class PluginManager:
         elif isinstance(plugin, ScoringAlgorithmPlugin) and plugin.name in self.scoring_plugins:
             del self.scoring_plugins[plugin.name]
 
-
 # Example plugin implementations for reference
 
 class LinearPatternStrategy(AbstractPatternStrategy):
@@ -555,7 +549,6 @@ class LinearPatternStrategy(AbstractPatternStrategy):
 
         return hints
 
-
 class ExampleStrategyPlugin(StrategyPlugin):
     """Example plugin that provides a linear pattern strategy."""
 
@@ -566,7 +559,6 @@ class ExampleStrategyPlugin(StrategyPlugin):
         )
         self.set_metadata("author", "SpritePal Team")
         self.set_metadata("description", "Example linear pattern strategy plugin")
-
 
 class _PluginManagerSingleton:
     """Singleton holder for PluginManager."""
@@ -598,7 +590,6 @@ class _PluginManagerSingleton:
             cls._instance.shutdown_all_plugins()
             cls._instance = None
 
-
 def get_plugin_manager(plugin_directories: list[Path] | None = None) -> PluginManager:
     """
     Get global plugin manager instance.
@@ -610,7 +601,6 @@ def get_plugin_manager(plugin_directories: list[Path] | None = None) -> PluginMa
         Global plugin manager instance
     """
     return _PluginManagerSingleton.get(plugin_directories)
-
 
 def shutdown_plugin_manager() -> None:
     """Shutdown global plugin manager."""

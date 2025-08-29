@@ -1,6 +1,7 @@
 """
 Integration tests for sprite finder functionality using real components.
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
@@ -8,7 +9,6 @@ from pathlib import Path
 from core.sprite_finder import SpriteFinder
 from core.rom_extractor import ROMExtractor
 from core.hal_compression import HALCompressor
-
 
 @pytest.mark.integration
 class TestSpriteFinder:
@@ -131,7 +131,6 @@ class TestSpriteFinder:
         # Just verify it completes
         assert isinstance(result, list)
 
-
 @pytest.mark.integration
 class TestHALCompression:
     """Test HAL compression/decompression with real data."""
@@ -212,7 +211,6 @@ class TestHALCompression:
         
         # Should complete without crashes
         assert len(results) == len(offsets)
-
 
 @pytest.mark.integration
 class TestROMExtractor:

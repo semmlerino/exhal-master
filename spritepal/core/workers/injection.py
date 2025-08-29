@@ -32,7 +32,6 @@ from .specialized import (
 
 logger = get_logger(__name__)
 
-
 # Type definitions for injection parameters
 class VRAMInjectionParams(TypedDict, total=False):
     """Type definition for VRAM injection parameters"""
@@ -43,7 +42,6 @@ class VRAMInjectionParams(TypedDict, total=False):
     offset: int
     metadata_path: str | None
 
-
 class ROMInjectionParams(TypedDict, total=False):
     """Type definition for ROM injection parameters"""
     mode: str  # "rom"
@@ -53,7 +51,6 @@ class ROMInjectionParams(TypedDict, total=False):
     offset: int
     fast_compression: bool
     metadata_path: str | None
-
 
 class VRAMInjectionWorker(InjectionWorkerBase):
     """
@@ -69,7 +66,6 @@ class VRAMInjectionWorker(InjectionWorkerBase):
         self.params = params
         self._operation_name = "VRAMInjectionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -113,7 +109,6 @@ class VRAMInjectionWorker(InjectionWorkerBase):
             self.emit_error(error_msg)
             self.operation_finished.emit(False, error_msg)
 
-
 class ROMInjectionWorker(InjectionWorkerBase):
     """
     Worker for ROM injection operations using singleton InjectionManager.
@@ -128,7 +123,6 @@ class ROMInjectionWorker(InjectionWorkerBase):
         self.params = params
         self._operation_name = "ROMInjectionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -172,7 +166,6 @@ class ROMInjectionWorker(InjectionWorkerBase):
             self.emit_error(error_msg)
             self.operation_finished.emit(False, error_msg)
 
-
 # Worker-owned manager pattern (Phase 2 architecture)
 class WorkerOwnedVRAMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixin):
     """
@@ -205,7 +198,6 @@ class WorkerOwnedVRAMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixi
         self.params = params
         self._operation_name = "WorkerOwnedVRAMInjectionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -249,7 +241,6 @@ class WorkerOwnedVRAMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixi
             self.emit_error(error_msg)
             self.operation_finished.emit(False, error_msg)
 
-
 class WorkerOwnedROMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixin):
     """
     ROM injection worker that owns its own InjectionManager instance.
@@ -281,7 +272,6 @@ class WorkerOwnedROMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixin
         self.params = params
         self._operation_name = "WorkerOwnedROMInjectionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)

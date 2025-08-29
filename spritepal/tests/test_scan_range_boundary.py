@@ -2,6 +2,7 @@
 Test to verify that ROM scanning correctly includes the end offset boundary.
 This test validates the fix for the off-by-one error in scan range iteration.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
@@ -13,7 +14,6 @@ pytestmark = [
     pytest.mark.headless,
     pytest.mark.rom_data,
 ]
-
 
 class TestScanRangeBoundary:
     """Test that scan ranges are inclusive of the end offset."""
@@ -146,7 +146,6 @@ class TestScanRangeBoundary:
                 
                 assert actual_start == expected_start, \
                     f"Resume offset should be {hex(expected_start)} but was {hex(actual_start)}"
-
 
 def mock_open(read_data=None):
     """Create a mock file object."""

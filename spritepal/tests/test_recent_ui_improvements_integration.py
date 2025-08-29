@@ -48,7 +48,6 @@ except ImportError:
     MANUAL_OFFSET_AVAILABLE = False
     UnifiedManualOffsetDialog = Mock
 
-
 class TestSpritePalAppDarkThemeIntegration:
     """Test SpritePalApp dark theme integration with real Qt components."""
 
@@ -117,7 +116,6 @@ class TestSpritePalAppDarkThemeIntegration:
         assert min_size.width() >= expected_size.width(), f"Window width should be at least {expected_size.width()}, got {min_size.width()}"
         assert min_size.height() >= expected_size.height(), f"Window height should be at least {expected_size.height()}, got {min_size.height()}"
 
-
 class TestMainWindowIntegration:
     """Test MainWindow integration with new size and dark theme."""
 
@@ -177,7 +175,6 @@ class TestMainWindowIntegration:
             # Note: exact colors may vary due to inheritance, so test general darkness
             assert window_color.value() < 128, f"Window should be dark, got lightness {window_color.value()}"
             assert text_color.value() > 200, f"Text should be light, got lightness {text_color.value()}"
-
 
 class TestManualOffsetDialogSignalIntegration:
     """Test manual offset dialog with new signals (offset_changed, sprite_found)."""
@@ -306,7 +303,6 @@ class TestManualOffsetDialogSignalIntegration:
             except Exception as e:
                 pytest.skip(f"Could not test dialog with dark theme: {e}")
 
-
 class TestPreviewWidgetDarkBackgrounds:
     """Test sprite preview widgets with dark backgrounds (#1e1e1e)."""
 
@@ -372,7 +368,6 @@ class TestPreviewWidgetDarkBackgrounds:
         # Test background color matches theme
         expected_bg = COLORS['preview_background']
         assert expected_bg in preview_widget.styleSheet(), f"Background should use theme color {expected_bg}"
-
 
 class TestButtonStylingWithGradients:
     """Test button styling with gradients and hover states."""
@@ -481,7 +476,6 @@ class TestButtonStylingWithGradients:
         # Test that button maintains consistent size
         final_size = button.size()
         assert final_size == original_size, "Button size should be consistent after hover"
-
 
 class TestCompleteUserWorkflowIntegration:
     """Test complete user workflows with real Qt interaction."""
@@ -605,7 +599,6 @@ class TestCompleteUserWorkflowIntegration:
             assert new_size.width() >= 1000, "Width should remain at least 1000 after resize"
             assert new_size.height() >= 650, "Height should remain at least 650 after resize"
 
-
 class TestRegressionPrevention:
     """Tests to prevent regression of recent UI improvements."""
 
@@ -670,7 +663,6 @@ class TestRegressionPrevention:
             # Test that hover states are still included
             assert "hover" in css.lower(), f"Button style {button_type} should include hover states"
 
-
 # Helper functions for test setup
 @contextmanager
 def mock_manager_dependencies() -> Generator[None, None, None]:
@@ -682,11 +674,9 @@ def mock_manager_dependencies() -> Generator[None, None, None]:
         mock_extraction.return_value = Mock()
         yield
 
-
 def create_test_spritepal_app() -> SpritePalApp:
     """Create a test SpritePalApp instance with minimal setup."""
     return SpritePalApp(["test_spritepal"])
-
 
 @pytest.fixture
 def test_app(qtbot) -> Generator[SpritePalApp, None, None]:
@@ -694,7 +684,6 @@ def test_app(qtbot) -> Generator[SpritePalApp, None, None]:
     app = create_test_spritepal_app()
     yield app
     # Cleanup is handled by qtbot
-
 
 @pytest.fixture
 def test_main_window(qtbot) -> Generator[MainWindow, None, None]:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Run Memory Leak Tests
 
@@ -23,7 +25,6 @@ sys.path.insert(0, str(project_root))
 from memory_leak_profiler import MemoryLeakProfiler
 from PySide6.QtWidgets import QApplication
 
-
 def setup_test_environment():
     """Set up the test environment for leak detection."""
     # Ensure we have a Qt application
@@ -37,7 +38,6 @@ def setup_test_environment():
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
     return app
-
 
 def run_baseline_measurements(profiler: MemoryLeakProfiler, output_dir: Path):
     """Run baseline memory measurements."""
@@ -73,7 +73,6 @@ def run_baseline_measurements(profiler: MemoryLeakProfiler, output_dir: Path):
 
     print(f"Baseline metrics saved to: {baseline_file}")
     return baseline
-
 
 def run_dialog_leak_tests(profiler: MemoryLeakProfiler, cycles: int, output_dir: Path):
     """Run memory leak tests for all dialogs."""
@@ -133,7 +132,6 @@ def run_dialog_leak_tests(profiler: MemoryLeakProfiler, cycles: int, output_dir:
 
     return results
 
-
 def run_worker_leak_tests(profiler: MemoryLeakProfiler, operations: int, output_dir: Path):
     """Run memory leak tests for worker threads."""
     print(f"Running worker leak tests ({operations} operations each)...")
@@ -192,7 +190,6 @@ def run_worker_leak_tests(profiler: MemoryLeakProfiler, operations: int, output_
             results[worker_name] = None
 
     return results
-
 
 def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
     """Generate summary report with key metrics."""
@@ -275,7 +272,6 @@ def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
         f.write("5. Re-run tests after implementing fixes to verify improvements\n")
 
     print(f"Summary report saved to: {summary_file}")
-
 
 def main():
     """Main function."""
@@ -367,7 +363,6 @@ def main():
     print(f"\nAll results saved to: {args.output_dir}/")
 
     return severe_leaks  # Return non-zero exit code if severe leaks found
-
 
 if __name__ == "__main__":
     sys.exit(main())

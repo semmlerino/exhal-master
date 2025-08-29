@@ -35,14 +35,12 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class Priority(Enum):
     """Request priority levels"""
     LOW = 3      # Background prefetch
     NORMAL = 2   # User scrolling
     HIGH = 1     # User selection
     URGENT = 0   # User waiting
-
 
 class ErrorType(Enum):
     """Error categories for handling strategy"""
@@ -53,7 +51,6 @@ class ErrorType(Enum):
     WORKER_BUSY = auto()
     CANCELLED = auto()
     UNKNOWN = auto()
-
 
 @dataclass
 class PreviewRequest:
@@ -71,7 +68,6 @@ class PreviewRequest:
         if self.priority.value != other.priority.value:
             return self.priority.value < other.priority.value
         return self.timestamp < other.timestamp  # FIFO for same priority
-
 
 @dataclass
 class PreviewData:
@@ -92,7 +88,6 @@ class PreviewData:
         pixmap_size = (self.width * self.height * 4) if self.pixmap else 0
         return pixmap_size + len(self.tile_data)
 
-
 @dataclass
 class PreviewError:
     """Encapsulates preview generation errors"""
@@ -103,7 +98,6 @@ class PreviewError:
     recoverable: bool = True
     retry_after: float | None = None
     timestamp: float = field(default_factory=time.time)
-
 
 @dataclass
 class PreviewMetrics:
@@ -135,7 +129,6 @@ class PreviewMetrics:
         sorted_times = sorted(self.generation_times)
         index = int(len(sorted_times) * 0.99)
         return sorted_times[min(index, len(sorted_times) - 1)]
-
 
 class PreviewOrchestrator(QObject):
     """
@@ -337,11 +330,15 @@ class PreviewOrchestrator(QObject):
             self._worker_pool.preview_ready.connect(self._on_preview_ready)
             self._worker_pool.preview_error.connect(self._on_preview_error)
 
-        self._worker_pool.generate_preview(
-            request.request_id,
-            request.rom_path,
-            request.offset
-        )
+        # Check if generate_preview method exists
+        if hasattr(self._worker_pool, 'generate_preview'):
+            self._worker_pool.generate_preview(  # type: ignore[attr-defined]
+                request.request_id,
+                request.rom_path,
+                request.offset
+            )
+        else:
+            logger.error("generate_preview method not found on worker pool")
 
     def _deliver_preview(self, request_id: str, preview_data: PreviewData) -> None:
         """Deliver preview to requestor"""
@@ -430,7 +427,6 @@ class PreviewOrchestrator(QObject):
         rom_hash = hashlib.md5(rom_path.encode()).hexdigest()[:8]
         return f"{rom_hash}_{offset:08x}"
 
-
 class PreviewMemoryCache:
     """LRU memory cache for preview data"""
 
@@ -438,7 +434,7 @@ class PreviewMemoryCache:
         """Initialize memory cache with size limit"""
         from collections import OrderedDict
 
-        self._cache: OrderedDict[str, PreviewData] = OrderedDict()
+        self._cache: dict[str, PreviewData] = OrderedDict()
         self._max_size_bytes = max_size_mb * 1024 * 1024
         self._current_size_bytes = 0
         self._mutex = QMutex()

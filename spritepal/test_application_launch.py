@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test that simulates application launch from different working directories
 to verify the HAL compression fix works in realistic scenarios.

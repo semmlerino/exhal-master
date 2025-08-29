@@ -4,6 +4,7 @@ TestApplicationFactory: Standardized Qt application setup for testing.
 This factory provides consistent Qt application lifecycle management for tests,
 ensuring proper parent/child relationships and avoiding Qt lifecycle bugs.
 """
+from __future__ import annotations
 
 import atexit
 import os
@@ -127,7 +128,6 @@ class TestApplicationFactory:
             # Also process events with timeout for thorough processing
             cls._application_instance.processEvents()
 
-
 class TestQtContext:
     """
     Context manager for Qt testing that ensures proper setup and cleanup.
@@ -150,7 +150,7 @@ class TestQtContext:
         self.process_events_on_exit = process_events_on_exit
         self.application: QApplication | None = None
 
-    def __enter__(self) -> "TestQtContext":
+    def __enter__(self) -> TestQtContext:
         """Enter the Qt test context."""
         self.application = TestApplicationFactory.get_application(self.force_offscreen)
         return self
@@ -165,19 +165,16 @@ class TestQtContext:
         """Process Qt events within the context."""
         TestApplicationFactory.process_events(timeout_ms)
 
-
 # Convenience functions for common testing patterns
 def get_test_application(force_offscreen: bool = True) -> QApplication:
     """Get a QApplication instance configured for testing."""
     return TestApplicationFactory.get_application(force_offscreen)
-
 
 @contextmanager
 def qt_test_context(force_offscreen: bool = True):
     """Context manager for Qt testing."""
     with TestQtContext(force_offscreen) as context:
         yield context.application
-
 
 def ensure_qt_application() -> QApplication:
     """
@@ -188,11 +185,9 @@ def ensure_qt_application() -> QApplication:
     """
     return TestApplicationFactory.get_application()
 
-
 def process_qt_events(timeout_ms: int = 100) -> None:
     """Process Qt events for the current application."""
     TestApplicationFactory.process_events(timeout_ms)
-
 
 # Test validation functions
 def validate_qt_application_state() -> dict[str, Any]:
@@ -213,7 +208,6 @@ def validate_qt_application_state() -> dict[str, Any]:
         "platform_name": app.platformName() if hasattr(app, "platformName") else "unknown",
         "pixmap_creation_test": _test_pixmap_creation(),
     }
-
 
 def _test_pixmap_creation() -> dict[str, Any]:
     """Test that Qt pixmap creation works (validates rendering setup)."""

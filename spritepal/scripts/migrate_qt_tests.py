@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Migration helper script for updating Qt tests to use proper qtbot fixtures.
 
@@ -20,7 +22,6 @@ from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
 
 class QtTestAnalyzer(ast.NodeVisitor):
     """AST visitor to analyze Qt usage patterns in test files."""
@@ -77,7 +78,6 @@ class QtTestAnalyzer(ast.NodeVisitor):
                     self.qapp_instance_calls.append(getattr(node, 'lineno', 0))
 
         self.generic_visit(node)
-
 
 class QtTestMigrator:
     """Handles migration of Qt tests to proper qtbot usage."""
@@ -292,7 +292,6 @@ class QtTestMigrator:
 
         return '\n'.join(modified_lines)
 
-
 def main():
     parser = argparse.ArgumentParser(description='Migrate Qt tests to use proper qtbot fixtures')
     parser.add_argument('--analyze', action='store_true', help='Analyze current test state')
@@ -356,7 +355,6 @@ def main():
         else:
             print(f"⚠ {still_need_migration} files still need migration")
             print("Run with --analyze to see details")
-
 
 if __name__ == '__main__':
     main()

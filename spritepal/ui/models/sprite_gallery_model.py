@@ -2,16 +2,23 @@
 Sprite gallery model for efficient handling of large sprite collections.
 Implements virtual scrolling through QAbstractListModel.
 """
+from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QPersistentModelIndex, QSize, Qt, Signal
+from PySide6.QtCore import (
+    QAbstractListModel,
+    QModelIndex,
+    QPersistentModelIndex,
+    QSize,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import QPixmap
 
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpriteGalleryModel(QAbstractListModel):
     """Model for sprite gallery using virtual item view."""
@@ -250,7 +257,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         self.endResetModel()
 
-    def get_sprite_at_row(self, row: int) -> Optional[dict[str, Any]]:
+    def get_sprite_at_row(self, row: int) -> dict[str, Any | None]:
         """Get sprite data at the given row."""
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
         if 0 <= row < len(sprites):
@@ -387,7 +394,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return visible_count, total_count, selected_count
 
-    def get_sprite_pixmap(self, offset: int) -> Optional[QPixmap]:
+    def get_sprite_pixmap(self, offset: int) -> QPixmap | None:
         """
         Get the cached pixmap for a sprite at the given offset.
 

@@ -4,6 +4,7 @@ Tests for HAL process pool simplification fixes.
 Tests that the HAL process pool shutdown completes within timeout,
 no zombie processes remain, and force_reset functionality works correctly.
 """
+from __future__ import annotations
 
 import pytest
 import tempfile
@@ -42,7 +43,6 @@ pytestmark = [
     pytest.mark.thread_safety,
     pytest.mark.worker_threads,
 ]
-
 
 class TestHALProcessPoolSimplification:
     """Test HAL process pool simplification and cleanup fixes"""
@@ -375,7 +375,6 @@ class TestHALProcessPoolSimplification:
             assert not result.success
             assert "not initialized or shutting down" in result.error_message
 
-
 class TestHALWorkerProcessErrorHandling:
     """Test HAL worker process error handling improvements"""
 
@@ -428,7 +427,6 @@ class TestHALWorkerProcessErrorHandling:
             
             # Should exit gracefully
             _hal_worker_process("fake_exhal", "fake_inhal", mock_request_queue, mock_result_queue)
-
 
 class TestHALProcessPoolIntegration:
     """Integration tests for HAL process pool functionality"""
@@ -599,7 +597,6 @@ class TestHALProcessPoolIntegration:
             
             # Process refs should be cleared
             assert len(pool._process_refs) == 0 if hasattr(pool, '_process_refs') else True
-
 
 class TestHALProcessPoolPerformance:
     """Performance-related tests for HAL process pool"""

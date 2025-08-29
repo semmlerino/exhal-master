@@ -1,6 +1,7 @@
 """
 Tests for ROM validator
 """
+from __future__ import annotations
 
 import struct
 
@@ -10,14 +11,11 @@ from core.rom_validator import ROMValidator
 from utils.rom_exceptions import (
 # Systematic pytest markers applied based on test content analysis
 
-
     InvalidROMError,
     ROMChecksumError,
     ROMHeaderError,
     ROMSizeError,
 )
-
-
 
 pytestmark = [
     pytest.mark.file_io,
@@ -66,7 +64,6 @@ def create_valid_rom_header(
 
     return bytes(header)
 
-
 def create_test_rom(size=0x200000, has_smc_header=False, header_location=0x7FC0,
                    header_data=None, calculate_checksum=True):
     """Create a test ROM with specified properties"""
@@ -105,7 +102,6 @@ def create_test_rom(size=0x200000, has_smc_header=False, header_location=0x7FC0,
         rom_data = smc_header + rom_data
 
     return bytes(rom_data)
-
 
 class TestROMValidator:
     """Test ROM validation functionality"""

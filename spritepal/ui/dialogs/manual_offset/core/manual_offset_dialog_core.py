@@ -30,7 +30,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
     """
     Core composed implementation of the Manual Offset Dialog.
@@ -119,7 +118,7 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
         right_panel = self._worker_coordinator.create_right_panel() if self._worker_coordinator else None
 
         # Configure splitter through layout manager
-        if self._layout_manager:
+        if self._layout_manager and self.main_splitter and left_panel and right_panel:
             self._layout_manager.configure_splitter(
                 self.main_splitter,
                 left_panel,
@@ -127,8 +126,10 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
             )
 
         # Add panels to dialog with better proportions (2:3 instead of 1:3)
-        self.add_panel(left_panel, stretch_factor=2)
-        self.add_panel(right_panel, stretch_factor=3)
+        if left_panel:
+            self.add_panel(left_panel, stretch_factor=2)
+        if right_panel:
+            self.add_panel(right_panel, stretch_factor=3)
 
         # Set up custom buttons
         if self._tab_manager:
@@ -261,7 +262,7 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
 
         # Call parent cleanup
         if hasattr(super(), 'cleanup'):
-            super().cleanup()
+            super().cleanup()  # type: ignore[misc]
 
     def showEvent(self, event):
         """Handle show event."""

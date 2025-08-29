@@ -42,7 +42,6 @@ from ui.workers.batch_thumbnail_worker import (
     ThumbnailWorkerController,
 )
 
-
 class MemoryMonitor:
     """Monitor memory usage for leak detection."""
 
@@ -82,7 +81,6 @@ class MemoryMonitor:
             f"(initial: {self.initial_memory:.2f}MB, current: {self.measurements[-1]:.2f}MB)"
         )
 
-
 class WeakrefTracker:
     """Track object lifecycle using weakrefs."""
 
@@ -106,18 +104,15 @@ class WeakrefTracker:
         gc.collect()
         return sum(1 for ref in self.refs if ref() is not None)
 
-
 @pytest.fixture
 def memory_monitor():
     """Create a memory monitor."""
     return MemoryMonitor()
 
-
 @pytest.fixture
 def weakref_tracker():
     """Create a weakref tracker."""
     return WeakrefTracker()
-
 
 @pytest.fixture
 def large_rom_file(tmp_path) -> str:
@@ -132,7 +127,6 @@ def large_rom_file(tmp_path) -> str:
 
     rom_path.write_bytes(rom_data)
     return str(rom_path)
-
 
 class TestLRUCacheMemoryManagement:
     """Test memory management in LRU cache."""
@@ -206,7 +200,6 @@ class TestLRUCacheMemoryManagement:
 
         # Should not leak memory
         memory_monitor.assert_no_leak(max_increase_mb=5)
-
 
 class TestBatchThumbnailWorkerMemoryLeaks:
     """Test memory leak prevention in BatchThumbnailWorker."""
@@ -320,7 +313,6 @@ class TestBatchThumbnailWorkerMemoryLeaks:
         # Memory should be reclaimed
         memory_monitor.assert_no_leak(max_increase_mb=15)
 
-
 class TestQImageQPixmapMemoryManagement:
     """Test memory management of Qt image objects."""
 
@@ -364,7 +356,6 @@ class TestQImageQPixmapMemoryManagement:
 
         # Should not leak
         memory_monitor.assert_no_leak(max_increase_mb=5)
-
 
 class TestSignalSlotMemoryLeaks:
     """Test signal/slot connections don't leak memory."""
@@ -413,7 +404,6 @@ class TestSignalSlotMemoryLeaks:
 
         # Memory should be stable
         memory_monitor.assert_no_leak(max_increase_mb=5)
-
 
 class TestLargeDataProcessingMemoryLeaks:
     """Test memory leaks when processing large amounts of data."""
@@ -475,7 +465,6 @@ class TestLargeDataProcessingMemoryLeaks:
         # Memory should be released
         memory_monitor.assert_no_leak(max_increase_mb=30)  # Allow for 16MB ROM
 
-
 class TestMemoryLeakIntegration:
     """Integration tests for memory leak detection."""
 
@@ -506,7 +495,6 @@ class TestMemoryLeakIntegration:
 
         # Memory should not accumulate across iterations
         memory_monitor.assert_no_leak(max_increase_mb=20)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

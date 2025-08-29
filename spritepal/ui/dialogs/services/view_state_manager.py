@@ -5,6 +5,7 @@ Handles window state management for ManualOffsetDialog including fullscreen mode
 and position persistence. Extracted from ManualOffsetDialog to separate window
 management concerns from business logic.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,7 +20,6 @@ from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
-
 
 class ViewStateManager(QObject):
     """
@@ -36,7 +36,7 @@ class ViewStateManager(QObject):
     fullscreen_toggled = Signal(bool)  # is_fullscreen
     title_changed = Signal(str)  # new_title
 
-    def __init__(self, dialog_widget: "QWidget", parent=None) -> None:
+    def __init__(self, dialog_widget: QWidget, parent=None) -> None:
         super().__init__(parent)
 
         self.dialog_widget = dialog_widget
@@ -248,7 +248,6 @@ class ViewStateManager(QObject):
         except Exception as e:
             logger.warning(f"Error restoring window position: {e} - using safe positioning")
             return False
-
 
     def center_on_screen(self) -> None:
         """Center the dialog on the primary screen as a safe fallback"""

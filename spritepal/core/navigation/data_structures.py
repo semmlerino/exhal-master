@@ -23,7 +23,6 @@ class RegionType(Enum):
     UNCOMPRESSED = "uncompressed"  # Raw tile data
     METADATA = "metadata"          # Sprite headers/indices
 
-
 class NavigationStrategy(Enum):
     """Available navigation strategies."""
     LINEAR = "linear"              # Traditional linear scan
@@ -31,7 +30,6 @@ class NavigationStrategy(Enum):
     SIMILARITY = "similarity"      # Content similarity search
     PREDICTIVE = "predictive"      # ML-inspired prediction
     HYBRID = "hybrid"             # Multiple strategies combined
-
 
 @dataclass(frozen=True)
 class SpriteLocation:
@@ -101,7 +99,6 @@ class SpriteLocation:
             "metadata": self.metadata
         }
 
-
 @dataclass
 class NavigationHint:
     """Intelligent suggestion for next sprite location."""
@@ -151,7 +148,6 @@ class NavigationHint:
             "similarity_score": round(self.similarity_score, 3) if self.similarity_score else None,
             "pattern_strength": round(self.pattern_strength, 3) if self.pattern_strength else None
         }
-
 
 @dataclass
 class NavigationContext:
@@ -211,7 +207,6 @@ class NavigationContext:
 
         # Linear penalty based on distance
         return min(0.5, distance / self.max_distance)
-
 
 def create_similarity_fingerprint(sprite_data: bytes, tile_count: int) -> bytes:
     """

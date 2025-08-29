@@ -4,8 +4,9 @@ Enhanced Layout Component for Composed Implementation
 Provides superior visual design with modern spacing, proportions, and responsive behavior.
 This component demonstrates the visual improvements possible with the new architecture.
 """
+from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
@@ -69,7 +70,6 @@ class ModernLayoutConstants:
         3: 0.38,  # Gallery tab - needs more control space
     }
 
-
 class EnhancedLayoutComponent:
     """
     Enhanced layout manager with modern visual design principles.
@@ -78,11 +78,11 @@ class EnhancedLayoutComponent:
     compared to the legacy implementation.
     """
 
-    def __init__(self, dialog: 'ManualOffsetDialogCore') -> None:
+    def __init__(self, dialog: ManualOffsetDialogCore) -> None:
         """Initialize enhanced layout manager."""
         self.dialog = dialog
         self.constants = ModernLayoutConstants()
-        self._resize_timer: Optional[QTimer] = None
+        self._resize_timer: QTimer | None = None
         self._setup_resize_timer()
 
     def _setup_resize_timer(self) -> None:
@@ -297,7 +297,8 @@ class EnhancedLayoutComponent:
 
     def _apply_standard_layout(self) -> None:
         """Apply standard layout proportions."""
-        self._configure_enhanced_splitter(self.dialog.main_splitter)
+        if self.dialog.main_splitter:
+            self._configure_enhanced_splitter(self.dialog.main_splitter)
 
     def handle_dialog_resize(self, width: int, height: int) -> None:
         """Handle dialog resize with debouncing."""

@@ -5,8 +5,6 @@ Tests the double-check locking implementation and concurrent access scenarios
 to ensure the singleton pattern works correctly under concurrent load.
 """
 
-
-
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,7 +13,6 @@ import pytest
 from PySide6.QtWidgets import QWidget
 
 from ui.common import get_error_handler, reset_error_handler
-
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
@@ -26,7 +23,6 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.worker_threads,
 ]
-
 
 class TestErrorHandlerThreadSafety:
     """Test thread safety of error handler singleton"""

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Diagnostic script to debug intermittent exhal executable detection issue.
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Type Error Analysis Script for CI/CD
 
@@ -14,8 +16,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 class CITypeCheckAnalyzer:
     """CI-focused type checking analyzer with threshold enforcement."""
@@ -55,12 +56,12 @@ class CITypeCheckAnalyzer:
 
     def __init__(self, project_path: str = "."):
         self.project_path = Path(project_path)
-        self.errors: List[Dict[str, Any]] = []
-        self.warnings: List[Dict[str, Any]] = []
-        self.error_groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-        self.file_errors: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.errors: list[dict[str, Any]] = []
+        self.warnings: list[dict[str, Any]] = []
+        self.error_groups: dict[str, list[Dict[str, Any]]] = defaultdict(list)
+        self.file_errors: dict[str, list[Dict[str, Any]]] = defaultdict(list)
 
-    def run_basedpyright_json(self, files: Optional[List[str]] = None) -> Dict[str, Any]:
+    def run_basedpyright_json(self, files: list[str | None] = None) -> dict[str, Any]:
         """Run basedpyright with JSON output."""
         cmd = ["basedpyright", "--outputjson"]
 
@@ -95,7 +96,7 @@ class CITypeCheckAnalyzer:
             print(f"❌ Error running basedpyright: {e}")
             return {"summary": {"errorCount": 0, "warningCount": 0}, "generalDiagnostics": []}
 
-    def parse_json_output(self, json_data: Dict[str, Any]) -> None:
+    def parse_json_output(self, json_data: dict[str, Any]) -> None:
         """Parse basedpyright JSON output into structured data."""
         summary = json_data.get("summary", {})
         diagnostics = json_data.get("generalDiagnostics", [])
@@ -126,7 +127,7 @@ class CITypeCheckAnalyzer:
             else:
                 self.warnings.append(error_info)
 
-    def categorize_errors(self) -> Dict[str, int]:
+    def categorize_errors(self) -> dict[str, int]:
         """Categorize errors by priority level."""
         categories = {
             "critical": 0,
@@ -150,7 +151,7 @@ class CITypeCheckAnalyzer:
 
     def generate_ci_report(self, 
                           threshold_critical: int = 20,
-                          threshold_total: int = 150) -> Dict[str, Any]:
+                          threshold_total: int = 150) -> dict[str, Any]:
         """Generate a comprehensive report for CI/CD usage."""
         categories = self.categorize_errors()
         
@@ -197,7 +198,7 @@ class CITypeCheckAnalyzer:
             }
         }
 
-    def _get_critical_examples(self, max_examples: int = 5) -> List[Dict[str, Any]]:
+    def _get_critical_examples(self, max_examples: int = 5) -> list[dict[str, Any]]:
         """Get examples of critical errors for the report."""
         examples = []
         shown = 0
@@ -217,7 +218,7 @@ class CITypeCheckAnalyzer:
                         
         return examples
 
-    def print_ci_summary(self, report: Dict[str, Any], github_actions: bool = False) -> None:
+    def print_ci_summary(self, report: dict[str, Any], github_actions: bool = False) -> None:
         """Print CI-friendly summary."""
         summary = report["summary"]
         categories = report["categories"]
@@ -262,7 +263,6 @@ class CITypeCheckAnalyzer:
                 for example in report["critical_examples"]:
                     print(f"   {example['file']}:{example['line']} - {example['type']}")
                     print(f"      {example['message']}")
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -334,7 +334,6 @@ def main():
     if not report["thresholds"]["overall_passed"]:
         return 1
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

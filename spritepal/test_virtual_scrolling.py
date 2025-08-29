@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script for virtual scrolling sprite gallery implementation.
 Creates a test application with many sprites to verify performance.
@@ -20,7 +22,6 @@ from utils.logging_config import setup_logging, get_logger
 setup_logging()
 logger = get_logger(__name__)
 
-
 def create_test_sprite_data(count: int = 1000) -> list[dict]:
     """Create test sprite data for testing."""
     sprites = []
@@ -37,7 +38,6 @@ def create_test_sprite_data(count: int = 1000) -> list[dict]:
             'name': f"Sprite_{i:04d}"
         })
     return sprites
-
 
 def create_test_thumbnail(offset: int) -> QPixmap:
     """Create a test thumbnail for a sprite."""
@@ -58,7 +58,6 @@ def create_test_thumbnail(offset: int) -> QPixmap:
     painter.end()
     
     return pixmap
-
 
 class TestWindow(QMainWindow):
     """Test window for virtual scrolling gallery."""
@@ -177,7 +176,6 @@ class TestWindow(QMainWindow):
             status = f"Sprites: {visible}/{total} | Selected: {selected} | Thumbnails: {cached} cached, {pending} pending"
             self.setWindowTitle(f"Virtual Scrolling Test - {status}")
 
-
 def main():
     """Run the test application."""
     app = QApplication(sys.argv)
@@ -192,7 +190,6 @@ def main():
     QTimer.singleShot(100, lambda: window.load_sprites(1000))
     
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()

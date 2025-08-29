@@ -1,8 +1,7 @@
 """
 Tile renderer for converting 4bpp SNES tile data to images.
 """
-
-from typing import Optional
+from __future__ import annotations
 
 import numpy as np
 from PIL import Image
@@ -11,7 +10,6 @@ from core.default_palette_loader import DefaultPaletteLoader
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class TileRenderer:
     """Renders 4bpp SNES tile data to images."""
@@ -34,8 +32,8 @@ class TileRenderer:
         tile_data: bytes,
         width_tiles: int,
         height_tiles: int,
-        palette_index: Optional[int] = None
-    ) -> Optional[Image.Image]:
+        palette_index: int | None = None
+    ) -> Image.Image | None:
         """
         Render 4bpp tile data to an image.
 
@@ -79,7 +77,7 @@ class TileRenderer:
             height_pixels = height_tiles * 8
             image = Image.new('RGBA', (width_pixels, height_pixels), (0, 0, 0, 0))
             pixels = image.load()
-            
+
             # Check if pixels is None (can happen if image.load() fails)
             if pixels is None:
                 raise ValueError("Failed to load image pixels")
@@ -188,7 +186,7 @@ class TileRenderer:
         palette_index: int = 8,
         max_width: int = 256,
         max_height: int = 256
-    ) -> Optional[Image.Image]:
+    ) -> Image.Image | None:
         """
         Render a sprite preview with automatic layout.
 

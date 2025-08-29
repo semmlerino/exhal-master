@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive Integration Test Runner for SpritePal.
 
@@ -30,7 +32,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 def setup_environment():
     """Setup the test environment."""
     # Add the project directory to Python path
@@ -46,7 +47,6 @@ def setup_environment():
     else:
         print("⚠ Warning: Not running in virtual environment")
         print("  Consider activating venv with: source venv/bin/activate")
-
 
 def get_pytest_command(args):
     """Build the pytest command based on arguments."""
@@ -119,7 +119,6 @@ def get_pytest_command(args):
     
     return cmd
 
-
 def show_available_markers():
     """Show available test markers."""
     print("\nAvailable test markers for integration tests:")
@@ -145,7 +144,6 @@ def show_available_markers():
     print("  python3 run_comprehensive_integration_tests.py --gui --performance")
     print("  python3 run_comprehensive_integration_tests.py --headless --memory")
     print("  python3 run_comprehensive_integration_tests.py --coverage --verbose")
-
 
 def check_dependencies():
     """Check that required dependencies are installed."""
@@ -178,7 +176,6 @@ def check_dependencies():
     print("✓ All required packages are installed")
     return True
 
-
 def dry_run_info(cmd):
     """Show what would be executed in dry run mode."""
     print("\nDry run - would execute:")
@@ -194,7 +191,6 @@ def dry_run_info(cmd):
             print(f"  ❌ {test_file} (not found)")
     
     print(f"\nTotal test files: {len([f for f in test_files if Path(f).exists()])}")
-
 
 def main():
     """Main entry point."""
@@ -277,7 +273,6 @@ Examples:
     except Exception as e:
         print(f"\n❌ Error running tests: {e}")
         return 1
-
 
 if __name__ == '__main__':
     sys.exit(main())

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Test QSignalSpy API to find correct access method."""
 
 from PySide6.QtCore import QObject, Signal
@@ -45,5 +47,5 @@ if spy.count() > 0:
         # PySide6 might use a different approach
         for i in range(spy.count()):
             print(f"Signal {i}: {spy.at(i)}")
-    except:
+    except Exception:
         pass

@@ -8,6 +8,7 @@ Note: The over-engineered MVP services (ManualOffsetController, ROMDataSession,
 OffsetExplorationService) have been removed and consolidated into the simplified
 ManualOffsetDialogSimplified for better stability and maintainability.
 """
+from __future__ import annotations
 
 from .view_state_manager import ViewStateManager
 

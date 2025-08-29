@@ -1,4 +1,5 @@
 """Tests for SpriteExtractor class"""
+from __future__ import annotations
 
 import sys
 import tempfile
@@ -20,7 +21,6 @@ pytestmark = [
 ]
 
 from core.extractor import SpriteExtractor
-
 
 class TestSpriteExtractor:
     """Test the SpriteExtractor functionality"""

@@ -2,8 +2,7 @@
 Sprite thumbnail widget for gallery display.
 Compact version of SpritePreviewWidget optimized for grid layouts.
 """
-
-from typing import Optional
+from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
@@ -12,7 +11,6 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpriteThumbnailWidget(QWidget):
     """Compact sprite thumbnail for gallery display."""
@@ -26,7 +24,7 @@ class SpriteThumbnailWidget(QWidget):
         self,
         offset: int = 0,
         size: int = 128,
-        parent: Optional[QWidget] = None
+        parent: QWidget | None = None
     ):
         """
         Initialize sprite thumbnail widget.
@@ -40,13 +38,13 @@ class SpriteThumbnailWidget(QWidget):
 
         self.offset = offset
         self.thumbnail_size = size
-        self.sprite_pixmap: Optional[QPixmap] = None
+        self.sprite_pixmap: QPixmap | None = None
         self.is_selected = False
         self.is_hovered = False
         self.sprite_info = {}
 
         # Thumbnail display label
-        self.thumbnail_label: Optional[QLabel] = None
+        self.thumbnail_label: QLabel | None = None
 
         # Info text
         self.offset_text = f"0x{offset:06X}"
@@ -115,7 +113,7 @@ class SpriteThumbnailWidget(QWidget):
     def set_sprite_data(
         self,
         pixmap: QPixmap,
-        sprite_info: Optional[dict] = None
+        sprite_info: dict | None = None
     ):
         """
         Set the sprite thumbnail data.

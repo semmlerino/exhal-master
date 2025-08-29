@@ -18,7 +18,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class ErrorHandler(QObject):
     """
     Centralized error handler that emits signals for errors instead of showing dialogs directly.
@@ -84,7 +83,6 @@ class ErrorHandler(QObject):
         if self._show_dialogs and self._parent_widget is not None:
             QMessageBox.information(self._parent_widget, title, message)
 
-
 class _ErrorHandlerSingleton:
     """Thread-safe singleton holder for ErrorHandler."""
     _instance: ErrorHandler | None = None
@@ -115,11 +113,9 @@ class _ErrorHandlerSingleton:
         with cls._lock:
             cls._instance = None
 
-
 def get_error_handler(parent: QWidget | None = None) -> ErrorHandler:
     """Get or create the global error handler instance (thread-safe)"""
     return _ErrorHandlerSingleton.get(parent)
-
 
 def reset_error_handler() -> None:
     """Reset the global error handler (useful for testing)"""

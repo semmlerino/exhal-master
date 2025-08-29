@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test sprite gallery layout when window is maximized.
 Measures actual dimensions to verify empty space fix.

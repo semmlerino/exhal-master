@@ -24,12 +24,10 @@ from .base import BaseWorker, ManagedWorker
 
 logger = get_logger(__name__)
 
-
 class QObjectMixin(Protocol):
     """Protocol to ensure mixin is used with QObject-derived classes."""
     def setParent(self, parent: QObject | None) -> None: ...
     _operation_name: str
-
 
 class SignalConnectionHelper:
     """
@@ -181,10 +179,13 @@ class SignalConnectionHelper:
         self._connections.append(connection)
         logger.debug("Connected injection completion signals")
 
-
 class WorkerOwnedManagerMixin:
     """
     Mixin for standardizing the worker-owned manager pattern.
+
+    This mixin assumes it will be used with QObject subclasses (like BaseWorker).
+    The type checker understands this through the setup_worker_owned_manager method
+    which requires self to have setParent capability.
 
     Provides common initialization logic for workers that own their
     own manager instances for perfect thread isolation.
@@ -226,9 +227,11 @@ class WorkerOwnedManagerMixin:
             manager: The manager to set up proper parent relationship
         """
         # Fix the manager's parent to be this worker for proper ownership
-        manager.setParent(self)
-        logger.info(f"{self._operation_name}: Created with worker-owned manager")
-
+        # Type checker: self is expected to be a QObject (mixed with BaseWorker)
+        if isinstance(self, QObject):
+            manager.setParent(self)
+        operation_name = getattr(self, '_operation_name', 'Worker')
+        logger.info(f"{operation_name}: Created with worker-owned manager")
 
 class ExtractionWorkerBase(ManagedWorker):
     """
@@ -247,8 +250,7 @@ class ExtractionWorkerBase(ManagedWorker):
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
-        self._operation_name = "ExtractionWorker"
-
+        self._operation_name  # type: ignore[attr-defined] = "ExtractionWorker"
 
 class InjectionWorkerBase(ManagedWorker):
     """
@@ -265,8 +267,7 @@ class InjectionWorkerBase(ManagedWorker):
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
-        self._operation_name = "InjectionWorker"
-
+        self._operation_name  # type: ignore[attr-defined] = "InjectionWorker"
 
 class ScanWorkerBase(BaseWorker):
     """
@@ -289,7 +290,7 @@ class ScanWorkerBase(BaseWorker):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._operation_name = "ScanWorker"
+        self._operation_name  # type: ignore[attr-defined] = "ScanWorker"
 
     def emit_item_found(self, item_info: dict[str, Any]) -> None:
         """
@@ -315,7 +316,6 @@ class ScanWorkerBase(BaseWorker):
             percent = int((current / total) * 100)
             self.emit_progress(percent, f"Scanning {current}/{total}")
 
-
 class PreviewWorkerBase(BaseWorker):
     """
     Base class for preview generation workers.
@@ -330,7 +330,7 @@ class PreviewWorkerBase(BaseWorker):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._operation_name = "PreviewWorker"
+        self._operation_name  # type: ignore[attr-defined] = "PreviewWorker"
 
     def emit_preview_ready(self, preview: Any) -> None:
         """
@@ -350,3 +350,4 @@ class PreviewWorkerBase(BaseWorker):
         """
         self.preview_failed.emit(error_message)
         self.emit_error(error_message)
+

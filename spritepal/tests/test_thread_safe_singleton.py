@@ -4,6 +4,7 @@ Test suite for thread-safe singleton implementations.
 Tests the thread safety of singleton patterns with concurrent access,
 Qt thread affinity checking, and proper cleanup.
 """
+from __future__ import annotations
 
 import threading
 import time
@@ -14,15 +15,12 @@ from PySide6.QtWidgets import QApplication, QWidget
 from utils.thread_safe_singleton import (
 # Serial execution required: QApplication management, Thread safety concerns
 
-
     LazyThreadSafeSingleton,
     QtThreadSafeSingleton,
     ThreadSafeSingleton,
     create_qt_singleton,
     create_simple_singleton,
 )
-
-
 
 pytestmark = [
     
@@ -46,7 +44,6 @@ class MockClass:
     def get_value(self) -> str:
         return self.value
 
-
 class MockQtClass(QWidget):
     """Mock Qt class for testing Qt singleton patterns."""
 
@@ -55,7 +52,6 @@ class MockQtClass(QWidget):
         self.creation_thread = threading.current_thread().name
         self.creation_time = time.time()
         self.test_value = "qt_test"
-
 
 class TestThreadSafeSingleton:
     """Test basic thread-safe singleton functionality."""
@@ -142,7 +138,6 @@ class TestThreadSafeSingleton:
         instance2 = TestSingleton.get()
         assert instance1 is not instance2
         assert TestSingleton.is_initialized()
-
 
 class TestQtThreadSafeSingleton:
     """Test Qt-specific thread-safe singleton functionality."""
@@ -233,7 +228,6 @@ class TestQtThreadSafeSingleton:
         # Should return None from worker thread (safe failure)
         assert worker_result[0] is None
 
-
 class TestLazyThreadSafeSingleton:
     """Test lazy initialization singleton functionality."""
 
@@ -264,7 +258,6 @@ class TestLazyThreadSafeSingleton:
         assert same_instance is instance
         assert same_instance.value == "initialized"  # Original value preserved
 
-
 class TestSingletonFactories:
     """Test singleton factory functions."""
 
@@ -293,7 +286,6 @@ class TestSingletonFactories:
         assert instance1 is instance2
         assert isinstance(instance1, MockQtClass)
         assert MockQtSingleton.__name__ == "MockQtClassSingleton"
-
 
 class TestRealWorldScenarios:
     """Test realistic usage scenarios."""
@@ -362,7 +354,6 @@ class TestRealWorldScenarios:
         assert cleanup_called.is_set()
         assert not CleanupSingleton.is_initialized()
 
-
 # Integration tests with real singleton classes
 
 class TestManualOffsetDialogSingletonIntegration:
@@ -401,7 +392,6 @@ class TestManualOffsetDialogSingletonIntegration:
             # Should be a controlled error, not a crash
             assert "thread" in result_value.lower()
 
-
 class TestSettingsManagerSingletonIntegration:
     """Integration tests for the fixed SettingsManagerSingleton."""
 
@@ -431,7 +421,6 @@ class TestSettingsManagerSingletonIntegration:
         first_instance = instances[0][1]
         for _thread_id, instance in instances:
             assert instance is first_instance
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

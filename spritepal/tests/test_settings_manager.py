@@ -1,4 +1,5 @@
 """Tests for settings manager"""
+from __future__ import annotations
 
 import json
 import tempfile
@@ -8,7 +9,6 @@ from unittest.mock import patch
 import pytest
 
 from utils.settings_manager import SettingsManager, get_settings_manager
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
 ]
-
 
 class TestSettingsManager:
     """Test the SettingsManager class"""
@@ -265,7 +264,6 @@ class TestSettingsManager:
         assert settings_manager.get("session", "output_name") == ""
         assert settings_manager.get("session", "create_grayscale") is True
         assert settings_manager.get("session", "create_metadata") is True
-
 
 class TestGlobalSettingsInstance:
     """Test the global settings instance"""

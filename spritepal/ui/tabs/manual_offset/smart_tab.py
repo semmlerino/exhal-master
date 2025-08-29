@@ -34,7 +34,6 @@ from utils.sprite_regions import SpriteRegion
 if TYPE_CHECKING:
     pass
 
-
 class SimpleSmartTab(QWidget):
     """
     Smart tab with region-based navigation for efficient sprite exploration.

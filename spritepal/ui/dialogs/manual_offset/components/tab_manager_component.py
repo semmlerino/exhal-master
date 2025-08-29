@@ -4,6 +4,7 @@ Tab Manager Component
 Manages the 4 tabs (Browse, Smart, History, Gallery) and their coordination.
 Enhanced for superior visual design in composed implementation.
 """
+from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
@@ -16,7 +17,6 @@ if TYPE_CHECKING:
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class TabManagerComponent:
     """
@@ -118,6 +118,7 @@ class TabManagerComponent:
                 border: 1px solid #c0c0c0;
                 border-radius: 6px;
                 background-color: #fafafa;
+                color: #000000;
                 padding: 4px;
             }
             QTabBar::tab {
@@ -132,11 +133,13 @@ class TabManagerComponent:
             }
             QTabBar::tab:selected {
                 background-color: #ffffff;
+                color: #000000;
                 border-bottom-color: #ffffff;
                 font-weight: 600;
             }
             QTabBar::tab:hover:!selected {
                 background-color: #f0f0f0;
+                color: #000000;
             }
             QTabWidget::tab-bar {
                 alignment: left;
@@ -155,9 +158,9 @@ class TabManagerComponent:
 
             # Connect apply button if browse tab is available
             if self.browse_tab and hasattr(self.browse_tab, 'apply_current_offset'):
-                apply_btn.clicked.connect(self.browse_tab.apply_current_offset)
+                apply_btn.clicked.connect(self.browse_tab.apply_current_offset)  # type: ignore[attr-defined]
 
-    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: 'ExtractionManager'):
+    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: ExtractionManager):
         """Update tabs with ROM data."""
         # Update each tab with ROM data
         if self.browse_tab and hasattr(self.browse_tab, 'set_rom_data'):

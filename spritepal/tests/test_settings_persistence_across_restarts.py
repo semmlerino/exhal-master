@@ -9,6 +9,7 @@ This module tests real-world scenarios of SpritePal settings persisting through:
 - Cache settings persistence
 - Auto-save session functionality
 """
+from __future__ import annotations
 
 import builtins
 import contextlib
@@ -25,7 +26,6 @@ import utils.settings_manager
 from core.managers import (
 # Serial execution required: Manager registry manipulation
 
-
     cleanup_managers,
     get_session_manager,
     initialize_managers,
@@ -34,7 +34,6 @@ from ui.dialogs.settings_dialog import SettingsDialog
 from ui.main_window import MainWindow
 from utils.rom_cache import get_rom_cache
 from utils.settings_manager import get_settings_manager
-
 
 # Override the autouse fixture from conftest to prevent automatic initialization
 
@@ -57,7 +56,6 @@ def setup_managers():
     # Cleanup any managers that were created by tests
     with contextlib.suppress(builtins.BaseException):
         cleanup_managers()
-
 
 class TestSettingsPersistenceAcrossRestarts:
     """Test settings persistence through app restart scenarios."""

@@ -11,6 +11,7 @@ This refactored version uses:
 - No mocking of core components
 - Proper worker lifecycle management
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -21,7 +22,6 @@ from PySide6.QtTest import QSignalSpy
 
 from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
 
 # Serial execution required: QApplication management, Real Qt components
 pytestmark = [
@@ -35,7 +35,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 class TestVRAMExtractionWorker:
     """Test the VRAMExtractionWorker class with real components."""
@@ -270,7 +269,6 @@ class TestVRAMExtractionWorker:
         # They only work properly when called from within the running thread
         # For testing, we verify the mechanism exists
 
-
 class TestROMExtractionWorker:
     """Test the ROMExtractionWorker class with real components."""
 
@@ -440,7 +438,6 @@ class TestROMExtractionWorker:
         # Performing operation should raise InterruptedError
         with pytest.raises(InterruptedError, match="Operation was cancelled"):
             worker.perform_operation()
-
 
 # Session fixture for QApplication compatibility
 @pytest.fixture

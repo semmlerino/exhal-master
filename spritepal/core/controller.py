@@ -60,7 +60,6 @@ class ExtractionParams(TypedDict):
     create_metadata: bool
     grayscale_mode: bool
 
-
 class ROMExtractionParams(TypedDict):
     """Type definition for ROM extraction parameters"""
     rom_path: str
@@ -69,9 +68,7 @@ class ROMExtractionParams(TypedDict):
     output_base: str
     cgram_path: NotRequired[str | None]
 
-
 logger = get_logger(__name__)
-
 
 class ErrorHandlerProtocol(Protocol):
     """Protocol defining the error handler interface for type safety"""
@@ -102,11 +99,9 @@ class ErrorHandlerProtocol(Protocol):
         """Handle a validation error with context"""
         ...
 
-
 # MockErrorHandler removed - replaced with ConsoleErrorHandler
 # The MockErrorHandler was a dangerous pattern that silently swallowed errors.
 # Now using ConsoleErrorHandler which properly logs errors to console/file.
-
 
 class ExtractionController(QObject):
     """Controller for the extraction workflow"""
@@ -717,5 +712,4 @@ class ExtractionController(QObject):
         """Safely cleanup ROM worker thread"""
         WorkerManager.cleanup_worker(self.rom_worker, timeout=3000)
         self.rom_worker = None
-
 

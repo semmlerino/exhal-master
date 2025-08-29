@@ -8,6 +8,7 @@ These tests verify that the new manager-per-worker pattern provides:
 - Proper Qt object lifecycle management
 
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -23,14 +24,11 @@ from core.managers.factory import StandardManagerFactory
 from core.workers.injection import (
 # Serial execution required: QApplication management
 
-
     VRAMInjectionParams,
     ROMInjectionParams,
     WorkerOwnedROMInjectionWorker,
     WorkerOwnedVRAMInjectionWorker,
 )
-
-
 
 pytestmark = [
     
@@ -335,7 +333,6 @@ class TestWorkerOwnedInjectionPattern:
             assert not qt_lifecycle_error, f"Qt lifecycle error: {error_spy.at(0) if error_spy else 'None'}"
 
             print("✅ ROM injection worker test PASSED - no Qt lifecycle errors")
-
 
 @pytest.fixture
 def qtbot():

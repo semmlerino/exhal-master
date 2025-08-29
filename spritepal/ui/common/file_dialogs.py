@@ -4,6 +4,7 @@ File dialog utilities for standardized file selection patterns
 Provides helper functions and classes for consistent file dialog usage
 throughout the SpritePal application.
 """
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -215,7 +216,6 @@ class FileDialogHelper:
         # Use default directory
         return settings.get_default_directory()
 
-
 # Convenience functions for common dialog patterns
 def browse_for_directory(
     parent: QWidget | None = None,
@@ -225,7 +225,6 @@ def browse_for_directory(
     """Convenience function for simple directory browsing"""
     return FileDialogHelper.browse_directory(parent, title, initial_dir)
 
-
 def browse_for_open_file(
     parent: QWidget | None = None,
     title: str = "Open File",
@@ -234,7 +233,6 @@ def browse_for_open_file(
 ) -> str:
     """Convenience function for simple file opening"""
     return FileDialogHelper.browse_open_file(parent, title, file_filter, initial_path)
-
 
 def browse_for_save_file(
     parent: QWidget | None = None,

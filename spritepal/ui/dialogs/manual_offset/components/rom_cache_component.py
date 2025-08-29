@@ -3,11 +3,11 @@ ROM Cache Component
 
 Handles ROM cache integration and adjacent offset preloading optimization.
 """
+from __future__ import annotations
 
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class ROMCacheComponent:
     """

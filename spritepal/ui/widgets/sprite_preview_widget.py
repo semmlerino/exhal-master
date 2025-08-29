@@ -2,7 +2,7 @@
 Sprite preview widget for SpritePal
 Shows visual preview of sprites with optional palette support
 """
-
+from __future__ import annotations
 
 from PIL import Image
 from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
@@ -33,7 +33,6 @@ from ui.styles import get_muted_text_style
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpritePreviewWidget(QWidget):
     """Widget for displaying sprite previews with palette selection"""
@@ -568,7 +567,7 @@ class SpritePreviewWidget(QWidget):
                         self.palettes = palette_list if palette_list else []
                         logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
                         # Ensure palette index is valid
-                        if self.current_palette_index >= len(self.palettes):
+                        if self.current_palette_index is not None and self.current_palette_index >= len(self.palettes):
                             self.current_palette_index = 0
 
             bytes_per_tile = 32

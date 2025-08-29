@@ -1,4 +1,5 @@
 """Worker thread for comprehensive range scanning of ROM data"""
+from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -14,7 +15,6 @@ from utils.rom_cache import get_rom_cache
 
 logger = get_logger(__name__)
 
-
 class RangeScanWorker(BaseWorker):
     """Worker thread for comprehensive scanning of ROM ranges to find all sprites"""
 
@@ -29,7 +29,7 @@ class RangeScanWorker(BaseWorker):
     cache_progress_saved = Signal(int, int, int)  # current_offset, total_sprites_found, progress_percentage
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 step_size: int, extractor, parent: "QObject | None" = None):
+                 step_size: int, extractor, parent: QObject | None = None):
         """
         Initialize range scan worker
 

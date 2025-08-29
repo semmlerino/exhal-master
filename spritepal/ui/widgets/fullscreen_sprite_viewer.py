@@ -57,7 +57,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class FullscreenSpriteViewer(QWidget):
     """Fullscreen sprite viewer with keyboard navigation."""
 
@@ -202,7 +201,10 @@ class FullscreenSpriteViewer(QWidget):
         """)
 
         # Set cursor to hidden after a delay
-        QTimer.singleShot(3000, lambda: self.setCursor(Qt.CursorShape.BlankCursor))
+        self.cursor_timer = QTimer()
+        self.cursor_timer.setSingleShot(True)
+        self.cursor_timer.timeout.connect(lambda: self.setCursor(Qt.CursorShape.BlankCursor) if self else None)
+        self.cursor_timer.start(3000)
 
     def set_sprite_data(self, sprites_data: list[dict[str, Any]], current_offset: int,
                        rom_path: str, rom_extractor: ROMExtractor | None) -> bool:
@@ -294,8 +296,8 @@ class FullscreenSpriteViewer(QWidget):
         # Try to get from parent gallery if available
         if self.parent():
             gallery_window = self.parent()  # type: ignore[assignment]
-            if (hasattr(gallery_window, "gallery_widget")  # type: ignore[arg-type] and
-                    gallery_window.gallery_widget)  # type: ignore[attr-defined]:
+            if (hasattr(gallery_window, "gallery_widget") and  # type: ignore[arg-type]
+                    gallery_window.gallery_widget):  # type: ignore[attr-defined]
                 gallery = gallery_window.gallery_widget  # type: ignore[attr-defined]
 
                 # New API - check if gallery has get_sprite_pixmap method
@@ -461,7 +463,10 @@ class FullscreenSpriteViewer(QWidget):
         # Set focus and cursor
         self.setFocus()
         self.setCursor(Qt.CursorShape.ArrowCursor)
-        QTimer.singleShot(3000, lambda: self.setCursor(Qt.CursorShape.BlankCursor))
+        # Reuse the cursor timer if it exists
+        if hasattr(self, 'cursor_timer'):
+            self.cursor_timer.stop()
+            self.cursor_timer.start(3000)
 
     def _apply_fullscreen_with_fallbacks(self):
         """Apply fullscreen using multiple strategies with fallbacks."""
@@ -486,7 +491,8 @@ class FullscreenSpriteViewer(QWidget):
             success = self._try_manual_geometry_fullscreen(screen_geometry)
 
         # Log final result for debugging
-        QTimer.singleShot(100, self._log_fullscreen_result)
+        if self:  # Check if object still exists
+            QTimer.singleShot(100, self._log_fullscreen_result)
 
         if not success:
             logger.error("All fullscreen strategies failed!")
@@ -586,13 +592,27 @@ class FullscreenSpriteViewer(QWidget):
                 # Windows-specific recovery
                 logger.debug("Applying Windows fullscreen recovery")
                 self.setWindowState(Qt.WindowState.WindowNoState)
-                QTimer.singleShot(50, lambda: self.setWindowState(Qt.WindowState.WindowFullScreen))
+                # Use a safer timer that checks if widget still exists
+                def set_fullscreen():
+                    try:
+                        if self:
+                            self.setWindowState(Qt.WindowState.WindowFullScreen)
+                    except RuntimeError:
+                        pass  # Widget was deleted
+                QTimer.singleShot(50, set_fullscreen)
 
             elif system == "linux":
                 # Linux-specific recovery
                 logger.debug("Applying Linux fullscreen recovery")
                 self.showNormal()
-                QTimer.singleShot(50, lambda: self.showFullScreen())
+                # Use a safer timer that checks if widget still exists
+                def show_fullscreen():
+                    try:
+                        if self:
+                            self.showFullScreen()
+                    except RuntimeError:
+                        pass  # Widget was deleted
+                QTimer.singleShot(50, show_fullscreen)
 
             else:
                 # Generic recovery
@@ -608,6 +628,12 @@ class FullscreenSpriteViewer(QWidget):
         """Handle close event."""
         logger.info("Fullscreen sprite viewer closing")
 
+        # Stop all timers to prevent accessing deleted object
+        if hasattr(self, 'cursor_timer'):
+            self.cursor_timer.stop()
+        if hasattr(self, 'transition_timer'):
+            self.transition_timer.stop()
+
         # Show cursor again
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -621,7 +647,9 @@ class FullscreenSpriteViewer(QWidget):
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
         # Hide cursor again after delay
-        QTimer.singleShot(3000, lambda: self.setCursor(Qt.CursorShape.BlankCursor))
+        if hasattr(self, 'cursor_timer'):
+            self.cursor_timer.stop()
+            self.cursor_timer.start(3000)
 
         super().mousePressEvent(event)
 

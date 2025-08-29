@@ -5,8 +5,9 @@ This component handles all message dialog operations including errors, warnings,
 information messages, and confirmation dialogs. It's designed to be composed
 into dialogs via the DialogBase composition system.
 """
+from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog, QMessageBox
@@ -28,7 +29,7 @@ class MessageDialogManager(QObject):
     # Signal emitted when a message is shown (type, message)
     message_shown = Signal(str, str)
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """
         Initialize the message dialog manager.
 
@@ -36,7 +37,7 @@ class MessageDialogManager(QObject):
             parent: Optional parent QObject for proper cleanup
         """
         super().__init__(parent)
-        self._dialog: Optional[QDialog] = None
+        self._dialog: QDialog | None = None
 
     def initialize(self, context: Any) -> None:
         """

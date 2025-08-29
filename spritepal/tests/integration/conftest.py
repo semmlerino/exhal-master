@@ -1,43 +1,41 @@
 """
 Integration test fixtures that use real components without mocking.
 """
+from __future__ import annotations
 
 import shutil
 import sys
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QApplication
+
+if TYPE_CHECKING:
+    pass
 
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.managers.registry import cleanup_managers, initialize_managers
-from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
-from ui.rom_extraction_panel import ROMExtractionPanel
-
-
 @pytest.fixture(scope="session")
 def qt_app():
     """Provide a QApplication instance for the entire test session."""
+    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
     yield app
     # Don't quit the app here as pytest-qt manages it
 
-
 @pytest.fixture(scope="function")
 def managers_initialized(qt_app):
     """Initialize managers for integration tests."""
+    from core.managers.registry import cleanup_managers, initialize_managers
     try:
         initialize_managers()
         yield
     finally:
         cleanup_managers()
-
 
 @pytest.fixture
 def temp_dir():
@@ -46,7 +44,6 @@ def temp_dir():
     yield Path(temp_path)
     # Cleanup
     shutil.rmtree(temp_path, ignore_errors=True)
-
 
 @pytest.fixture
 def test_rom_data():
@@ -70,7 +67,6 @@ def test_rom_data():
         rom_data[0x10000 + i] = (i % 16) * 16 + (i // 16) % 16
 
     return bytes(rom_data)
-
 
 @pytest.fixture
 def test_rom_with_sprites(temp_dir, test_rom_data):
@@ -109,7 +105,6 @@ def test_rom_with_sprites(temp_dir, test_rom_data):
         'sprites': []  # No compressed sprites in test ROM
     }
 
-
 @pytest.fixture
 def real_kirby_rom():
     """Provide path to real Kirby ROM if available for integration testing."""
@@ -118,23 +113,22 @@ def real_kirby_rom():
         return rom_path
     return None
 
-
 @pytest.fixture
 def rom_extraction_panel(qtbot, managers_initialized):
     """Create a real ROM extraction panel for testing."""
+    from ui.rom_extraction_panel import ROMExtractionPanel
     panel = ROMExtractionPanel()
     qtbot.addWidget(panel)
     panel.show()
     return panel
 
-
 @pytest.fixture
 def manual_offset_dialog(qtbot, managers_initialized):
     """Create a real manual offset dialog for testing."""
+    from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
     dialog = UnifiedManualOffsetDialog()
     qtbot.addWidget(dialog)
     return dialog
-
 
 @pytest.fixture
 def loaded_rom_panel(rom_extraction_panel, test_rom_with_sprites, qtbot):
@@ -154,36 +148,43 @@ def loaded_rom_panel(rom_extraction_panel, test_rom_with_sprites, qtbot):
 
     return rom_extraction_panel, rom_info
 
+def _create_condition_waiter():
+    """Create ConditionWaiter class with lazy Qt imports."""
+    from PySide6.QtCore import QObject, QTimer, Signal
 
-class ConditionWaiter(QObject):
-    """Helper class for waiting on conditions with proper Qt event loop handling."""
+    class ConditionWaiter(QObject):
+        """Helper class for waiting on conditions with proper Qt event loop handling."""
 
-    condition_met = Signal()
+        condition_met = Signal()
 
-    def __init__(self, condition_func, parent=None):
-        super().__init__(parent)
-        self.condition_func = condition_func
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.check_condition)
+        def __init__(self, condition_func, parent=None):
+            super().__init__(parent)
+            self.condition_func = condition_func
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.check_condition)
 
-    def check_condition(self):
-        """Check if condition is met and emit signal if true."""
-        try:
-            if self.condition_func():
-                self.timer.stop()
-                self.condition_met.emit()
-        except Exception:
-            # Ignore exceptions in condition check to prevent crashes
-            pass
+        def check_condition(self):
+            """Check if condition is met and emit signal if true."""
+            try:
+                if self.condition_func():
+                    self.timer.stop()
+                    self.condition_met.emit()
+            except Exception:
+                # Ignore exceptions in condition check to prevent crashes
+                pass
 
-    def start(self, interval=50):
-        """Start checking the condition."""
-        self.timer.start(interval)
+        def start(self, interval=50):
+            """Start checking the condition."""
+            self.timer.start(interval)
 
-    def stop(self):
-        """Stop checking."""
-        self.timer.stop()
+        def stop(self):
+            """Stop checking."""
+            self.timer.stop()
 
+    return ConditionWaiter
+
+# Lazy-load ConditionWaiter when needed
+ConditionWaiter = None
 
 def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition not met"):
     """
@@ -206,7 +207,6 @@ def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition n
         # waitUntil raises AssertionError on timeout
         raise TimeoutError(f"Timeout waiting for condition: {message}")
 
-
 @pytest.fixture
 def wait_for(qtbot):
     """Provide the wait_for_condition function as a fixture."""
@@ -214,15 +214,14 @@ def wait_for(qtbot):
         return wait_for_condition(qtbot, condition_func, timeout, message)
     return _wait_for
 
-
 @pytest.fixture
 def process_events(qtbot):
     """Process Qt events to ensure UI updates."""
     def _process():
+        from PySide6.QtWidgets import QApplication
         QApplication.processEvents()
         qtbot.wait(10)
     return _process
-
 
 # Markers for test organization
 def pytest_configure(config):

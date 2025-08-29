@@ -2,6 +2,7 @@
 Sprite configuration loader for SpritePal
 Loads sprite locations from external configuration files
 """
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass
@@ -11,7 +12,6 @@ from typing import Any
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 @dataclass
 class SpriteConfig:
@@ -24,7 +24,6 @@ class SpriteConfig:
     estimated_size: int
     palette_indices: list[int] | None = None
     offset_variants: list[int] | None = None
-
 
 class SpriteConfigLoader:
     """Loads and manages sprite location configurations"""

@@ -1,6 +1,7 @@
 """
 Preview coordination for MainWindow sprite and palette previews
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -20,14 +21,13 @@ if TYPE_CHECKING:
     from ui.palette_preview import PalettePreviewWidget
     from ui.zoomable_preview import PreviewPanel
 
-
 class PreviewCoordinator(QObject):
     """Coordinates sprite and palette preview widgets"""
 
     def __init__(
         self,
-        sprite_preview: "PreviewPanel",
-        palette_preview: "PalettePreviewWidget"
+        sprite_preview: PreviewPanel,
+        palette_preview: PalettePreviewWidget
     ) -> None:
         """Initialize preview coordinator
 

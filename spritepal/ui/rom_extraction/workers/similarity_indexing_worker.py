@@ -4,6 +4,7 @@ Background indexing worker for visual similarity search.
 Automatically indexes sprites as they're found during ROM scanning,
 building a searchable index for visual similarity queries.
 """
+from __future__ import annotations
 
 import contextlib
 import hashlib
@@ -22,7 +23,6 @@ from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
-
 
 class SimilarityIndexingWorker(BaseWorker):
     """

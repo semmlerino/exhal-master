@@ -4,6 +4,7 @@ Comprehensive Dialog Migration Testing
 This test suite verifies that all migrated dialogs work correctly together
 and maintain full functionality after migration to the new component architecture.
 """
+from __future__ import annotations
 
 import contextlib
 import tempfile
@@ -19,7 +20,6 @@ from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.dialog,
@@ -32,7 +32,6 @@ pytestmark = [
     pytest.mark.widget,
     pytest.mark.ci_safe,
 ]
-
 
 class TestComprehensiveDialogMigrations:
     """Test all migrated dialogs work together correctly"""
@@ -415,7 +414,6 @@ class TestComprehensiveDialogMigrations:
                     dialog.close()
                 except Exception:
                     pass
-
 
 # Manager Context Integration Tests
 class TestManagerContextIntegration:

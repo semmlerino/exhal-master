@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Quality Report Generator
 
@@ -12,7 +14,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class QualityReportGenerator:
@@ -403,10 +405,10 @@ class QualityReportGenerator:
         return "\n".join(report)
 
     def load_all_data(self,
-                     type_check_file: Optional[str] = None,
-                     mock_density_file: Optional[str] = None,
-                     lint_file: Optional[str] = None,
-                     test_file: Optional[str] = None) -> None:
+                     type_check_file: str | None = None,
+                     mock_density_file: str | None = None,
+                     lint_file: str | None = None,
+                     test_file: str | None = None) -> None:
         """Load all available quality check data."""
         if type_check_file:
             self.type_check_data = self.load_json_report(type_check_file)
@@ -419,7 +421,6 @@ class QualityReportGenerator:
 
         if test_file:
             self.test_data = self.load_json_report(test_file)
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -469,7 +470,6 @@ def main():
         return 0 if quality_score >= args.threshold else 1
 
     return 0
-
 
 if __name__ == '__main__':
     sys.exit(main())

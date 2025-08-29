@@ -4,6 +4,7 @@ Complete implementation example of the Smart Preview system for real-time update
 This example demonstrates how to integrate all components for smooth 60 FPS
 preview updates during slider scrubbing.
 """
+from __future__ import annotations
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
@@ -201,7 +202,6 @@ class SmartPreviewExample(QWidget):
             self.coordinator.cleanup()
         super().closeEvent(event)
 
-
 # Timing Strategy Configuration Example
 TIMING_STRATEGIES = {
     # Real-time UI updates (60 FPS)
@@ -221,7 +221,6 @@ TIMING_STRATEGIES = {
     "max_preview_workers": 2,  # 2 concurrent workers
     "worker_idle_timeout": 30000,  # 30s idle timeout
 }
-
 
 # Signal Connection Pattern Example
 def connect_smart_preview_to_slider(coordinator, slider):
@@ -251,7 +250,6 @@ def connect_smart_preview_to_slider(coordinator, slider):
     slider.sliderReleased.connect(
         lambda: print("Drag ended - generating high-quality preview")
     )
-
 
 if __name__ == "__main__":
     app = QApplication([])

@@ -4,6 +4,7 @@ Basic functionality tests for the ComposedDialog architecture.
 This module provides basic tests to verify that the composition-based dialog
 architecture components can be imported and instantiated correctly.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
@@ -14,7 +15,6 @@ from ui.components.base.composed.composed_dialog import ComposedDialog
 from ui.components.base.composed.dialog_context import DialogContext
 from ui.components.base.composed.message_dialog_manager import MessageDialogManager
 from ui.components.base.composed.status_bar_manager import StatusBarManager
-
 
 class TestComposedDialogBasics:
     """Basic tests for ComposedDialog architecture components."""

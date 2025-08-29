@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to validate fullscreen sprite viewer fixes.
 Run this to test if the fullscreen viewer covers the entire screen.
@@ -16,7 +18,6 @@ from PySide6.QtCore import Qt
 
 from ui.widgets.fullscreen_sprite_viewer import FullscreenSpriteViewer
 from utils.logging_config import setup_logging
-
 
 class FullscreenTestWidget(QWidget):
     """Simple test widget to test fullscreen functionality."""
@@ -87,7 +88,6 @@ class FullscreenTestWidget(QWidget):
         """Handle viewer closed."""
         print("Fullscreen viewer closed")
 
-
 def main():
     """Main test function."""
     # Setup logging to see debug output
@@ -104,7 +104,6 @@ def main():
     print("Check that the fullscreen viewer covers the ENTIRE screen.")
     
     return app.exec()
-
 
 if __name__ == "__main__":
     sys.exit(main())

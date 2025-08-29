@@ -280,10 +280,8 @@ class EnvironmentInfo:
             not self.is_docker  # Docker might have limitations
         )
 
-
 # Global environment instance
 _environment_info: EnvironmentInfo | None = None
-
 
 def get_environment_info() -> EnvironmentInfo:
     """Get cached environment information."""
@@ -292,42 +290,34 @@ def get_environment_info() -> EnvironmentInfo:
         _environment_info = EnvironmentInfo()
     return _environment_info
 
-
 # Convenience functions for common checks
 def is_headless_environment() -> bool:
     """Check if running in headless environment."""
     return get_environment_info().is_headless
 
-
 def is_ci_environment() -> bool:
     """Check if running in CI environment."""
     return get_environment_info().is_ci
-
 
 def is_wsl_environment() -> bool:
     """Check if running in WSL environment."""
     return get_environment_info().is_wsl
 
-
 def is_docker_environment() -> bool:
     """Check if running in Docker container."""
     return get_environment_info().is_docker
-
 
 def has_display_available() -> bool:
     """Check if display is available for GUI tests."""
     return get_environment_info().has_display
 
-
 def is_xvfb_available() -> bool:
     """Check if xvfb is available for virtual display."""
     return get_environment_info().xvfb_available
 
-
 def get_recommended_qt_platform() -> str | None:
     """Get recommended Qt platform plugin."""
     return get_environment_info().recommended_qt_platform
-
 
 # Skip decorators for test control
 def skip_if_no_display(reason: str = "Test requires display but none available") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -339,7 +329,6 @@ def skip_if_no_display(reason: str = "Test requires display but none available")
         )(func)
     return decorator
 
-
 def skip_in_ci(reason: str = "Test should not run in CI environment") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Skip test when running in CI environment."""
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -349,14 +338,12 @@ def skip_in_ci(reason: str = "Test should not run in CI environment") -> Callabl
         )(func)
     return decorator
 
-
 def requires_display(func: Callable[..., Any]) -> Callable[..., Any]:
     """Require display for test - skip if headless."""
     return pytest.mark.skipif(
         is_headless_environment(),
         reason="Test requires display but running in headless environment"
     )(func)
-
 
 def headless_safe(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark test as safe for headless environments.
@@ -365,7 +352,6 @@ def headless_safe(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     return pytest.mark.headless(func)
 
-
 def ci_safe(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark test as safe for CI environments.
 
@@ -373,14 +359,12 @@ def ci_safe(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     return pytest.mark.ci_safe(func)
 
-
 def requires_real_qt(func: Callable[..., Any]) -> Callable[..., Any]:
     """Require real Qt components - skip if mocked."""
     return pytest.mark.skipif(
         is_headless_environment() and not is_xvfb_available(),
         reason="Test requires real Qt but running headless without xvfb"
     )(func)
-
 
 def skip_if_wsl(reason: str = "Test has known issues on WSL") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Skip test if running on WSL."""
@@ -391,7 +375,6 @@ def skip_if_wsl(reason: str = "Test has known issues on WSL") -> Callable[[Calla
         )(func)
     return decorator
 
-
 def skip_if_docker(reason: str = "Test has known issues in Docker") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Skip test if running in Docker container."""
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -400,7 +383,6 @@ def skip_if_docker(reason: str = "Test has known issues in Docker") -> Callable[
             reason=reason
         )(func)
     return decorator
-
 
 # Configuration helpers
 def configure_qt_for_environment() -> None:
@@ -418,7 +400,6 @@ def configure_qt_for_environment() -> None:
     if env_info.is_headless:
         os.environ.setdefault('QT_LOGGING_RULES', '*.debug=false')
         os.environ.setdefault('QT_QPA_FONTDIR', '/usr/share/fonts')
-
 
 def get_environment_report() -> str:
     """Generate comprehensive environment report for debugging."""
@@ -464,17 +445,14 @@ def get_environment_report() -> str:
 
     return "\n".join(lines)
 
-
 def print_environment_report() -> None:
     """Print environment report to stdout."""
     print(get_environment_report())
-
 
 # Legacy compatibility functions
 def is_pyside6_available() -> bool:
     """Legacy compatibility function."""
     return get_environment_info().pyside6_available
-
 
 class HeadlessModeError(RuntimeError):
     """Raised when Qt functionality is accessed in headless mode."""
@@ -485,7 +463,6 @@ class HeadlessModeError(RuntimeError):
             f"Install PySide6 and ensure a display is available, or use "
             f"non-Qt testing functionality."
         )
-
 
 def require_qt(feature: str) -> None:
     """Raise an error if Qt is not available.

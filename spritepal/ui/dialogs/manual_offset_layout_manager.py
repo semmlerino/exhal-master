@@ -14,8 +14,7 @@ Key responsibilities:
 - Manual offset dialog-specific size constraints
 - Tab-specific layout adjustments
 """
-
-from typing import Optional
+from __future__ import annotations
 
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QLabel, QSizePolicy, QSplitter, QVBoxLayout, QWidget
@@ -43,7 +42,6 @@ TAB_RATIOS = {
     2: 0.35,  # History tab - list view
     3: 0.40,  # Gallery tab - needs more controls
 }
-
 
 class LayoutManager:
     """Manages layout configuration for Manual Offset Dialog."""
@@ -112,7 +110,7 @@ class LayoutManager:
         # DO NOT add stretch at the end - let tab widget expand
 
     def setup_right_panel_layout(self, panel: QWidget, preview_widget: QWidget,
-                                title_label: Optional[QLabel] = None) -> None:
+                                title_label: QLabel | None = None) -> None:
         """
         Configure right panel layout for preview.
 

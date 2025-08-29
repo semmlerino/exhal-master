@@ -4,9 +4,10 @@ Button box manager component for handling dialog button boxes.
 This component manages button box creation, button management, and signal handling.
 It's designed to be composed into dialogs via the DialogBase composition system.
 """
+from __future__ import annotations
 
 import os
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialogButtonBox, QPushButton
@@ -34,7 +35,7 @@ class ButtonBoxManager(QObject):
     # Signal emitted when a custom button is clicked
     button_clicked = Signal(str)  # Emits button text
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """
         Initialize the button box manager.
 
@@ -42,7 +43,7 @@ class ButtonBoxManager(QObject):
             parent: Optional parent QObject for proper cleanup
         """
         super().__init__(parent)
-        self._button_box: Optional[QDialogButtonBox] = None
+        self._button_box: QDialogButtonBox | None = None
         self._custom_buttons: dict[str, QPushButton] = {}
         self._button_callbacks: dict[str, Callable] = {}
 
@@ -129,7 +130,7 @@ class ButtonBoxManager(QObject):
         self,
         text: str,
         role: QDialogButtonBox.ButtonRole = QDialogButtonBox.ButtonRole.ActionRole,
-        callback: Optional[Callable] = None
+        callback: Callable | None = None
     ) -> QPushButton:
         """
         Add a custom button to the button box.
@@ -166,7 +167,7 @@ class ButtonBoxManager(QObject):
 
         return button
 
-    def get_button(self, standard_button: QDialogButtonBox.StandardButton) -> Optional[QPushButton]:
+    def get_button(self, standard_button: QDialogButtonBox.StandardButton) -> QPushButton | None:
         """
         Get a standard button from the button box.
 
@@ -299,7 +300,7 @@ class ButtonBoxManager(QObject):
         return self._button_box is not None
 
     @property
-    def button_box(self) -> Optional[QDialogButtonBox]:
+    def button_box(self) -> QDialogButtonBox | None:
         """
         Get the underlying QDialogButtonBox widget.
 

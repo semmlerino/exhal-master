@@ -13,6 +13,7 @@ Benefits of real component testing vs mocking:
 - Ensures proper signal/slot connections
 - Performance and resource management validation
 """
+from __future__ import annotations
 
 import json
 import tempfile
@@ -31,7 +32,6 @@ from core.managers import cleanup_managers, initialize_managers
 from core.managers.exceptions import ValidationError
 from core.managers.injection_manager import InjectionManager
 
-
 # Serial execution required: Thread safety concerns
 pytestmark = [
     
@@ -49,7 +49,6 @@ pytestmark = [
     pytest.mark.worker_threads,
 ]
 
-
 @pytest.fixture(autouse=True)
 def setup_managers():
     """Setup managers for all tests"""
@@ -57,12 +56,10 @@ def setup_managers():
     yield
     cleanup_managers()
 
-
 @pytest.fixture
 def injection_manager_real():
     """Provide real injection manager for testing."""
     return InjectionManager()
-
 
 @pytest.fixture
 def temp_files_with_real_content(tmp_path):
@@ -110,7 +107,6 @@ def temp_files_with_real_content(tmp_path):
         "metadata_path": str(metadata_file),
         "output_dir": str(tmp_path)
     }
-
 
 class TestInjectionManagerInitialization:
     """TDD tests for InjectionManager initialization and lifecycle.
@@ -180,7 +176,6 @@ class TestInjectionManagerInitialization:
             
         finally:
             worker_helper.cleanup()
-
 
 class TestInjectionManagerParameterValidation:
     """TDD tests for parameter validation with real file I/O.
@@ -416,7 +411,6 @@ class TestInjectionManagerParameterValidation:
         # Metadata file should not exist
         assert not Path(params["metadata_path"]).exists()
 
-
 class TestInjectionManagerWorkflows:
     """Test injection workflow methods"""
 
@@ -557,7 +551,6 @@ class TestInjectionManagerWorkflows:
         finally:
             worker_helper.cleanup()
 
-
 class TestInjectionManagerSignalHandling:
     """Test worker signal handling"""
 
@@ -645,7 +638,6 @@ class TestInjectionManagerSignalHandling:
         with patch.object(manager, "injection_finished") as mock_signal:
             manager._on_worker_finished(False, "Error message")
             mock_signal.emit.assert_called_once_with(False, "Error message")
-
 
 class TestInjectionManagerVRAMSuggestion:
     """Test smart VRAM suggestion functionality"""
@@ -785,7 +777,6 @@ class TestInjectionManagerVRAMSuggestion:
         result = manager._try_last_injection_vram()
         assert result == str(vram_file)
 
-
 # Integration test demonstrating TDD methodology with real components
 
 def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
@@ -855,7 +846,6 @@ def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
         pytest.skip(f"Real validation found issue (valuable test result): {e}")
     finally:
         injection_fixture.cleanup()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

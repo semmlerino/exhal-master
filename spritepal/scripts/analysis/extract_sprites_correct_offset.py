@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Extract sprites from VRAM at the CORRECT offsets (0x4000/0x6000)
 """
@@ -11,7 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
-
 
 def extract_sprites_from_vram(vram_path, output_prefix):
     """Extract sprites from VRAM at correct offsets"""
@@ -55,7 +56,6 @@ def extract_sprites_from_vram(vram_path, output_prefix):
 
     return extracted_files
 
-
 def main():
     # Test with USA ROM VRAM dump
     vram_file = "../Kirby Super Star (USA)_2_VRAM.dmp"
@@ -71,7 +71,6 @@ def main():
     print(f"\nExtracted {len(extracted)} sprite sheets")
     print("\nIMPORTANT: These are grayscale because we're extracting from VRAM without palettes.")
     print("Check the images to see if we finally have actual Kirby sprites!")
-
 
 if __name__ == "__main__":
     main()

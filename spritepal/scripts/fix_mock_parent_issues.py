@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Fix Mock parent issues in test files by replacing Mock() with proper test helpers."""
 
 import re
 from pathlib import Path
-
 
 def fix_mock_parent_issues(filepath: Path) -> None:
     """Fix Mock parent issues in a test file."""
@@ -70,13 +71,11 @@ def fix_mock_parent_issues(filepath: Path) -> None:
     filepath.write_text(content)
     print(f"Fixed {filepath}")
 
-
 def add_cleanups_to_test(content: str) -> str:
     """Add cleanup calls to test methods that use window_helper."""
     # This is a more complex transformation that would require AST parsing
     # For now, we'll just ensure the one we manually fixed has cleanup
     return content
-
 
 def main():
     """Main function to fix Mock parent issues."""
@@ -96,7 +95,6 @@ def main():
         if "mock_window = Mock()" in content and "ExtractionController(mock_window)" in content:
             print(f"\nFound Mock parent issues in {test_file}")
             fix_mock_parent_issues(test_file)
-
 
 if __name__ == "__main__":
     main()

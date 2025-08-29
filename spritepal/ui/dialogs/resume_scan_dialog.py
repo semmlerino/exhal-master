@@ -2,6 +2,7 @@
 Dialog for resuming interrupted sprite scans
 Provides options to resume from cached progress or start fresh
 """
+from __future__ import annotations
 
 from typing import Any
 

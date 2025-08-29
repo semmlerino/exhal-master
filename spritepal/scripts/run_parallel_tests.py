@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Parallel test runner for SpritePal test suite.
 
@@ -11,7 +13,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
 
 def run_command(cmd: list[str], description: str, timeout: int = 300) -> tuple[bool, str]:
     """Run a command and return success status and output."""
@@ -54,7 +55,6 @@ def run_command(cmd: list[str], description: str, timeout: int = 300) -> tuple[b
         duration = time.time() - start_time
         print(f"\n{description} ERROR after {duration:.1f}s: {e}")
         return False, str(e)
-
 
 def get_test_counts() -> tuple[int, int]:
     """Get counts of parallel vs serial tests."""
@@ -103,7 +103,6 @@ def get_test_counts() -> tuple[int, int]:
     except Exception as e:
         print(f"Warning: Error counting tests: {e}")
         return "unknown", "unknown"
-
 
 def main():
     parser = argparse.ArgumentParser(description="Run SpritePal tests with optimal parallel/serial execution")
@@ -193,7 +192,6 @@ def main():
     else:
         print(f"\n❌ Some test phases failed!")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

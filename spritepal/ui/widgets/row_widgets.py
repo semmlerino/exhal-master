@@ -1,7 +1,7 @@
 """
 Row-related widgets for SpritePal row arrangement dialog
 """
-
+from __future__ import annotations
 
 from PIL import Image
 from PySide6.QtCore import QMimeData, Qt, Signal
@@ -155,7 +155,6 @@ class RowPreviewWidget(QWidget):
         """Set selection state"""
         self.is_selected = selected
         self.update()
-
 
 class DragDropListWidget(QListWidget):
     """List widget with enhanced drag-and-drop support"""

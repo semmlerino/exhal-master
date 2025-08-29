@@ -18,7 +18,7 @@ This replaces mock usage in dialog tests:
 - Mock Qt parent/child relationships (misses real Qt lifecycle issues)
 - Mock signal connections (can't test real cross-dialog communication)
 """
-
+from __future__ import annotations
 
 import os
 import sys
@@ -47,7 +47,6 @@ pytestmark = [
     pytest.mark.signals_slots,
     pytest.mark.slow,
 ]
-
 
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
@@ -82,7 +81,6 @@ from ui.dialogs import (
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
-
 
 class TestRealDialogIntegration:
     """
@@ -499,7 +497,6 @@ class TestRealDialogIntegration:
         finally:
             dialog.close()
 
-
 class TestRealDialogManagerIntegration:
     """
     Test dialog integration with real managers vs mocked manager interactions.
@@ -580,7 +577,6 @@ class TestRealDialogManagerIntegration:
         finally:
             manual_dialog.close()
             settings_dialog.close()
-
 
 class TestBugDiscoveryRealVsMockedDialogs:
     """
@@ -718,7 +714,6 @@ class TestBugDiscoveryRealVsMockedDialogs:
         except Exception as e:
             print(f"REAL BUG: Dialog file validation failed: {e}")
             # This exposes real file validation bugs vs mocked file success
-
 
 if __name__ == "__main__":
     # Run the tests directly

@@ -8,7 +8,7 @@ used throughout the SpritePal codebase:
 - Proper timeout handling with multiple attempts
 - Consistent logging and error reporting
 """
-
+from __future__ import annotations
 
 import contextlib
 
@@ -17,7 +17,6 @@ from PySide6.QtCore import QThread
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class WorkerManager:
     """

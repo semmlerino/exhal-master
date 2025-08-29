@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -37,7 +39,6 @@ def qt_app():
     yield app
     # Don't quit app - let pytest-qt handle it
 
-
 @pytest.fixture(params=["legacy", "composed"])
 def dialog_implementation(request, qt_app, monkeypatch):
     """Fixture that provides both implementations for testing."""
@@ -75,9 +76,8 @@ def dialog_implementation(request, qt_app, monkeypatch):
         dialog.cleanup()
         dialog.close()
         dialog.deleteLater()
-    except:
+    except Exception:
         pass
-
 
 class TestUnifiedDialogMigration:
     """Test suite comparing legacy and composed implementations."""
@@ -219,7 +219,6 @@ class TestUnifiedDialogMigration:
             has_data = dialog_implementation._has_rom_data()
             assert isinstance(has_data, bool)
 
-
 class TestImplementationConsistency:
     """Test that both implementations behave identically."""
     
@@ -252,7 +251,7 @@ class TestImplementationConsistency:
                 dialog.cleanup()
                 dialog.close()
                 dialog.deleteLater()
-            except:
+            except Exception:
                 pass
     
     def test_same_signals(self, both_dialogs):
@@ -332,7 +331,6 @@ class TestImplementationConsistency:
         composed_offset = composed.get_current_offset()
         assert legacy_offset == composed_offset == 0x200000
 
-
 class TestComponentIntegration:
     """Test composed implementation components work correctly."""
     
@@ -356,7 +354,7 @@ class TestComponentIntegration:
             dialog.cleanup()
             dialog.close()
             dialog.deleteLater()
-        except:
+        except Exception:
             pass
     
     def test_component_creation(self, composed_dialog):
@@ -393,7 +391,6 @@ class TestComponentIntegration:
         
         # Should complete without errors
         # Components should be cleaned up internally
-
 
 # Performance comparison tests
 class TestPerformanceComparison:

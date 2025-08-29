@@ -1,6 +1,7 @@
 """
 Helper for testing dialog integration with real dialog components
 """
+from __future__ import annotations
 
 import contextlib
 import json
@@ -16,7 +17,6 @@ from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
 
-
 # Serial execution required: QApplication management
 pytestmark = [
     pytest.mark.serial,
@@ -28,14 +28,12 @@ pytestmark = [
     pytest.mark.rom_data,
 ]
 
-
 def ensure_headless_qt():
     """Ensure Qt is running in headless mode for testing"""
     import os
     # Set environment variables for headless testing
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     os.environ["QT_QUICK_BACKEND"] = "software"
-
 
 class TestDialogHelper(QObject):
     """Helper for dialog integration testing with real dialogs"""

@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -149,7 +151,6 @@ class TestConsoleErrorHandler(unittest.TestCase):
             self.assertIn("Very bad", stderr_output)
             self.assertIn("Bad value", stderr_output)
 
-
 class TestControllerErrorHandlerFallback(unittest.TestCase):
     """Test that the controller properly uses ConsoleErrorHandler as fallback"""
 
@@ -169,7 +170,6 @@ class TestControllerErrorHandlerFallback(unittest.TestCase):
         with patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
             handler.handle_exception(Exception("Test"), "context")
             self.assertIn("Test", mock_stderr.getvalue())
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,6 +5,7 @@ This class ensures that instance variables are declared before setup methods are
 preventing the common bug where widgets created in setup methods are overwritten by
 late instance variable declarations.
 """
+from __future__ import annotations
 
 from typing import Any, ClassVar
 
@@ -25,10 +26,8 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class InitializationOrderError(Exception):
     """Raised when initialization order requirements are violated."""
-
 
 # In PySide6, we should not inherit from type(QDialog) directly
 # Instead, we'll use a simpler approach without metaclass

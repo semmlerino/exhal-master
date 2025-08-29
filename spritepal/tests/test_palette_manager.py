@@ -1,4 +1,5 @@
 """Tests for PaletteManager class"""
+from __future__ import annotations
 
 import json
 import sys
@@ -17,7 +18,6 @@ from utils.constants import (
     SPRITE_PALETTE_START,
 )
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.rom_data,
 ]
-
 
 class TestPaletteManager:
     """Test the PaletteManager functionality"""

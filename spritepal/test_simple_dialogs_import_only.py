@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Import-only test for simple dialogs migration.
 
@@ -20,18 +22,17 @@ Usage:
 import sys
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Add project root to Python path
 sys.path.insert(0, str(Path(__file__).parent))
-
 
 class ImportTestResult:
     """Track import test results for reporting"""
     
     def __init__(self):
-        self.results: List[Dict[str, Any]] = []
-        self.errors: List[str] = []
+        self.results: list[dict[str, Any]] = []
+        self.errors: list[str] = []
     
     def record_test(self, name: str, success: bool, detail: str = ""):
         """Record a test result"""
@@ -82,7 +83,6 @@ class ImportTestResult:
         
         return success
 
-
 def test_basic_module_imports(results: ImportTestResult) -> None:
     """Test basic Python module imports without Qt"""
     
@@ -91,7 +91,7 @@ def test_basic_module_imports(results: ImportTestResult) -> None:
         import os
         import sys  
         from pathlib import Path
-        from typing import Any, ClassVar
+from typing import Any, ClassVar
         results.record_test("Standard library imports", True, "os, sys, pathlib, typing")
     except ImportError as e:
         results.record_test("Standard library imports", False, str(e))
@@ -102,7 +102,6 @@ def test_basic_module_imports(results: ImportTestResult) -> None:
         results.record_test("Logging config import", True, "get_logger available")
     except ImportError as e:
         results.record_test("Logging config import", False, str(e))
-
 
 def test_feature_flag_system_imports(results: ImportTestResult) -> None:
     """Test that feature flag system can be imported and used"""
@@ -149,7 +148,6 @@ def test_feature_flag_system_imports(results: ImportTestResult) -> None:
     except ImportError as e:
         results.record_test("Feature flag utilities import", False, str(e))
 
-
 def test_dialog_selector_import(results: ImportTestResult) -> None:
     """Test dialog selector import (may use mocks if Qt unavailable)"""
     
@@ -169,7 +167,6 @@ def test_dialog_selector_import(results: ImportTestResult) -> None:
             
     except ImportError as e:
         results.record_test("Dialog selector import", False, str(e))
-
 
 def test_settings_dialog_import(results: ImportTestResult) -> None:
     """Test SettingsDialog import"""
@@ -195,7 +192,6 @@ def test_settings_dialog_import(results: ImportTestResult) -> None:
             
     except ImportError as e:
         results.record_test("SettingsDialog import", False, str(e))
-
 
 def test_user_error_dialog_import(results: ImportTestResult) -> None:
     """Test UserErrorDialog import"""
@@ -229,7 +225,6 @@ def test_user_error_dialog_import(results: ImportTestResult) -> None:
     except ImportError as e:
         results.record_test("UserErrorDialog import", False, str(e))
 
-
 def test_composed_dialog_imports(results: ImportTestResult) -> None:
     """Test composed dialog system imports"""
     
@@ -251,7 +246,6 @@ def test_composed_dialog_imports(results: ImportTestResult) -> None:
     except ImportError as e:
         results.record_test("DialogContext import", False, str(e))
 
-
 def test_base_dialog_legacy_import(results: ImportTestResult) -> None:
     """Test legacy BaseDialog import"""
     
@@ -268,7 +262,6 @@ def test_base_dialog_legacy_import(results: ImportTestResult) -> None:
             
     except ImportError as e:
         results.record_test("Legacy DialogBase import", False, str(e))
-
 
 def test_implementation_switching(results: ImportTestResult) -> None:
     """Test switching between implementations"""
@@ -305,7 +298,6 @@ def test_implementation_switching(results: ImportTestResult) -> None:
         # Restore original environment
         os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = original
 
-
 def test_import_error_scenarios(results: ImportTestResult) -> None:
     """Test behavior when imports fail gracefully"""
     
@@ -317,7 +309,6 @@ def test_import_error_scenarios(results: ImportTestResult) -> None:
         results.record_test("Nonexistent dialog import error handling", True, "ImportError raised correctly")
     except Exception as e:
         results.record_test("Nonexistent dialog import error handling", False, f"Unexpected error: {e}")
-
 
 def test_class_structure_inspection(results: ImportTestResult) -> None:
     """Test inspection of dialog class structure without instantiation"""
@@ -345,7 +336,6 @@ def test_class_structure_inspection(results: ImportTestResult) -> None:
         
     except ImportError as e:
         results.record_test("Class structure inspection", False, str(e))
-
 
 def main() -> bool:
     """Run all import-only tests"""
@@ -392,7 +382,6 @@ def main() -> bool:
     success = results.summary()
     
     return success
-
 
 if __name__ == "__main__":
     success = main()

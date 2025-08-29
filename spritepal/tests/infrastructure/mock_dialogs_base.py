@@ -4,9 +4,10 @@ Base mock dialog infrastructure for testing.
 This module provides lightweight mock dialogs that prevent blocking operations
 while maintaining realistic Qt signal behavior.
 """
+from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 
 class TestDialogBase:
@@ -25,7 +26,7 @@ class TestDialogBase:
         Accepted = 1
         Rejected = 0
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         self.parent_widget = parent
         self.result_value = self.DialogCode.Accepted
         self._exec_called = False
@@ -99,7 +100,6 @@ class TestDialogBase:
         """Finished signal interface."""
         return CallbackSignal(self.finished_callbacks)
 
-
 class CallbackSignal:
     """Signal-like interface for callbacks."""
 
@@ -111,7 +111,7 @@ class CallbackSignal:
         if callback not in self.callbacks:
             self.callbacks.append(callback)
 
-    def disconnect(self, callback: Optional[Callable] = None) -> None:
+    def disconnect(self, callback: Callable | None = None) -> None:
         """Disconnect callback(s)."""
         if callback is None:
             self.callbacks.clear()
@@ -126,11 +126,10 @@ class CallbackSignal:
             except Exception:
                 pass  # Don't crash on callback errors
 
-
 class TestMessageBox(TestDialogBase):
     """Test QMessageBox for testing."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.text = ""
         self.informative_text = ""
@@ -159,11 +158,10 @@ class TestMessageBox(TestDialogBase):
         """Mock question dialog."""
         return TestDialogBase.DialogCode.Accepted
 
-
 class TestFileDialog(TestDialogBase):
     """Test QFileDialog for testing."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.selected_files = []
         self.selected_directory = ""
@@ -185,7 +183,6 @@ class TestFileDialog(TestDialogBase):
                            directory: str = "") -> str:
         """Mock directory selection dialog."""
         return "/test/directory"
-
 
 class TestInputDialog(TestDialogBase):
     """Test QInputDialog for testing."""
@@ -210,11 +207,10 @@ class TestInputDialog(TestDialogBase):
         """Mock double input dialog."""
         return 3.14, True
 
-
 class TestProgressDialog(TestDialogBase):
     """Test QProgressDialog for testing."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         # Progress dialog specific callbacks
         self.canceled_callbacks: list[Callable[[], None]] = []
@@ -249,7 +245,6 @@ class TestProgressDialog(TestDialogBase):
         """Canceled signal interface."""
         return CallbackSignal(self.canceled_callbacks)
 
-
 def create_mock_dialog(dialog_type: str, **kwargs) -> TestDialogBase:
     """
     Factory function to create mock dialogs.
@@ -270,7 +265,6 @@ def create_mock_dialog(dialog_type: str, **kwargs) -> TestDialogBase:
 
     dialog_class = dialog_map.get(dialog_type, TestDialogBase)
     return dialog_class(**kwargs)
-
 
 # Convenience function for patching
 def patch_all_dialogs(monkeypatch):

@@ -40,7 +40,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class CacheWorker(QObject):
     """Worker that performs cache I/O in background thread"""
 
@@ -49,7 +48,7 @@ class CacheWorker(QObject):
     load_error = Signal(str, str)           # request_id, error
     save_complete = Signal(str, bool)       # cache_key, success
 
-    def __init__(self, cache_dir: Path):
+    def __init__(self, cache_dir: Path) -> None:
         super().__init__()
         self.cache_dir = cache_dir
         self._stop_requested = threading.Event()
@@ -136,7 +135,6 @@ class CacheWorker(QObject):
         """Stop the worker"""
         self._stop_requested.set()
 
-
 class AsyncROMCache(QObject):
     """
     Asynchronous interface to ROM cache.
@@ -157,7 +155,7 @@ class AsyncROMCache(QObject):
     _request_load = Signal(str, str)        # request_id, cache_key
     _request_save = Signal(str, bytes, dict)  # cache_key, data, metadata
 
-    def __init__(self, rom_cache: ROMCache | None = None):
+    def __init__(self, rom_cache: ROMCache | None = None) -> None:
         """
         Initialize async cache wrapper.
 

@@ -2,6 +2,7 @@
 Test PNG round-trip conversion accuracy
 Ensures sprites survive the extract -> edit -> inject cycle without corruption
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -12,7 +13,6 @@ from PIL import Image
 from core.injector import SpriteInjector, encode_4bpp_tile
 from core.rom_extractor import ROMExtractor
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.no_qt,
     pytest.mark.rom_data,
 ]
-
 
 class TestPNGRoundTrip:
     """Test PNG conversion accuracy for both grayscale and indexed modes"""
@@ -219,7 +218,6 @@ class TestPNGRoundTrip:
             valid, msg = self.injector.validate_sprite(rgb_path)
             assert not valid
             assert "must be in indexed (P) or grayscale (L) mode" in msg
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

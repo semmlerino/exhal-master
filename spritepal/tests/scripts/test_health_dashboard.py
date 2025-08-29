@@ -21,7 +21,6 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
 import re
 from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
@@ -29,7 +28,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 # Type aliases for clarity
-TestResult = Dict[str, Union[str, int, float, bool]]
+TestResult = dict[str, str | int | float | bool]
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
@@ -46,8 +45,7 @@ pytestmark = [
     pytest.mark.slow,
 ]
 FailureCategory = str
-TestMetrics = Dict[str, Union[int, float]]
-
+TestMetrics = dict[str, int | float]
 
 @dataclass
 class TestFailure:
@@ -65,7 +63,6 @@ class TestFailure:
     is_mock_related: bool = False
     is_qt_related: bool = False
 
-
 @dataclass
 class TestSuiteMetrics:
     """Comprehensive test suite metrics."""
@@ -80,11 +77,11 @@ class TestSuiteMetrics:
     total_duration: float
     average_duration: float
     median_duration: float
-    slowest_tests: List[Tuple[str, float]] = field(default_factory=list)
+    slowest_tests: list[tuple[str, float]] = field(default_factory=list)
     
     # Failure analysis
-    failures_by_category: Dict[FailureCategory, int] = field(default_factory=dict)
-    failures_by_file: Dict[str, int] = field(default_factory=dict)
+    failures_by_category: dict[FailureCategory, int] = field(default_factory=dict)
+    failures_by_file: dict[str, int] = field(default_factory=dict)
     timeout_failures: int = 0
     import_failures: int = 0
     type_failures: int = 0
@@ -96,7 +93,6 @@ class TestSuiteMetrics:
     improvement_trend: float = 0.0
     critical_failures: int = 0
     quick_wins_available: int = 0
-
 
 class FailureCategorizer:
     """Categorizes test failures based on error patterns."""
@@ -185,7 +181,7 @@ class FailureCategorizer:
         ],
     }
     
-    def categorize_failure(self, failure_info: Dict[str, str]) -> FailureCategory:
+    def categorize_failure(self, failure_info: dict[str, str]) -> FailureCategory:
         """Categorize a failure based on error message and traceback."""
         combined_text = f"{failure_info.get('message', '')} {failure_info.get('traceback', '')}"
         combined_text = combined_text.lower()
@@ -198,7 +194,7 @@ class FailureCategorizer:
         
         return 'uncategorized'
     
-    def analyze_failure_trends(self, failures: List[TestFailure]) -> Dict[str, any]:
+    def analyze_failure_trends(self, failures: list[TestFailure]) -> dict[str, any]:
         """Analyze failure trends and patterns."""
         category_counts = Counter(f.category for f in failures)
         file_counts = Counter(f.test_file for f in failures)
@@ -224,7 +220,6 @@ class FailureCategorizer:
             'affected_files': len(file_counts),
         }
 
-
 class TestRunner:
     """Handles test execution with different strategies."""
     
@@ -232,7 +227,7 @@ class TestRunner:
         self.test_dir = test_dir
         self.project_root = test_dir.parent
     
-    def run_progressive_tests(self) -> Dict[str, TestSuiteMetrics]:
+    def run_progressive_tests(self) -> dict[str, TestSuiteMetrics]:
         """Run tests in progressive stages to quickly identify issues."""
         stages = [
             ("smoke_tests", [
@@ -264,7 +259,7 @@ class TestRunner:
         
         return results
     
-    def _run_test_stage(self, stage_name: str, test_args: List[str]) -> TestSuiteMetrics:
+    def _run_test_stage(self, stage_name: str, test_args: list[str]) -> TestSuiteMetrics:
         """Run a single stage of tests and collect metrics."""
         start_time = time.time()
         
@@ -439,7 +434,6 @@ class TestRunner:
         except Exception as e:
             print(f"Warning: Could not parse XML results: {e}")
 
-
 class TestHealthMonitor:
     """Main class for monitoring test suite health."""
     
@@ -506,7 +500,7 @@ class TestHealthMonitor:
         
         return filepath
     
-    def load_historical_metrics(self, days_back: int = 7) -> List[TestSuiteMetrics]:
+    def load_historical_metrics(self, days_back: int = 7) -> list[TestSuiteMetrics]:
         """Load historical metrics from the last N days."""
         cutoff_date = datetime.now() - timedelta(days=days_back)
         metrics_list = []
@@ -549,7 +543,7 @@ class TestHealthMonitor:
         
         return sorted(metrics_list, key=lambda m: m.timestamp)
     
-    def generate_health_report(self, metrics: TestSuiteMetrics, historical: List[TestSuiteMetrics] = None) -> str:
+    def generate_health_report(self, metrics: TestSuiteMetrics, historical: list[TestSuiteMetrics] = None) -> str:
         """Generate comprehensive health report."""
         report = []
         report.append("=" * 80)
@@ -676,7 +670,7 @@ class TestHealthMonitor:
         
         return "\n".join(report)
     
-    def generate_prioritized_fix_list(self, metrics: TestSuiteMetrics) -> Dict[str, List[str]]:
+    def generate_prioritized_fix_list(self, metrics: TestSuiteMetrics) -> dict[str, list[str]]:
         """Generate prioritized list of fixes based on failure analysis."""
         fixes = {
             "critical": [],
@@ -724,7 +718,6 @@ class TestHealthMonitor:
                 fixes["optimization"].append(f"Optimize slowest test: {slowest[0]} ({slowest[1]:.1f}s)")
         
         return fixes
-
 
 def main():
     """Main entry point for test health dashboard."""
@@ -802,7 +795,6 @@ def main():
                 print("-" * 30)
                 for i, fix in enumerate(fix_list, 1):
                     print(f"{i}. {fix}")
-
 
 if __name__ == "__main__":
     main()

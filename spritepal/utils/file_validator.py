@@ -5,6 +5,7 @@ This service consolidates all file validation logic from across the codebase
 into a single, reusable service with detailed error reporting and comprehensive
 file type support.
 """
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
@@ -28,7 +29,6 @@ class FileInfo:
     extension: str
     resolved_path: str
 
-
 @dataclass
 class ValidationResult:
     """Result of file validation with detailed information"""
@@ -36,7 +36,6 @@ class ValidationResult:
     error_message: str | None = None
     warnings: list[str] = field(default_factory=list)
     file_info: FileInfo | None = None
-
 
 class BasicFileValidator:
     """Handles file existence, permissions, and basic size checks."""
@@ -217,7 +216,6 @@ class BasicFileValidator:
         if size_bytes < 1024 * 1024:
             return f"{size_bytes // 1024}KB"
         return f"{size_bytes // (1024 * 1024)}MB"
-
 
 class FormatValidator:
     """Handles format-specific rules for VRAM, CGRAM, OAM, and ROM files."""
@@ -403,7 +401,6 @@ class FormatValidator:
 
         return ValidationResult(is_valid=True)
 
-
 class ContentValidator:
     """Handles content parsing and validation for various file types."""
 
@@ -458,7 +455,6 @@ class ContentValidator:
                 is_valid=False,
                 error_message=f"Cannot read VRAM file: {e}"
             )
-
 
 class FileValidator:
     """

@@ -12,7 +12,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 def run_command(cmd: list[str], description: str, timeout: int = 30) -> tuple[bool, str]:
     """Run a command and return success status and output."""
     try:
@@ -28,7 +27,6 @@ def run_command(cmd: list[str], description: str, timeout: int = 30) -> tuple[bo
         return False, f"Command timed out after {timeout}s"
     except Exception as e:
         return False, f"Error running command: {e}"
-
 
 def validate_system():
     """Validate that the monitoring system is properly set up."""
@@ -130,7 +128,6 @@ def validate_system():
     
     return True
 
-
 def show_usage_examples():
     """Show practical usage examples."""
     
@@ -175,7 +172,6 @@ def show_usage_examples():
     print("5. Finalize session when satisfied with results")
     print("6. Use regression detector to compare with previous state")
 
-
 def main():
     """Main validation function."""
     
@@ -203,7 +199,6 @@ def main():
         print("\n❌ System validation failed!")
         print("Please check error messages above and fix issues before proceeding.")
         return False
-
 
 if __name__ == "__main__":
     success = main()

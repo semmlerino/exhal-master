@@ -5,8 +5,7 @@ These tests ensure all dialogs can be created without errors,
 particularly catching initialization order bugs where attributes
 might be None when methods expect them to be initialized.
 """
-
-
+from __future__ import annotations
 
 from unittest.mock import patch
 
@@ -17,7 +16,6 @@ from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from ui.dialogs import (
 # Systematic pytest markers applied based on test content analysis
 
-
     ResumeScanDialog,
     SettingsDialog,
     UserErrorDialog,
@@ -25,8 +23,6 @@ from ui.dialogs import (
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
-
-
 
 pytestmark = [
     pytest.mark.dialog,
@@ -170,7 +166,6 @@ class TestDialogInstantiation:
             if os.path.exists(test_file):
                 os.unlink(test_file)
 
-
 class TestDialogMethodCalls:
     """Test that dialog methods can be called without AttributeError."""
 
@@ -193,7 +188,6 @@ class TestDialogMethodCalls:
                 # calling these methods will raise AttributeError
                 # No need to catch and assert - let it fail naturally
                 method(*args)
-
 
 class TestInitializationOrder:
     """Specific tests for initialization order issues."""

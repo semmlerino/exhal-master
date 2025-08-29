@@ -1,13 +1,13 @@
 """
 Tests for sprite detection algorithms in ROMExtractor
 """
+from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
 import pytest
 
 from core.rom_extractor import ROMExtractor
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 @pytest.fixture
 def rom_extractor():
     """Create a ROMExtractor instance with mocked dependencies"""
@@ -30,7 +29,6 @@ def rom_extractor():
         # Mock the rom_injector
         extractor.rom_injector = Mock()
         return extractor
-
 
 @pytest.fixture
 def create_test_sprite_data():
@@ -91,7 +89,6 @@ def create_test_sprite_data():
         return bytes(tile_data)
 
     return _create_sprite_data
-
 
 class TestSpriteDetection:
     """Test sprite detection algorithms"""

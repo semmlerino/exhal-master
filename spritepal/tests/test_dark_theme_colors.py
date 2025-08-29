@@ -4,9 +4,10 @@ Tests for dark theme color constants and basic theme functionality.
 This module tests the color definitions, Theme class, and basic styling functions
 from ui.styles.theme.py following TDD principles with real implementations.
 """
+from __future__ import annotations
 
 import re
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import pytest
 
@@ -18,7 +19,6 @@ from ui.styles.theme import (
     get_disabled_state_style,
     get_theme_style,
 )
-
 
 class TestColorConstants:
     """Test dark theme color constants validation."""
@@ -84,7 +84,6 @@ class TestColorConstants:
             f"should be {'dark' if expected_darkness else 'light'}"
         )
 
-
 class TestFontConstants:
     """Test font constant definitions."""
 
@@ -116,7 +115,6 @@ class TestFontConstants:
         assert "bold_weight" in FONTS
         assert FONTS["normal_weight"] in ["normal", "400"]
         assert FONTS["bold_weight"] in ["bold", "600", "700"]
-
 
 class TestDimensionConstants:
     """Test dimension constant definitions."""
@@ -150,7 +148,6 @@ class TestDimensionConstants:
             value = DIMENSIONS[key]
             assert isinstance(value, int)
             assert 1 <= value <= 5, f"Border width {key} should be 1-5 pixels"
-
 
 class TestThemeClass:
     """Test the Theme class provides correct color access."""
@@ -187,7 +184,6 @@ class TestThemeClass:
         assert Theme.BORDER == COLORS["border"]
         assert Theme.BORDER_FOCUS == COLORS["border_focus"]
         assert Theme.BORDER_ERROR == COLORS["border_error"]
-
 
 class TestThemeStylingFunctions:
     """Test basic theme styling functions."""
@@ -251,11 +247,10 @@ class TestThemeStylingFunctions:
         assert isinstance(css, str)
         assert isinstance(disabled_css, str)
 
-
 class TestColorUtilities:
     """Test color utility functions and calculations."""
 
-    def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
+    def _hex_to_rgb(self, hex_color: str) -> tuple[int, int, int]:
         """Convert hex color to RGB tuple."""
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
@@ -277,7 +272,6 @@ class TestColorUtilities:
                 assert all(0 <= c <= 255 for c in rgb), f"Color {color_name} RGB values out of range"
             except ValueError:
                 pytest.fail(f"Color {color_name} ({color_hex}) is not parseable")
-
 
 @pytest.mark.headless
 class TestColorConstantsHeadless:

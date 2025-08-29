@@ -1,6 +1,7 @@
 """
 Unit tests for GridImageProcessor
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -10,13 +11,10 @@ from PIL import Image
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
 
-
     TileGroup,
     TilePosition,
 )
 from ui.row_arrangement.grid_image_processor import GridImageProcessor
-
-
 
 pytestmark = [
     pytest.mark.file_io,

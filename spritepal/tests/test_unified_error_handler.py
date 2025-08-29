@@ -5,13 +5,13 @@ This module tests the comprehensive error handling capabilities including
 categorization, context management, recovery suggestions, and integration
 with existing patterns.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 from core.managers.exceptions import (
 # Systematic pytest markers applied based on test content analysis
-
 
     ExtractionError,
     ValidationError,
@@ -23,8 +23,6 @@ from utils.unified_error_handler import (
     ErrorSeverity,
     UnifiedErrorHandler,
 )
-
-
 
 pytestmark = [
     pytest.mark.headless,
@@ -48,12 +46,10 @@ def error_handler():
 
     return UnifiedErrorHandler(error_display=mock_error_display)
 
-
 @pytest.fixture
 def mock_widget():
     """Create a mock widget for testing"""
     return MagicMock()
-
 
 class TestUnifiedErrorHandler:
     """Test the core UnifiedErrorHandler functionality"""
@@ -211,7 +207,6 @@ class TestUnifiedErrorHandler:
         assert "extraction" in stats["categories"]
         assert stats["categories"]["file_io"] == 2  # Two file errors
 
-
 class TestErrorIntegration:
     """Test error integration utilities"""
 
@@ -247,7 +242,6 @@ class TestErrorIntegration:
         result = successful_function()
         assert result == "success"
 
-
 class TestErrorRecovery:
     """Test error recovery mechanisms"""
 
@@ -281,7 +275,6 @@ class TestErrorRecovery:
         assert not error_handler._should_suggest_abort(
             ValidationError("invalid"), ErrorSeverity.LOW
         )
-
 
 @pytest.mark.integration
 class TestErrorHandlerIntegration:

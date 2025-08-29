@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Type checking script for SpritePal tests.
 
@@ -8,7 +10,6 @@ Run this script to validate type safety improvements in the test suite.
 import subprocess
 import sys
 from pathlib import Path
-
 
 def run_basedpyright():
     """Run basedpyright on the test files."""
@@ -33,7 +34,6 @@ def run_basedpyright():
     except FileNotFoundError:
         print("❌ basedpyright not found. Install with: pip install basedpyright")
         return False
-
 
 def run_mypy():
     """Run mypy as fallback type checker."""
@@ -60,7 +60,6 @@ def run_mypy():
     except FileNotFoundError:
         print("❌ mypy not found. Install with: pip install mypy")
         return False
-
 
 def validate_syntax():
     """Validate Python syntax of key test files."""
@@ -91,7 +90,6 @@ def validate_syntax():
     
     return True
 
-
 def run_import_tests():
     """Test that improved imports work correctly."""
     print("🔍 Testing imports...")
@@ -119,7 +117,6 @@ def run_import_tests():
             return False
     
     return True
-
 
 def main():
     """Run all type safety validations."""
@@ -155,7 +152,6 @@ def main():
     else:
         print("❌ Some validations failed. Check output above.")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

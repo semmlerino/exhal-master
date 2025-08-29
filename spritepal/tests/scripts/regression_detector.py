@@ -36,7 +36,6 @@ class TestChange:
     change_type: str  # improvement, regression, new_failure, fixed, new_test, removed_test
     impact_score: float  # 0-1 score of impact severity
 
-
 @dataclass
 class RegressionReport:
     """Comprehensive regression analysis report."""
@@ -70,7 +69,6 @@ class RegressionReport:
     net_improvement_score: float = 0.0
     regression_risk_score: float = 0.0
     overall_health_change: float = 0.0
-
 
 class RegressionDetector:
     """Detects regressions and improvements between test runs."""
@@ -615,7 +613,6 @@ class RegressionDetector:
 
         return report_file
 
-
 def main():
     """Main entry point for regression detector."""
     parser = argparse.ArgumentParser(description="Regression Detection System")
@@ -715,7 +712,6 @@ def main():
     print("  Create baseline:    python regression_detector.py --baseline --tag 'before_fixes'")
     print("  Compare files:      python regression_detector.py --compare before.json after.json")
     print("  Auto-compare:       python regression_detector.py --auto-compare")
-
 
 if __name__ == "__main__":
     main()

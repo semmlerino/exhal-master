@@ -308,7 +308,6 @@ class MockDensityAnalyzer:
         """
         return all(not result['exceeds_limit'] for result in self.results)
 
-
 def main():
     """Main entry point for the script."""
     import argparse
@@ -404,7 +403,6 @@ def main():
         print("\n✅ All files comply with mock density limits")
 
     return 0 if is_compliant else 1
-
 
 if __name__ == '__main__':
     sys.exit(main())

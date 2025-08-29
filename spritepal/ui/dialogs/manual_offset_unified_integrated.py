@@ -20,10 +20,8 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-try:
-    from typing_extensions import override
-except ImportError:
-    from typing_extensions import override
+with contextlib.suppress(ImportError):
+    pass
 
 if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
@@ -74,7 +72,6 @@ def get_main_thread():
     app = QApplication.instance()
     return app.thread() if app else None
 
-
 # Smart DialogBase selection based on environment
 def _get_dialog_base_class():
     """Get the appropriate DialogBase class based on environment settings."""
@@ -123,11 +120,9 @@ from ui.tabs.manual_offset import SimpleBrowseTab, SimpleHistoryTab, SimpleSmart
 
 # Using SimplePreviewCoordinator instead of SmartPreviewCoordinator to avoid worker pool crashes
 
-
 # SimpleBrowseTab, SimpleSmartTab, SimpleHistoryTab removed - now imported from ui.tabs.manual_offset
 
-
-class UnifiedManualOffsetDialog(DialogBase):
+class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
     """
     Unified Manual Offset Dialog combining simplified architecture with tab-based navigation.
 
@@ -1623,7 +1618,6 @@ Cache Misses: {session_stats['misses']}"""
 
         except Exception as e:
             logger.warning(f"Failed to load sprites for mini map: {e}")
-
 
 def create_manual_offset_dialog(parent: QWidget | None = None) -> UnifiedManualOffsetDialog:
     """Factory function for creating manual offset dialog."""

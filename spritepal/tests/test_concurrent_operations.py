@@ -9,6 +9,7 @@ This module tests threading scenarios that can occur in real usage:
 
 Tests use real QThread instances without mocking to find actual race conditions.
 """
+from __future__ import annotations
 
 import os
 import time
@@ -44,7 +45,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 @pytest.fixture
 def temp_dirs(tmp_path):
     """Create temporary directories for testing."""
@@ -56,7 +56,6 @@ def temp_dirs(tmp_path):
     for dir_path in dirs.values():
         dir_path.mkdir(exist_ok=True)
     return dirs
-
 
 @pytest.fixture
 def sample_files(temp_dirs):
@@ -94,7 +93,6 @@ def sample_files(temp_dirs):
         "output_dir": str(temp_dirs["output"]),
     }
 
-
 @pytest.fixture
 def real_cache(temp_dirs):
     """Create a real ROM cache instance with clean settings."""
@@ -112,7 +110,6 @@ def real_cache(temp_dirs):
         cache = ROMCache(cache_dir=str(cache_dir))
         with patch("utils.rom_cache.get_rom_cache", return_value=cache):
             yield cache
-
 
 @pytest.fixture
 def mock_main_window():
@@ -136,7 +133,6 @@ def mock_main_window():
             pass
     
     return MockMainWindow()
-
 
 # ============================================================================
 # Worker Completion Tracker
@@ -183,7 +179,6 @@ class WorkerTracker:
         """Verify no workers reported errors."""
         if self.errors:
             raise AssertionError(f"Worker errors: {self.errors}")
-
 
 # ============================================================================
 # Concurrent ROM Scanning Tests
@@ -353,7 +348,6 @@ class TestConcurrentROMScanning:
             final_sprites = real_cache.get_sprite_locations(sample_files["rom_path"])
             assert final_sprites is not None
 
-
 # ============================================================================
 # Concurrent Extraction Tests
 # ============================================================================
@@ -508,7 +502,6 @@ class TestConcurrentExtraction:
                 output_path = os.path.join(sample_files["output_dir"], f"extract_{i}.png")
                 assert os.path.exists(output_path)
 
-
 # ============================================================================
 # Settings Change During Operations
 # ============================================================================
@@ -617,7 +610,6 @@ class TestSettingsChangeDuringOperations:
                 # The important thing is no error occurred during the cache location change
                 assert results["write_done"] or len(cache1_files) > 0 or len(cache2_files) > 0
 
-
 # ============================================================================
 # UI Responsiveness Tests
 # ============================================================================
@@ -655,7 +647,6 @@ class TestUIResponsiveness:
             # Verify UI was updated (the helper tracks status messages)
             status_messages = mock_main_window.get_signal_emissions()["status_messages"]
             assert any("Working" in msg for msg in status_messages)
-
 
 # ============================================================================
 # Manager Thread Safety Tests
@@ -715,7 +706,6 @@ class TestManagerThreadSafety:
             # Verify previews were generated
             assert results["previews"] > 0
 
-
 # ============================================================================
 # Race Condition Tests
 # ============================================================================
@@ -772,7 +762,6 @@ class TestRaceConditions:
             final_data = real_cache.get_sprite_locations(rom_path)
             assert "InitialSprite" in final_data
             assert "NewSprite" in final_data
-
 
 # ============================================================================
 # Manager Context Isolation Tests  

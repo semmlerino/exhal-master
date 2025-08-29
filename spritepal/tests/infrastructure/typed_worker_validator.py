@@ -49,7 +49,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 @runtime_checkable
 class WorkerProtocol(Protocol):
     """Base protocol for all worker types with common interface."""
@@ -70,7 +69,6 @@ class WorkerProtocol(Protocol):
         """Check if worker is currently running."""
         ...
 
-
 @runtime_checkable
 class ExtractionWorkerProtocol(WorkerProtocol, Protocol):
     """Protocol for extraction worker types."""
@@ -82,7 +80,6 @@ class ExtractionWorkerProtocol(WorkerProtocol, Protocol):
     def perform_operation(self) -> None:
         """Perform the extraction operation."""
         ...
-
 
 @runtime_checkable
 class InjectionWorkerProtocol(WorkerProtocol, Protocol):
@@ -96,7 +93,6 @@ class InjectionWorkerProtocol(WorkerProtocol, Protocol):
         """Start the injection operation."""
         ...
 
-
 class WorkerValidationError(TypeError):
     """Raised when worker validation fails with detailed error information."""
 
@@ -105,7 +101,6 @@ class WorkerValidationError(TypeError):
         self.worker = worker
         self.expected_type = expected_type
         self.actual_type = type(worker)
-
 
 class TypedWorkerValidator:
     """
@@ -476,7 +471,6 @@ class TypedWorkerValidator:
 
         return "\n".join(message_parts)
 
-
 class TypeSafeFactoryWrapper:
     """
     Type-safe wrapper around RealComponentFactory that eliminates cast() operations.
@@ -596,7 +590,6 @@ class TypeSafeFactoryWrapper:
             return self.create_rom_injection_worker(params)
         raise ValueError(f"Unknown worker type: {worker_type}")
 
-
 # Example usage and migration patterns
 def demonstrate_typeguard_usage() -> None:
     """
@@ -655,7 +648,6 @@ def demonstrate_typeguard_usage() -> None:
 
     print("TypeGuard usage patterns demonstrated - see function docstrings")
 
-
 # Integration with RealComponentFactory
 def integrate_with_real_component_factory() -> None:
     """
@@ -688,7 +680,6 @@ def integrate_with_real_component_factory() -> None:
 
     print(f"Type-safe VRAM worker: {type(vram_worker).__name__}")
     print(f"Type-safe ROM worker: {type(rom_worker).__name__}")
-
 
 if __name__ == "__main__":
     # Run demonstrations

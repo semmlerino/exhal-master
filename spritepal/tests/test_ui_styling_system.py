@@ -9,11 +9,11 @@ from ui.styles import get_button_style, get_input_style, get_muted_text_style, g
 
 from ui.styles import get_button_style, get_input_style, get_muted_text_style, get_panel_style
 """
+from __future__ import annotations
 
 import pytest
 from ui.styles import (
 # Systematic pytest markers applied based on test content analysis
-
 
     COLORS,
     DIMENSIONS,
@@ -21,8 +21,6 @@ from ui.styles import (
     get_scroll_area_style,
     get_splitter_style,
 )
-
-
 
 pytestmark = [
     pytest.mark.dialog,
@@ -160,7 +158,6 @@ class TestStylingSystemFunctions:
                     for hex_color in hex_colors:
                         assert hex_color in valid_colors, f"Hardcoded color not in theme: {hex_color} in line: {line}"
 
-
 class TestStylingSystemIntegration:
     """Test styling system integration"""
 
@@ -199,7 +196,6 @@ class TestStylingSystemIntegration:
             result = func()
             assert isinstance(result, str)
             assert len(result) > 0
-
 
 class TestRealWorldUsage:
     """Test styling functions in realistic usage scenarios"""

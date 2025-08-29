@@ -8,6 +8,7 @@ Tests the real interaction between:
 4. Preview widget sprite display updates
 5. Signal propagation through the system
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 import pytest
@@ -29,7 +30,6 @@ from utils.sprite_history_manager import SpriteHistoryManager
 from utils.update_throttler import UpdateThrottler, LastWriteWinsQueue
 from utils.state_manager import StateManager
 
-
 # Test characteristics: Singleton management
 pytestmark = [
     pytest.mark.dialog,
@@ -49,7 +49,6 @@ pytestmark = [
     pytest.mark.thread_safety,
     pytest.mark.worker_threads,
 ]
-
 
 @pytest.mark.integration
 @pytest.mark.no_manager_setup
@@ -570,7 +569,6 @@ class TestManualOffsetSliderSpriteIntegration:
         assert preview.show_fallback.called
         assert not preview.display_sprite.called
 
-
 @pytest.mark.integration  
 @pytest.mark.no_manager_setup
 class TestManualOffsetHistoryIntegration:
@@ -670,7 +668,6 @@ class TestManualOffsetHistoryIntegration:
         default_manager = SpriteHistoryManager()
         assert default_manager.get_max_history() == 50  # Default from class
 
-
     def test_history_manager_advanced_features(self):
         """Test advanced features of the history manager."""
         history_manager = SpriteHistoryManager()
@@ -706,7 +703,6 @@ class TestManualOffsetHistoryIntegration:
         assert len(items) == 4
         assert "0x001000 - Quality: 0.50" in items[0]
         assert "0x002000 - Quality: 0.95" in items[1]
-
 
 @pytest.mark.integration
 @pytest.mark.no_manager_setup  

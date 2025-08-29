@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Script to take a screenshot of the main window for layout analysis.
 """
@@ -92,7 +94,6 @@ def take_main_window_screenshot():
 
     # Run the application
     app.exec()
-
 
 if __name__ == "__main__":
     take_main_window_screenshot()

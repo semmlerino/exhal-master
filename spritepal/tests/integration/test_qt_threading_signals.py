@@ -9,12 +9,13 @@ testing complex scenarios involving:
 - Thread affinity and object ownership
 - Deadlock prevention patterns
 """
+from __future__ import annotations
 
 import sys
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, List, Optional
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -28,7 +29,6 @@ from PySide6.QtWidgets import QApplication, QWidget
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class ThreadSafeCounter(QObject):
     """Thread-safe counter using Qt's synchronization primitives."""
@@ -54,7 +54,6 @@ class ThreadSafeCounter(QObject):
         """Thread-safe read."""
         with QMutexLocker(self._mutex):
             return self._value
-
 
 class WorkerWithSignals(QObject):
     """Worker that emits signals from worker thread."""
@@ -103,13 +102,12 @@ class WorkerWithSignals(QObject):
         with QMutexLocker(self._mutex):
             self.is_cancelled = True
 
-
 class SignalCollector(QObject):
     """Collects signals with thread information."""
     
     def __init__(self):
         super().__init__()
-        self.signals: List[tuple] = []
+        self.signals: list[tuple] = []
         self._mutex = QMutex()
         self.main_thread = QThread.currentThread()
         
@@ -142,7 +140,7 @@ class SignalCollector(QObject):
         with QMutexLocker(self._mutex):
             self.signals.append((signal_type, value, is_main, timestamp))
             
-    def get_signals(self) -> List[tuple]:
+    def get_signals(self) -> list[tuple]:
         """Get collected signals thread-safely."""
         with QMutexLocker(self._mutex):
             return self.signals.copy()
@@ -151,7 +149,6 @@ class SignalCollector(QObject):
         """Clear collected signals."""
         with QMutexLocker(self._mutex):
             self.signals.clear()
-
 
 @pytest.mark.gui
 class TestCrossThreadSignals:
@@ -285,7 +282,6 @@ class TestCrossThreadSignals:
         assert end_time is not None
         assert (end_time - start_time) >= 0.1  # At least 100ms
 
-
 @pytest.mark.gui
 class TestSignalParameterMarshalling:
     """Test parameter marshalling across threads."""
@@ -402,7 +398,6 @@ class TestSignalParameterMarshalling:
         assert received['dict'] == test_dict
         assert received['tuple'] == test_tuple
 
-
 @pytest.mark.gui
 class TestThreadAffinity:
     """Test Qt object thread affinity rules."""
@@ -464,7 +459,6 @@ class TestThreadAffinity:
         
         # Timer should have same thread as worker
         assert result[0] == True
-
 
 @pytest.mark.gui
 class TestSignalSynchronization:
@@ -575,7 +569,6 @@ class TestSignalSynchronization:
         result = wait_for_result()
         assert result == "Done"
 
-
 @pytest.mark.gui
 class TestDeadlockPrevention:
     """Test patterns that prevent deadlocks."""
@@ -649,7 +642,6 @@ class TestDeadlockPrevention:
         
         # Should only increment once despite multiple connection attempts
         assert counter.get_value() == 1
-
 
 @pytest.mark.gui
 class TestHighConcurrency:
@@ -740,7 +732,6 @@ class TestHighConcurrency:
         # All should be received in order
         assert len(received) == num_signals
         assert received == list(range(num_signals))
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

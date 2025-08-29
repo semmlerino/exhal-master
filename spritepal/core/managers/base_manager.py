@@ -1,6 +1,7 @@
 """
 Base manager class providing common functionality for all managers
 """
+from __future__ import annotations
 
 import logging
 import os

@@ -5,9 +5,10 @@ This module provides the DialogContext dataclass that serves as a centralized
 state container for all dialog components in the composition-based refactoring.
 It enables component communication and provides access to shared dialog elements.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import (
@@ -48,10 +49,10 @@ class DialogContext:
     content_widget: QWidget
 
     # Optional UI elements (default to None)
-    button_box: Optional[QDialogButtonBox] = None
-    status_bar: Optional[QStatusBar] = None
-    tab_widget: Optional[QTabWidget] = None
-    main_splitter: Optional[QSplitter] = None
+    button_box: QDialogButtonBox | None = None
+    status_bar: QStatusBar | None = None
+    tab_widget: QTabWidget | None = None
+    main_splitter: QSplitter | None = None
 
     # Configuration and component registry
     config: dict[str, Any] = field(default_factory=dict)
@@ -76,7 +77,7 @@ class DialogContext:
 
         self.components[name] = component
 
-    def get_component(self, name: str) -> Optional[QObject]:
+    def get_component(self, name: str) -> QObject | None:
         """
         Get a registered component by name.
 

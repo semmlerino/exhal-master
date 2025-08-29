@@ -7,6 +7,7 @@ This module provides comprehensive testing of cache UI integration with:
 - Performance validation
 - Cleaner test organization
 """
+from __future__ import annotations
 
 import os
 import time
@@ -43,7 +44,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 @pytest.fixture(autouse=True)
 def setup_teardown():
     """Initialize and cleanup managers for each test."""
@@ -54,14 +54,12 @@ def setup_teardown():
     from utils.rom_cache import _ROMCacheSingleton
     _ROMCacheSingleton._instance = None
 
-
 @pytest.fixture
 def temp_cache_dir(tmp_path):
     """Create a temporary cache directory."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
     return str(cache_dir)
-
 
 @pytest.fixture
 def test_rom_file(tmp_path):
@@ -75,12 +73,10 @@ def test_rom_file(tmp_path):
     rom_file.write_bytes(rom_data)
     return str(rom_file)
 
-
 @pytest.fixture
 def rom_cache(temp_cache_dir):
     """Create a ROM cache instance with temporary directory."""
     return ROMCache(cache_dir=temp_cache_dir)
-
 
 @pytest.fixture
 def mock_rom_cache(rom_cache):
@@ -95,7 +91,6 @@ def mock_rom_cache(rom_cache):
     from utils.rom_cache import _ROMCacheSingleton
     _ROMCacheSingleton._instance = None
 
-
 @pytest.fixture
 def disabled_cache(temp_cache_dir):
     """Create a cache instance with caching disabled."""
@@ -106,14 +101,12 @@ def disabled_cache(temp_cache_dir):
         cache = ROMCache(cache_dir=temp_cache_dir)
         yield cache
 
-
 @pytest.fixture
 def corrupted_cache_file(temp_cache_dir):
     """Create a corrupted cache file for error testing."""
     cache_file = Path(temp_cache_dir) / "abc123_sprite_locations.json"
     cache_file.write_text("{ invalid json content")
     return str(cache_file)
-
 
 # ============================================================================
 # ROMFileWidget Cache Display Tests
@@ -182,7 +175,6 @@ class TestROMFileWidgetCacheDisplay:
         # Should handle gracefully
         assert widget.rom_path_edit.text() == test_rom_file
 
-
 # ============================================================================
 # SpriteScanWorker Cache Integration Tests (Enhanced)
 # ============================================================================
@@ -237,7 +229,6 @@ class TestSpriteScanWorkerCacheIntegration:
         # This test is marked slow but demonstrates interval saving
         pytest.skip("Slow test - demonstrates cache save intervals")
 
-
 # ============================================================================
 # Error Condition Tests
 # ============================================================================
@@ -289,7 +280,6 @@ class TestCacheErrorConditions:
             result = mock_rom_cache.get_sprite_locations(test_rom_file)
             assert result is None
 
-
 # ============================================================================
 # Performance Tests
 # ============================================================================
@@ -327,7 +317,6 @@ class TestCachePerformance:
         assert len(locations_with_cache) == 100
         # Cache read should be at least 10x faster than the overhead
         assert time_with_cache < time_no_cache + 0.1  # Allow 100ms overhead
-
 
 # ============================================================================
 # StatusPanel Cache Display Tests
@@ -368,7 +357,6 @@ class TestStatusPanelCacheDisplay:
         panel.update_status("✅ Cache updated")
         # Just verify the method can be called without error
 
-
 # ============================================================================
 # Integration Test Helpers
 # ============================================================================
@@ -404,7 +392,6 @@ class TestCacheUIHelpers:
         assert result is not None
         assert "Test" in result
 
-
 # ============================================================================
 # Concurrent Operation Tests
 # ============================================================================
@@ -436,7 +423,6 @@ class TestConcurrentCacheOperations:
 
         assert widget1._cache_status["has_cache"]
         assert widget2._cache_status["has_cache"]
-
 
 # ============================================================================
 # Settings Integration Tests

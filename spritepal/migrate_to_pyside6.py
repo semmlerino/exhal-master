@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 PySide6 to PySide6 Migration Script
 
@@ -32,7 +34,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
 
 class PySide6ToPySide6Migrator:
     """Handles comprehensive PySide6 to PySide6 migration"""
@@ -418,7 +419,6 @@ class PySide6ToPySide6Migrator:
             logger.error(f"Failed to restore backup: {e}")
             return False
 
-
 def main():
     """Main entry point"""
     import argparse
@@ -499,7 +499,6 @@ Examples:
         print("  - Use --restore to revert changes if needed")
 
     sys.exit(0 if success else 1)
-
 
 if __name__ == '__main__':
     main()

@@ -4,6 +4,7 @@ Test the Qt test infrastructure to ensure proper qtbot and QApplication manageme
 This test verifies that our Qt fixtures work correctly and prevent common
 Qt testing issues like multiple QApplication instances and resource leaks.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock
@@ -23,7 +24,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 @pytest.mark.qt_app
 def test_qapplication_singleton(qapp_session):
@@ -45,7 +45,6 @@ def test_qapplication_singleton(qapp_session):
     except ImportError:
         # In environments without Qt, should get mock
         assert isinstance(qapp_session, Mock)
-
 
 def test_qtbot_widget_cleanup(qtbot):
     """Verify widgets are properly registered with qtbot for cleanup."""
@@ -71,7 +70,6 @@ def test_qtbot_widget_cleanup(qtbot):
         # In headless environments, qtbot might be mocked
         assert hasattr(qtbot, 'addWidget')
         qtbot.addWidget(Mock())
-
 
 @pytest.mark.gui
 def test_qt_gui_functionality(qtbot):
@@ -100,7 +98,6 @@ def test_qt_gui_functionality(qtbot):
         assert hasattr(qtbot, 'waitSignal')
         assert hasattr(qtbot, 'addWidget')
 
-
 def test_safe_qtbot_fallback(safe_qtbot):
     """Test that safe_qtbot provides proper fallback in headless environments."""
     # Should always have required methods
@@ -114,7 +111,6 @@ def test_safe_qtbot_fallback(safe_qtbot):
     safe_qtbot.addWidget(Mock())
     safe_qtbot.wait(1)
 
-
 def test_safe_qapp_functionality(safe_qapp):
     """Test that safe_qapp provides necessary QApplication functionality."""
     # Should always have processEvents method
@@ -123,13 +119,11 @@ def test_safe_qapp_functionality(safe_qapp):
     # Should be callable without errors
     safe_qapp.processEvents()
 
-
 @pytest.mark.no_gui
 def test_no_gui_marker():
     """Test that doesn't require Qt GUI components."""
     # This test should run in all environments
     assert True
-
 
 def test_qt_cleanup_integration(qtbot, qapp_session):
     """Test that Qt cleanup works properly between tests."""
@@ -153,14 +147,12 @@ def test_qt_cleanup_integration(qtbot, qapp_session):
         # In mock environments, just verify structure
         pass
 
-
 def test_thread_safety_marker():
     """Test Qt thread safety markers work correctly."""
     import threading
     
     # Should be running in main thread for Qt operations
     assert threading.current_thread() is threading.main_thread()
-
 
 @pytest.mark.mock_gui
 def test_mock_gui_in_headless():
@@ -180,7 +172,6 @@ def test_mock_gui_in_headless():
     assert mock_widget.show.called
     assert mock_widget.close.called
 
-
 def test_qt_markers_configuration():
     """Test that Qt-specific pytest markers are properly configured."""
     import pytest
@@ -198,7 +189,6 @@ def test_qt_markers_configuration():
     # At least some of our markers should be recognized
     # (exact verification depends on pytest internals)
     assert len(marker_names) > 0
-
 
 @pytest.mark.stability
 def test_multiple_qapplication_prevention():
@@ -218,7 +208,6 @@ def test_multiple_qapplication_prevention():
     except ImportError:
         # In mock environments, this is handled by our fixture
         pass
-
 
 def test_qt_resource_cleanup():
     """Test that Qt resources are properly cleaned up."""

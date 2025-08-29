@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Dialog-Specific Memory Leak Profiler
 
@@ -59,7 +61,6 @@ DIALOG_REGISTRY = {
     }
 }
 
-
 def list_available_dialogs():
     """List all available dialogs for testing."""
     print("Available Dialogs for Memory Leak Testing:")
@@ -70,7 +71,6 @@ def list_available_dialogs():
         print(f"  Description: {info['description']}")
         print(f"  Module: {info['module']}")
         print()
-
 
 def load_dialog_class(dialog_name: str) -> type[QDialog]:
     """Dynamically load a dialog class."""
@@ -86,7 +86,6 @@ def load_dialog_class(dialog_name: str) -> type[QDialog]:
         raise ImportError(f"Failed to import {dialog_name}: {e}")
     except AttributeError as e:
         raise AttributeError(f"Class {info['class']} not found in {info['module']}: {e}")
-
 
 def run_detailed_dialog_analysis(profiler: MemoryLeakProfiler, dialog_name: str,
                                 dialog_class: type[QDialog], cycles: int,
@@ -274,7 +273,6 @@ def run_detailed_dialog_analysis(profiler: MemoryLeakProfiler, dialog_name: str,
         "cycles_completed": cycles
     }
 
-
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Profile memory leaks in specific dialogs")
@@ -361,7 +359,6 @@ def main():
         import traceback
         traceback.print_exc()
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

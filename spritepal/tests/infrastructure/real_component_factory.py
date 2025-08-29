@@ -10,7 +10,7 @@ MIGRATION GUIDE FROM MOCKFACTORY:
 
 OLD (MockFactory - deprecated):
     from tests.infrastructure.mock_factory import MockFactory
-    from typing import cast
+from typing import cast
 
     def test_extraction():
         # Creates mock with 15+ unsafe cast() operations
@@ -84,7 +84,6 @@ if TYPE_CHECKING:
 # Type variables for generic manager handling
 M = TypeVar("M", bound=BaseManager)
 W = TypeVar("W", bound=QThread)
-
 
 class RealComponentFactory:
     """
@@ -559,7 +558,6 @@ class RealComponentFactory:
         """Context manager exit with cleanup."""
         self.cleanup()
 
-
 class TypedManagerFactory(Generic[M]):
     """
     Generic factory for creating typed managers with compile-time type safety.
@@ -603,7 +601,6 @@ class TypedManagerFactory(Generic[M]):
         manager = self.create()
         self._factory.inject_test_data(manager, data_size)
         return manager
-
 
 class TypedWorkerFactory(Generic[W]):
     """
@@ -653,17 +650,14 @@ class TypedWorkerFactory(Generic[W]):
 
         return self.create(params)
 
-
 # Convenience functions for common manager types
 def create_extraction_manager_factory() -> TypedManagerFactory[ExtractionManager]:
     """Create a typed factory for ExtractionManager."""
     return TypedManagerFactory(ExtractionManager)
 
-
 def create_injection_manager_factory() -> TypedManagerFactory[InjectionManager]:
     """Create a typed factory for InjectionManager."""
     return TypedManagerFactory(InjectionManager)
-
 
 def create_session_manager_factory() -> TypedManagerFactory[SessionManager]:
     """Create a typed factory for SessionManager."""

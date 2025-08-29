@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.common.error_handler import ErrorHandler
 
-
 class ErrorHandlerAdapter:
     """
     Adapter that wraps ui.common.error_handler.ErrorHandler to implement

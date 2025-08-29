@@ -15,11 +15,10 @@ import weakref
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
-    from PySide6.QtCore import QObject as _QObject, Signal as _Signal
-    from PySide6.QtWidgets import QMessageBox as _QMessageBox, QWidget as _QWidget
+    from PySide6.QtWidgets import QWidget as _QWidget
 
 # Import core exceptions - these should always be available
 from core.managers.exceptions import (
@@ -161,13 +160,11 @@ if TYPE_CHECKING:
     except ImportError:
         QWidget = None  # type: ignore[misc,assignment]
 
-
 class IErrorDisplay(Protocol):
     """Protocol for error display handlers to break circular dependency"""
     def handle_critical_error(self, title: str, message: str) -> None: ...
     def handle_warning(self, title: str, message: str) -> None: ...
     def handle_info(self, title: str, message: str) -> None: ...
-
 
 # Create a simple console-based error display as default
 class ConsoleErrorDisplay:
@@ -181,10 +178,8 @@ class ConsoleErrorDisplay:
     def handle_info(self, title: str, message: str) -> None:
         print(f"INFO: {title} - {message}")
 
-
 # Get logger directly without circular import
 logger = logging.getLogger(f"spritepal.{__name__}")
-
 
 class ErrorSeverity(Enum):
     """Error severity levels for categorization"""
@@ -193,7 +188,6 @@ class ErrorSeverity(Enum):
     MEDIUM = "medium"          # Minor functionality issues
     LOW = "low"                # Warnings and notices
     INFO = "info"              # Informational messages
-
 
 class ErrorCategory(Enum):
     """Error categories for specialized handling"""
@@ -210,7 +204,6 @@ class ErrorCategory(Enum):
     SYSTEM = "system"                  # System-level errors
     UNKNOWN = "unknown"                # Uncategorized
 
-
 @dataclass
 class ErrorContext:
     """Context information for error handling"""
@@ -220,7 +213,6 @@ class ErrorContext:
     component: str | None = None    # UI component or module name
     recovery_possible: bool = True     # Whether recovery is possible
     additional_info: dict[str, Any] | None = None  # Extra context data
-
 
 @dataclass
 class ErrorResult:
@@ -233,7 +225,6 @@ class ErrorResult:
     recovery_suggestions: list[str]   # Suggested recovery actions
     should_retry: bool = False        # Whether operation should be retried
     should_abort: bool = False        # Whether operation should be aborted
-
 
 class UnifiedErrorHandler(QObject):
     """
@@ -251,7 +242,7 @@ class UnifiedErrorHandler(QObject):
     error_processed = Signal(ErrorResult)
     recovery_suggested = Signal(str, list)  # operation, suggestions
 
-    def __init__(self, parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None):
+    def __init__(self, parent: _QWidget | None = None, error_display: IErrorDisplay | None = None):
         """Initialize the unified error handler
 
         Args:
@@ -770,15 +761,14 @@ class UnifiedErrorHandler(QObject):
             "recent_errors": len(self._error_history),
         }
 
-
 class _UnifiedErrorHandlerSingleton:
     """Thread-safe singleton holder for UnifiedErrorHandler."""
     _instance: UnifiedErrorHandler | None = None
     _lock = threading.Lock()
-    _error_display: Optional[IErrorDisplay] = None
+    _error_display: IErrorDisplay | None = None
 
     @classmethod
-    def get(cls, parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None) -> UnifiedErrorHandler:
+    def get(cls, parent: _QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
         """Get or create the global unified error handler (thread-safe)
 
         Args:
@@ -816,8 +806,7 @@ class _UnifiedErrorHandlerSingleton:
         with cls._lock:
             cls._instance = None
 
-
-def get_unified_error_handler(parent: Optional["_QWidget"] = None, error_display: Optional[IErrorDisplay] = None) -> UnifiedErrorHandler:
+def get_unified_error_handler(parent: _QWidget | None = None, error_display: IErrorDisplay | None = None) -> UnifiedErrorHandler:
     """Get or create the global unified error handler (thread-safe)
 
     Args:
@@ -825,7 +814,6 @@ def get_unified_error_handler(parent: Optional["_QWidget"] = None, error_display
         error_display: Error display handler (injected to break circular dependency)
     """
     return _UnifiedErrorHandlerSingleton.get(parent, error_display)
-
 
 def set_global_error_display(error_display: IErrorDisplay) -> None:
     """Set the global error display handler
@@ -835,11 +823,9 @@ def set_global_error_display(error_display: IErrorDisplay) -> None:
     """
     _UnifiedErrorHandlerSingleton.set_error_display(error_display)
 
-
 def reset_unified_error_handler() -> None:
     """Reset the global unified error handler (useful for testing)"""
     _UnifiedErrorHandlerSingleton.reset()
-
 
 # Convenience functions for common error patterns
 
@@ -858,7 +844,6 @@ def handle_file_operation_error(
         file_path=file_path
     )
 
-
 def handle_validation_error(
     operation: str,
     error_handler: UnifiedErrorHandler | None = None
@@ -871,7 +856,6 @@ def handle_validation_error(
         operation=operation,
         category=ErrorCategory.VALIDATION
     )
-
 
 def handle_worker_operation_error(
     operation: str,

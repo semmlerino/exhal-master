@@ -1,12 +1,13 @@
 """
 Extraction panel with drag & drop zones for dump files
 """
+from __future__ import annotations
 
 import builtins
 import contextlib
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer, Signal
 
@@ -70,7 +71,6 @@ from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
 
-
 class DropZone(QWidget):
     """Drag and drop zone for file input"""
 
@@ -117,7 +117,7 @@ class DropZone(QWidget):
         _ = self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def dragEnterEvent(self, a0: Optional['QDragEnterEvent']):
+    def dragEnterEvent(self, a0: QDragEnterEvent | None):
         """Handle drag enter events"""
         if a0:
             mime_data = a0.mimeData()
@@ -133,7 +133,7 @@ class DropZone(QWidget):
                 """
                 )
 
-    def dragLeaveEvent(self, a0: Optional['QDragLeaveEvent']):
+    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):
         """Handle drag leave events"""
         self.setStyleSheet(
             """
@@ -145,7 +145,7 @@ class DropZone(QWidget):
         """
         )
 
-    def dropEvent(self, a0: Optional['QDropEvent']):
+    def dropEvent(self, a0: QDropEvent | None):
         """Handle drop events"""
         if a0:
             mime_data = a0.mimeData()
@@ -229,7 +229,6 @@ class DropZone(QWidget):
     def get_file_path(self):
         """Get the current file path"""
         return self.file_path
-
 
 class ExtractionPanel(QGroupBox):
     """Panel for managing extraction inputs"""
@@ -765,7 +764,7 @@ class ExtractionPanel(QGroupBox):
         if self.preset_combo.currentIndex() == 0:  # Kirby Sprites
             return VRAM_SPRITE_OFFSET
         # Custom Range
-        return self.offset_spinbox
+        return self.offset_spinbox.value()
 
     def restore_session_files(self, file_paths):
         """Restore file paths from session data"""
@@ -829,7 +828,7 @@ class ExtractionPanel(QGroupBox):
             super().keyPressEvent(event)
             return
 
-        current = self.offset_spinbox
+        current = self.offset_spinbox.value()
         step = self.offset_spinbox.singleStep()
 
         # Ctrl + Arrow keys for fine stepping

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Verify integration tests structure and demonstrate test coverage.
 This script validates the integration test files without requiring PySide6.

@@ -3,6 +3,7 @@ SpritePal UI Components
 
 Reusable dialog architecture components for consistent UI development.
 """
+from __future__ import annotations
 
 from typing import Any
 
@@ -110,7 +111,7 @@ class TabbedDialog(DialogBase):
             raise RuntimeError("TabbedDialog not properly initialized - tab widget is None")
 
         self._main_tab_widget.addTab(widget, label)
-    
+
     def add_tab_with_index(self, widget: QWidget, label: str) -> int:
         """
         Add a tab to the dialog and return the index.
@@ -157,7 +158,6 @@ class TabbedDialog(DialogBase):
         if self._main_tab_widget is not None:
             return self._main_tab_widget.currentIndex()
         return -1
-
 
 class SplitterDialog(DialogBase):
     """
@@ -286,7 +286,6 @@ class SplitterDialog(DialogBase):
         pane_index = self.add_pane(widget)
         if self._main_splitter is not None:
             self._main_splitter.setStretchFactor(pane_index, stretch_factor)
-
 
 # Create aliases for backward compatibility
 BaseDialog = DialogBase

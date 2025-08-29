@@ -43,7 +43,6 @@ def get_settings_manager():
 
 logger = get_logger(__name__)
 
-
 class ROMCache:
     """Manages caching of ROM scan results for performance optimization."""
 
@@ -1203,7 +1202,6 @@ class ROMCache:
                     self.cache_dir = new_dir
                     self._cache_enabled = self._setup_cache_directory()
 
-
 class _ROMCacheSingleton:
     """Thread-safe singleton holder for ROMCache."""
     _instance: ROMCache | None = None
@@ -1222,7 +1220,6 @@ class _ROMCacheSingleton:
             if cls._instance is None:
                 cls._instance = ROMCache()
         return cls._instance
-
 
 def get_rom_cache() -> ROMCache:
     """Get the global ROM cache instance (thread-safe)."""

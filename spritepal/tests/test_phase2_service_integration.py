@@ -25,6 +25,7 @@ import shutil
 - Performance Tests: Service overhead and caching
 - Thread Safety Tests: Concurrent access patterns
 """
+from __future__ import annotations
 
 import os
 import threading
@@ -41,7 +42,6 @@ from PIL import Image
 from tests.utils.file_helpers import create_temp_directory, create_test_files
 from utils.constants import (
 # Serial execution required: Thread safety concerns
-
 
     BYTES_PER_TILE,
     CGRAM_EXPECTED_SIZE,
@@ -71,8 +71,6 @@ from utils.unified_error_handler import (
     get_unified_error_handler,
     reset_unified_error_handler,
 )
-
-
 
 pytestmark = [
     
@@ -126,7 +124,6 @@ def temp_test_environment():
     # Cleanup
     import shutil
     shutil.rmtree(temp_dir, ignore_errors=True)
-
 
 @pytest.mark.integration
 @pytest.mark.mock_gui
@@ -263,7 +260,6 @@ class TestPhase2ServiceInterfaces:
         )
         assert error_result.handled is True
         assert error_result.severity == ErrorSeverity.MEDIUM
-
 
 @pytest.mark.integration
 @pytest.mark.mock_gui
@@ -468,7 +464,6 @@ class TestPhase2ServiceIntegration:
         preview_generator.cleanup()
         reset_unified_error_handler()
 
-
 @pytest.mark.integration
 @pytest.mark.mock_gui
 @pytest.mark.no_manager_setup
@@ -605,7 +600,6 @@ class TestPhase2BackwardCompatibility:
 
         reset_unified_error_handler()
 
-
 @pytest.mark.integration
 @pytest.mark.mock_gui
 @pytest.mark.benchmark
@@ -723,7 +717,6 @@ class TestPhase2ServicePerformance:
 
         count = benchmark(initialize_all_services)
         assert count == 3  # Successfully initialized
-
 
 @pytest.mark.integration
 @pytest.mark.mock_gui
@@ -933,7 +926,6 @@ class TestPhase2ServiceThreadSafety:
 
         reset_unified_error_handler()
 
-
 # Integration scenarios that combine multiple aspects
 @pytest.mark.integration
 @pytest.mark.mock_gui
@@ -1107,7 +1099,6 @@ class TestPhase2ComprehensiveIntegration:
                     preview_generator.cleanup()
 
         reset_unified_error_handler()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

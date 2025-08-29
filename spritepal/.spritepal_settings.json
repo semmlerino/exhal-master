@@ -6,22 +6,41 @@
     "output_name": "",
     "create_grayscale": true,
     "create_metadata": true,
-    "extraction_mode": 0
+    "extraction_mode": 0,
+    "last_rom_path": "",
+    "last_vram_path": "",
+    "last_output_dir": "",
+    "recent_files": [],
+    "data": {
+      "vram_path": "",
+      "cgram_path": "",
+      "oam_path": "",
+      "extraction_mode": 0,
+      "output_name": "",
+      "create_grayscale": true,
+      "create_metadata": true
+    }
   },
   "ui": {
     "window_width": 1138,
     "window_height": 711,
     "window_x": 354,
-    "window_y": 155
+    "window_y": 155,
+    "restore_position": true,
+    "theme": "default"
   },
   "paths": {
     "last_used_dir": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\spritepal",
-    "default_dumps_dir": "C:\\Users\\gabri\\Documents\\Mesen2\\Debugger"
+    "default_dumps_dir": "C:\\Users\\gabri\\Documents\\Mesen2\\Debugger",
+    "last_export_dir": "",
+    "last_import_dir": ""
   },
   "test": {
     "key": "value",
     "data": "value",
-    "new_data": "new_value"
+    "new_data": "new_value",
+    "key1": "value1",
+    "adapter_key": "adapter_value"
   },
   "rom_injection": {
     "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
@@ -65,10 +84,10 @@
     "max_recent": 10
   },
   "manual_offset_dialog": {
-    "x": 112,
-    "y": 54,
-    "width": 1023,
-    "height": 649
+    "x": 603,
+    "y": 97,
+    "width": 900,
+    "height": 600
   },
   "experimental": {
     "use_composed_dialogs": true

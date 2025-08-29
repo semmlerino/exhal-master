@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to verify the fixed exhal detection works from any working directory.
 """

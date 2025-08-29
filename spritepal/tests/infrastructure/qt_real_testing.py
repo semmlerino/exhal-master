@@ -12,6 +12,7 @@ Key Features:
 - Thread safety helpers for concurrent testing
 - Event loop management for async operations
 """
+from __future__ import annotations
 
 import gc
 import os
@@ -33,7 +34,6 @@ from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 # Type variable for generic widget types
 W = TypeVar("W", bound=QWidget)
-
 
 class QtTestCase:
     """
@@ -158,7 +158,6 @@ class QtTestCase:
         self.threads.append(thread)
         return thread
 
-
 class WidgetFactory:
     """Factory for creating common Qt widgets with standard configurations."""
 
@@ -208,7 +207,6 @@ class WidgetFactory:
         layout = layout_class(widget)
         widget.setLayout(layout)
         return widget, layout
-
 
 class EventLoopHelper:
     """Helper class for managing Qt event loops in tests."""
@@ -308,7 +306,6 @@ class EventLoopHelper:
             elapsed += interval_ms
         return False
 
-
 class ThreadSafetyHelper:
     """Helper class for thread-safe Qt testing."""
 
@@ -388,7 +385,6 @@ class ThreadSafetyHelper:
                     thread.terminate()
                     thread.wait()
 
-
 class MemoryHelper:
     """Helper class for memory management in Qt tests."""
 
@@ -443,7 +439,6 @@ class MemoryHelper:
                 f"Memory leak detected: {increase} {obj_type.__name__} "
                 f"objects leaked (max allowed: {max_increase})"
             )
-
 
 # Widget pool for performance optimization
 class WidgetPool:

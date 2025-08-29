@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test Infrastructure Cleanup Script
 
@@ -31,9 +33,7 @@ pytestmark = [
     pytest.mark.integration,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 class TestInfrastructureAnalyzer:
     """Analyzes and reports on test infrastructure issues."""
@@ -254,7 +254,6 @@ class TestInfrastructureAnalyzer:
 
         results["recommendations"] = recommendations
 
-
 def generate_cleanup_report(test_dir: Path) -> str:
     """Generate a comprehensive cleanup report."""
     analyzer = TestInfrastructureAnalyzer(test_dir)
@@ -306,7 +305,6 @@ def generate_cleanup_report(test_dir: Path) -> str:
             report.append("")
 
     return "\n".join(report)
-
 
 if __name__ == "__main__":
     test_dir = Path(__file__).parent

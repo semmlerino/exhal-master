@@ -25,11 +25,9 @@ try:
 except ImportError:
     HAS_ISORT = False
 
-
 class ValidationError(Exception):
     """Raised when code validation fails."""
     pass
-
 
 class CodeValidator:
     """Validates Python code for syntax and formatting issues."""
@@ -221,7 +219,6 @@ class CodeValidator:
 
         return valid
 
-
 def validate_generated_code(
     code: str,
     language: str = 'python',
@@ -281,7 +278,6 @@ def validate_generated_code(
 
     return is_valid, current_code, all_issues
 
-
 def validate_test_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     """
     Validate test code with additional test-specific checks.
@@ -323,7 +319,6 @@ def validate_test_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
 
     all_issues = issues + extra_issues
     return is_valid and len(extra_issues) == 0, formatted_code, all_issues
-
 
 def validate_qt_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     """
@@ -373,7 +368,6 @@ def validate_qt_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
     all_issues = issues + extra_issues
     return is_valid and len(extra_issues) == 0, formatted_code, all_issues
 
-
 # Integration helpers
 def create_pre_commit_hook() -> str:
     """
@@ -392,7 +386,6 @@ def create_pre_commit_hook() -> str:
         types: [python]
         stages: [commit]
 """
-
 
 def get_ci_integration_script() -> str:
     """
@@ -416,7 +409,6 @@ done
 
 echo "Code validation completed successfully!"
 """
-
 
 def validate_file(filepath: str | Path, **kwargs) -> tuple[bool, list[str]]:
     """
@@ -448,7 +440,6 @@ def validate_file(filepath: str | Path, **kwargs) -> tuple[bool, list[str]]:
         is_valid, _, issues = validate_generated_code(code, **kwargs)
 
     return is_valid, issues
-
 
 if __name__ == '__main__':
     import argparse

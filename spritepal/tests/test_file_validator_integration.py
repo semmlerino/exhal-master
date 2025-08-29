@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -19,7 +21,6 @@ from utils.file_validator import FileValidator
 
 # Mark all tests in this module to skip manager setup
 pytestmark = pytest.mark.no_manager_setup
-
 
 def test_file_validator_backward_compatibility():
     """Test that FileValidator maintains backward compatibility with existing usage."""
@@ -105,7 +106,6 @@ def test_file_validator_backward_compatibility():
     assert not result.is_valid
     assert "negative" in result.error_message
 
-
 def test_file_validator_error_messages_preserved():
     """Ensure error messages remain consistent after refactoring."""
 
@@ -145,7 +145,6 @@ def test_file_validator_error_messages_preserved():
                 "Expected exactly 512 bytes" in result.error_message)
 
     os.unlink(tmp.name)
-
 
 def test_file_validator_warnings_preserved():
     """Ensure warnings are preserved after refactoring."""

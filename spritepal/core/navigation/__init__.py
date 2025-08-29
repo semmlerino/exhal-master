@@ -223,6 +223,7 @@ cache_stats = get_navigation_cache().get_cache_statistics()
 print(f"Memory cache hits: {cache_stats['memory']['hits']}")
 ```
 """
+from __future__ import annotations
 
 # Core exports
 # Performance components
@@ -297,7 +298,6 @@ class _NavigationManagerSingleton:
             cls._instance.cleanup()
             cls._instance = None
 
-
 def get_navigation_manager() -> NavigationManager:
     """
     Get the global navigation manager instance.
@@ -306,7 +306,6 @@ def get_navigation_manager() -> NavigationManager:
         Global NavigationManager instance
     """
     return _NavigationManagerSingleton.get()
-
 
 def shutdown_navigation_system() -> None:
     """Shutdown the entire navigation system and clean up resources."""
@@ -318,7 +317,6 @@ def shutdown_navigation_system() -> None:
 
     # Shutdown plugins
     shutdown_plugin_manager()
-
 
 def initialize_default_strategies() -> None:
     """Initialize and register the default navigation strategies."""
@@ -333,7 +331,6 @@ def initialize_default_strategies() -> None:
     # Set hybrid as default
     registry.set_default_strategy("Hybrid")
 
-
 # Version information
 __version__ = "1.0.0"
 __author__ = "SpritePal Navigation Team"
@@ -346,7 +343,6 @@ except Exception as e:
     # Log error but don't fail import
     import logging
     logging.getLogger(__name__).warning(f"Failed to initialize default strategies: {e}")
-
 
 __all__ = [
     # Strategy framework

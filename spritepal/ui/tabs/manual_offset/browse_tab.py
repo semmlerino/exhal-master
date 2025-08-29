@@ -7,6 +7,7 @@ navigation buttons, and sprite search capabilities.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
@@ -31,7 +32,6 @@ if TYPE_CHECKING:
     from ui.dialogs.advanced_search_dialog import AdvancedSearchDialog
 
 logger = get_logger(__name__)
-
 
 class SimpleBrowseTab(QWidget):
     """
@@ -95,12 +95,15 @@ class SimpleBrowseTab(QWidget):
         title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4488dd;")
         controls_layout.addWidget(title)
 
-        # Slider with smart preview support
+        # Slider with smart preview support and type-safe range checking
         self.position_slider = QSlider(Qt.Orientation.Horizontal)
         self.position_slider.setObjectName("manual_offset_rom_slider")  # Unique identifier
+        # Ensure values fit in 32-bit signed int range (QSlider limitation)
+        max_slider_value = min(self._rom_size, 0x7FFFFFFF)  # 2^31 - 1
         self.position_slider.setMinimum(0)
-        self.position_slider.setMaximum(self._rom_size)
-        self.position_slider.setValue(self._current_offset)
+        self.position_slider.setMaximum(max_slider_value)
+        safe_current_offset = min(self._current_offset, max_slider_value)
+        self.position_slider.setValue(safe_current_offset)
         self.position_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         # Connect to valueChanged for compatibility (used by smart coordinator)
@@ -200,6 +203,14 @@ class SimpleBrowseTab(QWidget):
         self.next_button.setToolTip("Find next sprite (skip empty areas)")
         self.next_button.clicked.connect(self.find_next_clicked.emit)
         nav_row.addWidget(self.next_button)
+
+        # Clipboard paste button
+        self.paste_button = QPushButton("📋 Paste")
+        if self.paste_button:
+            self.paste_button.setStyleSheet(button_style)
+        self.paste_button.setToolTip("Paste offset from Mesen2 (Key 0 in Lua script)")
+        self.paste_button.clicked.connect(self._paste_from_clipboard)
+        nav_row.addWidget(self.paste_button)
 
         nav_row.addStretch()  # Add space between navigation and action buttons
 
@@ -492,6 +503,39 @@ class SimpleBrowseTab(QWidget):
 
         # Log the action
         logger.debug(f"Advanced search selected sprite at offset 0x{offset:06X}")
+
+    def _paste_from_clipboard(self) -> None:
+        """Read offset from Mesen2 clipboard file and navigate to it."""
+        # Try multiple possible locations for the clipboard file
+        possible_paths = [
+            Path.home() / "Mesen2" / "sprite_clipboard.txt",
+            Path.home() / "Documents" / "Mesen2" / "sprite_clipboard.txt",
+            Path.cwd() / "sprite_clipboard.txt",
+        ]
+        
+        for clipboard_file in possible_paths:
+            if clipboard_file.exists():
+                try:
+                    with open(clipboard_file, 'r') as f:
+                        offset_str = f.read().strip()
+                        
+                    # Parse offset (handles both 0x and $ prefix)
+                    if offset_str.startswith("0x"):
+                        offset = int(offset_str, 16)
+                    elif offset_str.startswith("$"):
+                        offset = int(offset_str[1:], 16)
+                    else:
+                        offset = int(offset_str, 16)
+                        
+                    # Navigate to the offset
+                    logger.info(f"Pasting offset from clipboard: 0x{offset:06X}")
+                    self.set_offset(offset)
+                    return
+                    
+                except (ValueError, IOError) as e:
+                    logger.error(f"Error reading clipboard file: {e}")
+                    
+        logger.warning("No clipboard file found. Press 0 in Mesen2 to copy sprite offset.")
 
     def _on_find_sprites(self) -> None:
         """Handle Find Sprites button click - emit signal for parent to handle."""

@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 class DummyWorker(QThread):
     """Simple test worker that can be controlled"""
 
@@ -48,7 +47,6 @@ class DummyWorker(QThread):
         """Stop the worker"""
         self.should_run = False
         self.quit()
-
 
 class TestWorkerManager:
     """Test WorkerManager functionality"""

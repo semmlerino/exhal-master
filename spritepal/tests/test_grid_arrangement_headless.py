@@ -1,6 +1,7 @@
 """
 Headless-safe integration tests for grid arrangement system
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -29,7 +30,6 @@ from ui.row_arrangement.grid_arrangement_manager import (
 from ui.row_arrangement.grid_image_processor import GridImageProcessor
 from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
-
 
 class TestGridArrangementHeadless:
     """Headless-safe integration tests for grid arrangement system"""
@@ -534,7 +534,6 @@ class TestGridArrangementHeadless:
             assert (
                 len(data["groups"]) >= 0
             )  # May be 0 if all tiles are already arranged
-
 
 class TestGridArrangementPerformance:
     """Performance tests for grid arrangement system"""

@@ -1,11 +1,11 @@
 """
 Validation tests for TestMainWindowHelper
 """
+from __future__ import annotations
 
 import pytest
 
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -16,7 +16,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 class TestMainWindowHelperValidation:
     """Test TestMainWindowHelper functionality"""

@@ -1,6 +1,7 @@
 """
 Integration tests for preview system using real components.
 """
+from __future__ import annotations
 
 import pytest
 import time
@@ -10,7 +11,6 @@ from PySide6.QtWidgets import QWidget
 from ui.common.simple_preview_coordinator import SimplePreviewCoordinator, SimplePreviewWorker
 from core.managers import ExtractionManager
 from utils.rom_cache import ROMCache
-
 
 @pytest.mark.integration
 class TestSimplePreviewCoordinator:
@@ -170,7 +170,6 @@ class TestSimplePreviewCoordinator:
         assert coordinator._current_worker is None or not coordinator._current_worker.isRunning()
         assert not coordinator._debounce_timer.isActive()
 
-
 class WorkerContainer(QWidget):
     """Container widget to hold worker and manage its lifecycle properly."""
     
@@ -199,7 +198,6 @@ class WorkerContainer(QWidget):
                 self.worker.wait(500)
             self.worker.deleteLater()
             self.worker = None
-
 
 @pytest.mark.integration
 class TestSimplePreviewWorker:
@@ -306,7 +304,6 @@ class TestSimplePreviewWorker:
         # Ensure proper cleanup
         container.cleanup_worker()
 
-
 @pytest.mark.integration
 class TestPreviewCaching:
     """Test preview caching with ROM cache."""
@@ -334,7 +331,6 @@ class TestPreviewCaching:
         
         # Cleanup
         coordinator.cleanup()
-
 
 @pytest.mark.integration
 class TestPreviewPerformance:

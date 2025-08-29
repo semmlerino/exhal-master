@@ -1,6 +1,7 @@
 """
 Tests for sprite finder
 """
+from __future__ import annotations
 
 import json
 import tempfile
@@ -10,7 +11,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from core.sprite_finder import SpriteCandidate, SpriteFinder
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
 ]
-
 
 @pytest.fixture
 def mock_rom_data():
@@ -42,13 +41,11 @@ def mock_rom_data():
 
     return bytes(data)
 
-
 @pytest.fixture
 def temp_output_dir():
     """Create temporary output directory"""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
-
 
 @pytest.fixture
 def mock_extractor():
@@ -63,7 +60,6 @@ def mock_extractor():
     extractor._convert_4bpp_to_png = Mock()
 
     return extractor
-
 
 @pytest.fixture
 def mock_validator():
@@ -82,7 +78,6 @@ def mock_validator():
     })
 
     return validator
-
 
 class TestSpriteCandidate:
     """Test SpriteCandidate dataclass"""
@@ -130,7 +125,6 @@ class TestSpriteCandidate:
         assert result["visual_metrics"]["coherence"] == 0.823
         assert result["visual_metrics"]["edge_score"] == 0.712
         assert result["preview_path"] == "/tmp/preview.png"
-
 
 class TestSpriteFinder:
     """Test SpriteFinder class"""

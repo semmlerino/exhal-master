@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test that the empty space issue is fixed in the gallery.
 Verifies that the container doesn't expand beyond its content.

@@ -10,6 +10,7 @@ This demonstrates the new testing architecture that:
 - Uses real test data instead of mock data
 - Catches architectural bugs that mocks hide
 """
+from __future__ import annotations
 
 import contextlib
 import os
@@ -23,7 +24,6 @@ from PySide6.QtWidgets import QApplication
 from tests.infrastructure import (
 # Serial execution required: Real Qt components
 
-
     QtTestingFramework,
     RealManagerFixtureFactory,
     TestApplicationFactory,
@@ -36,8 +36,6 @@ from ui.dialogs.settings_dialog import SettingsDialog
 # Import real SpritePal components (no mocking)
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
-
-
 
 pytestmark = [
     
@@ -361,7 +359,6 @@ class TestRealCrossDialogIntegration:
         # Re-parent manager for cleanup
         manager.setParent(self.qt_app)
 
-
 # Additional integration test for validation
 class TestRealTestingInfrastructureValidation:
     """Validate that the real testing infrastructure works correctly."""
@@ -425,7 +422,6 @@ class TestRealTestingInfrastructureValidation:
         # But wouldn't test the ACTUAL validation logic
 
         factory.cleanup()
-
 
 if __name__ == "__main__":
     # Run a quick validation that the real integration tests work

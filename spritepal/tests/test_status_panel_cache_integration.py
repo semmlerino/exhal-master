@@ -15,6 +15,7 @@ import utils.rom_cache as rom_cache_module
 import utils.rom_cache as rom_cache_module
 - Error handling and edge cases
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
@@ -43,7 +44,6 @@ pytestmark = [
     pytest.mark.requires_display,
 ]
 
-
 @pytest.fixture(autouse=True)
 def setup_teardown():
     """Initialize and cleanup managers for each test."""
@@ -54,7 +54,6 @@ def setup_teardown():
     import utils.rom_cache as rom_cache_module
     rom_cache_module._rom_cache_instance = None
 
-
 @pytest.fixture
 def temp_cache_dir(tmp_path):
     """Create a temporary cache directory."""
@@ -62,12 +61,10 @@ def temp_cache_dir(tmp_path):
     cache_dir.mkdir()
     return str(cache_dir)
 
-
 @pytest.fixture
 def rom_cache(temp_cache_dir):
     """Create a ROM cache instance with test directory."""
     return ROMCache(cache_dir=temp_cache_dir)
-
 
 @pytest.fixture
 def mock_rom_cache(rom_cache):
@@ -75,7 +72,6 @@ def mock_rom_cache(rom_cache):
     with patch("utils.rom_cache.get_rom_cache") as mock_get:
         mock_get.return_value = rom_cache
         yield rom_cache
-
 
 @pytest.fixture
 def mock_settings_manager():
@@ -86,7 +82,6 @@ def mock_settings_manager():
         mock_manager.get_cache_enabled.return_value = True
         mock_get.return_value = mock_manager
         yield mock_manager
-
 
 # ============================================================================
 # Basic Cache Status Display Tests
@@ -141,7 +136,6 @@ class TestStatusPanelCacheBasics:
         assert "gray" in panel.cache_icon_label.styleSheet()
         assert panel.cache_info_label.text() == "Disabled"
         assert panel.cache_status_widget.toolTip() == "ROM caching is disabled"
-
 
 # ============================================================================
 # Cache Statistics Update Tests
@@ -235,7 +229,6 @@ class TestStatusPanelCacheStatistics:
         assert "5 items" in panel.cache_info_label.text()
         assert "5.5MB" in panel.cache_info_label.text()
 
-
 # ============================================================================
 # Error Handling Tests
 # ============================================================================
@@ -270,7 +263,6 @@ class TestStatusPanelCacheErrorHandling:
             # Should show error state
             assert panel.cache_icon_label.text() == "⚠"
             assert panel.cache_info_label.text() == "Error"
-
 
 # ============================================================================
 # Settings Integration Tests
@@ -325,7 +317,6 @@ class TestStatusPanelSettingsIntegration:
 
         # Should show enabled state again
         assert panel.cache_icon_label.text() == "✓"
-
 
 # ============================================================================
 # Integration with Other Panel Features
@@ -382,7 +373,6 @@ class TestStatusPanelIntegration:
 
         # Cache icon should remain the same
         assert panel.cache_icon_label.text() == "✓"
-
 
 # ============================================================================
 # Visual and Layout Tests

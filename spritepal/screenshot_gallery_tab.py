@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Script to launch SpritePal, open manual offset dialog, switch to Gallery tab and take a screenshot.
 """
@@ -13,7 +15,6 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 sys.path.insert(0, str(Path(__file__).parent))
 
 from ui.main_window import MainWindow
-
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

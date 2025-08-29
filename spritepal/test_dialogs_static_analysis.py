@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Static analysis test for simple dialogs migration.
 Verifies that the import statements have been correctly updated.

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to verify widgets can initialize safely in headless mode.
 """
@@ -42,7 +44,6 @@ def test_collapsible_group_box():
         traceback.print_exc()
         return False
 
-
 def test_sprite_preview_widget():
     """Test that SpritePreviewWidget can be created in headless mode."""
     print("\nTesting SpritePreviewWidget in headless mode...")
@@ -68,7 +69,6 @@ def test_sprite_preview_widget():
         import traceback
         traceback.print_exc()
         return False
-
 
 def test_browse_tab():
     """Test that SimpleBrowseTab can be created in headless mode."""
@@ -96,7 +96,6 @@ def test_browse_tab():
         traceback.print_exc()
         return False
 
-
 def test_manual_offset_dialog():
     """Test that manual offset dialog can be created in headless mode."""
     print("\nTesting Manual Offset Dialog in headless mode...")
@@ -120,7 +119,7 @@ def test_manual_offset_dialog():
         try:
             dialog.setWindowTitle("Test Dialog")
             print("✓ UnifiedManualOffsetDialog window title set successfully")
-        except:
+        except Exception:
             pass  # Not critical if this fails
         
         return True
@@ -130,7 +129,6 @@ def test_manual_offset_dialog():
         import traceback
         traceback.print_exc()
         return False
-
 
 def main():
     """Run all headless safety tests."""
@@ -174,7 +172,6 @@ def main():
     else:
         print("Some tests FAILED - widgets may crash in headless mode")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

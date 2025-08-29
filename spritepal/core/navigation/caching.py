@@ -22,7 +22,6 @@ from .region_map import SpriteRegionMap
 
 logger = get_logger(__name__)
 
-
 class CacheLevel:
     """Base class for cache levels."""
 
@@ -60,7 +59,6 @@ class CacheLevel:
         else:
             stats["hit_rate"] = 0.0
         return stats
-
 
 class MemoryCache(CacheLevel):
     """In-memory LRU cache with weak references for automatic cleanup."""
@@ -144,7 +142,6 @@ class MemoryCache(CacheLevel):
             if lru_key in self._weak_refs:
                 del self._weak_refs[lru_key]
             self._statistics["evictions"] += 1
-
 
 class DiskCache(CacheLevel):
     """Persistent disk-based cache with compression."""
@@ -295,7 +292,6 @@ class DiskCache(CacheLevel):
 
         del self._index[oldest_key]
         self._statistics["evictions"] += 1
-
 
 class NavigationCache:
     """
@@ -486,7 +482,7 @@ class NavigationCache:
         for cache_level in self._cache_levels:
             if hasattr(cache_level, "_cache"):  # Memory cache
                 keys_to_remove = [
-                    key for key in cache_level._cache
+                    key for key in cache_level._cache  # type: ignore[attr-defined]
                     if rom_stem in key
                 ]
                 for key in keys_to_remove:
@@ -494,7 +490,7 @@ class NavigationCache:
 
             elif hasattr(cache_level, "_index"):  # Disk cache
                 keys_to_remove = [
-                    key for key in cache_level._index
+                    key for key in cache_level._index  # type: ignore[attr-defined]
                     if rom_stem in key
                 ]
                 for key in keys_to_remove:
@@ -613,7 +609,6 @@ class NavigationCache:
         # - Optimization of disk cache files
         # - Memory usage optimization
 
-
 class _NavigationCacheSingleton:
     """Singleton holder for NavigationCache."""
     _instance: NavigationCache | None = None
@@ -644,7 +639,6 @@ class _NavigationCacheSingleton:
             cls._instance.shutdown()
             cls._instance = None
 
-
 def get_navigation_cache(cache_dir: Path | None = None) -> NavigationCache:
     """
     Get global navigation cache instance.
@@ -656,7 +650,6 @@ def get_navigation_cache(cache_dir: Path | None = None) -> NavigationCache:
         Global navigation cache instance
     """
     return _NavigationCacheSingleton.get(cache_dir)
-
 
 def shutdown_navigation_cache() -> None:
     """Shutdown global navigation cache."""

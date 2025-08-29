@@ -15,7 +15,6 @@ COMBO_MIN_WIDTH = 200
 BUTTON_MAX_WIDTH = 150
 LABEL_MIN_WIDTH = 120
 
-
 class CGRAMSelectorWidget(BaseExtractionWidget):
     """Widget for selecting optional CGRAM palette file"""
 

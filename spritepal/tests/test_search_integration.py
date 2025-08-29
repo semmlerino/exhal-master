@@ -4,6 +4,7 @@ Integration tests for search functionality with real ROM data.
 Tests full search workflow, performance benchmarks, memory usage,
 and integration between different search components.
 """
+from __future__ import annotations
 
 import logging
 import tempfile
@@ -32,9 +33,7 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 logger = logging.getLogger(__name__)
-
 
 @pytest.fixture
 def large_test_rom():
@@ -73,7 +72,6 @@ def large_test_rom():
 
     return bytes(rom_data)
 
-
 @pytest.fixture
 def large_temp_rom_file(large_test_rom):
     """Create temporary ROM file with test data."""
@@ -85,7 +83,6 @@ def large_temp_rom_file(large_test_rom):
 
     # Cleanup
     Path(temp_path).unlink(missing_ok=True)
-
 
 @pytest.fixture
 def real_sprite_images():
@@ -132,7 +129,6 @@ def real_sprite_images():
     images["different"] = different
 
     return images
-
 
 class TestParallelSearchIntegration:
     """Integration tests for parallel sprite search."""
@@ -266,7 +262,6 @@ class TestParallelSearchIntegration:
         assert cancel_time < 2.0  # Should be much faster than full search
 
         finder.shutdown()
-
 
 class TestVisualSimilarityIntegration:
     """Integration tests for visual similarity search."""
@@ -420,7 +415,6 @@ class TestVisualSimilarityIntegration:
         finally:
             export_path.unlink(missing_ok=True)
 
-
 class TestAdvancedSearchDialogIntegration:
     """Integration tests for advanced search dialog."""
 
@@ -517,7 +511,6 @@ class TestAdvancedSearchDialogIntegration:
                 loaded_entry = dialog2.search_history[0]
                 assert loaded_entry.search_type == "Integration Test"
                 assert loaded_entry.results_count == 10
-
 
 class TestSpriteSearchWorkerIntegration:
     """Integration tests for SpriteSearchWorker."""
@@ -624,7 +617,6 @@ class TestSpriteSearchWorkerIntegration:
             # Should find the result closer to original position (0x25000)
             assert len(found_signals) == 1
             assert found_signals[0][0] == 0x25000
-
 
 @pytest.mark.slow
 @pytest.mark.integration
@@ -756,7 +748,6 @@ class TestPerformanceBenchmarks:
         # Memory should be mostly freed after shutdown
         memory_retained = final_memory - initial_memory
         assert memory_retained < 50  # Less than 50MB retained
-
 
 @pytest.mark.benchmark
 class TestSearchBenchmarks:

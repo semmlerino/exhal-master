@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 BasedPyright Type Checking Analysis Tool
 
@@ -195,7 +197,6 @@ class TypeCheckAnalyzer:
 
         print(f"\n💾 Report saved to: {filename}")
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Analyze basedpyright type checking results"
@@ -254,7 +255,6 @@ def main():
 
     # Return exit code based on errors
     return 0 if len(analyzer.errors) == 0 else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

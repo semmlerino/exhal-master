@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script for ResumeScanDialog pilot migration to feature flag system.
 
@@ -11,7 +13,7 @@ Run this script to verify the feature flag system works correctly.
 
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +29,7 @@ from ui.components.base import (
 )
 
 # Test data for the dialog
-TEST_SCAN_INFO: Dict[str, Any] = {
+TEST_SCAN_INFO: dict[str, Any] = {
     "found_sprites": [
         {"offset": 0x1000, "size": 512},
         {"offset": 0x2000, "size": 256},
@@ -42,7 +44,6 @@ TEST_SCAN_INFO: Dict[str, Any] = {
     "completed": False,
     "total_found": 3
 }
-
 
 def test_dialog_creation(implementation: str) -> bool:
     """Test basic dialog creation and initialization."""
@@ -83,7 +84,6 @@ def test_dialog_creation(implementation: str) -> bool:
         traceback.print_exc()
         return False
 
-
 def test_button_functionality(implementation: str) -> bool:
     """Test button click functionality."""
     print(f"\n[{implementation}] Testing button functionality...")
@@ -122,7 +122,6 @@ def test_button_functionality(implementation: str) -> bool:
         traceback.print_exc()
         return False
 
-
 def test_progress_formatting(implementation: str) -> bool:
     """Test progress info formatting."""
     print(f"\n[{implementation}] Testing progress formatting...")
@@ -159,7 +158,6 @@ def test_progress_formatting(implementation: str) -> bool:
         traceback.print_exc()
         return False
 
-
 def test_static_method(implementation: str) -> bool:
     """Test the static show_resume_dialog method."""
     print(f"\n[{implementation}] Testing static method...")
@@ -181,7 +179,6 @@ def test_static_method(implementation: str) -> bool:
         import traceback
         traceback.print_exc()
         return False
-
 
 def run_tests_for_implementation(use_composed: bool) -> bool:
     """Run all tests for a specific implementation."""
@@ -221,7 +218,6 @@ def run_tests_for_implementation(use_composed: bool) -> bool:
     
     return all(results)
 
-
 def main():
     """Main test runner."""
     print("\n" + "="*60)
@@ -260,7 +256,6 @@ def main():
     # Clean up
     app.quit()
     sys.exit(exit_code)
-
 
 if __name__ == "__main__":
     main()

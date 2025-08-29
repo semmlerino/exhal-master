@@ -8,11 +8,12 @@ This refactored test suite demonstrates best practices:
 - Actual worker lifecycle testing
 - No mocking of core business logic
 """
+from __future__ import annotations
 
 import json
 import tempfile
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Generator
 
 import pytest
 from PIL import Image
@@ -22,7 +23,6 @@ from core.managers.exceptions import ValidationError
 from core.managers.injection_manager import InjectionManager
 from core.workers.injection import VRAMInjectionWorker, ROMInjectionWorker
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
 
 # Serial execution required: Real Qt components
 pytestmark = [
@@ -35,7 +35,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 class TestInjectionManagerReal:
     """Test InjectionManager with real components and minimal mocking."""

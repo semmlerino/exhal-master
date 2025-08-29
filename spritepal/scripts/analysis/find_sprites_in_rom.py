@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Search for VRAM sprite patterns in ROM
 """
-
 
 import os
 import sys
@@ -15,7 +16,6 @@ sys.path.insert(0, str(parent_dir))
 
 # Import after path setup
 from core.hal_compression import HALCompressor
-
 
 def extract_kirby_patterns(vram_path: str):
     """Extract known Kirby sprite patterns from VRAM"""
@@ -44,7 +44,6 @@ def extract_kirby_patterns(vram_path: str):
                 print(f"  First 16 bytes: {' '.join(f'{b:02X}' for b in pattern[:16])}")
 
     return patterns
-
 
 def search_rom_compressed(rom_path: str, patterns: list[bytes]):
     """Search for patterns in compressed ROM data"""
@@ -111,7 +110,6 @@ def search_rom_compressed(rom_path: str, patterns: list[bytes]):
 
     return found_locations
 
-
 def main():
     if len(sys.argv) < 3:
         print("Usage: python find_sprites_in_rom.py <vram_dump> <rom_file>")
@@ -141,7 +139,6 @@ def main():
         print("\nBest candidates for sprite locations:")
         for rom_offset, vram_offset, position in locations[:10]:
             print(f"  ROM 0x{rom_offset:06X} (VRAM 0x{vram_offset:04X} at +{position})")
-
 
 if __name__ == "__main__":
     main()

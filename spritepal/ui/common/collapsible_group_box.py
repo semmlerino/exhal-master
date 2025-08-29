@@ -4,6 +4,7 @@ Collapsible Group Box for Progressive Disclosure.
 Implements a group box that can be collapsed/expanded to hide advanced options,
 following the principle of progressive disclosure to reduce UI complexity.
 """
+from __future__ import annotations
 
 try:
     from typing_extensions import override

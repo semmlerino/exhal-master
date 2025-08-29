@@ -2,6 +2,7 @@
 Unit tests for image utils with mocked Qt dependencies.
 These tests run in headless environments without requiring Qt GUI.
 """
+from __future__ import annotations
 
 import logging
 from unittest.mock import MagicMock, patch
@@ -10,7 +11,6 @@ import pytest
 from PIL import Image
 
 from utils.image_utils import pil_to_qpixmap
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.no_manager_setup,  # Pure unit tests with mocked dependencies
 ]
-
 
 class TestPilToQPixmapMocked:
     """Test pil_to_qpixmap function with mocked Qt dependencies"""
@@ -239,7 +238,6 @@ class TestPilToQPixmapMocked:
 
             assert result is None
             assert "Failed to convert PIL to QPixmap" in caplog.text
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

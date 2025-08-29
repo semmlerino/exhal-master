@@ -2,6 +2,7 @@
 Default palette loader for SpritePal
 Provides default palettes for sprites when CGRAM data is not available
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import Any
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class DefaultPaletteLoader:
     """Loads and manages default sprite palettes"""

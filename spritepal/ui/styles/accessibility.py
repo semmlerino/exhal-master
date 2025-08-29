@@ -2,6 +2,7 @@
 Global accessibility styles for SpritePal application.
 Provides consistent focus indicators, keyboard navigation hints, and WCAG 2.1 compliance.
 """
+from __future__ import annotations
 
 from typing import cast
 
@@ -14,7 +15,7 @@ def apply_global_accessibility_styles() -> None:
     app = QApplication.instance()
     if not app:
         return
-    
+
     # Cast to QApplication for type checker
     app = cast(QApplication, app)
 
@@ -31,6 +32,7 @@ def apply_global_accessibility_styles() -> None:
     QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
         border: 2px solid #0078d4;
         background-color: #f0f8ff;
+        color: #000000;
     }
 
     /* Buttons */
@@ -38,6 +40,7 @@ def apply_global_accessibility_styles() -> None:
         border: 2px solid #0078d4;
         padding: 3px;
         background-color: #e6f2ff;
+        color: #000000;
     }
 
     QPushButton:default {
@@ -49,12 +52,14 @@ def apply_global_accessibility_styles() -> None:
     QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
         border: 2px solid #0078d4;
         background-color: #f0f8ff;
+        color: #000000;
     }
 
     /* Sliders */
     QSlider:focus {
         border: 1px solid #0078d4;
         background-color: #f0f8ff;
+        color: #000000;
     }
 
     /* Checkboxes and radio buttons */
@@ -71,11 +76,13 @@ def apply_global_accessibility_styles() -> None:
     QTabBar::tab:focus {
         border: 2px solid #0078d4;
         background-color: #e6f2ff;
+        color: #000000;
     }
 
     QTabBar::tab:selected {
         font-weight: bold;
         background-color: #ffffff;
+        color: #000000;
     }
 
     /* List widgets */
@@ -168,6 +175,7 @@ def apply_global_accessibility_styles() -> None:
         left: 10px;
         padding: 0 5px 0 5px;
         background-color: white;
+        color: #000000;
     }
 
     QGroupBox:focus {
@@ -216,6 +224,7 @@ def apply_global_accessibility_styles() -> None:
     QLineEdit[hasError="true"], QTextEdit[hasError="true"] {
         border: 2px solid #ff0000;
         background-color: #fff0f0;
+        color: #000000;
     }
 
     /* ===== SELECTION COLORS ===== */
@@ -267,7 +276,6 @@ def apply_global_accessibility_styles() -> None:
         # Some attributes may not be available in this Qt version
         pass
 
-
 def configure_accessibility_settings() -> None:
     """Configure application-wide accessibility settings."""
     app = QApplication.instance()
@@ -278,14 +286,14 @@ def configure_accessibility_settings() -> None:
     font = app.font()  # type: ignore[attr-defined]
     if font.pointSize() < 10:
         font.setPointSize(10)
-        app.setFont(  # type: ignore[attr-defined]font)
+        app.setFont(font)  # type: ignore[attr-defined]
 
     # Note: setNavigationMode is not available in Qt6/PySide6
     # Keyboard navigation is enabled by default in modern Qt
 
     # Set double-click interval for users with motor impairments
     try:
-        app.setDoubleClickInterval(  # type: ignore[attr-defined]600)  # 600ms instead of default 400ms
+        app.setDoubleClickInterval(600)  # type: ignore[attr-defined]  # 600ms instead of default 400ms
     except AttributeError:
         # This method might not be available in all Qt versions
         pass
@@ -297,7 +305,6 @@ def configure_accessibility_settings() -> None:
     except (AttributeError, TypeError):
         # Attribute may not be available in this Qt version
         pass
-
 
 def initialize_accessibility() -> None:
     """Initialize all accessibility features for the application."""

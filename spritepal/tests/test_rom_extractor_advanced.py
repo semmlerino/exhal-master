@@ -1,6 +1,7 @@
 """
 Advanced tests for ROM extractor methods that were missing coverage.
 """
+from __future__ import annotations
 
 import random
 from unittest.mock import Mock
@@ -9,7 +10,6 @@ import pytest
 
 from core.rom_extractor import ROMExtractor
 from utils.constants import BYTES_PER_TILE
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.slow,
 ]
-
 
 class TestROMExtractorScanMethods:
     """Test advanced ROM scanning and analysis methods"""
@@ -161,7 +160,6 @@ class TestROMExtractorScanMethods:
             sprite_data.extend(tile_data)
 
         return bytes(sprite_data)
-
 
 class TestROMExtractorQualityAssessment:
     """Test sprite quality assessment methods"""
@@ -301,7 +299,6 @@ class TestROMExtractorQualityAssessment:
 
         return bytes(sprite_data)
 
-
 class TestROMExtractorValidationMethods:
     """Test tile and data validation methods"""
 
@@ -437,7 +434,6 @@ class TestROMExtractorValidationMethods:
         """Test graphics pattern detection with insufficient data"""
         small_data = b"\x00" * 32
         assert extractor._has_graphics_patterns(small_data) is False
-
 
 class TestROMExtractorFindBestOffsets:
     """Test best sprite offset finding functionality"""

@@ -5,7 +5,6 @@ This module provides pure functions for sprite-related calculations,
 including coordinate mapping, offset clamping, and grid positioning.
 """
 
-
 # Import constants from existing module
 from utils.constants import TILE_HEIGHT, TILE_WIDTH
 
@@ -42,7 +41,6 @@ def calculate_sprite_coords(
 
     return (col, row)
 
-
 def clamp_offset(offset: int, rom_size: int) -> int:
     """
     Clamp offset to valid ROM bounds.
@@ -57,7 +55,6 @@ def clamp_offset(offset: int, rom_size: int) -> int:
     if rom_size <= 0:
         return 0
     return max(0, min(offset, rom_size - 1))
-
 
 def calculate_sprite_offset(
     col: int,
@@ -83,7 +80,6 @@ def calculate_sprite_offset(
     sprite_index = row * sprites_per_row + col
     return sprite_index * sprite_size_bytes
 
-
 def is_valid_sprite_offset(
     offset: int,
     rom_size: int,
@@ -106,7 +102,6 @@ def is_valid_sprite_offset(
     sprite_size_bytes = sprite_width * sprite_width // 2
     return offset + sprite_size_bytes <= rom_size
 
-
 def align_offset_to_sprite(
     offset: int,
     sprite_width: int = 16
@@ -124,7 +119,6 @@ def align_offset_to_sprite(
     sprite_size_bytes = sprite_width * sprite_width // 2
     return (offset // sprite_size_bytes) * sprite_size_bytes
 
-
 def calculate_tiles_per_sprite(sprite_width: int = 16) -> int:
     """
     Calculate number of 8x8 tiles in a sprite.
@@ -138,7 +132,6 @@ def calculate_tiles_per_sprite(sprite_width: int = 16) -> int:
     tiles_horizontal = sprite_width // TILE_WIDTH
     tiles_vertical = sprite_width // TILE_HEIGHT
     return tiles_horizontal * tiles_vertical
-
 
 def calculate_sprite_size_bytes(sprite_width: int = 16, bpp: int = 4) -> int:
     """

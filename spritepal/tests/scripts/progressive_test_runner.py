@@ -40,7 +40,6 @@ class StageResult:
     critical_failures: list[str]
     should_continue: bool
 
-
 class ProgressiveTestRunner:
     """Orchestrates progressive test execution with intelligent stopping."""
 
@@ -531,7 +530,6 @@ class ProgressiveTestRunner:
 
         return filepath
 
-
 def main():
     """Main entry point for progressive test runner."""
     parser = argparse.ArgumentParser(description="Progressive Test Runner for SpritePal")
@@ -596,7 +594,6 @@ def main():
     if args.save_results:
         filepath = runner.save_results()
         print(f"Results saved to: {filepath}")
-
 
 if __name__ == "__main__":
     main()

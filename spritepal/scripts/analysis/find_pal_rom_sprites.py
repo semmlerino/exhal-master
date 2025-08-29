@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Find PAL ROM sprite locations by searching for VRAM patterns."""
 
 import os
@@ -36,7 +38,6 @@ def find_all_compressed(rom_data: bytes) -> list[tuple[int, bytes]]:
     # the HAL decompression algorithm directly
     print("WARNING: find_all_compressed is not yet implemented")
     return []
-
 
 def search_for_vram_patterns(rom_path: str, vram_samples: list[bytes]):
     """Search ROM for patterns matching VRAM sprite data."""

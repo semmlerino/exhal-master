@@ -4,6 +4,7 @@ Enhanced test isolation utilities for SpritePal tests.
 This module provides comprehensive test isolation to prevent state leakage
 between tests.
 """
+from __future__ import annotations
 
 import gc
 import threading
@@ -13,7 +14,6 @@ from typing import Generator
 import pytest
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
-
 
 # Serial execution required: QApplication management, Manager registry manipulation, HAL process pool, Thread safety concerns
 pytestmark = [
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.memory,
     pytest.mark.requires_display,
 ]
-
 
 @pytest.fixture(autouse=True)
 def ensure_complete_test_isolation() -> Generator[None, None, None]:
@@ -53,7 +52,6 @@ def ensure_complete_test_isolation() -> Generator[None, None, None]:
     _cleanup_qt_application()
     _force_garbage_collection()
 
-
 def _cleanup_managers() -> None:
     """Force cleanup all manager singletons."""
     try:
@@ -72,7 +70,6 @@ def _cleanup_managers() -> None:
     except ImportError:
         pass
 
-
 def _cleanup_hal_pool() -> None:
     """Force reset HAL process pool singleton."""
     try:
@@ -89,7 +86,6 @@ def _cleanup_hal_pool() -> None:
     except ImportError:
         pass
 
-
 def _cleanup_threads(initial_threads: set) -> None:
     """Wait for test threads to finish."""
     timeout = time.time() + 5  # 5 second timeout
@@ -101,7 +97,6 @@ def _cleanup_threads(initial_threads: set) -> None:
                 thread.join(timeout=0.1)
             except Exception:
                 pass
-
 
 def _cleanup_qt_application() -> None:
     """Clean up Qt application instance."""
@@ -115,7 +110,6 @@ def _cleanup_qt_application() -> None:
             # Just process events to clean up
         except Exception:
             pass
-
 
 def _force_garbage_collection() -> None:
     """Force garbage collection to clean up resources."""

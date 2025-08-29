@@ -7,6 +7,7 @@ while maintaining backward compatibility with the existing global singleton patt
 These classes offer a clean migration path from global manager access to explicit
 dependency injection.
 """
+from __future__ import annotations
 
 from typing import Any, Protocol, TypeVar
 
@@ -23,7 +24,6 @@ from .session_manager import SessionManager
 logger = get_logger(__name__)
 
 T = TypeVar('T')
-
 
 class ManagerProvider(Protocol):
     """
@@ -44,7 +44,6 @@ class ManagerProvider(Protocol):
     def get_session_manager(self) -> SessionManager:
         """Get session manager instance."""
         ...
-
 
 class ContextualManagerProvider:
     """
@@ -95,7 +94,6 @@ class ContextualManagerProvider:
         # Fallback to global singleton
         logger.debug("No session manager in context, falling back to global")
         return get_session_manager()
-
 
 class InjectableWidget(QWidget):
     """
@@ -154,7 +152,6 @@ class InjectableWidget(QWidget):
     def get_session_manager(self) -> SessionManager:
         """Get session manager through dependency injection."""
         return self._manager_provider.get_session_manager()
-
 
 class InjectableDialog(QDialog):
     """
@@ -216,7 +213,6 @@ class InjectableDialog(QDialog):
         """Get session manager through dependency injection."""
         return self._manager_provider.get_session_manager()
 
-
 class DirectManagerProvider:
     """
     Manager provider that uses directly injected manager instances.
@@ -264,7 +260,6 @@ class DirectManagerProvider:
             return get_session_manager()
         return self._session_manager
 
-
 def create_direct_provider(
     extraction_manager: ExtractionManager | None = None,
     injection_manager: InjectionManager | None = None,
@@ -286,7 +281,6 @@ def create_direct_provider(
         injection_manager=injection_manager,
         session_manager=session_manager
     )
-
 
 class InjectionMixin:
     """
@@ -333,7 +327,6 @@ class InjectionMixin:
     def get_session_manager(self) -> SessionManager:
         """Get session manager through dependency injection."""
         return self._manager_provider.get_session_manager()
-
 
 # Convenience type aliases for type hints
 InjectableQWidget = InjectableWidget

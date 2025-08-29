@@ -1,6 +1,7 @@
 """
 Unit tests for refactored UI components
 """
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -27,11 +28,9 @@ pytestmark = [
     pytest.mark.requires_display,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.managers import cleanup_managers, initialize_managers
-
 
 class TestROMMapWidget:
     """Test ROMMapWidget functionality"""
@@ -130,7 +129,6 @@ class TestROMMapWidget:
         # Verify resources cleared
         assert len(widget.found_sprites) == 0
 
-
 class TestScanControlsPanel:
     """Test ScanControlsPanel functionality"""
 
@@ -181,7 +179,6 @@ class TestScanControlsPanel:
         
         assert is_valid is True, "Valid scan parameters should pass validation"
         assert end_offset > start_offset, "End offset should be greater than start offset"
-
 
 class TestImportExportPanel:
     """Test ImportExportPanel functionality"""
@@ -235,7 +232,6 @@ class TestImportExportPanel:
         test_sprites = [(0x1000, 0.8), (0x2000, 0.9)]
         panel.set_found_sprites(test_sprites)
         assert panel.found_sprites == test_sprites
-
 
 class TestStatusPanel:
     """Test StatusPanel functionality"""
@@ -315,7 +311,6 @@ class TestStatusPanel:
         assert hasattr(panel, "show_progress")
         assert hasattr(panel, "hide_progress") 
         assert hasattr(panel, "update_progress")
-
 
 class TestRangeScanDialog:
     """Test RangeScanDialog functionality"""

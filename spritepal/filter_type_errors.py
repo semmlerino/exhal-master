@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Quick script to filter and categorize basedpyright errors by specific rules."""
 
 import json
@@ -6,12 +8,13 @@ import subprocess
 import sys
 from collections import defaultdict
 
+
 def main():
     # Run basedpyright and get JSON output
     result = subprocess.run([
         "python3", "-m", "basedpyright", ".", "--outputjson"
-    ], capture_output=True, text=True, cwd="/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal")
-    
+    ], check=False, capture_output=True, text=True, cwd="/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal")
+
     if result.returncode != 0:
         try:
             data = json.loads(result.stderr)
@@ -20,18 +23,18 @@ def main():
             sys.exit(1)
     else:
         data = json.loads(result.stdout)
-    
+
     # Target rules
     target_rules = {
         "reportGeneralTypeIssues",
-        "reportIncompatibleMethodOverride", 
+        "reportIncompatibleMethodOverride",
         "reportOptionalSubscript",
         "reportAssignmentType"
     }
-    
+
     # Filter errors by target rules
     filtered_errors = defaultdict(list)
-    
+
     for error in data.get("generalDiagnostics", []):
         rule = error.get("rule", "")
         if rule in target_rules:
@@ -41,7 +44,7 @@ def main():
                 "message": error["message"],
                 "severity": error["severity"]
             })
-    
+
     # Print summary
     print("Type Error Summary:")
     total = 0
@@ -51,7 +54,7 @@ def main():
         print(f"  {rule}: {count}")
     print(f"  Total: {total}")
     print()
-    
+
     # Print details for each rule
     for rule in target_rules:
         if filtered_errors[rule]:

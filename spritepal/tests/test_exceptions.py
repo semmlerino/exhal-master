@@ -1,4 +1,5 @@
 """Tests for custom exceptions"""
+from __future__ import annotations
 
 import pytest
 
@@ -14,7 +15,6 @@ from utils.exceptions import (
     VRAMError,
 )
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.no_manager_setup,  # Skip heavy manager initialization for simple exception tests
 ]
-
 
 class TestExceptions:
     """Test custom exception classes"""

@@ -2,6 +2,7 @@
 Sprite gallery tab for visual overview of all sprites in ROM.
 Provides grid display, filtering, sorting, and batch operations.
 """
+from __future__ import annotations
 
 import builtins
 import contextlib
@@ -9,7 +10,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QPixmap
@@ -39,7 +40,6 @@ LAYOUT_SPACING = 4
 LAYOUT_MARGINS = 4
 BUTTON_HEIGHT = 32
 
-
 class SpriteGalleryTab(QWidget):
     """Tab widget for sprite gallery display and management."""
 
@@ -47,7 +47,7 @@ class SpriteGalleryTab(QWidget):
     sprite_selected = Signal(int)  # Navigate to sprite
     sprites_exported = Signal(list)  # Sprites exported
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Initialize the sprite gallery tab.
 
@@ -57,20 +57,20 @@ class SpriteGalleryTab(QWidget):
         super().__init__(parent)
 
         # State
-        self.rom_path: Optional[str] = None
+        self.rom_path: str | None = None
         self.rom_size: int = 0
         self.rom_extractor = None
         self.sprites_data: list[dict[str, Any]] = []
 
         # Workers
-        self.thumbnail_controller: Optional[ThumbnailWorkerController] = None
-        self.scan_thread: Optional[QThread] = None
+        self.thumbnail_controller: ThumbnailWorkerController | None = None
+        self.scan_thread: QThread | None = None
 
         # UI Components - these are always initialized in _setup_ui()
         self.gallery_widget: SpriteGalleryWidget  # Always initialized
         self.toolbar: QToolBar  # Always initialized
-        self.progress_dialog: Optional[QProgressDialog] = None
-        self.detached_window: Optional[Any] = None  # DetachedGalleryWindow
+        self.progress_dialog: QProgressDialog | None = None
+        self.detached_window: Any | None = None  # DetachedGalleryWindow
 
         self._setup_ui()
 
@@ -302,7 +302,7 @@ class SpriteGalleryTab(QWidget):
         # Start scan with custom range
         self._start_sprite_scan(start_offset, end_offset)
 
-    def _start_sprite_scan(self, start_offset: Optional[int] = None, end_offset: Optional[int] = None):
+    def _start_sprite_scan(self, start_offset: int | None = None, end_offset: int | None = None):
         """Start the sprite scanning process."""
         # Use SpriteFinder to scan
         finder = SpriteFinder()
@@ -668,7 +668,7 @@ class SpriteGalleryTab(QWidget):
             self.thumbnail_controller.cleanup()
             self.thumbnail_controller = None
 
-    def _get_cache_path(self, rom_path: Optional[str] = None) -> Path:
+    def _get_cache_path(self, rom_path: str | None = None) -> Path:
         """Get the cache file path for a specific ROM."""
         # Use local cache directory in the project
         cache_dir = Path(__file__).parent.parent.parent / ".cache" / "gallery_scans"
@@ -710,7 +710,7 @@ class SpriteGalleryTab(QWidget):
         except Exception as e:
             logger.error(f"Failed to save scan cache: {e}")
 
-    def _load_scan_cache(self, rom_path: Optional[str] = None):
+    def _load_scan_cache(self, rom_path: str | None = None):
         """Load previously saved scan results from cache."""
         if not rom_path:
             rom_path = self.rom_path

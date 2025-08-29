@@ -1,6 +1,7 @@
 """
 Simple test for SearchWorker without importing the dialog.
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -8,7 +9,6 @@ from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -24,7 +24,6 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 @pytest.fixture
 def temp_rom_file() -> Generator[str, None, None]:
     """Create temporary ROM file for testing."""
@@ -38,7 +37,6 @@ def temp_rom_file() -> Generator[str, None, None]:
 
     # Cleanup
     Path(temp_path).unlink(missing_ok=True)
-
 
 class TestSearchWorkerSimple:
     """Test SearchWorker without importing the actual dialog."""

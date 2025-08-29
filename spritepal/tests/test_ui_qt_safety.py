@@ -4,6 +4,7 @@ Tests for Qt boolean evaluation safety fixes.
 Tests that Qt containers are properly checked with `is not None` instead of truthiness,
 preventing bugs where empty containers evaluate to False.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
@@ -22,7 +23,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.stability,
 ]
-
 
 try:
     from PySide6.QtWidgets import (
@@ -43,7 +43,6 @@ except ImportError:
     QWidget = Mock
     QApplication = Mock
     QT_AVAILABLE = False
-
 
 class TestQtBooleanEvaluationFixes:
     """Test Qt boolean evaluation safety patterns"""
@@ -164,7 +163,6 @@ class TestQtBooleanEvaluationFixes:
         assert bool(vbox)
         assert bool(hbox)
 
-
 class TestQtSafetyPatterns:
     """Test safe patterns for Qt boolean evaluation"""
 
@@ -227,7 +225,6 @@ class TestQtSafetyPatterns:
 
         assert check_truthiness(mock_populated_layout) is True  # Correct: populated passes
         assert check_not_none(mock_populated_layout) is True    # Correct: populated passes
-
 
 class TestSpecificFixedLocations:
     """Test specific locations where Qt boolean evaluation fixes were applied"""
@@ -303,7 +300,6 @@ class TestSpecificFixedLocations:
         add_to_splitter_safely(mock_splitter, mock_widget)
         mock_splitter.addWidget.assert_called_once_with(mock_widget)
 
-
 class TestQtBooleanEvaluationRegressionPrevention:
     """Tests to prevent regression of Qt boolean evaluation bugs"""
 
@@ -373,7 +369,6 @@ class TestQtBooleanEvaluationRegressionPrevention:
         result = correct_pattern_add(mock_empty_container, "item")
         assert result is True  # Correct: empty container is accepted
         mock_empty_container.addItem.assert_called_once_with("item")  # Item added
-
 
 class TestQtBooleanEvaluationIntegration:
     """Integration tests for Qt boolean evaluation fixes"""

@@ -26,7 +26,7 @@ from __future__ import annotations
 import time
 import tempfile
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 import pytest
 from PIL import Image
@@ -35,7 +35,6 @@ from PIL import Image
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-
 
     ManagerTestContext,
     manager_context,
@@ -47,8 +46,6 @@ from tests.infrastructure.test_data_repository import (
 )
 
 from core.managers import ExtractionManager, InjectionManager, ValidationError
-
-
 
 pytestmark = [
     
@@ -356,7 +353,6 @@ class TestManagerPerformanceBenchmarksTDD:
         # Should complete all suggestions
         assert result == 5
 
-
 class TestManagerMemoryPerformanceTDD:
     """TDD tests for manager memory usage and performance."""
 
@@ -444,7 +440,6 @@ class TestManagerMemoryPerformanceTDD:
         # Should have made all connections
         assert result == 40
 
-
 # Comparative Performance Tests
 
 @pytest.mark.benchmark
@@ -488,7 +483,6 @@ def test_real_vs_mock_performance_comparison_tdd(benchmark, test_data_repo):
     
     # Should complete workflow (success or controlled failure)
     assert result in [True, False]
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-m", "benchmark"])

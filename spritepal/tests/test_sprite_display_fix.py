@@ -11,6 +11,7 @@ Tests focus on:
 7. Performance with large sprite data
 8. Memory management and resource cleanup
 """
+from __future__ import annotations
 
 import tempfile
 import time
@@ -28,7 +29,6 @@ from core.visual_similarity_search import VisualSimilarityEngine
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.qt_testing_framework import QtTestingFramework
 
-
 # Serial execution required: Real Qt components
 pytestmark = [
     
@@ -43,7 +43,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.stability,
 ]
-
 
 class MockDefaultPaletteLoader:
     """Mock default palette loader for testing"""
@@ -71,7 +70,6 @@ class MockDefaultPaletteLoader:
             result[i] = self.palettes[i]
         return result
 
-
 class MockVisualSimilarityEngine:
     """Mock visual similarity engine for testing"""
     def __init__(self):
@@ -91,7 +89,6 @@ class MockVisualSimilarityEngine:
             {"offset": 0x300000, "similarity": 0.87},
             {"offset": 0x400000, "similarity": 0.76}
         ]
-
 
 class TestSpritePreviewWidgetDisplayFix:
     """Test SpritePreviewWidget functionality for display fix"""
@@ -369,7 +366,6 @@ class TestSpritePreviewWidgetDisplayFix:
         
         return bytes(data)
 
-
 class TestSpriteDisplayFixIntegration:
     """Integration tests for the complete sprite display fix"""
     
@@ -476,7 +472,6 @@ class TestSpriteDisplayFixIntegration:
         
         return bytes([i % 256 for i in range(total_bytes)])
 
-
 class TestSpriteDisplayFixRegressionTests:
     """Regression tests to ensure the fix doesn't break existing functionality"""
     
@@ -558,7 +553,6 @@ class TestSpriteDisplayFixRegressionTests:
         total_pixels = width * height
         total_bytes = (total_pixels + 1) // 2
         return bytes([i % 256 for i in range(total_bytes)])
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

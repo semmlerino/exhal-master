@@ -4,11 +4,12 @@ Critical Code Fixes - Ready-to-Use Examples
 These are drop-in replacements for the most critical issues found in code review.
 Copy and adapt these patterns throughout the codebase.
 """
+from __future__ import annotations
 
 import mmap
 import weakref
 from pathlib import Path
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 from PySide6.QtCore import (
@@ -74,11 +75,10 @@ class ThreadSafeWorker(QObject):
         """Safely stop the worker."""
         self._should_stop = True
 
-    def get_cached_item(self, key: int) -> Optional[str]:
+    def get_cached_item(self, key: int) -> str | None:
         """Thread-safe cache read."""
         with QMutexLocker(self._cache_mutex):
             return self._cache.get(key)
-
 
 class WorkerController:
     """
@@ -87,8 +87,8 @@ class WorkerController:
     """
 
     def __init__(self):
-        self.worker: Optional[ThreadSafeWorker] = None
-        self.thread: Optional[QThread] = None
+        self.worker: ThreadSafeWorker | None = None
+        self.thread: QThread | None = None
 
     def start_worker(self, rom_path: str):
         """Start worker with proper thread management."""
@@ -116,7 +116,6 @@ class WorkerController:
             self.thread.quit()
             self.thread.wait()
 
-
 # ============================================================================
 # FIX 2: Safe UI Update from Worker Thread
 # ============================================================================
@@ -143,7 +142,6 @@ def safe_ui_update(func):
         return func(self, *args, **kwargs)
     return wrapper
 
-
 class SafeUIWidget(QWidget):
     """Example widget with thread-safe UI updates."""
 
@@ -161,7 +159,6 @@ class SafeUIWidget(QWidget):
         """This method is safe to call from any thread."""
         self.label.setText(f"Progress: {percent}%")
 
-
 # ============================================================================
 # FIX 3: Type-Safe Protocol with None Checks
 # ============================================================================
@@ -177,7 +174,7 @@ class MainWindowProtocol(Protocol):
     extract_requested: Signal
     open_in_editor_requested: Signal
 
-    def get_rom_path(self) -> Optional[str]:
+    def get_rom_path(self) -> str | None:
         """Get current ROM path if loaded."""
         ...
 
@@ -185,8 +182,7 @@ class MainWindowProtocol(Protocol):
         """Bridge method for Qt compatibility."""
         return self
 
-
-def safe_access_example(window: Optional[MainWindowProtocol]) -> str:
+def safe_access_example(window: MainWindowProtocol | None) -> str:
     """
     Example of safe optional access pattern.
     Always check for None before accessing attributes.
@@ -199,7 +195,6 @@ def safe_access_example(window: Optional[MainWindowProtocol]) -> str:
         return "No ROM loaded"
 
     return f"ROM loaded: {rom_path}"
-
 
 # ============================================================================
 # FIX 4: Memory-Efficient ROM Access
@@ -245,7 +240,6 @@ class MemoryEfficientROMReader:
         """Get ROM file size."""
         return len(self._mmap) if self._mmap else 0
 
-
 # ============================================================================
 # FIX 5: Vectorized Tile Rendering (5-10x faster)
 # ============================================================================
@@ -284,7 +278,6 @@ def decode_4bpp_tile_vectorized(tile_bytes: bytes) -> np.ndarray:
 
     return color_indices
 
-
 # ============================================================================
 # FIX 6: Accessibility - Keyboard Navigation
 # ============================================================================
@@ -292,7 +285,7 @@ def decode_4bpp_tile_vectorized(tile_bytes: bytes) -> np.ndarray:
 def make_accessible_widget(widget: QWidget,
                           name: str,
                           description: str,
-                          shortcut: Optional[str] = None) -> QWidget:
+                          shortcut: str | None = None) -> QWidget:
     """
     Add accessibility features to any widget.
     Apply this to all interactive UI elements.
@@ -327,7 +320,6 @@ def make_accessible_widget(widget: QWidget,
 
     return widget
 
-
 def create_accessible_label_input_pair(label_text: str,
                                        input_widget: QWidget,
                                        description: str) -> tuple[QLabel, QWidget]:
@@ -349,7 +341,6 @@ def create_accessible_label_input_pair(label_text: str,
 
     return label, input_widget
 
-
 # ============================================================================
 # FIX 7: Weak References to Prevent Memory Leaks
 # ============================================================================
@@ -366,7 +357,7 @@ class MemorySafeContext:
         self.components = weakref.WeakValueDictionary()
 
     @property
-    def parent(self) -> Optional[QObject]:
+    def parent(self) -> QObject | None:
         """Get parent if still alive."""
         return self._parent_ref() if self._parent_ref else None
 
@@ -382,7 +373,6 @@ class MemorySafeContext:
     def cleanup(self):
         """Clean up all components."""
         self.components.clear()
-
 
 # ============================================================================
 # Usage Examples
@@ -412,7 +402,6 @@ def example_usage():
     tile_data = b'\x00' * 32  # Example tile data
     color_indices = decode_4bpp_tile_vectorized(tile_data)
     print(f"Decoded tile shape: {color_indices.shape}")
-
 
 if __name__ == "__main__":
     print("Critical fixes loaded. Import and use these patterns throughout the codebase.")

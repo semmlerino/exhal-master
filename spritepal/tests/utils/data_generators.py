@@ -4,6 +4,7 @@ Test data generation utilities for SpritePal tests.
 This module provides functions to generate consistent test data across
 different test files, eliminating duplication and ensuring test consistency.
 """
+from __future__ import annotations
 
 import random
 
@@ -76,7 +77,6 @@ def generate_sprite_data(
 
     return data
 
-
 def generate_palette_data(
     palette_count: int = 16,
     colors_per_palette: int = 16,
@@ -130,7 +130,6 @@ def generate_palette_data(
 
     return palettes
 
-
 def generate_rom_data(
     size: int = 0x400000,  # 4MB
     add_sprites: bool = True,
@@ -167,7 +166,6 @@ def generate_rom_data(
                 data[offset:offset + len(sprite_data)] = sprite_data
 
     return data
-
 
 def create_test_image(
     width: int = 128,
@@ -230,12 +228,10 @@ def create_test_image(
 
     return img
 
-
 def _hsv_to_rgb(h: float, s: float, v: float) -> tuple[float, float, float]:
     """Convert HSV color to RGB."""
     import colorsys
     return colorsys.hsv_to_rgb(h, s, v)
-
 
 def generate_oam_data(entry_count: int = 128) -> bytearray:
     """
@@ -266,7 +262,6 @@ def generate_oam_data(entry_count: int = 128) -> bytearray:
         data[offset + 3] = 0x20 | palette  # Bit 5 set for visibility
 
     return data
-
 
 def generate_cgram_data(palette_count: int = 16) -> bytearray:
     """

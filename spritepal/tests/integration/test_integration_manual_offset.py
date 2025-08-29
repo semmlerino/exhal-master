@@ -1,6 +1,7 @@
 """
 Integration tests for manual offset dialog using real components.
 """
+from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import Qt, QTimer
@@ -9,7 +10,6 @@ from PySide6.QtTest import QTest
 
 from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from core.managers import ExtractionManager
-
 
 @pytest.mark.integration
 @pytest.mark.gui
@@ -203,7 +203,6 @@ class TestManualOffsetDialog:
         offset_after_prev = dialog.current_offset
         assert offset_after_prev <= offset_after_next
 
-
 @pytest.mark.integration
 @pytest.mark.gui
 class TestSpriteScanDialog:
@@ -281,7 +280,6 @@ class TestSpriteScanDialog:
         
         # Verify we navigated to the sprite
         assert dialog.current_offset == sprite_offset
-
 
 @pytest.mark.integration
 @pytest.mark.gui

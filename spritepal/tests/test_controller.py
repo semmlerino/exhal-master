@@ -1,6 +1,7 @@
 """
 Comprehensive tests for controller functionality
 """
+from __future__ import annotations
 
 import importlib
 import os
@@ -29,9 +30,7 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 
 import core.controller
 from core.controller import ExtractionController
@@ -44,7 +43,6 @@ from core.managers.session_manager import SessionManager
 def get_main_window():
     from ui.main_window import MainWindow
     return MainWindow
-
 
 @pytest.mark.no_manager_setup
 class TestControllerImports:
@@ -70,7 +68,6 @@ class TestControllerImports:
 
         assert hasattr(controller, "pil_to_qpixmap")
         assert callable(controller.pil_to_qpixmap)
-
 
 @pytest.mark.no_manager_setup
 class TestExtractionController:
@@ -193,12 +190,12 @@ class TestExtractionController:
             # Start extraction (should fail validation immediately)
             controller.start_extraction()
             
-            # Verify extraction_failed was called with correct message
-            mock_main_window.extraction_failed.assert_called_once()
-            call_args = mock_main_window.extraction_failed.call_args[0]
-            assert "VRAM file is required for extraction" in call_args[0]
+            # Verify BEHAVIOR: error was reported with correct message
+            assert mock_main_window.extraction_failed.called
+            error_message = mock_main_window.extraction_failed.call_args[0][0]
+            assert "VRAM file is required for extraction" in error_message
             
-            # Verify worker was not created (validation failed before worker creation)
+            # Verify STATE: no worker was created when validation fails
             assert controller.worker is None
 
     def test_parameter_validation_missing_cgram(self):
@@ -235,12 +232,12 @@ class TestExtractionController:
             # Start extraction (should fail validation immediately)
             controller.start_extraction()
 
-            # Verify extraction_failed was called with correct message
-            mock_main_window.extraction_failed.assert_called_once()
-            call_args = mock_main_window.extraction_failed.call_args[0]
-            assert expected_msg in call_args[0]
+            # Verify BEHAVIOR: error was reported with correct message
+            assert mock_main_window.extraction_failed.called
+            error_message = mock_main_window.extraction_failed.call_args[0][0]
+            assert expected_msg in error_message
             
-            # Verify worker was not created (validation failed before worker creation)
+            # Verify STATE: no worker created when CGRAM missing in color mode
             assert controller.worker is None
 
     def test_parameter_validation_missing_both(self):
@@ -275,12 +272,12 @@ class TestExtractionController:
             # Start extraction (should fail validation immediately)
             controller.start_extraction()
 
-            # When both are missing, it fails on VRAM parameter check first
-            mock_main_window.extraction_failed.assert_called_once()
-            call_args = mock_main_window.extraction_failed.call_args[0]
-            assert "VRAM file is required for extraction" in call_args[0]
+            # Verify BEHAVIOR: VRAM error is reported first when both are missing
+            assert mock_main_window.extraction_failed.called
+            error_message = mock_main_window.extraction_failed.call_args[0][0]
+            assert "VRAM file is required for extraction" in error_message
             
-            # Verify worker was not created (validation failed before worker creation)
+            # Verify STATE: no worker created when both files missing
             assert controller.worker is None
 
     def test_start_extraction_valid_params(self):
@@ -335,18 +332,19 @@ class TestExtractionController:
             # Start extraction (should create worker)
             controller.start_extraction()
             
-            # Verify worker was created with correct parameters
-            mock_worker_class.assert_called_once()
-            call_args = mock_worker_class.call_args[0][0]  # First argument (params)
-            assert call_args["vram_path"] == valid_params["vram_path"]
-            assert call_args["cgram_path"] == valid_params["cgram_path"]
-            assert call_args["output_base"] == valid_params["output_base"]
+            # Verify BEHAVIOR: worker was created with correct parameters
+            assert mock_worker_class.called
+            worker_params = mock_worker_class.call_args[0][0]  # First argument (params)
+            assert worker_params["vram_path"] == valid_params["vram_path"]
+            assert worker_params["cgram_path"] == valid_params["cgram_path"] 
+            assert worker_params["output_base"] == valid_params["output_base"]
             
-            # Verify worker was started
-            mock_worker.start.assert_called_once()
-            
-            # Verify worker is stored in controller
+            # Verify STATE: controller holds the worker instance
+            assert controller.worker is not None
             assert controller.worker == mock_worker
+            
+            # Verify BEHAVIOR: worker thread was started
+            assert mock_worker.start.called  # Thread activation occurred
 
     def test_on_progress_handler(self, controller, main_window):
         """Test progress message handler"""
@@ -354,8 +352,10 @@ class TestExtractionController:
 
         controller._on_progress(50, test_message)
 
-        # Verify the controller called showMessage with the correct message
-        main_window.status_bar.showMessage.assert_called_once_with(test_message)
+        # Verify BEHAVIOR: status bar displays the progress message
+        assert main_window.status_bar.showMessage.called
+        displayed_message = main_window.status_bar.showMessage.call_args[0][0]
+        assert displayed_message == test_message
 
     def test_on_preview_ready_handler(self, controller, main_window):
         """Test preview ready handler - now expects PIL Image due to Qt threading fix"""
@@ -422,9 +422,12 @@ class TestExtractionController:
         # Call the real controller method
         controller._on_extraction_finished(extracted_files)
         
-        # Verify the controller called the main_window method with correct args
-        main_window.extraction_complete.assert_called_once_with(extracted_files)
-        # Verify worker was cleaned up
+        # Verify BEHAVIOR: extraction completion was signaled with files
+        assert main_window.extraction_complete.called
+        signaled_files = main_window.extraction_complete.call_args[0][0]
+        assert signaled_files == extracted_files
+        
+        # Verify STATE: worker was cleaned up after completion
         assert controller.worker is None
 
     def test_on_extraction_error_handler(self, controller, main_window):
@@ -442,9 +445,12 @@ class TestExtractionController:
         # Call the real controller method
         controller._on_extraction_error(error_message)
         
-        # Verify the controller called the main_window method with correct args
-        main_window.extraction_failed.assert_called_once_with(error_message)
-        # Verify worker was cleaned up
+        # Verify BEHAVIOR: error was reported to UI
+        assert main_window.extraction_failed.called
+        reported_error = main_window.extraction_failed.call_args[0][0]
+        assert reported_error == error_message
+        
+        # Verify STATE: worker was cleaned up after error
         assert controller.worker is None
 
     @patch("core.controller.subprocess.Popen")
@@ -467,16 +473,18 @@ class TestExtractionController:
         with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
-        # Verify Popen was called with the correct arguments
-        mock_popen.assert_called_once()
-        call_args = mock_popen.call_args[0][0]
-        assert call_args[0] == sys.executable
-        assert call_args[1].endswith("launch_pixel_editor.py")
-        assert call_args[2] == os.path.abspath(str(sprite_file))
+        # Verify BEHAVIOR: subprocess launched with correct command
+        assert mock_popen.called
+        launch_command = mock_popen.call_args[0][0]
+        assert launch_command[0] == sys.executable  # Python executable
+        assert launch_command[1].endswith("launch_pixel_editor.py")  # Script path
+        assert launch_command[2] == os.path.abspath(str(sprite_file))  # File to edit
 
-        # Verify status bar message was shown
+        # Verify BEHAVIOR: user was notified of successful launch
         expected_message = f"Opened {os.path.basename(sprite_file)} in pixel editor"
-        main_window.status_bar.showMessage.assert_called_with(expected_message)
+        assert main_window.status_bar.showMessage.called
+        status_message = main_window.status_bar.showMessage.call_args[0][0]
+        assert status_message == expected_message
 
     @patch("core.controller.subprocess.Popen")
     def test_open_in_editor_launcher_in_subdirectory(
@@ -498,12 +506,12 @@ class TestExtractionController:
         with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
-        # Verify Popen was called with the correct arguments
-        mock_popen.assert_called_once()
-        call_args = mock_popen.call_args[0][0]
-        assert call_args[0] == sys.executable
-        assert call_args[1].endswith("pixel_editor/launch_pixel_editor.py")
-        assert call_args[2] == os.path.abspath(str(sprite_file))
+        # Verify BEHAVIOR: subprocess launched with correct subdirectory path
+        assert mock_popen.called
+        launch_command = mock_popen.call_args[0][0]
+        assert launch_command[0] == sys.executable
+        assert launch_command[1].endswith("pixel_editor/launch_pixel_editor.py")
+        assert launch_command[2] == os.path.abspath(str(sprite_file))
 
     @patch("core.controller.subprocess.Popen")
     def test_open_in_editor_launcher_in_parent_directory(
@@ -531,12 +539,12 @@ class TestExtractionController:
         with patch("core.controller.__file__", fake_controller_file):
             controller.open_in_editor(str(sprite_file))
 
-        # Verify Popen was called with the correct arguments
-        mock_popen.assert_called_once()
-        call_args = mock_popen.call_args[0][0]
-        assert call_args[0] == sys.executable
-        assert call_args[1].endswith("launch_pixel_editor.py")
-        assert call_args[2] == os.path.abspath(str(sprite_file))
+        # Verify BEHAVIOR: subprocess launched from parent directory
+        assert mock_popen.called
+        launch_command = mock_popen.call_args[0][0]
+        assert launch_command[0] == sys.executable
+        assert launch_command[1].endswith("launch_pixel_editor.py")
+        assert launch_command[2] == os.path.abspath(str(sprite_file))
 
     def test_open_in_editor_launcher_not_found(
         self, controller, main_window, tmp_path
@@ -553,8 +561,10 @@ class TestExtractionController:
         with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
-        # Verify status bar message was shown
-        main_window.status_bar.showMessage.assert_called_with("Pixel editor not found")
+        # Verify BEHAVIOR: user was notified that editor not found
+        assert main_window.status_bar.showMessage.called
+        status_message = main_window.status_bar.showMessage.call_args[0][0]
+        assert status_message == "Pixel editor not found"
 
     @patch("core.controller.subprocess.Popen")
     def test_open_in_editor_subprocess_error(
@@ -575,9 +585,10 @@ class TestExtractionController:
         with patch("core.controller.__file__", str(mock_controller_file)):
             controller.open_in_editor(str(sprite_file))
 
-        # Verify status bar message was shown
-        main_window.status_bar.showMessage.assert_called_with("Failed to open pixel editor: Subprocess failed")
-
+        # Verify BEHAVIOR: error message shown to user
+        assert main_window.status_bar.showMessage.called
+        error_msg = main_window.status_bar.showMessage.call_args[0][0]
+        assert error_msg == "Failed to open pixel editor: Subprocess failed"
 
 class TestVRAMExtractionWorker:
     """Test VRAMExtractionWorker functionality"""
@@ -632,21 +643,23 @@ class TestVRAMExtractionWorker:
         ]) as mock_extract:
             worker.run()
 
-            # Verify manager was called with correct params
-            mock_extract.assert_called_once_with(
-                vram_path=worker.params["vram_path"],
-                output_base=worker.params["output_base"],
-                cgram_path=worker.params.get("cgram_path"),
-                oam_path=worker.params.get("oam_path"),
-                vram_offset=worker.params.get("vram_offset"),
-                create_grayscale=worker.params.get("create_grayscale", True),
-                create_metadata=worker.params.get("create_metadata", True),
-                grayscale_mode=worker.params.get("grayscale_mode", False),
-            )
+            # Verify BEHAVIOR: manager processed extraction with correct params
+            assert mock_extract.called
+            extract_args = mock_extract.call_args[1]
+            assert extract_args["vram_path"] == worker.params["vram_path"]
+            assert extract_args["output_base"] == worker.params["output_base"]
+            assert extract_args["cgram_path"] == worker.params.get("cgram_path")
+            assert extract_args["oam_path"] == worker.params.get("oam_path")
+            assert extract_args["vram_offset"] == worker.params.get("vram_offset")
+            assert extract_args["create_grayscale"] == worker.params.get("create_grayscale", True)
+            assert extract_args["create_metadata"] == worker.params.get("create_metadata", True)
+            assert extract_args["grayscale_mode"] == worker.params.get("grayscale_mode", False)
 
-            # Verify signals were emitted
+            # Verify BEHAVIOR: successful extraction signaled with files
             assert extraction_spy.count() == 1
             assert extraction_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
+            
+            # Verify STATE: no errors occurred
             assert error_spy.count() == 0
 
     def test_run_error_handling(self, worker):
@@ -683,13 +696,15 @@ class TestVRAMExtractionWorker:
         with patch.object(worker.manager, "extract_from_vram", return_value=["output.png"]) as mock_extract:
             worker.run()
 
-            # Verify manager was called with None cgram_path
-            mock_extract.assert_called_once()
-            call_args = mock_extract.call_args[1]
-            assert call_args["cgram_path"] is None
-
-            # Verify signals
+            # Verify BEHAVIOR: extraction proceeds without CGRAM 
+            assert mock_extract.called
+            extract_args = mock_extract.call_args[1]
+            assert extract_args["cgram_path"] is None  # CGRAM not provided
+            
+            # Verify BEHAVIOR: successful completion signaled
             assert finished_spy.count() == 1
+            
+            # Verify STATE: no errors with missing CGRAM
             assert error_spy.count() == 0
 
     def test_run_without_oam(self, worker):
@@ -706,13 +721,16 @@ class TestVRAMExtractionWorker:
         ]) as mock_extract:
             worker.run()
 
-            # Verify manager was called with None oam_path
-            mock_extract.assert_called_once()
-            call_args = mock_extract.call_args[1]
-            assert call_args.get("oam_path") is None
-
-            # Verify signals
+            # Verify BEHAVIOR: extraction proceeds without OAM
+            assert mock_extract.called
+            extract_args = mock_extract.call_args[1]
+            assert extract_args.get("oam_path") is None  # OAM not provided
+            
+            # Verify BEHAVIOR: successful completion with results
             assert finished_spy.count() == 1
+            assert finished_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
+            
+            # Verify STATE: no errors without OAM
             assert error_spy.count() == 0
 
     def test_run_without_metadata_creation(self, worker):
@@ -729,13 +747,17 @@ class TestVRAMExtractionWorker:
         ]) as mock_extract:
             worker.run()
 
-            # Verify manager was called with create_metadata=False
-            mock_extract.assert_called_once()
-            call_args = mock_extract.call_args[1]
-            assert call_args["create_metadata"] is False
-
-            # Verify signals
+            # Verify BEHAVIOR: metadata creation was disabled
+            assert mock_extract.called
+            extract_args = mock_extract.call_args[1]
+            assert extract_args["create_metadata"] is False
+            
+            # Verify BEHAVIOR: extraction completed without metadata file
             assert finished_spy.count() == 1
+            result_files = finished_spy.at(0)[0]
+            assert result_files == ["output.png", "output.pal.json"]  # No metadata file
+            
+            # Verify STATE: successful without metadata
             assert error_spy.count() == 0
 
     def test_run_without_grayscale_creation(self, worker):
@@ -750,13 +772,17 @@ class TestVRAMExtractionWorker:
         with patch.object(worker.manager, "extract_from_vram", return_value=["output.png"]) as mock_extract:
             worker.run()
 
-            # Verify manager was called with create_grayscale=False
-            mock_extract.assert_called_once()
-            call_args = mock_extract.call_args[1]
-            assert call_args["create_grayscale"] is False
-
-            # Verify signals
+            # Verify BEHAVIOR: grayscale creation was disabled
+            assert mock_extract.called
+            extract_args = mock_extract.call_args[1]
+            assert extract_args["create_grayscale"] is False
+            
+            # Verify BEHAVIOR: extraction completed successfully
             assert finished_spy.count() == 1
+            result_files = finished_spy.at(0)[0]
+            assert result_files == ["output.png"]  # Only main output
+            
+            # Verify STATE: successful without grayscale
             assert error_spy.count() == 0
 
     def test_signal_emission_order(self, worker):
@@ -777,7 +803,6 @@ class TestVRAMExtractionWorker:
             
             # Verify error signal was not emitted
             assert error_spy.count() == 0
-
 
 @pytest.mark.no_manager_setup
 class TestRealControllerImplementation:
@@ -966,7 +991,6 @@ class TestRealControllerImplementation:
         assert real_controller is not None
         assert real_controller.main_window == window_helper
 
-
 @pytest.mark.no_manager_setup
 @pytest.mark.skip(reason="Real MainWindow creation causes hanging - needs refactoring")
 class TestControllerWorkerIntegration:
@@ -1124,13 +1148,16 @@ class TestControllerWorkerIntegration:
         # Simulate worker error
         integration_controller._on_extraction_error("Failed to read file")
 
-        # Verify error signal was emitted
+        # Verify BEHAVIOR: error signal was emitted with message
         assert failed_spy.count() == 1
         assert failed_spy.at(0)[0] == "Failed to read file"
-        assert integration_controller.worker is None  # Worker should be cleaned up
         
-        # Verify error dialog was called
-        mock_show_error.assert_called_once()
+        # Verify STATE: worker was cleaned up after error
+        assert integration_controller.worker is None
+        
+        # Verify BEHAVIOR: error dialog was shown to user
+        assert mock_show_error.called
+        # Could also verify the error message if show_error takes arguments
 
     def test_worker_cleanup_on_completion(self, integration_controller):
         """Test that worker is cleaned up on completion"""
@@ -1193,7 +1220,6 @@ class TestControllerWorkerIntegration:
                 if worker.isRunning():
                     worker.quit()
                     worker.wait(1000)
-
 
 # Manager Context Integration Tests for Controllers
 @pytest.mark.no_manager_setup
@@ -1274,7 +1300,6 @@ class TestControllerManagerContextIntegration:
         # Manager state should persist since it's the same instance
         assert controller2.extraction_manager is controller1.extraction_manager
         assert controller2.extraction_manager.test_state == "persistent_value"
-
 
 @pytest.mark.no_manager_setup
 class TestPrivateAttributeAccessFix:

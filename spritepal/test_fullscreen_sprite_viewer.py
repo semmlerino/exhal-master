@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Simple integration test for the fullscreen sprite viewer functionality.
 Tests the integration between DetachedGalleryWindow and FullscreenSpriteViewer.

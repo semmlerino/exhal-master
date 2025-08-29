@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Focused test for composed dialog functionality.
 
@@ -117,7 +119,6 @@ def main():
         
     finally:
         app.quit()
-
 
 if __name__ == "__main__":
     success = main()

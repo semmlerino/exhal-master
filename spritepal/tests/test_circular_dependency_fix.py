@@ -1,4 +1,5 @@
 """Test that the circular dependency between MainWindow and ExtractionController is fixed."""
+from __future__ import annotations
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -7,7 +8,6 @@ from PySide6.QtWidgets import QApplication
 
 from ui.main_window import MainWindow
 from core.controller import ExtractionController
-
 
 class TestCircularDependencyFix:
     """Test suite for circular dependency fix."""

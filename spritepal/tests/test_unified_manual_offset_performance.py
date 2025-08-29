@@ -7,11 +7,10 @@ Provides benchmarking and profiling tools for dialog performance validation.
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 from unittest.mock import Mock
 
 import psutil
-
 
 class PerformanceTargets:
     """Performance targets for validation."""
@@ -19,7 +18,6 @@ class PerformanceTargets:
     STARTUP_TIME_MS = 1000  # 1 second max startup
     PREVIEW_GENERATION_MS = 500  # 500ms max preview
     MEMORY_OVERHEAD_MB = 50  # 50MB max overhead
-
 
 class MemoryProfiler:
     """Memory profiling utilities."""
@@ -31,7 +29,7 @@ class MemoryProfiler:
         return process.memory_info().rss / 1024 / 1024
     
     @staticmethod
-    def profile_function(func: Callable, *args, **kwargs) -> Dict[str, Any]:
+    def profile_function(func: Callable, *args, **kwargs) -> dict[str, Any]:
         """Profile memory usage of a function."""
         initial_memory = MemoryProfiler.get_memory_usage()
         
@@ -49,12 +47,11 @@ class MemoryProfiler:
             "final_memory_mb": final_memory
         }
 
-
 class StartupBenchmark:
     """Benchmark dialog startup performance."""
     
     @staticmethod
-    def measure_dialog_startup(dialog_class, setup_func: Callable) -> Dict[str, Any]:
+    def measure_dialog_startup(dialog_class, setup_func: Callable) -> dict[str, Any]:
         """Measure dialog startup performance."""
         start_time = time.perf_counter()
         
@@ -75,12 +72,11 @@ class StartupBenchmark:
             "dialog": dialog
         }
 
-
 class PreviewPerformanceBenchmark:
     """Benchmark preview generation performance."""
     
     @staticmethod
-    def measure_preview_generation(generator_func: Callable, *args) -> Dict[str, Any]:
+    def measure_preview_generation(generator_func: Callable, *args) -> dict[str, Any]:
         """Measure preview generation performance."""
         start_time = time.perf_counter()
         
@@ -99,12 +95,11 @@ class PreviewPerformanceBenchmark:
             "result": result
         }
 
-
 class ServiceAdapterOverheadAnalyzer:
     """Analyze service adapter overhead."""
     
     @staticmethod
-    def measure_adapter_overhead(adapter_class, operations: list) -> Dict[str, Any]:
+    def measure_adapter_overhead(adapter_class, operations: list) -> dict[str, Any]:
         """Measure overhead of service adapter operations."""
         adapter = adapter_class()
         
@@ -121,7 +116,7 @@ class ServiceAdapterOverheadAnalyzer:
                 start_time = time.perf_counter()
                 try:
                     getattr(adapter, operation_name)()
-                except:
+                except Exception:
                     pass  # Ignore errors in benchmarking
                 end_time = time.perf_counter()
                 
@@ -134,12 +129,11 @@ class ServiceAdapterOverheadAnalyzer:
         
         return results
 
-
 class PerformanceReportGenerator:
     """Generate performance reports."""
     
     @staticmethod
-    def generate_report(benchmark_results: Dict[str, Any]) -> str:
+    def generate_report(benchmark_results: dict[str, Any]) -> str:
         """Generate a formatted performance report."""
         report_lines = [
             "=== Performance Report ===",
@@ -168,7 +162,7 @@ class PerformanceReportGenerator:
         return "\n".join(report_lines)
     
     @staticmethod
-    def check_targets(results: Dict[str, Any]) -> Dict[str, bool]:
+    def check_targets(results: dict[str, Any]) -> dict[str, bool]:
         """Check if performance targets are met."""
         target_checks = {}
         

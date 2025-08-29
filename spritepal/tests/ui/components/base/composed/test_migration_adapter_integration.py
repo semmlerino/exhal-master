@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 pytestmark = [
     pytest.mark.cache,
     pytest.mark.ci_safe,
@@ -89,7 +91,6 @@ TEST_BUTTON_TEXT = "Test Button"
 PERFORMANCE_THRESHOLD_MS = 100
 MEMORY_THRESHOLD_MB = 10
 
-
 class TestDialogBase:
     """Base class for dialog subclasses used in testing."""
     
@@ -100,7 +101,6 @@ class TestDialogBase:
     def create_dialog(self) -> QDialog:
         """Create a dialog instance for testing."""
         return self.dialog_class(**self.kwargs)
-
 
 class SimpleTestDialog(LegacyDialogBase):
     """Simple test dialog using legacy implementation."""
@@ -121,7 +121,6 @@ class SimpleTestDialog(LegacyDialogBase):
         layout.addWidget(self.test_label)
         self.main_layout.addWidget(self.test_widget)
 
-
 class SimpleComposedTestDialog(ComposedDialogBase):
     """Simple test dialog using composed implementation."""
     
@@ -141,7 +140,6 @@ class SimpleComposedTestDialog(ComposedDialogBase):
         layout.addWidget(self.test_label)
         self.main_layout.addWidget(self.test_widget)
 
-
 class BadInitOrderDialog(LegacyDialogBase):
     """Dialog that violates initialization order (for testing error handling)."""
     
@@ -150,7 +148,6 @@ class BadInitOrderDialog(LegacyDialogBase):
         # Late assignment - should trigger warning/error
         self.test_widget: QWidget | None = None
 
-
 class BadInitOrderComposedDialog(ComposedDialogBase):
     """Dialog that violates initialization order (composed version)."""
     
@@ -158,7 +155,6 @@ class BadInitOrderComposedDialog(ComposedDialogBase):
         super().__init__(parent, **kwargs)
         # Late assignment - should trigger warning
         self.test_widget: QWidget | None = None
-
 
 @pytest.fixture(scope="session")
 def qt_app() -> Generator[QApplication, None, None]:
@@ -178,7 +174,6 @@ def qt_app() -> Generator[QApplication, None, None]:
     app.processEvents()
     # Don't quit the app as it might be shared with other tests
 
-
 @pytest.fixture
 def dialog_implementations() -> Generator[dict[str, type], None, None]:
     """Provide both dialog implementations for comparison testing."""
@@ -187,7 +182,6 @@ def dialog_implementations() -> Generator[dict[str, type], None, None]:
         "composed": ComposedDialogBase,
     }
     yield implementations
-
 
 @pytest.fixture
 def mock_message_box() -> Generator[Mock, None, None]:
@@ -200,7 +194,6 @@ def mock_message_box() -> Generator[Mock, None, None]:
         question=Mock(return_value=QMessageBox.StandardButton.Yes),
     ) as mocks:
         yield mocks
-
 
 @pytest.fixture
 def feature_flag_switcher() -> Generator[Callable[[bool], None], None, None]:
@@ -224,7 +217,6 @@ def feature_flag_switcher() -> Generator[Callable[[bool], None], None, None]:
     
     # Restore original setting
     set_dialog_implementation(original_setting)
-
 
 class TestBasicDialogCreation:
     """Test basic dialog creation and properties."""
@@ -318,7 +310,6 @@ class TestBasicDialogCreation:
                 dialog.close()
                 qt_app.processEvents()
 
-
 class TestTabManagement:
     """Test tab management functionality."""
     
@@ -391,7 +382,6 @@ class TestTabManagement:
             dialog.close()
             qt_app.processEvents()
 
-
 class TestButtonBoxFunctionality:
     """Test button box functionality."""
     
@@ -460,7 +450,6 @@ class TestButtonBoxFunctionality:
             dialog.close()
             qt_app.processEvents()
 
-
 class TestStatusBarOperations:
     """Test status bar operations."""
     
@@ -509,7 +498,6 @@ class TestStatusBarOperations:
             
             dialog.close()
             qt_app.processEvents()
-
 
 class TestMessageDialogs:
     """Test message dialog methods."""
@@ -594,7 +582,6 @@ class TestMessageDialogs:
             
             mock_message_box["question"].reset_mock()
 
-
 class TestSignalSlotConnections:
     """Test signal/slot connections."""
     
@@ -671,7 +658,6 @@ class TestSignalSlotConnections:
             
             qt_app.processEvents()
 
-
 class TestInitializationOrderPattern:
     """Test initialization order enforcement."""
     
@@ -724,7 +710,6 @@ class TestInitializationOrderPattern:
         dialog.close()
         qt_app.processEvents()
 
-
 class TestSplitterFunctionality:
     """Test splitter dialog functionality."""
     
@@ -774,7 +759,6 @@ class TestSplitterFunctionality:
             
             dialog.close()
             qt_app.processEvents()
-
 
 class TestPerformanceComparison:
     """Test performance comparison between implementations."""
@@ -848,7 +832,6 @@ class TestPerformanceComparison:
         for impl_name, memory_mb in results.items():
             assert memory_mb < MEMORY_THRESHOLD_MB, f"{impl_name} uses too much memory: {memory_mb}MB"
 
-
 class TestFeatureFlagIntegration:
     """Test integration with feature flag system."""
     
@@ -875,7 +858,6 @@ class TestFeatureFlagIntegration:
         
         feature_flag_switcher(False)
         assert not is_composed_dialogs_enabled()
-
 
 class TestBehavioralConsistency:
     """Test that both implementations provide identical behavior."""
@@ -927,7 +909,6 @@ class TestBehavioralConsistency:
                 dialog.close()
                 qt_app.processEvents()
 
-
 class TestCleanupAndLifecycle:
     """Test dialog cleanup and lifecycle management."""
     
@@ -965,7 +946,6 @@ class TestCleanupAndLifecycle:
             dialog.close()
             qt_app.processEvents()
 
-
 # Performance benchmark fixtures and utilities
 @pytest.fixture
 def performance_monitor():
@@ -997,7 +977,6 @@ def performance_monitor():
             }
     
     return PerformanceMonitor()
-
 
 # Run performance benchmarks if requested
 def test_comprehensive_performance_benchmark(qt_app: QApplication, dialog_implementations: dict[str, type], performance_monitor) -> None:
@@ -1039,7 +1018,6 @@ def test_comprehensive_performance_benchmark(qt_app: QApplication, dialog_implem
     for impl_name in dialog_implementations.keys():
         time_ms = performance_monitor.get_measurement(impl_name)
         assert time_ms < PERFORMANCE_THRESHOLD_MS * iterations, f"{impl_name} performance regression: {time_ms}ms"
-
 
 if __name__ == "__main__":
     # Run tests directly if called as script

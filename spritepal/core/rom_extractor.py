@@ -2,6 +2,7 @@
 ROM sprite extraction functionality for SpritePal
 Extracts sprites directly from ROM files using HAL decompression
 """
+from __future__ import annotations
 
 import math
 from pathlib import Path
@@ -54,8 +55,7 @@ from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 from utils.rom_exceptions import ROMCompressionError
 
-logger: "logging.Logger" = get_logger(__name__)
-
+logger: logging.Logger = get_logger(__name__)
 
 class ROMExtractor:
     """Handles sprite extraction directly from ROM files"""

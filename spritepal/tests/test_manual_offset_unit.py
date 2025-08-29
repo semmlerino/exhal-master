@@ -4,13 +4,13 @@ Unit tests for Manual Offset Dialog components.
 These tests focus on individual methods and core logic without requiring
 full Qt setup or complex integration scenarios.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
-
 
 # Test characteristics: Singleton management
 pytestmark = [
@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.ci_safe,
 ]
-
 
 @pytest.mark.unit
 @pytest.mark.no_manager_setup
@@ -138,7 +137,6 @@ class TestManualOffsetDialogSingleton:
         ManualOffsetDialogSingleton.reset()
         assert ManualOffsetDialogSingleton._instance is None
 
-
 @pytest.mark.unit
 @pytest.mark.no_manager_setup
 class TestUnifiedManualOffsetDialogMethods:
@@ -221,7 +219,6 @@ class TestUnifiedManualOffsetDialogMethods:
         # Test None
         assert not is_valid_rom_data(None)
 
-
 def is_valid_rom_data(data):
     """Helper function to validate ROM data."""
     if data is None:
@@ -229,7 +226,6 @@ def is_valid_rom_data(data):
     if len(data) < 0x8000:  # Minimum 32KB
         return False
     return True
-
 
 @pytest.mark.unit
 @pytest.mark.no_manager_setup

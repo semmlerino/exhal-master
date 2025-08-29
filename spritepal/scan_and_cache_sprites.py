@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Scan a ROM for sprites and cache the results for later use.
 This allows us to quickly load sprite data for screenshots without re-scanning.
@@ -41,7 +43,7 @@ def scan_rom_for_sprites(rom_path: Path, limit: int = 50) -> list[dict[str, Any]
     extractor = ROMExtractor()
 
     # Find sprites using SpriteFinder
-    finder = SpriteFinder("sprite_candidates")
+    SpriteFinder("sprite_candidates")
     sprites = []
 
     print(f"Searching for sprites (limit: {limit})...")

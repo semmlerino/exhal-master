@@ -5,6 +5,7 @@ This module provides mock implementations of HAL compression/decompression
 that eliminate process pool overhead while maintaining interface compatibility.
 Tests run 7x faster with these mocks compared to real HAL process pools.
 """
+from __future__ import annotations
 
 import contextlib
 import hashlib
@@ -290,7 +291,6 @@ class MockHALProcessPool:
         """Toggle between deterministic and random mock data."""
         self._deterministic_data = enabled
 
-
 class MockHALCompressor:
     """
     Fast mock implementation of HALCompressor for unit tests.
@@ -492,7 +492,6 @@ class MockHALCompressor:
 
         return stats
 
-
 def create_mock_hal_tools(tmp_path: Path) -> tuple[str, str]:
     """
     Create mock HAL tool executables for testing.
@@ -515,7 +514,6 @@ def create_mock_hal_tools(tmp_path: Path) -> tuple[str, str]:
 
     return str(exhal_path), str(inhal_path)
 
-
 def patch_hal_for_tests():
     """
     Patch HAL modules to use mock implementations.
@@ -529,7 +527,6 @@ def patch_hal_for_tests():
         HALProcessPool=MockHALProcessPool,
         HALCompressor=MockHALCompressor
     )
-
 
 def configure_hal_mocking(use_mocks: bool = True, deterministic: bool = True):
     """
@@ -548,11 +545,9 @@ def configure_hal_mocking(use_mocks: bool = True, deterministic: bool = True):
         os.environ.pop('SPRITEPAL_MOCK_HAL', None)
         os.environ.pop('SPRITEPAL_MOCK_HAL_DETERMINISTIC', None)
 
-
 def is_hal_mocked() -> bool:
     """Check if HAL mocking is enabled."""
     return os.environ.get('SPRITEPAL_MOCK_HAL') == '1'
-
 
 def is_hal_deterministic() -> bool:
     """Check if HAL mocks should use deterministic data."""

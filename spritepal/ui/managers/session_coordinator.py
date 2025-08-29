@@ -1,6 +1,7 @@
 """
 Session coordination for MainWindow save/restore functionality
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -16,15 +17,14 @@ if TYPE_CHECKING:
     from ui.main_window import MainWindow
     from ui.managers.output_settings_manager import OutputSettingsManager
 
-
 class SessionCoordinator(QObject):
     """Coordinates session save/restore operations"""
 
     def __init__(
         self,
-        main_window: "MainWindow",
-        extraction_panel: "ExtractionPanel",
-        output_settings_manager: "OutputSettingsManager"
+        main_window: MainWindow,
+        extraction_panel: ExtractionPanel,
+        output_settings_manager: OutputSettingsManager
     ) -> None:
         """Initialize session coordinator
 

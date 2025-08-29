@@ -7,6 +7,7 @@ This test module verifies:
 3. Proper cleanup handling
 4. Cache thread safety
 """
+from __future__ import annotations
 
 import concurrent.futures
 import os
@@ -30,7 +31,6 @@ pytestmark = [
     pytest.mark.worker_threads,
 ]
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.preview_generator import (
@@ -40,7 +40,6 @@ from utils.preview_generator import (
     cleanup_preview_generator,
     get_preview_generator,
 )
-
 
 class TestPreviewGeneratorThreadSafety:
     """Test thread safety of PreviewGenerator singleton."""
@@ -309,7 +308,6 @@ class TestPreviewGeneratorThreadSafety:
 
         # Cancel any pending requests
         generator.cancel_pending_requests()
-
 
 @pytest.fixture(autouse=True)
 def cleanup_singleton():

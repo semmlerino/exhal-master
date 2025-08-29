@@ -5,7 +5,6 @@ Test infrastructure fixes and verification
 import pytest
 import time
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -15,7 +14,6 @@ pytestmark = [
     pytest.mark.cache,
 ]
 
-
 @pytest.mark.no_manager_setup
 def test_runs_fast():
     """This should complete in <0.1 seconds"""
@@ -24,12 +22,10 @@ def test_runs_fast():
     elapsed = time.time() - start
     assert elapsed < 0.1, f"Test took {elapsed}s, should be <0.1s"
 
-
 def test_session_fixture_available(managers):
     """This should reuse session managers"""
     assert managers is not None
     # Should not reinitialize
-
 
 @pytest.mark.no_manager_setup  
 def test_circular_import_prevention():
@@ -40,7 +36,6 @@ def test_circular_import_prevention():
     
     assert MainWindow is not None
     assert ExtractionController is not None
-
 
 @pytest.mark.no_manager_setup
 def test_manager_markers_work():
@@ -56,7 +51,6 @@ def test_manager_markers_work():
     elapsed = time.time() - start
     assert elapsed < 0.01, f"Test took {elapsed}s, markers may not be working"
 
-
 def test_session_managers_reuse(session_managers):
     """Test that session managers are reused across tests"""
     # This test gets fresh session managers
@@ -71,7 +65,6 @@ def test_session_managers_reuse(session_managers):
     assert injection_manager is not None  
     assert session_manager is not None
 
-
 def test_session_managers_reuse_second_test(session_managers):
     """Second test using session managers should be very fast"""
     start = time.time()
@@ -83,7 +76,6 @@ def test_session_managers_reuse_second_test(session_managers):
     elapsed = time.time() - start
     # Manager access should be virtually instant if properly cached
     assert elapsed < 0.05, f"Manager access took {elapsed}s, should be cached"
-
 
 @pytest.mark.no_manager_setup
 def test_infrastructure_speed_baseline():

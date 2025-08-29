@@ -4,6 +4,7 @@ Performance tests to validate HAL mocking improvements.
 This module demonstrates the performance improvements achieved by
 using mock HAL implementations instead of real process pools.
 """
+from __future__ import annotations
 
 import time
 import pytest
@@ -24,7 +25,6 @@ pytestmark = [
     pytest.mark.headless,
     pytest.mark.performance,
 ]
-
 
 class TestHALMockingPerformance:
     """Test HAL mocking performance improvements."""
@@ -225,7 +225,6 @@ class TestHALMockingPerformance:
         # Mock should be at least 10x faster for requests
         assert request_speedup > 10
 
-
 class TestHALCompressorMocking:
     """Test HAL compressor mocking."""
     
@@ -303,7 +302,6 @@ class TestHALCompressorMocking:
         stats = hal_compressor.get_statistics()
         assert stats["decompress_count"] == 1
         assert stats["compress_count"] == 1
-
 
 class TestAutoMocking:
     """Test automatic HAL mocking based on test type."""

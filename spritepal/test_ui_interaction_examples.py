@@ -42,7 +42,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from ui.main_window import MainWindow
 from core.managers.registry import initialize_managers, cleanup_managers
 
-
 class TestUIInteractionExamples:
     """
     Examples of advanced UI testing patterns with qtbot.
@@ -555,7 +554,6 @@ class TestUIInteractionExamples:
         
         assert widget.slave_input.text() == str(known_value), "Force sync should correct slave value"
         assert f"force_sync_{known_value}" in widget.sync_events, "Force sync should be logged"
-
 
 if __name__ == "__main__":
     # Run examples when executed directly

@@ -2,6 +2,7 @@
 Comprehensive tests for ROM sprite extraction functionality.
 Tests both unit functionality and integration across multiple modules.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import Mock
@@ -12,7 +13,6 @@ from PIL import Image
 from core.hal_compression import HALCompressionError
 from core.rom_extractor import ROMExtractor
 from utils.constants import BYTES_PER_TILE, TILE_HEIGHT, TILE_WIDTH
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.slow,
 ]
-
 
 class TestROMExtractorInit:
     """Test ROM extractor initialization"""
@@ -54,7 +53,6 @@ class TestROMExtractorInit:
         assert isinstance(extractor.default_palette_loader, DefaultPaletteLoader)
         assert isinstance(extractor.rom_palette_extractor, ROMPaletteExtractor)
         assert isinstance(extractor.sprite_config_loader, SpriteConfigLoader)
-
 
 class TestROMExtractor4bppConversion:
     """Test 4bpp to PNG conversion functionality"""
@@ -190,7 +188,6 @@ class TestROMExtractor4bppConversion:
             assert img.size[0] > 0  # Width should be positive
             assert img.size[1] >= 0  # Height should be non-negative
 
-
 class TestROMExtractorSpriteLocations:
     """Test sprite location discovery functionality"""
 
@@ -241,7 +238,6 @@ class TestROMExtractorSpriteLocations:
         locations = mock_extractor.get_known_sprite_locations("/path/to/bad.sfc")
 
         assert locations == {}
-
 
 class TestROMExtractorMainExtraction:
     """Test main sprite extraction functionality"""
@@ -464,7 +460,6 @@ class TestROMExtractorMainExtraction:
             mock_extractor.extract_sprite_from_rom(
                 str(rom_path), 0x8000, str(output_base), "test_sprite"
             )
-
 
 class TestROMExtractorIntegration:
     """Integration tests with real file operations"""

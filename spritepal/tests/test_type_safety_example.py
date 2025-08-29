@@ -3,6 +3,8 @@
 # pyright: reportUnknownMemberType=warning  # Mock attributes are dynamic
 # pyright: reportUnknownArgumentType=warning  # Test data may be dynamic
 
+from __future__ import annotations
+
 """
 Type-safe test example demonstrating best practices for SpritePal tests.
 
@@ -41,7 +43,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 class TestTypeSafetyPatterns:
     """Demonstrate type-safe testing patterns."""
@@ -158,7 +159,6 @@ class TestTypeSafetyPatterns:
             # Type narrowing works properly
             assert len(str(input_value)) > 0
 
-
 class TestAsyncTypePatterns:
     """Demonstrate type-safe async testing patterns."""
 
@@ -179,7 +179,6 @@ class TestAsyncTypePatterns:
         await sleep(0.001)  # Simulate async work
         return f"processed: {data}"
 
-
 class TestContextManagerPatterns:
     """Demonstrate type-safe context manager testing."""
 
@@ -196,7 +195,6 @@ class TestContextManagerPatterns:
             content = f.read()
         
         assert content == "test data"
-
 
 class TestFixtureTypeSafety:
     """Demonstrate type-safe fixture usage."""
@@ -232,7 +230,6 @@ class TestFixtureTypeSafety:
         rom_path: str = real_extraction_params["rom_path"]
         assert rom_path.endswith(('.sfc', '.smc'))
 
-
 # Factory pattern for type-safe test objects
 class TypeSafeTestFactory:
     """Factory for creating type-safe test objects."""
@@ -260,7 +257,6 @@ class TypeSafeTestFactory:
         mock.process_request = Mock(return_value={"status": "success"})
         
         return mock
-
 
 # Integration test showing real vs mock patterns
 class TestRealVsMockPatterns:
@@ -322,7 +318,6 @@ class TestRealVsMockPatterns:
         # Mock only the external dependency
         output_path = mock_writer.write_sprite(sprite_data)  # pyright: ignore[reportUnknownMemberType]
         assert output_path.endswith(".png")  # pyright: ignore[reportUnknownMemberType]
-
 
 # Performance testing with proper typing
 class TestPerformancePatterns:

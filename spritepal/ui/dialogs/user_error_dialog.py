@@ -2,6 +2,7 @@
 User-friendly error dialog for SpritePal
 Provides clear error messages and recovery suggestions
 """
+from __future__ import annotations
 
 from typing import ClassVar
 
@@ -158,7 +159,7 @@ class UserErrorDialog(BaseDialog):
                 f"Full Error:\n{technical_details or error_message}"
             )
             details_text.setStyleSheet(
-                "QTextEdit { background-color: #f5f5f5; font-family: monospace; }"
+                "QTextEdit { background-color: #f5f5f5; color: #000000; font-family: monospace; }"
             )
             details_text.hide()  # Hidden by default
 

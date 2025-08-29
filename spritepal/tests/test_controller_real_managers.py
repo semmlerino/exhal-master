@@ -4,6 +4,7 @@ This test file demonstrates the hybrid approach of using real manager
 implementations for business logic testing while mocking only I/O operations.
 This provides better test coverage and catches real bugs in manager logic.
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
@@ -13,7 +14,6 @@ from typing import Any
 from core.controller import ExtractionController
 from core.managers import ExtractionManager, InjectionManager, SessionManager
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
 
 # Serial execution required: Real Qt components
 pytestmark = [
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.mock_dialogs,
     pytest.mark.unit,
 ]
-
 
 class TestControllerWithRealManagers:
     """Test controller with real manager implementations.
@@ -149,7 +148,6 @@ class TestControllerWithRealManagers:
         # Verify data persisted through real manager
         assert new_session.get("test", "key") == "value"
 
-
 class TestRealManagerBenefits:
     """Demonstrate benefits of using real managers in tests."""
     
@@ -189,7 +187,6 @@ class TestRealManagerBenefits:
         # Real manager handles individual keys
         assert manager.get("category", "key1") == "value1"
         assert manager.get("category", "key2") == "value2"
-
 
 # Summary of benefits:
 # 1. Tests real business logic, not mocked behavior

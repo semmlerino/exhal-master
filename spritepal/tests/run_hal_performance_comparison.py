@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Script to compare HAL test performance with and without mocking.
 
@@ -69,7 +71,6 @@ def run_tests_with_timing(use_real_hal=False, test_pattern="test_hal"):
         'returncode': result.returncode
     }
 
-
 def main():
     """Run performance comparison."""
     
@@ -123,7 +124,6 @@ def main():
             print(f"Real errors: {real_results['errors'][:500]}")
     
     return 0 if speedup >= 7 else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

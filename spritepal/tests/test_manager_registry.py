@@ -1,14 +1,12 @@
 """
 Tests for manager registry
 """
-
-
+from __future__ import annotations
 
 import pytest
 
 from core.managers import (
 # Serial execution required: Thread safety concerns
-
 
     ExtractionManager,
     ManagerError,
@@ -21,8 +19,6 @@ from core.managers import (
     initialize_managers,
 )
 from core.managers.registry import ManagerRegistry
-
-
 
 pytestmark = [
     

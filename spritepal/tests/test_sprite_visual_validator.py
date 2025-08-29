@@ -1,6 +1,7 @@
 """
 Tests for sprite visual validator
 """
+from __future__ import annotations
 
 from unittest.mock import patch
 
@@ -10,7 +11,6 @@ from PIL import Image
 
 import core.sprite_visual_validator as validator_module
 from core.sprite_visual_validator import SpriteVisualValidator
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -22,12 +22,10 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 @pytest.fixture
 def validator():
     """Create a validator instance"""
     return SpriteVisualValidator()
-
 
 @pytest.fixture
 def create_test_image():
@@ -74,7 +72,6 @@ def create_test_image():
         return img
 
     return _create_image
-
 
 class TestSpriteVisualValidator:
     """Test sprite visual validation functionality"""

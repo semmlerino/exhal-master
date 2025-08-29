@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to verify critical thread safety fixes.
 Tests the refactored BatchThumbnailWorker with proper moveToThread pattern.
@@ -14,7 +16,6 @@ from PySide6.QtWidgets import QApplication
 sys.path.insert(0, '.')
 
 from ui.workers.batch_thumbnail_worker import ThumbnailWorkerController, BatchThumbnailWorker
-
 
 def test_worker_thread_safety():
     """Test that worker properly uses moveToThread pattern."""
@@ -120,7 +121,6 @@ def test_worker_thread_safety():
         # Clean up temp file
         Path(rom_path).unlink(missing_ok=True)
 
-
 def test_type_safety():
     """Test type safety fixes."""
     print("\n\nTesting type safety fixes...")
@@ -129,7 +129,7 @@ def test_type_safety():
     print("\n1. Testing MainWindowProtocol...")
     try:
         from core.protocols.manager_protocols import MainWindowProtocol
-        from typing import Protocol
+from typing import Protocol
         
         # Check if it's a Protocol (expected due to metaclass conflict)
         # This is a known limitation - MainWindowProtocol cannot inherit from QWidget
@@ -146,7 +146,7 @@ def test_type_safety():
     print("\n2. Testing TypedDict definitions...")
     try:
         from core.controller import ROMExtractionParams
-        from typing import get_type_hints
+from typing import get_type_hints
         from typing_extensions import NotRequired
         
         hints = get_type_hints(ROMExtractionParams, include_extras=True)
@@ -158,7 +158,6 @@ def test_type_safety():
     
     print("\n✅ All type safety tests passed!")
     return True
-
 
 def main():
     """Run all tests."""
@@ -194,7 +193,6 @@ def main():
     else:
         print("\n⚠️ Some tests failed. Please review the fixes.")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

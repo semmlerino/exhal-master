@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive test suite for simple dialogs migration.
 
@@ -23,7 +25,7 @@ Usage:
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple
+from typing import Any, Generator
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
@@ -64,13 +66,12 @@ except ImportError as e:
                 'QTest', 'Qt', 'Signal']:
         globals()[name] = MockQtClass()
 
-
 class DialogTestResult:
     """Store and track test results for comparison between implementations"""
     
     def __init__(self):
-        self.results: Dict[str, Dict[str, Any]] = {}
-        self.errors: List[str] = []
+        self.results: dict[str, Dict[str, Any]] = {}
+        self.errors: list[str] = []
         self.implementation_type = "unknown"
     
     def record_result(self, test_name: str, **kwargs):
@@ -89,7 +90,7 @@ class DialogTestResult:
         """Check if any errors were recorded"""
         return len(self.errors) > 0
     
-    def compare_with(self, other: 'DialogTestResult') -> List[str]:
+    def compare_with(self, other: 'DialogTestResult') -> list[str]:
         """Compare results with another test result instance"""
         differences = []
         
@@ -112,12 +113,11 @@ class DialogTestResult:
         
         return differences
 
-
 class TestDialogMigrationFramework:
     """Base class providing common test infrastructure for dialog migration testing"""
     
     @pytest.fixture(scope="class")
-    def qt_app(self) -> Generator[Optional[QApplication], None, None]:
+    def qt_app(self) -> Generator[QApplication | None, None, None]:
         """Create QApplication instance if Qt is available"""
         if not HAS_QT:
             yield None
@@ -182,7 +182,6 @@ class TestDialogMigrationFramework:
                 # In mock mode, return a mock object
                 return Mock(spec=dialog_class)
 
-
 class TestFeatureFlagSystem(TestDialogMigrationFramework):
     """Test the feature flag system for dialog implementation selection"""
     
@@ -234,7 +233,6 @@ class TestFeatureFlagSystem(TestDialogMigrationFramework):
             
         finally:
             os.environ["SPRITEPAL_USE_COMPOSED_DIALOGS"] = original_value
-
 
 class TestSettingsDialogMigration(TestDialogMigrationFramework):
     """Comprehensive tests for SettingsDialog migration"""
@@ -482,7 +480,6 @@ class TestSettingsDialogMigration(TestDialogMigrationFramework):
             if hasattr(dialog, 'deleteLater'):
                 dialog.deleteLater()
 
-
 class TestUserErrorDialogMigration(TestDialogMigrationFramework):
     """Comprehensive tests for UserErrorDialog migration"""
     
@@ -620,7 +617,6 @@ class TestUserErrorDialogMigration(TestDialogMigrationFramework):
             except Exception as e:
                 pytest.fail(f"Static show_error method failed: {e}")
 
-
 class TestImplementationComparison(TestDialogMigrationFramework):
     """Test to compare behavior between legacy and composed implementations"""
     
@@ -691,7 +687,6 @@ class TestImplementationComparison(TestDialogMigrationFramework):
         if composed_result.has_errors():
             pytest.fail(f"Composed implementation errors: {composed_result.errors}")
 
-
 class TestImportOnlyFallback:
     """Test imports work correctly even when Qt is not available"""
     
@@ -740,7 +735,6 @@ class TestImportOnlyFallback:
         except ImportError as e:
             pytest.fail(f"Failed to import feature flag utilities: {e}")
 
-
 # Test summary and reporting functions
 def pytest_runtest_setup(item):
     """pytest hook to set up each test"""
@@ -752,7 +746,6 @@ def pytest_runtest_setup(item):
         if not HAS_QT and QT_IMPORT_ERROR:
             print(f"Qt Import Error: {QT_IMPORT_ERROR}")
         print('='*60)
-
 
 def pytest_runtest_teardown(item, nextitem):
     """pytest hook to clean up after each test"""
@@ -766,7 +759,6 @@ def pytest_runtest_teardown(item, nextitem):
                     widget.close()
                 widget.deleteLater()
             app.processEvents()
-
 
 if __name__ == "__main__":
     """Run tests when executed directly"""

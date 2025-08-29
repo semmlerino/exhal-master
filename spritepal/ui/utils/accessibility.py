@@ -2,8 +2,7 @@
 Accessibility utilities for SpritePal UI components.
 Provides helpers for keyboard navigation, screen reader support, and focus management.
 """
-
-from typing import Optional, Union
+from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
@@ -63,8 +62,8 @@ class AccessibilityHelper:
         widget: QWidget,
         name: str,
         description: str = "",
-        shortcut: Optional[str] = None,
-        role: Optional[str] = None
+        shortcut: str | None = None,
+        role: str | None = None
     ) -> QWidget:
         """
         Make a widget accessible with proper naming and descriptions.
@@ -114,7 +113,7 @@ class AccessibilityHelper:
         label_text: str,
         input_widget: QWidget,
         description: str = "",
-        mnemonic_char: Optional[str] = None
+        mnemonic_char: str | None = None
     ) -> tuple[QLabel, QWidget]:
         """
         Create a properly linked label-input pair for accessibility.
@@ -195,7 +194,7 @@ class AccessibilityHelper:
 
     @staticmethod
     def add_action_with_shortcut(
-        parent: Union[QMainWindow, QDialog, QWidget],
+        parent: QMainWindow | QDialog | QWidget,
         name: str,
         text: str,
         shortcut: str,
@@ -355,16 +354,16 @@ class AccessibilityHelper:
         if isinstance(widget, QMainWindow):
             widget.statusBar().showMessage(message, 5000)
 
-
 def apply_global_accessibility_styles():
     """Apply global accessibility styles to the application."""
     from typing import cast
+
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if not app:
         return
-    
+
     # Cast to QApplication for type checker
     app = cast(QApplication, app)
 

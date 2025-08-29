@@ -5,6 +5,7 @@ This module tests the integration of dark theme styling with real Qt widgets,
 application theme switching, and preview widget dark backgrounds.
 Uses real Qt components following the established testing patterns.
 """
+from __future__ import annotations
 
 import os
 from typing import Any, Generator
@@ -32,7 +33,6 @@ from ui.styles.components import (
 )
 from ui.styles.theme import COLORS, get_theme_style
 
-
 # Mock the Qt widget imports to avoid import dependencies during testing
 try:
     from ui.widgets.sprite_preview_widget import SpritePreviewWidget
@@ -42,7 +42,6 @@ except ImportError:
     WIDGETS_AVAILABLE = False
     SpritePreviewWidget = Mock
     ZoomablePreviewWidget = Mock
-
 
 class TestApplicationThemeIntegration:
     """Test dark theme integration at the application level."""
@@ -134,7 +133,6 @@ class TestApplicationThemeIntegration:
         assert len(line_edit.styleSheet()) > 0
         assert len(group_box.styleSheet()) > 0
 
-
 class TestPreviewWidgetDarkTheme:
     """Test dark theme integration with preview widgets."""
 
@@ -224,7 +222,6 @@ class TestPreviewWidgetDarkTheme:
         
         assert preview_label.pixmap() is not None
         assert preview_label.pixmap().width() == 64
-
 
 class TestStylesheetIntegration:
     """Test CSS stylesheet integration with Qt widgets."""
@@ -334,7 +331,6 @@ class TestStylesheetIntegration:
         assert len(nested_button.styleSheet()) > 0
         assert len(nested_input.styleSheet()) > 0
 
-
 class TestMockApplicationIntegration:
     """Test application-level theme integration using mocks where appropriate."""
 
@@ -378,7 +374,6 @@ class TestMockApplicationIntegration:
                 # For now, just test that environment variables are readable
                 theme_setting = os.environ.get("SPRITEPAL_THEME", "dark")
                 assert theme_setting in ["dark", "auto", "light"] or theme_setting == "dark"
-
 
 class TestThemeConsistency:
     """Test consistency of theme application across different widgets."""
@@ -447,7 +442,6 @@ class TestThemeConsistency:
         # Performance should be reasonable (under 1 second for 20 widgets)
         assert creation_time < 1.0, f"Widget creation took too long: {creation_time:.2f}s"
         assert total_time < 2.0, f"Total theme application took too long: {total_time:.2f}s"
-
 
 @pytest.mark.headless
 class TestIntegrationHeadless:

@@ -4,6 +4,7 @@ Test sprite preview widget functionality
 This is a real Qt widget test that requires a GUI environment and tests
 actual widget rendering, pixmap handling, and Qt-specific behavior.
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -14,7 +15,6 @@ from PySide6.QtWidgets import QApplication
 
 from core.managers import cleanup_managers, initialize_managers
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
-
 
 # Skip in headless environments - this tests real Qt widget functionality
 pytestmark = [
@@ -32,14 +32,12 @@ pytestmark = [
     pytest.mark.rom_data,
 ]
 
-
 @pytest.fixture(autouse=True)
 def setup_managers():
     """Setup managers for all tests"""
     initialize_managers("TestApp")
     yield
     cleanup_managers()
-
 
 class TestSpritePreviewWidget:
     """Test the sprite preview widget"""
@@ -133,7 +131,6 @@ class TestSpritePreviewWidget:
         # Check state
         assert widget.sprite_pixmap is not None
         assert widget.info_label.text() == "Size: 8x8 | Tiles: 1"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

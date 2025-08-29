@@ -4,6 +4,7 @@ Test ROM cache exception handling improvements.
 Tests specific file I/O exceptions and error propagation scenarios
 for the JSON-based ROM cache implementation.
 """
+from __future__ import annotations
 
 import json
 import tempfile
@@ -13,7 +14,6 @@ from unittest.mock import patch
 import pytest
 
 from utils.rom_cache import ROMCache
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.cache,
     pytest.mark.ci_safe,
 ]
-
 
 class TestROMCacheExceptionHandling:
     """Test ROM cache exception handling and error propagation"""

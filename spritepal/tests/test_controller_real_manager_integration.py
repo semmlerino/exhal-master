@@ -18,7 +18,7 @@ This replaces heavy mock usage in test_controller.py:
 - Mock manager method calls (hides real manager coordination)
 - Fake signal chains (can't test real cross-manager communication)
 """
-
+from __future__ import annotations
 
 import sys
 import time
@@ -46,7 +46,6 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -71,7 +70,6 @@ from core.managers import (
     initialize_managers,
 )
 from ui.main_window import MainWindow
-
 
 class TestRealControllerManagerIntegration:
     """
@@ -402,7 +400,6 @@ class TestRealControllerManagerIntegration:
                 assert extraction_manager is not None, "ExtractionManager should remain accessible"
                 assert session_manager is not None, "SessionManager should remain accessible"
 
-
 class TestRealControllerWorkerManagerChain:
     """
     Test the complete controller -> manager -> worker integration chain.
@@ -490,7 +487,6 @@ class TestRealControllerWorkerManagerChain:
             finally:
                 # Restore method
                 main_window.get_extraction_params = original_get_params
-
 
 class TestBugDiscoveryRealVsMockedManagers:
     """
@@ -585,7 +581,6 @@ class TestBugDiscoveryRealVsMockedManagers:
 
             except Exception as e:
                 pytest.fail(f"REAL BUG: Manager resource conflict: {e}")
-
 
 if __name__ == "__main__":
     # Run the tests directly

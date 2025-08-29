@@ -1,4 +1,5 @@
 """Integration tests for settings persistence across components"""
+from __future__ import annotations
 
 import json
 import tempfile
@@ -11,7 +12,6 @@ from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
 from utils.settings_manager import SettingsManager, get_settings_manager
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
 ]
-
 
 class TestSettingsIntegration:
     """Test settings integration across application components"""

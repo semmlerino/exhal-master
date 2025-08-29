@@ -13,6 +13,7 @@ Key test areas:
 - Singleton behavior preservation
 - Performance characteristics
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
@@ -26,7 +27,6 @@ from ui.dialogs.manual_offset.components import (
     TabManagerComponent, LayoutManagerComponent, WorkerCoordinatorComponent,
     ROMCacheComponent, SignalRouterComponent
 )
-
 
 class TestManualOffsetComposedArchitecture:
     """Test suite for composed architecture implementation."""
@@ -183,7 +183,6 @@ class TestManualOffsetComposedArchitecture:
         # marked as skip for now
         pass
 
-
 class TestManualOffsetMigrationCompatibility:
     """Test migration compatibility between old and new implementations."""
     
@@ -206,7 +205,6 @@ class TestManualOffsetMigrationCompatibility:
         # order and that all dependencies are properly satisfied
         pass
 
-
 class TestManualOffsetPerformance:
     """Performance tests to ensure no regression."""
     
@@ -225,7 +223,6 @@ class TestManualOffsetPerformance:
         """Test that memory usage is comparable to original implementation."""
         pass
 
-
 @pytest.fixture
 def mock_rom_cache():
     """Mock ROM cache for testing."""
@@ -235,18 +232,15 @@ def mock_rom_cache():
     }
     return mock_cache
 
-
 @pytest.fixture  
 def mock_extraction_manager():
     """Mock extraction manager for testing."""
     return Mock()
 
-
 @pytest.fixture
 def mock_rom_extractor():
     """Mock ROM extractor for testing."""
     return Mock()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

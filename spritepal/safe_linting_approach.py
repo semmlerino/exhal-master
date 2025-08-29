@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 SAFE approach to fixing linting issues - analyze first, fix manually.
 This script ONLY analyzes and reports, does NOT auto-fix.

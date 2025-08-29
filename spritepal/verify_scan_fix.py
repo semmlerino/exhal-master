@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Script to verify that the ROM scan range fix is working correctly.
 This demonstrates that the scan now includes the end offset.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -61,7 +62,6 @@ def test_parallel_finder_chunk_iteration():
 
     return checked_offsets
 
-
 def test_rom_extractor_scan_loop():
     """Test the ROMExtractor scan loop logic."""
     print("\nTesting ROMExtractor scan loop...")
@@ -95,7 +95,6 @@ def test_rom_extractor_scan_loop():
 
     return scan_offsets
 
-
 def compare_old_vs_new():
     """Compare old range() method vs new while loop method."""
     print("\nComparing old vs new scanning methods:")
@@ -127,7 +126,6 @@ def compare_old_vs_new():
         print("  ℹ️  End offset was already included (step divides evenly)")
     else:
         print(f"  ✗ Bug still present: End offset 0x{end:X} not included")
-
 
 if __name__ == "__main__":
     print("=" * 60)

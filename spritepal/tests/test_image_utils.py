@@ -1,4 +1,5 @@
 """Tests for image utility functions"""
+from __future__ import annotations
 
 import logging
 from unittest.mock import MagicMock, patch
@@ -17,7 +18,6 @@ try:
 except ImportError:
     QT_AVAILABLE = False
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.headless,
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.no_manager_setup,  # Pure unit tests for image utility functions
 ]
-
 
 def is_headless_environment():
     """Check if we're in a headless environment"""
@@ -41,7 +40,6 @@ def is_headless_environment():
         or "microsoft" in os.uname().release.lower()
         or (sys.platform.startswith("linux") and not os.environ.get("DISPLAY"))
     )
-
 
 @pytest.mark.gui
 @pytest.mark.skipif(not QT_AVAILABLE, reason="Qt not available")
@@ -179,7 +177,6 @@ class TestPilToQPixmap:
             assert pixmap is not None, f"Failed to convert {mode} mode image"
             assert pixmap.width() == 20
             assert pixmap.height() == 20
-
 
 class TestCreateCheckerboardPattern:
     """Test checkerboard pattern creation"""

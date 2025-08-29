@@ -1,6 +1,7 @@
 """
 Menu bar management for MainWindow
 """
+from __future__ import annotations
 
 from typing import Protocol
 
@@ -26,7 +27,6 @@ class MenuBarActionsProtocol(Protocol):
     def clear_all_caches(self) -> None:
         """Clear all caches with confirmation"""
         ...
-
 
 class MenuBarManager:
     """Manages menu bar creation and actions for MainWindow"""

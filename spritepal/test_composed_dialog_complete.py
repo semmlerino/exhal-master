@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive test for composed dialog functionality including deferred signal connections.
 
@@ -72,7 +74,6 @@ def test_composed_dialog_creation(app):
     
     return True
 
-
 def test_button_functionality(app):
     """Test that dialog buttons work correctly."""
     print("=" * 60)
@@ -115,7 +116,6 @@ def test_button_functionality(app):
         app.quit()
     
     return True
-
 
 def test_singleton_pattern_with_signals():
     """Test singleton pattern with deferred signal connections."""
@@ -191,12 +191,12 @@ def test_singleton_pattern_with_signals():
         # Clean up temp file
         try:
             os.unlink(temp_rom.name)
-        except:
+        except Exception as e:
+            # Caught exception during operation
             pass
         app.quit()
     
     return True
-
 
 def test_dialog_lifecycle():
     """Test complete dialog lifecycle including signal connections."""
@@ -257,7 +257,6 @@ def test_dialog_lifecycle():
     
     return True
 
-
 def test_legacy_vs_composed_comparison():
     """Compare legacy vs composed dialog functionality."""
     print("=" * 60) 
@@ -309,7 +308,6 @@ def test_legacy_vs_composed_comparison():
     
     return True
 
-
 def main():
     """Run all tests."""
     print("COMPOSED DIALOG COMPREHENSIVE TEST SUITE")
@@ -354,7 +352,6 @@ def main():
     else:
         print("⚠️ SOME TESTS FAILED. Please check the output above for details.")
         return False
-
 
 if __name__ == "__main__":
     success = main()

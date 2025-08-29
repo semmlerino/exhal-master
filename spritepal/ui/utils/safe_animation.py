@@ -4,16 +4,16 @@ Safe animation utilities for Qt widgets.
 Provides fallback behavior for animations in headless environments where
 Qt graphics resources may not be available.
 """
+from __future__ import annotations
 
 import contextlib
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, Optional, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QEasingCurve, QObject, QPropertyAnimation
     from PySide6.QtWidgets import QWidget
-
 
 def is_headless_environment() -> bool:
     """
@@ -66,7 +66,6 @@ def is_headless_environment() -> bool:
 
     return False
 
-
 class SafeAnimation:
     """
     Safe wrapper for QPropertyAnimation that falls back to instant changes in headless mode.
@@ -76,7 +75,7 @@ class SafeAnimation:
     animation when graphics resources are unavailable.
     """
 
-    def __init__(self, target: Optional["QObject"] = None, property_name: Optional[bytes] = None):
+    def __init__(self, target: QObject | None = None, property_name: bytes | None = None):
         """
         Initialize safe animation wrapper.
 
@@ -90,7 +89,7 @@ class SafeAnimation:
         self._end_value = None
         self._duration = 250
         self._is_headless = is_headless_environment()
-        self._animation: Optional[QPropertyAnimation] = None
+        self._animation: QPropertyAnimation | None = None
         self._finished_callbacks: list[Callable] = []
         self._value_changed_callbacks: list[Callable] = []
 
@@ -122,7 +121,7 @@ class SafeAnimation:
         if self._animation:
             self._animation.setEndValue(value)
 
-    def setEasingCurve(self, curve: "QEasingCurve.Type") -> None:
+    def setEasingCurve(self, curve: QEasingCurve.Type) -> None:
         """Set easing curve (ignored in headless mode)."""
         if self._animation:
             self._animation.setEasingCurve(curve)
@@ -195,9 +194,8 @@ class SafeAnimation:
             if callback in self._callbacks:
                 self._callbacks.remove(callback)
 
-
-def create_safe_animation(target: Optional["QWidget"] = None,
-                         property_name: Optional[bytes] = None) -> SafeAnimation:
+def create_safe_animation(target: QWidget | None = None,
+                         property_name: bytes | None = None) -> SafeAnimation:
     """
     Factory function to create a safe animation.
 

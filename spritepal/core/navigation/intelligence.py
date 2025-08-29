@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class PatternAnalyzer:
     """
     Analyzes sprite storage patterns in ROM files.
@@ -309,7 +308,6 @@ class PatternAnalyzer:
 
         return statistics.mean(confidences)
 
-
 class OffsetPredictor:
     """
     ML-inspired predictor for next sprite locations.
@@ -575,7 +573,6 @@ class OffsetPredictor:
 
         return list(offset_map.values())
 
-
 class SimilarityEngine:
     """
     Content-based similarity analysis for sprites.
@@ -676,7 +673,6 @@ class SimilarityEngine:
         differences = sum(b1 != b2 for b1, b2 in zip(fp1, fp2))
         return 1.0 - (differences / len(fp1))
 
-
     def _calculate_metadata_similarity(self, sprite1: SpriteLocation, sprite2: SpriteLocation) -> float:
         """Calculate similarity based on metadata and context."""
         # Region type similarity
@@ -690,7 +686,6 @@ class SimilarityEngine:
         strategy_similarity = 1.0 if sprite1.discovery_strategy == sprite2.discovery_strategy else 0.5
 
         return (region_similarity + complexity_similarity + strategy_similarity) / 3.0
-
 
 class RegionClassifier:
     """

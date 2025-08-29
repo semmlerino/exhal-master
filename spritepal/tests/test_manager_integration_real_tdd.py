@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 import pytest
 from PIL import Image
@@ -35,7 +35,6 @@ from PIL import Image
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-
 
     ManagerTestContext,
     manager_context,
@@ -50,8 +49,6 @@ from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.exceptions import ValidationError
 from core.managers.session_manager import SessionManager
-
-
 
 pytestmark = [
     
@@ -334,7 +331,6 @@ class TestManagerIntegrationTDD:
             injection_mgr.cleanup()
             assert extraction_mgr.is_initialized()
 
-
 class TestManagerLifecycleIntegrationTDD:
     """TDD tests for manager lifecycle integration scenarios."""
 
@@ -397,7 +393,6 @@ class TestManagerLifecycleIntegrationTDD:
             # Context cleanup should handle all managers
             # (cleanup happens automatically when exiting context)
 
-
 # Performance Integration Tests
 
 @pytest.mark.benchmark
@@ -447,7 +442,6 @@ def test_manager_integration_performance_baseline_tdd(test_data_repo, benchmark)
     
     # Performance test should complete successfully
     assert result is True or result is False  # Should return boolean
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

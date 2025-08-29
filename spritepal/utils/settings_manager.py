@@ -4,6 +4,7 @@ Settings manager for SpritePal application
 This manager now delegates to SessionManager for actual storage to avoid
 conflicts when both managers save to the same file.
 """
+from __future__ import annotations
 
 import threading
 from pathlib import Path
@@ -195,7 +196,6 @@ class SettingsManager:
         self.set("cache", "expiration_days", max(CACHE_EXPIRATION_MIN_DAYS, min(CACHE_EXPIRATION_MAX_DAYS, days)))
         self.save_settings()
 
-
 class _SettingsManagerSingleton(ThreadSafeSingleton[SettingsManager]):
     """Thread-safe singleton holder for SettingsManager."""
     _instance: SettingsManager | None = None
@@ -205,7 +205,6 @@ class _SettingsManagerSingleton(ThreadSafeSingleton[SettingsManager]):
     def _create_instance(cls) -> SettingsManager:
         """Create a new SettingsManager instance."""
         return SettingsManager()
-
 
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance (thread-safe)"""

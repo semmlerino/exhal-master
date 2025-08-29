@@ -11,13 +11,14 @@ Key Features:
 - Cross-thread signal testing
 - Signal data capture and validation
 """
+from __future__ import annotations
 
 import time
 from collections import deque
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from PySide6.QtCore import (
     QEventLoop,
@@ -44,7 +45,6 @@ class SignalEmission:
         """String representation of emission."""
         args_str = ", ".join(str(arg) for arg in self.args)
         return f"{self.signal_name}({args_str}) at {self.timestamp:.3f}"
-
 
 class SignalSpy:
     """
@@ -213,7 +213,6 @@ class SignalSpy:
         """Check if any emissions recorded."""
         return bool(self.emissions)
 
-
 class MultiSignalSpy:
     """Spy for monitoring multiple signals simultaneously."""
 
@@ -329,7 +328,6 @@ class MultiSignalSpy:
 
         return "\n".join(lines)
 
-
 class AsyncSignalTester:
     """Helper for testing async signal behavior."""
 
@@ -418,7 +416,6 @@ class AsyncSignalTester:
 
         return timers
 
-
 class CrossThreadSignalTester:
     """Helper for testing signals across threads."""
 
@@ -478,7 +475,7 @@ class CrossThreadSignalTester:
 
     @staticmethod
     def create_threaded_emitter(
-        signal_type: Optional[type] = None
+        signal_type: type | None = None
     ) -> tuple[QObject, QThread]:
         """
         Create an object that emits signals from a worker thread.
@@ -504,7 +501,6 @@ class CrossThreadSignalTester:
         thread.start()
 
         return emitter, thread
-
 
 class SignalValidator:
     """Validator for complex signal patterns."""

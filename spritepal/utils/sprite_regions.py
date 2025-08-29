@@ -4,6 +4,7 @@ Sprite region detection and management for smart ROM navigation.
 This module provides intelligent grouping of sprites into navigable regions,
 enabling efficient ROM exploration by filtering out empty areas.
 """
+from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
@@ -19,7 +20,6 @@ from utils.constants import (
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 @dataclass
 class SpriteRegion:
@@ -64,7 +64,6 @@ class SpriteRegion:
         if self.average_quality > 0.5:
             return "medium"
         return "low"
-
 
 class SpriteRegionDetector:
     """Detects and manages sprite regions from scan results"""
@@ -221,14 +220,12 @@ class SpriteRegionDetector:
 
         return None
 
-
 class ClassificationRules(TypedDict):
     """Type definition for classification rules structure"""
     min_sprite_count: int
     max_sprite_count: int
     typical_density: tuple[float, float]  # (min, max) sprites per KB
     typical_sizes: tuple[int, int]        # (min, max) bytes
-
 
 class SpriteRegionClassifier:
     """Classifies sprite regions by type based on patterns"""
@@ -294,7 +291,6 @@ class SpriteRegionClassifier:
                 best_match = region_type
 
         return best_match, best_confidence
-
 
 class RegionUpdateManager:
     """Manages dynamic region updates as new sprites are discovered"""

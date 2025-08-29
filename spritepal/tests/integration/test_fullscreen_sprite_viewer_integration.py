@@ -17,6 +17,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtCore import QTimer, Qt
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtGui import QKeyEvent, QPixmap
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -53,7 +54,6 @@ def sample_sprites_data() -> list[dict[str, Any]]:
         },
     ]
 
-
 @pytest.fixture
 def mock_rom_extractor():
     """Create mock ROM extractor for testing."""
@@ -61,25 +61,30 @@ def mock_rom_extractor():
     extractor.extract_sprite = Mock(return_value=b'\x00' * 1024)
     return extractor
 
-
 @pytest.fixture
 def mock_parent_gallery():
-    """Create mock parent gallery with sprite pixmaps."""
-    gallery = Mock()
-    gallery_widget = Mock()
+    """Create test parent gallery with sprite pixmaps."""
+    from PySide6.QtWidgets import QWidget
     
-    # Mock the get_sprite_pixmap method
-    def mock_get_sprite_pixmap(offset: int) -> QPixmap | None:
-        if offset in [0x10000, 0x20000, 0x30000]:
-            pixmap = QPixmap(64, 64)
-            pixmap.fill(Qt.GlobalColor.blue)
-            return pixmap
-        return None
+    # Create a real Qt widget instead of Mock to avoid type errors
+    class TestParentGallery(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.gallery_widget = TestGalleryWidget()
     
-    gallery_widget.get_sprite_pixmap = mock_get_sprite_pixmap
-    gallery.gallery_widget = gallery_widget
-    return gallery
-
+    class TestGalleryWidget:
+        def get_sprite_pixmap(self, offset: int) -> QPixmap | None:
+            if offset in [0x10000, 0x20000, 0x30000]:
+                # Create ThreadSafeTestImage for thread safety, then convert to QPixmap
+                # This is safe because we're in the main thread (GUI test)
+                test_image = ThreadSafeTestImage(64, 64)
+                test_image.fill(Qt.GlobalColor.blue)
+                # Convert to QPixmap for GUI usage (safe in main thread)
+                pixmap = QPixmap.fromImage(test_image.toImage())
+                return pixmap
+            return None
+    
+    return TestParentGallery()
 
 @pytest.mark.gui
 @pytest.mark.integration
@@ -460,7 +465,6 @@ class TestFullscreenSpriteViewerIntegration(QtTestCase):
         # Should have navigated at least once
         assert self.viewer.current_index != initial_index
 
-
 @pytest.mark.gui
 @pytest.mark.integration
 @pytest.mark.slow
@@ -550,7 +554,6 @@ class TestFullscreenViewerCleanupIntegration(QtTestCase):
         
         # Signal count should not increase
         assert len(signal_calls) == final_count
-
 
 @pytest.mark.headless
 @pytest.mark.integration

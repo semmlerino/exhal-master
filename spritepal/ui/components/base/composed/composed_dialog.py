@@ -6,8 +6,9 @@ using the composition pattern. It automatically initializes and manages dialog
 components based on configuration, providing a flexible alternative to monolithic
 inheritance hierarchies.
 """
+from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QCloseEvent
@@ -41,7 +42,7 @@ class ComposedDialog(QDialog):
                 pass
     """
 
-    def __init__(self, parent: Optional[QWidget] = None, **config: Any) -> None:
+    def __init__(self, parent: QWidget | None = None, **config: Any) -> None:
         """
         Initialize the composed dialog.
 
@@ -170,7 +171,7 @@ class ComposedDialog(QDialog):
         self.context.register_component(name, component)
         self.components.append(component)
 
-    def get_component(self, name: str) -> Optional[QObject]:
+    def get_component(self, name: str) -> QObject | None:
         """
         Get a registered component by name.
 
@@ -209,7 +210,7 @@ class ComposedDialog(QDialog):
         """
         # Call cleanup on all components that support it
         for component in self.components:
-            if hasattr(component, 'cleanup') and callable(component.cleanup):
+            if hasattr(component, 'cleanup') and callable(getattr(component, 'cleanup', None)):
                 component.cleanup()  # type: ignore[attr-defined]
 
         # Call parent close event

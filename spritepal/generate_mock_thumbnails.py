@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Generate mock sprite thumbnails for the gallery.
 This creates colored pattern images to simulate actual sprites.

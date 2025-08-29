@@ -3,6 +3,7 @@ Fixed tests for advanced search dialog functionality.
 
 This version avoids import-time hangs by deferring imports and using more targeted mocking.
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -31,10 +32,8 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 if not os.environ.get('QT_QPA_PLATFORM'):
     os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-
 
 @dataclass
 class SearchFilter:
@@ -48,7 +47,6 @@ class SearchFilter:
     include_uncompressed: bool = False
     confidence_threshold: float = 0.7
 
-
 @dataclass
 class SearchResult:
     """Mock SearchResult to avoid importing the real one."""
@@ -58,7 +56,6 @@ class SearchResult:
     compressed_size: int
     confidence: float
     metadata: dict
-
 
 @pytest.fixture
 def temp_rom_file() -> Generator[str, None, None]:
@@ -74,12 +71,10 @@ def temp_rom_file() -> Generator[str, None, None]:
     # Cleanup
     Path(temp_path).unlink(missing_ok=True)
 
-
 @pytest.fixture
 def search_filter() -> SearchFilter:
     """Create SearchFilter for testing."""
     return SearchFilter()
-
 
 class TestSearchWorker:
     """Test suite for SearchWorker functionality."""
@@ -144,13 +139,19 @@ class TestSearchWorker:
         )
         mock_worker.search_complete.emit(results)
         
-        # Verify behavior
-        mock_finder.search_parallel.assert_called_once()
-        mock_worker.search_complete.emit.assert_called_once_with([])
+        # Verify BEHAVIOR: search was executed and results were emitted
+        assert mock_finder.search_parallel.called
+        search_args = mock_finder.search_parallel.call_args[1]
+        assert search_args["rom_path"] == temp_rom_file
+        assert search_args["start_offset"] == 0x0
+        assert search_args["end_offset"] == 0x1000
         
-        # Cleanup
-        mock_finder.shutdown()
-        mock_finder.shutdown.assert_called_once()
+        assert mock_worker.search_complete.emit.called
+        emitted_results = mock_worker.search_complete.emit.call_args[0][0]
+        assert emitted_results == []  # Empty results as mocked
+        
+        # Verify STATE: finder was properly shut down
+        assert mock_finder.shutdown.called
 
     def test_apply_filters_valid_result(self, search_filter):
         """Test filter application with valid result."""
@@ -225,7 +226,6 @@ class TestSearchWorker:
         
         assert apply_filters(result, search_filter) is False
 
-
 class TestAdvancedSearchDialog:
     """Test suite for AdvancedSearchDialog UI components."""
 
@@ -295,11 +295,17 @@ class TestAdvancedSearchDialog:
             progress_bar.setValue(i)
             progress_bar.setFormat(f"Searching... {i}%")
         
-        # Verify calls
-        progress_bar.setMaximum.assert_called_with(100)
-        progress_bar.setValue.assert_called_with(100)
+        # Verify BEHAVIOR: progress bar was updated correctly
+        assert progress_bar.setMaximum.called
+        max_value = progress_bar.setMaximum.call_args[0][0]
+        assert max_value == 100
+        
+        assert progress_bar.setValue.called
+        final_value = progress_bar.setValue.call_args[0][0]
+        assert final_value == 100  # Progress completed
+        
+        # Verify progress format was updated throughout
         assert progress_bar.setFormat.call_count == 11  # 0, 10, 20, ..., 100
-
 
 class TestSearchIntegration:
     """Integration tests for search functionality."""

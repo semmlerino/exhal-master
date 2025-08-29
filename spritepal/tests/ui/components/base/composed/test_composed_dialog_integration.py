@@ -5,10 +5,11 @@ This module provides comprehensive testing for the composition-based dialog
 architecture, validating that all components work together correctly and
 that the architecture provides the expected functionality.
 """
+from __future__ import annotations
 
 import os
 import sys
-from typing import Any, List
+from typing import Any
 from unittest import mock
 from unittest.mock import Mock, patch
 
@@ -36,7 +37,6 @@ from ui.components.base.composed.composed_dialog import ComposedDialog
 from ui.components.base.composed.dialog_context import DialogContext
 from ui.components.base.composed.message_dialog_manager import MessageDialogManager
 from ui.components.base.composed.status_bar_manager import StatusBarManager
-
 
 class TestDialog(ComposedDialog):
     """Test dialog implementation for integration testing with realistic UI."""
@@ -118,7 +118,6 @@ class TestDialog(ComposedDialog):
         status_manager = self.get_component("status_bar")
         if status_manager:
             status_manager.show_message(f"Processing... {value}%")
-
 
 @pytest.mark.qt_real
 @pytest.mark.integration
@@ -228,7 +227,7 @@ class TestComposedDialogIntegration(QtTestCase):
         assert message_manager is not None
         
         # Test signal collection for message_shown signal
-        signal_args: List[tuple] = []
+        signal_args: list[tuple] = []
         message_manager.message_shown.connect(lambda msg_type, msg: signal_args.append((msg_type, msg)))
         
         # Test show_info method
@@ -254,7 +253,7 @@ class TestComposedDialogIntegration(QtTestCase):
         message_manager = dialog.get_component("message_dialog")
         
         # Test signal collection for message_shown signal
-        signal_args: List[tuple] = []
+        signal_args: list[tuple] = []
         message_manager.message_shown.connect(lambda msg_type, msg: signal_args.append((msg_type, msg)))
         
         # Test show_error method
@@ -284,7 +283,7 @@ class TestComposedDialogIntegration(QtTestCase):
         message_manager = dialog.get_component("message_dialog")
         
         # Test signal collection for message_shown signal
-        signal_args: List[tuple] = []
+        signal_args: list[tuple] = []
         message_manager.message_shown.connect(lambda msg_type, msg: signal_args.append((msg_type, msg)))
         
         # Test confirm_action method
@@ -313,8 +312,8 @@ class TestComposedDialogIntegration(QtTestCase):
         assert button_manager is not None
         
         # Test signal collection for button manager signals
-        accepted_calls: List[bool] = []
-        rejected_calls: List[bool] = []
+        accepted_calls: list[bool] = []
+        rejected_calls: list[bool] = []
         
         button_manager.accepted.connect(lambda: accepted_calls.append(True))
         button_manager.rejected.connect(lambda: rejected_calls.append(True))
@@ -352,7 +351,7 @@ class TestComposedDialogIntegration(QtTestCase):
         assert button_manager is not None
         
         # Test signal collection for custom button clicks
-        clicked_buttons: List[str] = []
+        clicked_buttons: list[str] = []
         button_manager.button_clicked.connect(lambda btn_text: clicked_buttons.append(btn_text))
         
         # Add custom button with callback
@@ -384,7 +383,7 @@ class TestComposedDialogIntegration(QtTestCase):
         assert status_manager is not None
         
         # Test signal collection for status changes
-        status_messages: List[str] = []
+        status_messages: list[str] = []
         status_manager.status_changed.connect(lambda msg: status_messages.append(msg))
         
         # Verify status bar was created and is accessible
@@ -570,8 +569,8 @@ class TestComposedDialogIntegration(QtTestCase):
         assert button_manager is not None
         
         # Test signal collection for button manager signals
-        accepted_calls: List[bool] = []
-        rejected_calls: List[bool] = []
+        accepted_calls: list[bool] = []
+        rejected_calls: list[bool] = []
         
         button_manager.accepted.connect(lambda: accepted_calls.append(True))
         button_manager.rejected.connect(lambda: rejected_calls.append(True))
@@ -620,9 +619,9 @@ class TestComposedDialogIntegration(QtTestCase):
         assert status_manager is not None
         
         # Set up signal collection
-        message_events: List[tuple] = []
-        status_events: List[str] = []
-        button_events: List[str] = []
+        message_events: list[tuple] = []
+        status_events: list[str] = []
+        button_events: list[str] = []
         
         message_manager.message_shown.connect(lambda msg_type, msg: message_events.append((msg_type, msg)))
         status_manager.status_changed.connect(lambda msg: status_events.append(msg))
@@ -840,7 +839,7 @@ class TestComposedDialogIntegration(QtTestCase):
         assert message_manager is not None
         
         # Test signal collection for all message types
-        all_messages: List[tuple] = []
+        all_messages: list[tuple] = []
         message_manager.message_shown.connect(lambda msg_type, msg: all_messages.append((msg_type, msg)))
         
         # Test warning message (we already tested info, error, confirmation above)

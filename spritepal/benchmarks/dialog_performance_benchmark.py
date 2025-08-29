@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Dialog Performance Benchmark
 
@@ -71,7 +73,6 @@ class PerformanceThresholds:
     CLEANUP_ACCEPTABLE_MS = 5.0
     CLEANUP_WARNING_MS = 10.0
 
-
 @dataclass
 class BenchmarkResult:
     """Container for benchmark results."""
@@ -110,7 +111,6 @@ class BenchmarkResult:
             lower_bound = q1 - 1.5 * iqr
             upper_bound = q3 + 1.5 * iqr
             self.outliers = [v for v in self.values if v < lower_bound or v > upper_bound]
-
 
 class MemoryTracker:
     """Tracks memory usage during benchmark operations."""
@@ -152,7 +152,6 @@ class MemoryTracker:
             return peak / 1024 / 1024
         return 0.0
 
-
 @contextmanager
 def measure_time():
     """Context manager for measuring execution time."""
@@ -161,7 +160,6 @@ def measure_time():
         yield lambda: time.perf_counter() - start
     finally:
         pass
-
 
 class DialogBenchmark:
     """Main benchmark class for dialog performance testing."""
@@ -789,7 +787,6 @@ class DialogBenchmark:
         print("\n" + "=" * 60)
         print("🏁 Benchmark Complete!")
 
-
 def main():
     """Main benchmark execution function."""
     # Check if we're in a headless environment
@@ -834,7 +831,6 @@ def main():
         if hasattr(locals(), 'display'):
             display.stop()
         app.quit()
-
 
 if __name__ == "__main__":
     sys.exit(main())

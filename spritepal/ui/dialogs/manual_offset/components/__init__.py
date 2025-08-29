@@ -4,6 +4,7 @@ Manual Offset Dialog Components
 This module provides the composed components used by the ManualOffsetDialogCore.
 Each component handles a specific aspect of the dialog's functionality.
 """
+from __future__ import annotations
 
 from .layout_manager_component import LayoutManagerComponent
 from .rom_cache_component import ROMCacheComponent

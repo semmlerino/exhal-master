@@ -1,8 +1,9 @@
 """
 Zoomable sprite preview widget for SpritePal
 """
+from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 
@@ -203,7 +204,7 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
-    def wheelEvent(self, a0: Optional['QWheelEvent']) -> None:
+    def wheelEvent(self, a0: QWheelEvent | None) -> None:
         """Handle mouse wheel for zooming"""
         if self._pixmap is None or not a0:
             return
@@ -263,7 +264,7 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
-    def mousePressEvent(self, a0: Optional['QMouseEvent']) -> None:
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse press for panning"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = True
@@ -273,13 +274,13 @@ class ZoomablePreviewWidget(QWidget):
             # Right click to reset view
             self.reset_view()
 
-    def mouseReleaseEvent(self, a0: Optional['QMouseEvent']) -> None:
+    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse release"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
-    def mouseMoveEvent(self, a0: Optional['QMouseEvent']) -> None:
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse move for panning"""
         if a0 and self._is_panning and self._last_mouse_pos is not None:
             delta = a0.position() - self._last_mouse_pos
@@ -359,7 +360,6 @@ class ZoomablePreviewWidget(QWidget):
         self._zoom = min(scale_x, scale_y) * 0.9  # 90% to leave some margin
         self._pan_offset = QPointF(0, 0)
         self.update()
-
 
 class PreviewPanel(QWidget):
     """Panel containing the zoomable preview with controls"""

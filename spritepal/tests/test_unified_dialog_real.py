@@ -12,6 +12,7 @@ Key improvements:
 - Event simulation for user interactions
 - Memory-efficient testing (no mock overhead)
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -46,7 +47,6 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 if not os.environ.get('QT_QPA_PLATFORM'):
     if not os.environ.get("DISPLAY") or os.environ.get("CI"):
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
@@ -77,7 +77,6 @@ from tests.infrastructure.signal_testing_utils import (
     AsyncSignalTester,
     SignalValidator,
 )
-
 
 class TestUnifiedDialogReal(QtTestCase):
     """Test unified dialog with real Qt components."""
@@ -479,7 +478,6 @@ class TestUnifiedDialogReal(QtTestCase):
         # Should clamp to ROM size
         assert dialog.browse_tab.get_offset() <= 0x400000
 
-
 class TestDialogIntegrationReal(QtTestCase):
     """Test dialog integration scenarios with real components."""
     
@@ -558,7 +556,6 @@ class TestDialogIntegrationReal(QtTestCase):
         
         # Cleanup
         dialog.close()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

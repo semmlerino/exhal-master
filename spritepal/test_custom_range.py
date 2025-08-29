@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Test script to verify custom range scanning works in detached gallery."""
 
 import sys
@@ -10,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from PySide6.QtWidgets import QApplication
 from ui.windows.detached_gallery_window import DetachedGalleryWindow
 from ui.dialogs.scan_range_dialog import ScanRangeDialog
-
 
 def test_imports():
     """Test that all required components import correctly."""

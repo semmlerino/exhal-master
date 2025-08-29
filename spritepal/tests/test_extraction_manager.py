@@ -43,17 +43,17 @@ Bugs caught by real testing that mocks miss:
 - Qt signal/slot connection failures
 - Resource cleanup race conditions
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
 from PIL import Image
-from typing import Generator, Optional
+from typing import Generator
 
 # Phase 2 Real Component Testing Infrastructure
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.manager_test_context import (
 # Serial execution required: Thread safety concerns, Real Qt components
-
 
     ManagerTestContext,
     manager_context,
@@ -67,7 +67,6 @@ from tests.fixtures.test_managers import create_extraction_manager_fixture
 
 from core.managers import ExtractionError, ExtractionManager, ValidationError
 from utils.constants import BYTES_PER_TILE
-
 
 @pytest.mark.no_manager_setup
 class TestExtractionManager:
@@ -538,7 +537,6 @@ class TestExtractionManager:
             manager.cleanup()  # Should not raise
             manager.cleanup()  # Should not raise
 
-
 # TDD Integration Tests with Real Component Workflows
 
 def test_complete_extraction_workflow_tdd_integration(test_data_repo, qtbot, worker_timeout, signal_timeout):
@@ -615,7 +613,6 @@ def test_complete_extraction_workflow_tdd_integration(test_data_repo, qtbot, wor
             print(f"Note: Real workflow integration found issue: {e}")
             # Re-raise for debugging - integration issues should be fixed
             raise
-
 
 @pytest.mark.benchmark
 def test_performance_baseline_real_extraction_benchmark(test_data_repo, benchmark):

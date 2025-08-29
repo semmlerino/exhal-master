@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Simple script to take a screenshot of the manual offset dialog for layout analysis.
 """
@@ -127,7 +129,6 @@ def take_screenshot():
 
     # Run the application
     app.exec()
-
 
 if __name__ == "__main__":
     take_screenshot()

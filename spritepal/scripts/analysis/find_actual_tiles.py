@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Search VRAM for actual tile graphics data (not tilemap indices)
 """
@@ -11,7 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
-
 
 def analyze_vram_region(vram_data, start_offset, region_size, region_name):
     """Analyze a VRAM region to determine what type of data it contains"""
@@ -76,7 +77,6 @@ def analyze_vram_region(vram_data, start_offset, region_size, region_name):
     except Exception as e:
         print(f"Tile extraction failed: {e}")
 
-
 def search_for_graphics(vram_path):
     """Search entire VRAM for graphics data"""
 
@@ -135,7 +135,6 @@ def search_for_graphics(vram_path):
         if symmetry_score >= 4:
             print(f"\nPotential sprite tile at 0x{offset:04X} (symmetry score: {symmetry_score}/8)")
 
-
 def main():
     vram_file = "../Kirby Super Star (USA)_2_VRAM.dmp"
 
@@ -144,7 +143,6 @@ def main():
         return
 
     search_for_graphics(vram_file)
-
 
 if __name__ == "__main__":
     main()

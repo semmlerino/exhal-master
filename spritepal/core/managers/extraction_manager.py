@@ -1,6 +1,7 @@
 """
 Manager for handling all extraction operations
 """
+from __future__ import annotations
 
 import time
 from dataclasses import asdict
@@ -521,7 +522,7 @@ class ExtractionManager(BaseManager):
         # This should never be reached due to exception re-raising in handlers
         raise ExtractionError("Preview generation failed")
 
-    def get_rom_extractor(self) -> "ROMExtractor":
+    def get_rom_extractor(self) -> ROMExtractor:
         """
         Get the ROM extractor instance for advanced operations
 

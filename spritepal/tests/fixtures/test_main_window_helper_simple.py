@@ -1,6 +1,7 @@
 """
 Simplified helper for testing MainWindow functionality without creating Qt widgets
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -9,7 +10,6 @@ from unittest.mock import Mock
 
 import pytest
 from PySide6.QtCore import QObject, Signal
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestMainWindowHelperSimple(QObject):
     """Simplified helper for MainWindow testing without real Qt widgets"""

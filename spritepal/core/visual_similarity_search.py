@@ -4,6 +4,7 @@ Visual similarity search for sprites using perceptual hashing.
 This module enables finding visually similar sprites across ROMs,
 useful for finding variations, palette swaps, or related graphics.
 """
+from __future__ import annotations
 
 import logging
 import pickle
@@ -16,7 +17,6 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SpriteHash:
     """Container for sprite perceptual hash data."""
@@ -26,7 +26,6 @@ class SpriteHash:
     histogram: np.ndarray
     metadata: dict[str, Any]
 
-
 @dataclass
 class SimilarityMatch:
     """Result of similarity search."""
@@ -34,7 +33,6 @@ class SimilarityMatch:
     similarity_score: float
     hash_distance: int
     metadata: dict[str, Any]
-
 
 class VisualSimilarityEngine:
     """
@@ -238,7 +236,6 @@ class VisualSimilarityEngine:
             hist_similarity * 0.3
         )
 
-
     def _hamming_distance(self, hash1: np.ndarray, hash2: np.ndarray) -> int:
         """Calculate Hamming distance between two hashes."""
         return np.sum(hash1 != hash2)
@@ -293,7 +290,6 @@ class VisualSimilarityEngine:
         self.index_built = data["index_built"]
 
         logger.info(f"Imported similarity index with {len(self.sprite_database)} sprites")
-
 
 class SpriteGroupFinder:
     """

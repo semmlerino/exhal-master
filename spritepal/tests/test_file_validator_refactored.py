@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -32,7 +34,6 @@ from utils.file_validator import (
 
 # Mark all tests in this module to skip manager setup
 pytestmark = pytest.mark.no_manager_setup
-
 
 class TestBasicFileValidator:
     """Test cases for BasicFileValidator."""
@@ -169,7 +170,6 @@ class TestBasicFileValidator:
         assert BasicFileValidator.format_file_size(2048) == "2KB"
         assert BasicFileValidator.format_file_size(1024 * 1024) == "1MB"
         assert BasicFileValidator.format_file_size(5 * 1024 * 1024) == "5MB"
-
 
 class TestFormatValidator:
     """Test cases for FormatValidator."""
@@ -333,7 +333,6 @@ class TestFormatValidator:
         assert not result.is_valid
         assert "exceeds maximum" in result.error_message
 
-
 class TestContentValidator:
     """Test cases for ContentValidator."""
 
@@ -394,7 +393,6 @@ class TestContentValidator:
         result = ContentValidator.validate_vram_header("/nonexistent/file.bin")
         assert not result.is_valid
         assert "Cannot read VRAM file" in result.error_message
-
 
 class TestFileValidatorFacade:
     """Test cases for FileValidator facade."""

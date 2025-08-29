@@ -1,4 +1,5 @@
 """Fixed controller tests that don't hang during collection"""
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
@@ -15,7 +16,6 @@ pytestmark = [
     pytest.mark.file_io,
     pytest.mark.signals_slots,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestControllerFixed:
@@ -70,13 +70,15 @@ class TestControllerFixed:
             mock_preview_gen.set_managers = Mock()
             mock_get_preview.return_value = mock_preview_gen
             
-            # Setup mock window
+            # Setup mock window to track error messages
+            error_messages = []
             mock_window = Mock()
             mock_window.get_extraction_params = Mock(return_value={
                 "vram_path": "",  # Missing VRAM
                 "cgram_path": "/path/to/cgram",
                 "output_base": "/path/to/output"
             })
+            mock_window.extraction_failed = Mock(side_effect=lambda msg: error_messages.append(msg))
             
             # Setup mock manager that raises validation error
             mock_manager = Mock()
@@ -87,9 +89,10 @@ class TestControllerFixed:
             controller = ExtractionController(mock_window)
             controller.start_extraction()
             
-            # Verify failure was handled
-            mock_window.extraction_failed.assert_called_once()
-            assert controller.worker is None
+            # Verify BEHAVIOR: error message was captured and no worker was created
+            assert len(error_messages) == 1
+            assert "VRAM file is required" in error_messages[0]
+            assert controller.worker is None  # No worker should be created on validation failure
     
     def test_parameter_validation_missing_cgram(self):
         """Test validation when CGRAM is missing in color mode"""
@@ -105,7 +108,8 @@ class TestControllerFixed:
             mock_preview_gen.set_managers = Mock()
             mock_get_preview.return_value = mock_preview_gen
             
-            # Setup mock window
+            # Setup mock window to track error messages
+            error_messages = []
             mock_window = Mock()
             mock_window.get_extraction_params = Mock(return_value={
                 "vram_path": "/path/to/vram",
@@ -113,6 +117,7 @@ class TestControllerFixed:
                 "output_base": "/path/to/output",
                 "grayscale_mode": False  # Color mode requires CGRAM
             })
+            mock_window.extraction_failed = Mock(side_effect=lambda msg: error_messages.append(msg))
             
             # Setup mock manager
             mock_manager = Mock()
@@ -125,8 +130,10 @@ class TestControllerFixed:
             controller = ExtractionController(mock_window)
             controller.start_extraction()
             
-            # Verify failure was handled
-            mock_window.extraction_failed.assert_called_once()
+            # Verify BEHAVIOR: appropriate error for missing CGRAM in color mode
+            assert len(error_messages) == 1
+            assert "CGRAM file is required for Full Color mode" in error_messages[0]
+            assert controller.worker is None  # No worker created when validation fails
     
     def test_successful_extraction_start(self):
         """Test successful extraction start"""
@@ -181,14 +188,23 @@ class TestControllerFixed:
             controller = ExtractionController(mock_window)
             controller.start_extraction()
             
-            # Verify worker was created and started
-            # The worker is created with extraction_params (subset of params)
+            # Verify BEHAVIOR: worker was created with correct params and controller state updated
+            assert controller.worker is not None  # Worker was created
+            assert controller.worker == mock_worker  # Correct worker instance stored
+            
+            # Verify the worker was created with correct parameters
             assert mock_worker_class.called
             call_args = mock_worker_class.call_args[0][0]
             assert call_args['vram_path'] == params['vram_path']
             assert call_args['output_base'] == params['output_base']
-            mock_worker.start.assert_called_once()
-            assert controller.worker == mock_worker
+            
+            # Verify worker signals were connected (behavior, not implementation)
+            assert mock_worker.progress.connect.called
+            assert mock_worker.extraction_finished.connect.called
+            assert mock_worker.error.connect.called
+            
+            # Verify worker was started (state change)
+            assert mock_worker.start.called  # Worker thread was activated
     
     def test_open_in_editor_functionality(self):
         """Test opening files in editor"""

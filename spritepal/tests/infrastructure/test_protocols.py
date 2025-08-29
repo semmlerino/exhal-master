@@ -8,7 +8,7 @@ These protocols define the interfaces that mock objects should implement,
 ensuring type safety while maintaining the flexibility needed for testing.
 
 Usage:
-    from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
         from tests.infrastructure.test_protocols import MockMainWindowProtocol
@@ -45,7 +45,6 @@ pytestmark = [
     pytest.mark.qt_mock,
 ]
 
-
 @runtime_checkable
 class MockMainWindowProtocol(Protocol):
     """Protocol for mock main window objects."""
@@ -71,7 +70,6 @@ class MockMainWindowProtocol(Protocol):
     show: Mock
     close: Mock
 
-
 @runtime_checkable
 class MockExtractionWorkerProtocol(Protocol):
     """Protocol for mock extraction worker objects."""
@@ -88,7 +86,6 @@ class MockExtractionWorkerProtocol(Protocol):
     wait: Mock
     isRunning: Mock
 
-
 @runtime_checkable
 class MockExtractionManagerProtocol(Protocol):
     """Protocol for mock extraction manager objects."""
@@ -103,7 +100,6 @@ class MockExtractionManagerProtocol(Protocol):
     progress: MockSignal
     finished: MockSignal
     error: MockSignal
-
 
 @runtime_checkable
 class MockInjectionManagerProtocol(Protocol):
@@ -120,7 +116,6 @@ class MockInjectionManagerProtocol(Protocol):
     injection_complete: MockSignal
     injection_failed: MockSignal
 
-
 @runtime_checkable
 class MockSessionManagerProtocol(Protocol):
     """Protocol for mock session manager objects."""
@@ -131,7 +126,6 @@ class MockSessionManagerProtocol(Protocol):
     get_recent_files: Mock
     add_recent_file: Mock
 
-
 @runtime_checkable
 class MockQtBotProtocol(Protocol):
     """Protocol for Qt test bot objects (real or mock)."""
@@ -140,7 +134,6 @@ class MockQtBotProtocol(Protocol):
     waitSignal: Callable[..., Any]
     waitUntil: Callable[..., Any]
     addWidget: Callable[[Any], None]
-
 
 @runtime_checkable
 class MockDialogServicesProtocol(Protocol):
@@ -153,7 +146,6 @@ class MockDialogServicesProtocol(Protocol):
     sprites_registry: Mock
     worker_manager: Mock
 
-
 @runtime_checkable
 class MockPreviewGeneratorProtocol(Protocol):
     """Protocol for preview generator service."""
@@ -163,7 +155,6 @@ class MockPreviewGeneratorProtocol(Protocol):
     preview_ready: MockSignal
     preview_error: MockSignal
 
-
 @runtime_checkable
 class MockErrorHandlerProtocol(Protocol):
     """Protocol for error handler service."""
@@ -171,7 +162,6 @@ class MockErrorHandlerProtocol(Protocol):
     handle_error: Mock
     handle_exception: Mock
     report_warning: Mock
-
 
 @runtime_checkable
 class MockOffsetNavigatorProtocol(Protocol):
@@ -192,7 +182,6 @@ class MockOffsetNavigatorProtocol(Protocol):
     validate_offset: Mock
     get_valid_range: Mock
 
-
 @runtime_checkable
 class MockPreviewCoordinatorProtocol(Protocol):
     """Protocol for preview coordinator service."""
@@ -210,7 +199,6 @@ class MockPreviewCoordinatorProtocol(Protocol):
     cancel_pending_previews: Mock
     set_preview_widget: Mock
     cleanup_workers: Mock
-
 
 @runtime_checkable
 class MockSpritesRegistryProtocol(Protocol):
@@ -234,7 +222,6 @@ class MockSpritesRegistryProtocol(Protocol):
     has_sprite_at: Mock
     get_sprites_in_range: Mock
 
-
 @runtime_checkable
 class MockWorkerManagerProtocol(Protocol):
     """Protocol for worker manager service."""
@@ -249,7 +236,6 @@ class MockWorkerManagerProtocol(Protocol):
     cleanup_worker: Mock
     cleanup_all_workers: Mock
     get_active_workers: Mock
-
 
 @runtime_checkable
 class MockSignalCoordinatorProtocol(Protocol):
@@ -283,7 +269,6 @@ class MockSignalCoordinatorProtocol(Protocol):
     get_current_offset: Mock
     cleanup: Mock
 
-
 @runtime_checkable
 class MockDialogTabsProtocol(Protocol):
     """Protocol for manual offset dialog tabs collection."""
@@ -291,7 +276,6 @@ class MockDialogTabsProtocol(Protocol):
     browse_tab: Mock
     smart_tab: Mock
     history_tab: Mock
-
 
 @runtime_checkable
 class MockBrowseTabProtocol(Protocol):
@@ -310,7 +294,6 @@ class MockBrowseTabProtocol(Protocol):
     # Widgets
     slider: Mock
 
-
 @runtime_checkable
 class MockSmartTabProtocol(Protocol):
     """Protocol for smart tab."""
@@ -322,7 +305,6 @@ class MockSmartTabProtocol(Protocol):
     # Widgets
     smart_checkbox: Mock
     locations_combo: Mock
-
 
 @runtime_checkable
 class MockHistoryTabProtocol(Protocol):

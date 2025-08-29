@@ -4,6 +4,7 @@ Testing Approach Comparison - Mock vs Real Qt Components
 This script compares the mocked testing approach with the real Qt testing approach,
 demonstrating memory efficiency, execution speed, and code maintainability improvements.
 """
+from __future__ import annotations
 
 import gc
 import os
@@ -252,7 +253,6 @@ while providing more accurate and maintainable tests.
             }
         }
 
-
 def main():
     """Run the comparison."""
     try:
@@ -282,7 +282,6 @@ def main():
         print(f"\n❌ Error during comparison: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == "__main__":
     main()

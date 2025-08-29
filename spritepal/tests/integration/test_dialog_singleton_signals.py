@@ -8,13 +8,13 @@ signal/slot connections, ensuring:
 - Thread safety of singleton access
 - Proper cleanup and reconnection behavior
 """
+from __future__ import annotations
 
 import gc
 import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -27,16 +27,15 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SignalMonitor(QObject):
     """Monitor for tracking signal emissions from the singleton dialog."""
     
     def __init__(self):
         super().__init__()
-        self.offset_changes: List[int] = []
-        self.sprite_finds: List[tuple] = []
-        self.emission_times: List[float] = []
-        self.emission_threads: List[int] = []
+        self.offset_changes: list[int] = []
+        self.sprite_finds: list[tuple] = []
+        self.emission_times: list[float] = []
+        self.emission_threads: list[int] = []
         
     @Slot(int)
     def on_offset_changed(self, offset: int):
@@ -71,7 +70,6 @@ class SignalMonitor(QObject):
             'time_span': max(self.emission_times) - min(self.emission_times) if self.emission_times else 0
         }
 
-
 @pytest.fixture
 def cleanup_singleton():
     """Ensure singleton is cleaned up after each test."""
@@ -80,7 +78,6 @@ def cleanup_singleton():
     ManualOffsetDialogSingleton._instance = None
     ManualOffsetDialogSingleton._lock = threading.Lock()
     gc.collect()
-
 
 @pytest.fixture
 def temp_rom():
@@ -92,10 +89,9 @@ def temp_rom():
     try:
         import os
         os.unlink(path)
-    except:
+    except Exception as e:
+        # Caught exception during operation
         pass
-
-
 @pytest.mark.gui
 class TestSingletonBehavior:
     """Test the singleton pattern implementation."""
@@ -187,7 +183,6 @@ class TestSingletonBehavior:
         # Dialog exists but not open
         assert ManualOffsetDialogSingleton.get_current_dialog() is not None
         assert not ManualOffsetDialogSingleton.is_dialog_open()
-
 
 @pytest.mark.gui
 class TestSingletonSignalConnections:
@@ -281,7 +276,6 @@ class TestSingletonSignalConnections:
         assert panel1_calls.count(0x2000) == 1
         assert panel2_calls.count(0x2000) == 1
 
-
 @pytest.mark.gui
 class TestSingletonLifecycle:
     """Test singleton lifecycle and cleanup."""
@@ -356,7 +350,6 @@ class TestSingletonLifecycle:
         
         # Old monitor should not receive new signal
         assert monitor1.offset_changes == [0x1000]  # No change
-
 
 @pytest.mark.gui
 class TestSingletonSignalIntegrity:
@@ -452,7 +445,6 @@ class TestSingletonSignalIntegrity:
         assert len(monitor.offset_changes) == 1
         assert monitor.offset_changes[0] == 0x5000
 
-
 @pytest.mark.gui
 class TestSingletonErrorConditions:
     """Test error conditions and edge cases."""
@@ -501,7 +493,6 @@ class TestSingletonErrorConditions:
         new_dialog = ManualOffsetDialogSingleton.get_dialog(panel)
         assert new_dialog is not None
         assert new_dialog is not dialog  # Different instance
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

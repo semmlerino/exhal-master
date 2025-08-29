@@ -6,10 +6,10 @@ This file shows how to use the new performance-optimized fixtures:
 - managers fixture for integration tests  
 - isolated_managers fixture for tests needing fresh state
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
-
 
 # ============================================================================
 # UNIT TESTS - NO MANAGERS NEEDED (FASTEST)
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.cache,
     pytest.mark.unit,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestUnitTestExamples:
@@ -54,7 +53,6 @@ class TestUnitTestExamples:
         # Test exception instantiation and properties
         error = ValidationError("Test message")
         assert str(error) == "Test message"
-
 
 # ============================================================================
 # INTEGRATION TESTS - SHARED MANAGERS (FAST)
@@ -105,7 +103,6 @@ class TestIntegrationExamples:
         # This would be slow with per-test initialization but fast with session managers
         assert all([extraction_manager, injection_manager, session_manager])
 
-
 # ============================================================================
 # STATE MODIFICATION TESTS - ISOLATED MANAGERS (SLOW BUT SAFE)
 # ============================================================================
@@ -148,7 +145,6 @@ class TestIsolatedManagerExamples:
         assert injection_manager is not None
         
         # Could test error recovery that leaves manager in modified state
-
 
 # ============================================================================
 # MIGRATION EXAMPLES

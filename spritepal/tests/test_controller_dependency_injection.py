@@ -6,6 +6,7 @@ These tests verify that:
 2. Dependency injection works with custom managers
 3. The controller properly uses injected managers
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -13,7 +14,6 @@ import pytest
 
 from core.controller import ExtractionController
 from core.managers import ExtractionManager, InjectionManager, SessionManager
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestControllerDependencyInjection:
     """Test dependency injection functionality for ExtractionController."""
@@ -118,7 +117,6 @@ class TestControllerDependencyInjection:
         assert mock_extraction_manager.cache_hit.connect.called
         assert mock_injection_manager.injection_progress.connect.called
         assert mock_injection_manager.injection_finished.connect.called
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

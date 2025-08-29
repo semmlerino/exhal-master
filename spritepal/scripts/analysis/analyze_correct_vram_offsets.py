@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Analyze VRAM dumps at the CORRECT sprite offsets
 Based on research findings that sprites are at 0x4000 or 0x6000, not 0xC000
@@ -15,7 +17,6 @@ from core.rom_extractor import ROMExtractor
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 def analyze_vram_at_correct_offsets(vram_path: str):
     """Analyze VRAM dump at the correct sprite offsets"""
@@ -78,7 +79,6 @@ def analyze_vram_at_correct_offsets(vram_path: str):
         except Exception:
             logger.exception("Failed to convert to PNG")
 
-
 def check_rom_pointers(rom_path: str):
     """Check the ROM pointer table at $FF:0002 as discovered by research"""
 
@@ -107,7 +107,6 @@ def check_rom_pointers(rom_path: str):
             full_address = 0xFF0000 | pointer
             file_offset = ((full_address >> 16) - 0xC0) * 0x8000 + (full_address & 0x7FFF)
             logger.info(f"  Pointer {i}: ${pointer:04X} -> SNES ${full_address:06X} -> File 0x{file_offset:06X}")
-
 
 def main():
     """Main function"""
@@ -145,7 +144,6 @@ def main():
     for rom_file in rom_files:
         if Path(rom_file).exists():
             check_rom_pointers(rom_file)
-
 
 if __name__ == "__main__":
     main()

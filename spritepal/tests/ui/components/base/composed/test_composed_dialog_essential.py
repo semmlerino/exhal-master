@@ -4,6 +4,7 @@ Essential integration tests for the ComposedDialog architecture.
 This module provides minimal but comprehensive tests that validate the
 composition-based dialog architecture works correctly without Qt complications.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock, call
@@ -13,7 +14,6 @@ from ui.components.base.composed.composed_dialog import ComposedDialog
 from ui.components.base.composed.dialog_context import DialogContext
 from ui.components.base.composed.message_dialog_manager import MessageDialogManager
 from ui.components.base.composed.status_bar_manager import StatusBarManager
-
 
 @pytest.mark.mock_only
 @pytest.mark.integration

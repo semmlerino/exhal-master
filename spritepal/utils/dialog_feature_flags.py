@@ -18,6 +18,7 @@ Examples:
         # Handle composed-specific logic
         pass
 """
+from __future__ import annotations
 
 from ui.components.base.dialog_selector import (
     get_dialog_implementation as _get_dialog_implementation,
@@ -38,7 +39,6 @@ def get_dialog_implementation() -> str:
     """
     return _get_dialog_implementation()
 
-
 def set_dialog_implementation(use_composed: bool) -> None:
     """Set the dialog implementation type via environment variable.
 
@@ -53,7 +53,6 @@ def set_dialog_implementation(use_composed: bool) -> None:
     """
     _set_dialog_implementation(use_composed)
 
-
 def is_composed_dialogs_enabled() -> bool:
     """Check if composed dialogs are enabled via feature flag.
 
@@ -62,7 +61,6 @@ def is_composed_dialogs_enabled() -> bool:
     """
     return _is_composed_dialogs_enabled()
 
-
 def enable_composed_dialogs() -> None:
     """Enable composed dialog implementation.
 
@@ -70,14 +68,12 @@ def enable_composed_dialogs() -> None:
     """
     set_dialog_implementation(True)
 
-
 def enable_legacy_dialogs() -> None:
     """Enable legacy dialog implementation.
 
     Convenience function equivalent to set_dialog_implementation(False).
     """
     set_dialog_implementation(False)
-
 
 __all__ = [
     "enable_composed_dialogs",

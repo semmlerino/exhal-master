@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 pytestmark = [
     pytest.mark.dialog,
     pytest.mark.headless,
@@ -14,7 +16,6 @@ These tests validate the core architecture without Qt dependencies.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import sys
-
 
 def test_dialog_context_basics():
     """Test DialogContext basic functionality."""
@@ -54,7 +55,6 @@ def test_dialog_context_basics():
         assert not context.has_component("test")
         context.unregister_component("nonexistent")  # Should not raise
 
-
 def test_message_dialog_manager_basics():
     """Test MessageDialogManager basic functionality."""
     with patch.dict('sys.modules', {
@@ -91,7 +91,6 @@ def test_message_dialog_manager_basics():
         manager.cleanup()
         assert manager.context is None
 
-
 def test_status_bar_manager_basics():
     """Test StatusBarManager basic functionality."""
     with patch.dict('sys.modules', {
@@ -118,7 +117,6 @@ def test_status_bar_manager_basics():
         assert manager.status_bar is None
         assert not manager.is_available
 
-
 def test_button_box_manager_basics():
     """Test ButtonBoxManager basic functionality."""
     with patch.dict('sys.modules', {
@@ -144,7 +142,6 @@ def test_button_box_manager_basics():
         assert manager.context == context
         assert manager.button_box is None
         assert not manager.is_available
-
 
 def test_composed_dialog_architecture():
     """Test ComposedDialog component registration."""
@@ -183,7 +180,6 @@ def test_composed_dialog_architecture():
             # Test that optional components are not registered
             assert not dialog.context.has_component("status_bar")
             assert not dialog.context.has_component("button_box")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

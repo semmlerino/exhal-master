@@ -3,6 +3,7 @@ Safe logging utilities for test cleanup.
 
 Prevents I/O errors during test teardown when logging handlers are closed.
 """
+from __future__ import annotations
 
 import contextlib
 import logging
@@ -30,14 +31,12 @@ class SafeCleanupHandler(logging.Handler):
             # Silently ignore I/O errors during cleanup
             pass
 
-
 class NullCleanupHandler(logging.Handler):
     """Handler that discards all messages during cleanup."""
 
     def emit(self, record: logging.LogRecord) -> None:
         """Discard the log record."""
         pass
-
 
 def install_safe_cleanup_logging() -> None:
     """
@@ -56,7 +55,6 @@ def install_safe_cleanup_logging() -> None:
     # Add safe cleanup handler
     root_logger.addHandler(SafeCleanupHandler())
     root_logger.setLevel(logging.WARNING)  # Only log warnings during cleanup
-
 
 def install_null_logging() -> None:
     """

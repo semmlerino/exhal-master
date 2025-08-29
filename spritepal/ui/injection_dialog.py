@@ -2,6 +2,7 @@
 Injection dialog for SpritePal
 Allows users to configure sprite injection parameters
 """
+from __future__ import annotations
 
 import os
 from pathlib import Path
@@ -38,7 +39,6 @@ from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class InjectionDialog(TabbedDialog):
     """Dialog for configuring sprite injection parameters"""
@@ -134,10 +134,12 @@ class InjectionDialog(TabbedDialog):
         container_layout.addWidget(sprite_group)
 
         # Add tab widget below sprite selector
-        container_layout.addWidget(tab_widget)
+        if tab_widget:
+            container_layout.addWidget(tab_widget)
 
         # Replace tab widget with container in main layout
-        self.main_layout.removeWidget(tab_widget)
+        if tab_widget:
+            self.main_layout.removeWidget(tab_widget)
         self.main_layout.insertWidget(0, container)
 
         # Create VRAM injection tab
@@ -180,7 +182,8 @@ class InjectionDialog(TabbedDialog):
         splitter.add_widget(left_widget, stretch_factor=30)
 
         # Add shared preview widget to splitter with 70% width
-        splitter.add_widget(self.preview_widget, stretch_factor=70)
+        if self.preview_widget:
+            splitter.add_widget(self.preview_widget, stretch_factor=70)
 
         # Set initial splitter sizes (30/70 ratio)
         splitter.setSizes([400, 1000])  # Proportional to 1400px total width
@@ -212,7 +215,8 @@ class InjectionDialog(TabbedDialog):
         splitter.add_widget(left_widget, stretch_factor=30)
 
         # Add shared preview widget to splitter with 70% width
-        splitter.add_widget(self.preview_widget, stretch_factor=70)
+        if self.preview_widget:
+            splitter.add_widget(self.preview_widget, stretch_factor=70)
 
         # Set initial splitter sizes (30/70 ratio)
         splitter.setSizes([400, 1000])  # Proportional to 1400px total width
@@ -575,7 +579,6 @@ class InjectionDialog(TabbedDialog):
             self.extraction_vram_offset = None
             self.rom_extraction_info = None
             self.metadata = None
-
 
     def _on_vram_offset_changed(self, text: str) -> None:
         """Handle VRAM offset changes (callback for HexOffsetInput)"""
@@ -948,7 +951,6 @@ class InjectionDialog(TabbedDialog):
                 self.sprite_location_combo.setCurrentIndex(restore_info["sprite_location_index"])
         elif restore_info["custom_offset"] and self.rom_offset_input:
             self.rom_offset_input.set_text(restore_info["custom_offset"])
-
 
     def save_rom_injection_parameters(self) -> None:
         """Save ROM injection parameters to settings for future use"""

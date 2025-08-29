@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Find real character sprites in Kirby Super Star ROMs
 """
@@ -22,7 +24,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 def main():
     """Search for real sprites in ROM files"""
 
@@ -31,7 +32,6 @@ def main():
         "Kirby Super Star (USA).sfc",
         "Kirby's Fun Pak (Europe).sfc"
     ]
-
 
     finder = SpriteFinder(output_dir="real_sprite_candidates")
 
@@ -84,7 +84,6 @@ def main():
     print("- JSON summary with all findings")
     print("- Text report with detailed analysis")
     print("\nManually review the preview images to identify actual character sprites.")
-
 
 if __name__ == "__main__":
     main()

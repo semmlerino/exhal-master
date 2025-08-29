@@ -7,6 +7,7 @@ authentic behavior validation.
 
 Run with: pytest tests/examples/example_real_component_test.py -v
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
@@ -29,7 +30,6 @@ from tests.infrastructure.test_data_repository import get_test_data_repository
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
-
 
 class TestRealComponentExamples:
     """Examples of ideal real component testing patterns."""
@@ -330,7 +330,6 @@ class TestRealComponentExamples:
                 # Allow for various signal emission patterns
                 assert started_spy.count() >= 0
 
-
 # Fixtures demonstrating real component fixture patterns
 @pytest.fixture
 def extraction_manager_real():
@@ -341,20 +340,17 @@ def extraction_manager_real():
     if hasattr(manager, 'cleanup'):
         manager.cleanup()
 
-
 @pytest.fixture
 def test_context():
     """Fixture providing ManagerTestContext for integration tests."""
     with manager_context("all") as ctx:
         yield ctx
 
-
 @pytest.fixture
 def real_factory():
     """Fixture providing RealComponentFactory with automatic cleanup."""
     with RealComponentFactory() as factory:
         yield factory
-
 
 # Example of parametrized testing with real components
 @pytest.mark.parametrize("data_size", ["small", "medium"])
@@ -376,7 +372,6 @@ def test_parametrized_real_component_testing(data_size, real_factory):
     elif data_size == "medium":
         # Medium data should be valid for integration tests
         assert is_valid or not is_valid  # Allow either outcome
-
 
 # Example of testing real component interactions
 def test_real_component_interaction_patterns(test_context):
@@ -402,7 +397,6 @@ def test_real_component_interaction_patterns(test_context):
     
     # Clean up real session
     session.end_session()
-
 
 if __name__ == "__main__":
     # Run the examples

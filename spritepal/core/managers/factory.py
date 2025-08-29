@@ -4,6 +4,7 @@ Manager factory for creating manager instances with proper Qt parent management.
 This factory provides a clean way to create manager instances while respecting
 Qt's object lifecycle and enabling both singleton and per-worker patterns.
 """
+from __future__ import annotations
 
 import threading
 from typing import TYPE_CHECKING, Protocol
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class ManagerFactory(Protocol):
     """Protocol for manager factory implementations."""
 
@@ -32,7 +32,6 @@ class ManagerFactory(Protocol):
     def create_injection_manager(self, parent: QObject | None = None) -> InjectionManager:
         """Create an InjectionManager instance."""
         ...
-
 
 class StandardManagerFactory:
     """
@@ -123,7 +122,6 @@ class StandardManagerFactory:
         self._logger.debug(f"Created InjectionManager with parent: {qt_parent}")
         return manager
 
-
 class SingletonManagerFactory:
     """
     Manager factory that returns singleton instances from the global registry.
@@ -183,7 +181,6 @@ class SingletonManagerFactory:
         self._logger.debug("Returned singleton InjectionManager")
         return manager
 
-
 class _DefaultFactoryHolder:
     """Holds the default factory instance without using global keyword."""
     _instance: ManagerFactory | None = None
@@ -213,7 +210,6 @@ class _DefaultFactoryHolder:
             cls._instance = factory
             logger.info(f"Set default factory to: {type(factory).__name__}")
 
-
 def get_default_factory() -> ManagerFactory:
     """
     Get the default manager factory instance.
@@ -222,7 +218,6 @@ def get_default_factory() -> ManagerFactory:
         Default ManagerFactory instance
     """
     return _DefaultFactoryHolder.get()
-
 
 def set_default_factory(factory: ManagerFactory) -> None:
     """
@@ -234,7 +229,6 @@ def set_default_factory(factory: ManagerFactory) -> None:
         factory: ManagerFactory implementation to use as default
     """
     _DefaultFactoryHolder.set(factory)
-
 
 def create_per_worker_factory(worker: QObject) -> ManagerFactory:
     """

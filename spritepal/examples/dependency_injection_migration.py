@@ -6,6 +6,7 @@ to dependency injection using the new context system.
 
 The migration can be done gradually without breaking existing code.
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -58,7 +59,6 @@ def example_1_existing_code_unchanged():
         # dialog.injection_manager is now the mock!
         print(f"Dialog uses mock: {dialog.injection_manager is mock_injection}")
 
-
 def example_2_test_context_usage():
     """
     Example 2: Using contexts in tests
@@ -94,7 +94,6 @@ def example_2_test_context_usage():
 
         extraction_mgr = get_extraction_manager()
         print(f"Got mock extraction manager: {extraction_mgr is mock_extraction}")
-
 
 def example_3_injectable_base_classes():
     """
@@ -134,7 +133,6 @@ def example_3_injectable_base_classes():
         dialog = ModernDialog()
         print(f"Dialog uses thread context: {dialog.get_injection_manager() is mock_injection}")
 
-
 def example_4_direct_injection():
     """
     Example 4: Direct dependency injection
@@ -167,7 +165,6 @@ def example_4_direct_injection():
     dialog = DirectInjectionDialog(manager_provider=provider)
     print(f"Dialog uses directly injected manager: {dialog.injection_manager is mock_injection}")
 
-
 def example_5_migration_with_mixin():
     """
     Example 5: Gradual migration using mixin
@@ -199,7 +196,6 @@ def example_5_migration_with_mixin():
     with manager_context({"injection": mock_injection}):
         widget = ExistingWidget()
         print(f"Widget uses injected manager: {widget.injection_manager is mock_injection}")
-
 
 def example_6_pytest_integration():
     """
@@ -242,7 +238,6 @@ def example_6_pytest_integration():
     print("Example pytest test code:")
     print(test_code)
 
-
 def example_7_debugging_contexts():
     """
     Example 7: Debugging context issues
@@ -277,7 +272,6 @@ def example_7_debugging_contexts():
             if errors:
                 print("Errors:", errors)
 
-
 def example_8_performance_considerations():
     """
     Example 8: Performance considerations
@@ -310,7 +304,6 @@ def example_8_performance_considerations():
         def some_frequent_operation(self):
             # Use cached references instead of calling get_*_manager repeatedly
             return self._injection_manager.some_method()
-
 
 if __name__ == "__main__":
     print("SpritePal Dependency Injection Migration Examples")

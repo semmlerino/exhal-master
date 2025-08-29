@@ -1,6 +1,7 @@
 """
 Registry for accessing manager instances
 """
+from __future__ import annotations
 
 import threading
 import weakref
@@ -16,22 +17,27 @@ from utils.safe_logging import (
     suppress_logging_errors,
 )
 
+from .application_state_manager import ApplicationStateManager
+
+# Import new consolidated managers
+from .core_operations_manager import CoreOperationsManager
 from .exceptions import ManagerError
 from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager
+from .monitoring_manager import MonitoringManager
 from .session_manager import SessionManager
+from .ui_coordinator_manager import UICoordinatorManager
 
 # NavigationManager import deferred to avoid circular imports
-
 
 class ManagerRegistry:
     """Singleton registry for manager instances with memory leak prevention"""
 
-    _instance: "ManagerRegistry | None" = None
+    _instance: ManagerRegistry | None = None
     _lock: threading.Lock = threading.Lock()
     _cleanup_registered: bool = False
 
-    def __new__(cls) -> "ManagerRegistry":
+    def __new__(cls) -> ManagerRegistry:
         """Ensure only one instance exists"""
         if cls._instance is None:
             with cls._lock:
@@ -56,7 +62,12 @@ class ManagerRegistry:
         self._logger.info("ManagerRegistry initialized")
 
     def _register_cleanup_hooks(self) -> None:
-        """Register cleanup hooks with Qt application"""
+        """Register cleanup hooks with Qt application - delayed until Qt is available"""
+        # Don't try to register hooks immediately - wait until Qt is actually available
+        pass
+
+    def _try_register_cleanup_hooks(self) -> None:
+        """Actually register cleanup hooks when Qt is available"""
         if not ManagerRegistry._cleanup_registered:
             try:
                 app = QApplication.instance()
@@ -74,13 +85,15 @@ class ManagerRegistry:
         if manager_name in self._managers:
             del self._managers[manager_name]
 
-    def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None) -> None:
+    def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None,
+                          use_consolidated: bool = True) -> None:
         """
         Initialize all managers with proper error handling and cleanup
 
         Args:
             app_name: Application name for settings
             settings_path: Optional custom settings path (for testing)
+            use_consolidated: Whether to use consolidated managers (default: True)
 
         Raises:
             ManagerError: If manager initialization fails
@@ -91,7 +104,7 @@ class ManagerRegistry:
                 self._logger.debug("Managers already initialized, skipping")
                 return
 
-            self._logger.info("Initializing managers...")
+            self._logger.info(f"Initializing managers (consolidated={use_consolidated})...")
 
             # Get Qt application instance for proper parent management
             app = QApplication.instance()
@@ -101,38 +114,83 @@ class ManagerRegistry:
             else:
                 qt_parent = app
                 self._logger.debug("Using QApplication as Qt parent for managers")
+                # Now that we have a QApplication, try to register cleanup hooks
+                self._try_register_cleanup_hooks()
 
             # Track which managers were created for cleanup on failure
             created_managers = []
 
             try:
-                # Initialize session manager first as others may depend on it
-                # SessionManager inherits from BaseManager (QObject), so it can take a parent
-                self._logger.debug("Creating SessionManager...")
-                session_manager = SessionManager(app_name, settings_path)
-                session_manager.setParent(qt_parent)  # Set parent after creation
-                self._managers["session"] = session_manager
-                self._manager_refs["session"] = weakref.ref(session_manager,
-                    lambda ref: self._on_manager_deleted("session"))
-                created_managers.append("session")
-                self._logger.debug("SessionManager created successfully")
+                if use_consolidated:
+                    # Use new consolidated managers
+                    self._logger.debug("Creating ApplicationStateManager...")
+                    state_manager = ApplicationStateManager(app_name, settings_path, parent=qt_parent)
+                    self._managers["state"] = state_manager
+                    self._manager_refs["state"] = weakref.ref(state_manager,
+                        lambda ref: self._on_manager_deleted("state"))
+                    created_managers.append("state")
 
-                # Initialize Qt-based managers with proper parent to prevent lifecycle issues
-                self._logger.debug("Creating ExtractionManager...")
-                extraction_manager = ExtractionManager(parent=qt_parent)
-                self._managers["extraction"] = extraction_manager
-                self._manager_refs["extraction"] = weakref.ref(extraction_manager,
-                    lambda ref: self._on_manager_deleted("extraction"))
-                created_managers.append("extraction")
-                self._logger.debug("ExtractionManager created successfully")
+                    # Register adapters for backward compatibility
+                    self._managers["session"] = state_manager.get_session_adapter()
+                    self._manager_refs["session"] = weakref.ref(self._managers["session"],
+                        lambda ref: self._on_manager_deleted("session"))
+                    self._logger.debug("ApplicationStateManager created successfully")
 
-                self._logger.debug("Creating InjectionManager...")
-                injection_manager = InjectionManager(parent=qt_parent)
-                self._managers["injection"] = injection_manager
-                self._manager_refs["injection"] = weakref.ref(injection_manager,
-                    lambda ref: self._on_manager_deleted("injection"))
-                created_managers.append("injection")
-                self._logger.debug("InjectionManager created successfully")
+                    # Create CoreOperationsManager
+                    self._logger.debug("Creating CoreOperationsManager...")
+                    core_manager = CoreOperationsManager(parent=qt_parent)
+                    self._managers["core_operations"] = core_manager
+                    self._manager_refs["core_operations"] = weakref.ref(core_manager,
+                        lambda ref: self._on_manager_deleted("core_operations"))
+                    created_managers.append("core_operations")
+
+                    # Register adapters
+                    self._managers["extraction"] = core_manager.get_extraction_adapter()
+                    self._manager_refs["extraction"] = weakref.ref(self._managers["extraction"],
+                        lambda ref: self._on_manager_deleted("extraction"))
+                    self._managers["injection"] = core_manager.get_injection_adapter()
+                    self._manager_refs["injection"] = weakref.ref(self._managers["injection"],
+                        lambda ref: self._on_manager_deleted("injection"))
+                    self._logger.debug("CoreOperationsManager created successfully")
+
+                    # Create UICoordinatorManager
+                    self._logger.debug("Creating UICoordinatorManager...")
+                    ui_manager = UICoordinatorManager(parent=qt_parent)
+                    self._managers["ui_coordinator"] = ui_manager
+                    self._manager_refs["ui_coordinator"] = weakref.ref(ui_manager,
+                        lambda ref: self._on_manager_deleted("ui_coordinator"))
+                    created_managers.append("ui_coordinator")
+                    self._logger.debug("UICoordinatorManager created successfully")
+
+                else:
+                    # Use original managers for backward compatibility
+                    # Initialize session manager first as others may depend on it
+                    # SessionManager inherits from BaseManager (QObject), so it can take a parent
+                    self._logger.debug("Creating SessionManager...")
+                    session_manager = SessionManager(app_name, settings_path)
+                    session_manager.setParent(qt_parent)  # Set parent after creation
+                    self._managers["session"] = session_manager
+                    self._manager_refs["session"] = weakref.ref(session_manager,
+                        lambda ref: self._on_manager_deleted("session"))
+                    created_managers.append("session")
+                    self._logger.debug("SessionManager created successfully")
+
+                    # Initialize Qt-based managers with proper parent to prevent lifecycle issues
+                    self._logger.debug("Creating ExtractionManager...")
+                    extraction_manager = ExtractionManager(parent=qt_parent)
+                    self._managers["extraction"] = extraction_manager
+                    self._manager_refs["extraction"] = weakref.ref(extraction_manager,
+                        lambda ref: self._on_manager_deleted("extraction"))
+                    created_managers.append("extraction")
+                    self._logger.debug("ExtractionManager created successfully")
+
+                    self._logger.debug("Creating InjectionManager...")
+                    injection_manager = InjectionManager(parent=qt_parent)
+                    self._managers["injection"] = injection_manager
+                    self._manager_refs["injection"] = weakref.ref(injection_manager,
+                        lambda ref: self._on_manager_deleted("injection"))
+                    created_managers.append("injection")
+                    self._logger.debug("InjectionManager created successfully")
 
                 # TODO: NavigationManager disabled due to threading issues in tests
                 # self._logger.debug("Creating NavigationManager...")
@@ -140,6 +198,23 @@ class ManagerRegistry:
                 # self._managers["navigation"] = NavigationManager(parent=qt_parent)
                 # created_managers.append("navigation")
                 # self._logger.debug("NavigationManager created successfully")
+
+                # Initialize MonitoringManager
+                self._logger.debug("Creating MonitoringManager...")
+                monitoring_manager = MonitoringManager(parent=qt_parent)
+                self._managers["monitoring"] = monitoring_manager
+                self._manager_refs["monitoring"] = weakref.ref(monitoring_manager,
+                    lambda ref: self._on_manager_deleted("monitoring"))
+                created_managers.append("monitoring")
+                self._logger.debug("MonitoringManager created successfully")
+
+                # Register existing managers for automatic monitoring
+                if "extraction" in self._managers:
+                    monitoring_manager.register_manager_monitoring(self._managers["extraction"])
+                if "injection" in self._managers:
+                    monitoring_manager.register_manager_monitoring(self._managers["injection"])
+                if "session" in self._managers:
+                    monitoring_manager.register_manager_monitoring(self._managers["session"])
 
                 # Future managers will be added here
 
@@ -242,8 +317,61 @@ class ManagerRegistry:
         Raises:
             ManagerError: If manager not initialized
         """
-        # TODO: NavigationManager disabled due to threading issues in tests
-        raise ManagerError("NavigationManager temporarily disabled for test stability")
+        # Use DI container to resolve NavigationManager - eliminates circular dependencies
+        from core.di_container import inject
+        from core.protocols.manager_protocols import NavigationManagerProtocol
+        try:
+            return inject(NavigationManagerProtocol)
+        except ValueError as e:
+            raise ManagerError("NavigationManager not initialized. Call initialize_managers() first.") from e
+
+    def get_core_operations_manager(self):
+        """
+        Get the consolidated core operations manager instance
+
+        Returns:
+            CoreOperationsManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        return self._get_manager("core_operations", CoreOperationsManager)
+
+    def get_application_state_manager(self):
+        """
+        Get the consolidated application state manager instance
+
+        Returns:
+            ApplicationStateManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        return self._get_manager("state", ApplicationStateManager)
+
+    def get_ui_coordinator_manager(self):
+        """
+        Get the consolidated UI coordinator manager instance
+
+        Returns:
+            UICoordinatorManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        return self._get_manager("ui_coordinator", UICoordinatorManager)
+
+    def get_monitoring_manager(self):
+        """
+        Get the monitoring manager instance
+
+        Returns:
+            MonitoringManager instance
+
+        Raises:
+            ManagerError: If manager not initialized
+        """
+        return self._get_manager("monitoring", MonitoringManager)
 
     def _get_manager(self, name: str, expected_type: type) -> Any:
         """
@@ -329,7 +457,6 @@ class ManagerRegistry:
             self._logger.exception(f"Manager dependency validation failed: {e}")
             return False
 
-
 # Global instance accessor functions with context support
 _registry = ManagerRegistry()
 
@@ -349,18 +476,15 @@ import atexit
 
 atexit.register(_cleanup_global_registry)
 
-
 def _ensure_registry() -> ManagerRegistry:
     """Ensure the global registry is available and return it."""
     if _registry is None:
         raise ManagerError("Manager registry has been cleaned up or not initialized")
     return _registry
 
-
 def get_registry() -> ManagerRegistry:
     """Get the global manager registry instance"""
     return _ensure_registry()
-
 
 def get_session_manager() -> SessionManager:
     """
@@ -384,7 +508,6 @@ def get_session_manager() -> SessionManager:
     # Fallback to global registry
     return _ensure_registry().get_session_manager()
 
-
 def get_extraction_manager() -> ExtractionManager:
     """
     Get the extraction manager instance.
@@ -406,7 +529,6 @@ def get_extraction_manager() -> ExtractionManager:
 
     # Fallback to global registry
     return _ensure_registry().get_extraction_manager()
-
 
 def get_injection_manager() -> InjectionManager:
     """
@@ -430,7 +552,6 @@ def get_injection_manager() -> InjectionManager:
     # Fallback to global registry
     return _ensure_registry().get_injection_manager()
 
-
 def get_navigation_manager():
     """
     Get the global navigation manager instance
@@ -441,29 +562,33 @@ def get_navigation_manager():
     Raises:
         ManagerError: If managers not initialized
     """
-    return _ensure_registry().get_navigation_manager()
+    # Use DI container directly for better integration
+    from core.di_container import inject
+    from core.protocols.manager_protocols import NavigationManagerProtocol
+    try:
+        return inject(NavigationManagerProtocol)
+    except ValueError as e:
+        raise ManagerError("NavigationManager not initialized. Call initialize_managers() first.") from e
 
-
-def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None) -> None:
+def initialize_managers(app_name: str = "SpritePal", settings_path: Any = None,
+                       use_consolidated: bool = True) -> None:
     """
     Initialize all managers
 
     Args:
         app_name: Application name for settings
         settings_path: Optional custom settings path (for testing)
+        use_consolidated: Whether to use consolidated managers (default: True)
     """
-    _ensure_registry().initialize_managers(app_name, settings_path)
-
+    _ensure_registry().initialize_managers(app_name, settings_path, use_consolidated)
 
 def cleanup_managers() -> None:
     """Cleanup all managers"""
     _ensure_registry().cleanup_managers()
 
-
 def are_managers_initialized() -> bool:
     """Check if managers are initialized"""
     return _ensure_registry().is_initialized()
-
 
 def validate_manager_dependencies() -> bool:
     """
@@ -473,3 +598,51 @@ def validate_manager_dependencies() -> bool:
         True if all dependencies are valid, False otherwise
     """
     return _ensure_registry().validate_manager_dependencies()
+
+def get_core_operations_manager():
+    """
+    Get the consolidated core operations manager instance
+
+    Returns:
+        CoreOperationsManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _ensure_registry().get_core_operations_manager()
+
+def get_application_state_manager():
+    """
+    Get the consolidated application state manager instance
+
+    Returns:
+        ApplicationStateManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _ensure_registry().get_application_state_manager()
+
+def get_ui_coordinator_manager():
+    """
+    Get the consolidated UI coordinator manager instance
+
+    Returns:
+        UICoordinatorManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _ensure_registry().get_ui_coordinator_manager()
+
+def get_monitoring_manager():
+    """
+    Get the monitoring manager instance
+
+    Returns:
+        MonitoringManager instance
+
+    Raises:
+        ManagerError: If managers not initialized
+    """
+    return _ensure_registry().get_monitoring_manager()

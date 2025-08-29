@@ -1,11 +1,11 @@
 """Tests for scan worker division by zero and full ROM scanning fixes"""
+from __future__ import annotations
 
 import pytest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QObject
 from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
 from ui.rom_extraction.workers.range_scan_worker import RangeScanWorker
-
 
 class TestScanWorkerFixes:
     """Test division by zero and full ROM scanning fixes"""

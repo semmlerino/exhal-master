@@ -4,6 +4,7 @@ Base class for tabbed widgets with consistent styling and behavior.
 Provides a foundation for creating organized, tab-based interfaces that follow
 UI/UX principles like progressive disclosure and clear visual hierarchy.
 """
+from __future__ import annotations
 
 try:
     from typing_extensions import override

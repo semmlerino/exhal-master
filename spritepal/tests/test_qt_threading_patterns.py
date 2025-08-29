@@ -8,6 +8,7 @@ This suite specifically tests:
 4. Event loop management
 5. Synchronization and thread safety
 """
+from __future__ import annotations
 
 import threading
 import time
@@ -17,7 +18,6 @@ from unittest.mock import Mock, patch
 import pytest
 from PySide6.QtCore import (
 # Serial execution required: QApplication management, Thread safety concerns
-
 
     QEventLoop,
     QMutex,
@@ -31,8 +31,6 @@ from PySide6.QtWidgets import QApplication
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from ui.common.worker_manager import WorkerManager
-
-
 
 pytestmark = [
     
@@ -77,7 +75,6 @@ class ThreadInfoCapture:
         """Reset captures"""
         with self.lock:
             self.captures.clear()
-
 
 class TestQThreadPatterns:
     """Test different QThread implementation patterns"""
@@ -276,7 +273,6 @@ class TestQThreadPatterns:
         worker.deleteLater()
         thread.deleteLater()
 
-
 class TestSignalSlotAcrossThreads:
     """Test signal/slot mechanism across threads"""
     
@@ -399,7 +395,6 @@ class TestSignalSlotAcrossThreads:
         assert len(received_data[0]) == 10
         assert all(f"worker_{i}" in received_data[0] for i in range(10))
 
-
 class TestEventLoopManagement:
     """Test event loop management in worker threads"""
     
@@ -505,7 +500,6 @@ class TestEventLoopManagement:
         # Verify result
         assert len(results) == 1
         assert results[0] == "Timer completed"
-
 
 class TestSynchronizationPatterns:
     """Test Qt synchronization patterns"""
@@ -649,7 +643,6 @@ class TestSynchronizationPatterns:
             thread.quit()
             thread.wait()
 
-
 class TestWorkerLifecycle:
     """Test worker lifecycle management"""
     
@@ -728,7 +721,6 @@ class TestWorkerLifecycle:
         assert len(errors) == 1
         assert "Test error" in errors[0][0]
         assert isinstance(errors[0][1], ValueError)
-
 
 class TestRealWorldScenarios:
     """Test real-world threading scenarios"""
@@ -847,7 +839,6 @@ class TestRealWorldScenarios:
         assert processor.processed_data[0] == [2, 4, 6]
         assert processor.processed_data[1] == [8, 10, 12]
         assert processor.processed_data[2] == [14, 16, 18]
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

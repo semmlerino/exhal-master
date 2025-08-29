@@ -5,6 +5,7 @@ This module provides in-memory state management for temporary data that doesn't
 need disk persistence. Perfect for dialog positions, widget states, and other
 runtime state that should not be saved between application sessions.
 """
+from __future__ import annotations
 
 import pickle
 import sys
@@ -60,7 +61,6 @@ class StateEntry:
         self.accessed_at = time.time()
         self.access_count += 1
 
-
 class StateSnapshot:
     """
     Immutable snapshot of state at a point in time.
@@ -94,7 +94,6 @@ class StateSnapshot:
             Age in seconds
         """
         return time.time() - self.timestamp
-
 
 class StateManager:
     """
@@ -353,11 +352,9 @@ class StateManager:
             limit_mb = self._max_size_bytes / (1024 * 1024)
             return used_mb, limit_mb
 
-
 # Singleton instance for convenient global access
 _global_state_manager: StateManager | None = None
 _global_lock = threading.Lock()
-
 
 def get_state_manager() -> StateManager:
     """

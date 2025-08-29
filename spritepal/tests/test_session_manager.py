@@ -1,12 +1,11 @@
 """
 Tests for SessionManager
 """
-
+from __future__ import annotations
 
 import pytest
 
 from core.managers import SessionError, SessionManager, ValidationError
-
 
 # Test characteristics: Real GUI components requiring display
 pytestmark = [
@@ -21,7 +20,6 @@ pytestmark = [
     pytest.mark.headless,
     pytest.mark.signals_slots,
 ]
-
 
 class TestSessionManager:
     """Test SessionManager functionality"""

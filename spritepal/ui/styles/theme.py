@@ -1,7 +1,7 @@
 """
 Theme constants and styling foundations for SpritePal UI
 """
-
+from __future__ import annotations
 
 # Dark Theme Color Palette
 COLORS = {
@@ -157,7 +157,6 @@ def get_disabled_state_style() -> str:
         border-color: {COLORS['disabled']};
     }}
     """
-
 
 class Theme:
     """Theme class providing easy access to dark theme color constants."""

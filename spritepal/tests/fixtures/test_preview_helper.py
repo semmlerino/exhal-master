@@ -1,6 +1,7 @@
 """
 Helper for testing real preview functionality without extensive mocking
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -11,8 +12,8 @@ from typing import Any
 import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtWidgets import QApplication
-
 
 # Ensure headless Qt environment
 # Serial execution required: QApplication management
@@ -25,7 +26,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 def ensure_headless_qt():
     """Ensure Qt is running in headless mode for testing"""
@@ -112,7 +112,7 @@ class TestPreviewPanelHelper(QObject):
         self.temp_path = Path(self.temp_dir)
 
         # State tracking
-        self._current_pixmap: QPixmap | None = None
+        self._current_pixmap: QPixmap | ThreadSafeTestImage | None = None
         self._current_tile_count = 0
         self._current_tiles_per_row = 0
         self._grayscale_image = None
@@ -176,7 +176,7 @@ class TestPreviewPanelHelper(QObject):
             self._selected_palette_index = index
             self.palette_index_changed.emit(index)
 
-    def update_preview(self, pixmap: QPixmap, tile_count: int = 0, tiles_per_row: int = 0):
+    def update_preview(self, pixmap: QPixmap | ThreadSafeTestImage, tile_count: int = 0, tiles_per_row: int = 0):
         """Update preview (preserves zoom/pan state)"""
         old_zoom = self._zoom
         old_pan_x = self._pan_offset_x
@@ -199,7 +199,7 @@ class TestPreviewPanelHelper(QObject):
             "zoom_preserved": True
         })
 
-    def set_preview(self, pixmap: QPixmap, tile_count: int = 0, tiles_per_row: int = 0):
+    def set_preview(self, pixmap: QPixmap | ThreadSafeTestImage, tile_count: int = 0, tiles_per_row: int = 0):
         """Set new preview (resets zoom/pan state)"""
         self._current_pixmap = pixmap
         self._current_tile_count = tile_count
@@ -323,8 +323,9 @@ class TestControllerHelper(QObject):
             if offset == 0x4000:
                 raise ValueError("Invalid offset")
 
-            # Create mock pixmap for successful extraction
-            mock_pixmap = QPixmap(128, 128)
+            # Create thread-safe test image for successful extraction
+            # Using ThreadSafeTestImage instead of QPixmap to prevent threading violations
+            mock_pixmap = ThreadSafeTestImage(128, 128)
 
             # Simulate different tile counts for different offsets
             if offset == 0x8000:

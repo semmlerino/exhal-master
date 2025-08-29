@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.dialog,
@@ -18,8 +20,6 @@ making them suitable for headless environments.
 import pytest
 import sys
 from unittest.mock import Mock, MagicMock, patch
-from typing import Optional
-
 
 # Helper functions for creating proper Qt mocks (defined first)
 def create_mock_qobject():
@@ -27,14 +27,12 @@ def create_mock_qobject():
     mock = Mock()
     return mock
 
-
 def create_mock_signal(*args, **kwargs):
     """Create a properly configured Signal mock with emit method."""
     mock = Mock()
     mock.emit = Mock()
     mock.connect = Mock()
     return mock
-
 
 def create_mock_standard_button():
     """Create a mock StandardButton enum that supports bitwise operations."""
@@ -57,7 +55,6 @@ def create_mock_standard_button():
     
     return mock_enum
 
-
 def create_mock_button_box(*args, **kwargs):
     """Create a properly configured QDialogButtonBox mock."""
     mock_box = Mock()
@@ -67,7 +64,6 @@ def create_mock_button_box(*args, **kwargs):
     mock_box.removeButton = Mock()
     mock_box.button = Mock(return_value=Mock())
     return mock_box
-
 
 # Mock Qt modules before any imports
 sys.modules['PySide6'] = Mock()
@@ -172,7 +168,6 @@ MockQPixmap.__ror__ = lambda self, other: type('UnionType', (), {})
 qt_gui = sys.modules['PySide6.QtGui']
 qt_gui.QPixmap = MockQPixmap
 
-
 class TestDialogContextUnit:
     """Unit tests for DialogContext."""
     
@@ -235,7 +230,6 @@ class TestDialogContextUnit:
         
         # Unregistering non-existent should not raise
         context.unregister_component("nonexistent")
-
 
 class TestMessageDialogManagerUnit:
     """Unit tests for MessageDialogManager."""
@@ -324,7 +318,6 @@ class TestMessageDialogManagerUnit:
         # Verify message box was called
         mock_message_box.critical.assert_called_once_with(mock_dialog, "Error Title", "Error Message")
 
-
 class TestStatusBarManagerUnit:
     """Unit tests for StatusBarManager."""
     
@@ -383,7 +376,6 @@ class TestStatusBarManagerUnit:
         assert manager.status_bar is None
         assert context.status_bar is None
         assert not manager.is_available
-
 
 class TestButtonBoxManagerUnit:
     """Unit tests for ButtonBoxManager."""
@@ -487,7 +479,6 @@ class TestButtonBoxManagerUnit:
             # Restore original mock
             qt_widgets.QDialogButtonBox = original_qdialogbuttonbox
 
-
 class TestComposedDialogArchitecture:
     """Test the overall architecture integration."""
     
@@ -576,7 +567,6 @@ class TestComposedDialogArchitecture:
         
         assert not message_manager.is_initialized
         assert not button_manager.is_available
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

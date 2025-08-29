@@ -53,7 +53,6 @@ MIN_PANEL_WIDTH = 380  # Slightly smaller minimum
 LAYOUT_MARGINS = 8  # Tighter margins
 LAYOUT_SPACING = 6  # Tighter spacing
 
-
 class ExtractionParams(TypedDict):
     """Type definition for extraction parameters"""
     vram_path: str
@@ -64,7 +63,6 @@ class ExtractionParams(TypedDict):
     create_grayscale: bool
     create_metadata: bool
     grayscale_mode: bool
-
 
 class MainWindow(QMainWindow):
     """Main application window for SpritePal"""

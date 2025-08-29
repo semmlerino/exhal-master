@@ -2,11 +2,11 @@
 Test zoom functionality in grid arrangement dialog using mocks
 This version avoids Qt initialization issues in headless environments
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
 import pytest
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestGridGraphicsViewZoomMock:
     """Test zoom functionality using mocks to avoid Qt initialization issues"""
@@ -175,7 +174,6 @@ class TestGridGraphicsViewZoomMock:
         self.view.zoom_out()
         assert self.view.zoom_level < 1.0
 
-
 class TestGridGraphicsViewZoomIntegration:
     """Test zoom integration with mocked components"""
 
@@ -206,7 +204,6 @@ class TestGridGraphicsViewZoomIntegration:
         assert callable(self.view_class.zoom_to_fit)
         assert callable(self.view_class.reset_zoom)
         assert callable(self.view_class.get_zoom_level)
-
 
 class TestGridArrangementDialogZoomLogic:
     """Test zoom logic without Qt dependencies"""
@@ -277,7 +274,6 @@ class TestGridArrangementDialogZoomLogic:
             # Reverse scaling should get back to original
             unscaled = scaled / zoom
             assert abs(unscaled - base_coord) < 0.001  # Account for float precision
-
 
 if __name__ == "__main__":
     pytest.main([__file__])

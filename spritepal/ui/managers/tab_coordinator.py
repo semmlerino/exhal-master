@@ -1,6 +1,7 @@
 """
 Tab coordination and switching logic for MainWindow
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
@@ -12,7 +13,6 @@ if TYPE_CHECKING:
     from ui.managers.output_settings_manager import OutputSettingsManager
     from ui.managers.toolbar_manager import ToolbarManager
     from ui.rom_extraction_panel import ROMExtractionPanel
-
 
 class TabCoordinatorActionsProtocol(Protocol):
     """Protocol defining the interface for tab coordinator actions"""
@@ -33,7 +33,6 @@ class TabCoordinatorActionsProtocol(Protocol):
         """Get current extraction mode index"""
         ...
 
-
 class TabCoordinator(QObject):
     """Coordinates tab switching and state synchronization"""
 
@@ -43,10 +42,10 @@ class TabCoordinator(QObject):
     def __init__(
         self,
         extraction_tabs: QTabWidget,
-        rom_extraction_panel: "ROMExtractionPanel",
-        extraction_panel: "ExtractionPanel",
-        output_settings_manager: "OutputSettingsManager",
-        toolbar_manager: "ToolbarManager",
+        rom_extraction_panel: ROMExtractionPanel,
+        extraction_panel: ExtractionPanel,
+        output_settings_manager: OutputSettingsManager,
+        toolbar_manager: ToolbarManager,
         actions_handler: TabCoordinatorActionsProtocol
     ) -> None:
         """Initialize tab coordinator

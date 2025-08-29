@@ -4,6 +4,7 @@ Sprite Search Worker
 Worker thread for searching sprites in a specific direction from current position.
 Used for intelligent next/previous navigation that skips empty ROM areas.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,7 +23,6 @@ logger = get_logger(__name__)
 SEARCH_STEP = 0x100  # Search in 256-byte increments
 MAX_SEARCH_DISTANCE = 0x100000  # Stop after 1MB
 SEARCH_BATCH_SIZE = 100  # Check this many offsets before yielding
-
 
 class SpriteSearchWorker(BaseWorker):
     """
@@ -43,7 +43,7 @@ class SpriteSearchWorker(BaseWorker):
     # We'll override emit_progress to convert our (current, total) to (percent, message)
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 direction: int, rom_extractor: "ROMExtractor", parent=None):
+                 direction: int, rom_extractor: ROMExtractor, parent=None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.start_offset = start_offset

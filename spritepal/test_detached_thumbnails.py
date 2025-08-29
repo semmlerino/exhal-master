@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test that thumbnails are properly copied to the detached gallery window.
 """

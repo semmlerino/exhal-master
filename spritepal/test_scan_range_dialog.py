@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Quick test to verify ScanRangeDialog defaults are correct."""
 
 import sys
@@ -7,7 +9,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from PySide6.QtWidgets import QApplication
 from ui.dialogs.scan_range_dialog import ScanRangeDialog
-
 
 def test_scan_range_dialog_defaults():
     """Test that ScanRangeDialog has correct default values."""
@@ -40,7 +41,6 @@ def test_scan_range_dialog_defaults():
     print("\n✅ All ScanRangeDialog tests passed!")
     print(f"Default range is now: 0x{dialog.start_offset:X} - 0x{dialog.end_offset:X}")
     print("This matches the scan_worker.py defaults for full ROM scanning")
-
 
 if __name__ == "__main__":
     test_scan_range_dialog_defaults()

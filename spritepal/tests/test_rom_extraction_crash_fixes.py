@@ -2,6 +2,7 @@
 Tests for ROM extraction crash fixes.
 Verifies fixes for signal loops, offset parsing, and error handling.
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -11,7 +12,6 @@ import pytest
 
 from ui.injection_dialog import InjectionDialog
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.signals_slots,
 ]
-
 
 class TestSignalLoopFixes:
     """Test signal loop protection in injection dialog"""
@@ -97,7 +96,6 @@ class TestSignalLoopFixes:
 
         # Verify the signal handler was NOT called due to signal blocking
         assert not sprite_location_changed_called
-
 
 class TestOffsetParsingFixes:
     """Test improved offset parsing with error handling"""
@@ -175,7 +173,6 @@ class TestOffsetParsingFixes:
                 args = mock_warning.call_args[0]
                 assert "Invalid ROM offset value" in args[2]
 
-
 class TestROMLoadingSafety:
     """Test safe ROM loading with error handling"""
 
@@ -241,7 +238,6 @@ class TestROMLoadingSafety:
         assert dialog.sprite_location_combo.itemText(0) == "Load ROM file first..."
         assert dialog.rom_info_text.toPlainText() == ""
         assert not dialog.rom_info_group.isVisible()
-
 
 class TestPreviewWorkerSafety:
     """Test preview worker safety improvements"""
@@ -321,7 +317,6 @@ class TestPreviewWorkerSafety:
 
             finally:
                 os.unlink(tmp_file.name)
-
 
 class TestInputValidation:
     """Test input validation improvements"""

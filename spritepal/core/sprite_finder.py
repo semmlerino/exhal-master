@@ -1,6 +1,7 @@
 """
 Comprehensive sprite finder that scans ROMs for actual character sprites
 """
+from __future__ import annotations
 
 import json
 import os
@@ -33,7 +34,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class SpriteCandidate:
     """Represents a potential sprite found in ROM"""
@@ -56,7 +56,6 @@ class SpriteCandidate:
             "visual_metrics": {k: round(v, 3) for k, v in self.visual_metrics.items()},
             "preview_path": self.preview_path
         }
-
 
 class SpriteFinder:
     """Finds actual character sprites in ROM files"""
@@ -368,7 +367,28 @@ class SpriteFinder:
                 "alignment": "perfect" if len(sprite_data) % BYTES_PER_TILE == 0 else f"{len(sprite_data) % BYTES_PER_TILE} extra bytes"
             }
 
-
         except Exception:
             # Decompression or validation failed
+            return None
+            
+    def check_offset_for_sprite(self, rom_path: str, offset: int) -> dict[str, Any] | None:
+        """
+        Check if a specific ROM file offset contains valid sprite data.
+        
+        This method provides the missing interface needed for external validation
+        of ROM offsets discovered by other tools (like Lua scripts).
+        
+        Args:
+            rom_path: Path to ROM file
+            offset: ROM file offset to check
+            
+        Returns:
+            Sprite info dict if valid sprite found, None otherwise
+        """
+        try:
+            with open(rom_path, 'rb') as f:
+                rom_data = f.read()
+            return self.find_sprite_at_offset(rom_data, offset)
+        except Exception as e:
+            logger.warning(f"Failed to check offset 0x{offset:06X}: {e}")
             return None

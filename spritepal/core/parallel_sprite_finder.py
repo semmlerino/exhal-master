@@ -4,6 +4,7 @@ Parallel sprite finder for improved search performance.
 This module implements concurrent sprite searching across ROM regions,
 providing 3-4x speedup on multi-core systems.
 """
+from __future__ import annotations
 
 import logging
 import time
@@ -21,7 +22,6 @@ from utils.constants import (
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SearchChunk:
     """Represents a ROM region to search."""
@@ -33,7 +33,6 @@ class SearchChunk:
     def size(self) -> int:
         return self.end - self.start
 
-
 @dataclass
 class SearchResult:
     """Container for sprite search results."""
@@ -43,7 +42,6 @@ class SearchResult:
     compressed_size: int
     confidence: float
     metadata: dict[str, Any]
-
 
 class ParallelSpriteFinder:
     """
@@ -339,7 +337,6 @@ class ParallelSpriteFinder:
         """Shutdown the thread pool."""
         self.executor.shutdown(wait=True)
         logger.info("ParallelSpriteFinder shutdown complete")
-
 
 class AdaptiveSpriteFinder(ParallelSpriteFinder):
     """

@@ -56,7 +56,6 @@ from utils.thread_safe_singleton import QtThreadSafeSingleton
 
 logger = get_logger(__name__)
 
-
 class ScanDialog(QDialog):
     """Dialog for sprite scanning with typed attributes."""
 
@@ -79,7 +78,6 @@ BUTTON_MIN_HEIGHT = 32
 COMBO_MIN_WIDTH = 200
 BUTTON_MAX_WIDTH = 150
 LABEL_MIN_WIDTH = 120
-
 
 class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDialog"]):
     """
@@ -200,7 +198,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             if cls._instance is not None:
                 # Schedule deletion on main thread
                 instance = cls._instance  # Capture reference to avoid race condition
-                cls.safe_qt_call(lambda: instance.deleteLater() if instance else None)
+                cls.safe_qt_call(lambda: instance.deleteLater() if instance else None)  # type: ignore[arg-type]
                 cls._cleanup_instance(cls._instance)
                 cls._instance = None  # Clear the instance reference
 
@@ -233,7 +231,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
 
         # Use safe Qt call to check visibility
         instance = cls._instance  # Capture reference to avoid race condition
-        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)
+        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)  # type: ignore[arg-type]
         return is_visible is True  # Handle None return from safe_qt_call
 
     @classmethod
@@ -244,9 +242,8 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
 
         # Check if dialog is visible using thread-safe method
         instance = cls._instance  # Capture reference to avoid race condition
-        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)
+        is_visible = cls.safe_qt_call(lambda: instance.isVisible() if instance else False)  # type: ignore[arg-type]
         return cls._instance if is_visible else None
-
 
 class ROMExtractionPanel(QWidget):
     """Panel for ROM-based sprite extraction"""
@@ -1515,7 +1512,6 @@ class ROMExtractionPanel(QWidget):
         # Update extraction readiness
         self._check_extraction_ready()
 
-
     # Manual preview functionality removed - now handled in manual offset dialog
 
     def _find_next_sprite(self):
@@ -1634,7 +1630,6 @@ class ROMExtractionPanel(QWidget):
                         logger.warning(f"Error cleaning up preview worker: {e}")
                 self.sprite_navigator.preview_workers.clear()
 
-
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle panel close event"""
         # Clean up workers before closing
@@ -1657,7 +1652,6 @@ class ROMExtractionPanel(QWidget):
         except Exception as e:
             # Don't raise in destructor, just log
             logger.debug(f"Error in ROMExtractionPanel destructor: {e}")
-
 
 class ScanContext:
     """Context object for sharing data between scan event handlers."""

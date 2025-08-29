@@ -7,8 +7,7 @@ This module provides comprehensive testing of settings dialog integration with:
 - UI component interactions
 - Error handling scenarios
 """
-
-
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
@@ -41,7 +40,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 @pytest.fixture(autouse=True)
 def setup_teardown():
     """Initialize and cleanup managers for each test."""
@@ -52,7 +50,6 @@ def setup_teardown():
     import utils.rom_cache as rom_cache_module
     rom_cache_module._rom_cache_instance = None
 
-
 @pytest.fixture
 def temp_cache_dir(tmp_path):
     """Create a temporary cache directory."""
@@ -60,14 +57,12 @@ def temp_cache_dir(tmp_path):
     cache_dir.mkdir()
     return str(cache_dir)
 
-
 @pytest.fixture
 def temp_dumps_dir(tmp_path):
     """Create a temporary dumps directory."""
     dumps_dir = tmp_path / "dumps"
     dumps_dir.mkdir()
     return str(dumps_dir)
-
 
 @pytest.fixture
 def mock_settings_manager():
@@ -94,12 +89,10 @@ def mock_settings_manager():
 
     return mock_manager
 
-
 @pytest.fixture
 def rom_cache(temp_cache_dir):
     """Create a ROM cache instance."""
     return ROMCache(cache_dir=temp_cache_dir)
-
 
 @pytest.fixture
 def settings_dialog(qtbot, mock_settings_manager, rom_cache):
@@ -113,7 +106,6 @@ def settings_dialog(qtbot, mock_settings_manager, rom_cache):
             qtbot.addWidget(dialog)
 
             yield dialog, mock_settings_manager, rom_cache
-
 
 # ============================================================================
 # Settings Loading and Initialization Tests
@@ -189,7 +181,6 @@ class TestSettingsDialogInitialization:
             "cache_expiry", "auto_cleanup", "show_indicators"
         }
         assert set(dialog._original_settings.keys()) == expected_keys
-
 
 # ============================================================================
 # Settings Saving and Persistence Tests
@@ -267,7 +258,6 @@ class TestSettingsSavingAndPersistence:
 
         # Signal should be emitted
         assert len(signal_emitted) == 1
-
 
 # ============================================================================
 # Cache Integration Tests
@@ -367,7 +357,6 @@ class TestCacheIntegration:
         assert dialog.cache_files_label.text() == "N/A"
         assert dialog.cache_size_label.text() == "N/A"
 
-
 # ============================================================================
 # Cache Clearing Tests
 # ============================================================================
@@ -449,7 +438,6 @@ class TestCacheClearingFunctionality:
                 args = mock_error.call_args[0]
                 assert "Failed to clear cache" in args[2]
 
-
 # ============================================================================
 # Directory Selection Tests
 # ============================================================================
@@ -512,7 +500,6 @@ class TestDirectorySelection:
 
             # Value should remain unchanged
             assert dialog.dumps_dir_edit.text() == initial_value
-
 
 # ============================================================================
 # Settings Validation and Edge Cases
@@ -606,7 +593,6 @@ class TestSettingsValidationAndEdgeCases:
         displayed_path = dialog.cache_dir_label.text()
         assert len(displayed_path) <= 50
         assert displayed_path.startswith("...")
-
 
 # ============================================================================
 # Integration with Other Components

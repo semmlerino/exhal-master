@@ -20,7 +20,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SimplePreviewWorker(QThread):
     """Simple one-shot preview worker that generates a preview and exits."""
 
@@ -96,7 +95,6 @@ class SimplePreviewWorker(QThread):
         except Exception as e:
             logger.error(f"[SIMPLE] Error generating preview: {e}")
             self.preview_error.emit(str(e))
-
 
 class SimplePreviewCoordinator(QObject):
     """

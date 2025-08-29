@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Install Performance Validation Dependencies
 
@@ -7,7 +9,6 @@ This script ensures all dependencies for performance validation are installed.
 
 import subprocess
 import sys
-
 
 def install_package(package):
     """Install a package using pip."""

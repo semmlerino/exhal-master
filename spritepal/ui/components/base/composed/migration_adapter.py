@@ -12,8 +12,9 @@ Usage:
     With:
         from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter as DialogBase
 """
+from __future__ import annotations
 
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -31,10 +32,8 @@ from .composed_dialog import ComposedDialog
 
 logger = get_logger(__name__)
 
-
 class InitializationOrderError(Exception):
     """Raised when initialization order requirements are violated."""
-
 
 class DialogBaseMigrationAdapter(ComposedDialog):
     """
@@ -58,15 +57,15 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
-        title: Optional[str] = None,
+        parent: QWidget | None = None,
+        title: str | None = None,
         modal: bool = True,
-        min_size: Optional[tuple[Optional[int], Optional[int]]] = None,
-        size: Optional[tuple[int, int]] = None,
+        min_size: tuple[int | None, int | None | None] | None = None,
+        size: tuple[int, int | None] | None = None,
         with_status_bar: bool = False,
         with_button_box: bool = True,
-        default_tab: Optional[int] = None,
-        orientation: Optional[Any] = None,  # For splitter dialogs
+        default_tab: int | None = None,
+        orientation: Any | None = None,  # For splitter dialogs
         splitter_handle_width: int = 8,  # For splitter dialogs
         **kwargs  # Accept any additional keyword arguments
     ):
@@ -338,7 +337,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
             return self._tab_widget.currentIndex()
         return -1
 
-    def add_horizontal_splitter(self, handle_width: Optional[int] = None) -> Any:
+    def add_horizontal_splitter(self, handle_width: int | None = None) -> Any:
         """
         Add a horizontal splitter to the dialog (for splitter dialogs).
 
@@ -390,7 +389,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
             self.main_splitter.count() - 1, stretch_factor
         )
 
-    def add_button(self, text: str, callback: Optional[Any] = None) -> Any:
+    def add_button(self, text: str, callback: Any | None = None) -> Any:
         """
         Add a button to the dialog.
 
@@ -438,7 +437,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         """
         message_manager = self.get_component("message_dialog")
         if message_manager and hasattr(message_manager, "show_error"):
-            message_manager.show_error(title, message)
+            message_manager.show_error(title, message)  # type: ignore[attr-defined]
         else:
             # Fallback to direct QMessageBox
             QMessageBox.critical(self, title, message)
@@ -453,7 +452,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         """
         message_manager = self.get_component("message_dialog")
         if message_manager and hasattr(message_manager, "show_info"):
-            message_manager.show_info(title, message)
+            message_manager.show_info(title, message)  # type: ignore[attr-defined]
         else:
             # Fallback to direct QMessageBox
             QMessageBox.information(self, title, message)
@@ -468,7 +467,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         """
         message_manager = self.get_component("message_dialog")
         if message_manager and hasattr(message_manager, "show_warning"):
-            message_manager.show_warning(title, message)
+            message_manager.show_warning(title, message)  # type: ignore[attr-defined]
         else:
             # Fallback to direct QMessageBox
             QMessageBox.warning(self, title, message)
@@ -486,7 +485,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         """
         message_manager = self.get_component("message_dialog")
         if message_manager and hasattr(message_manager, "confirm_action"):
-            return message_manager.confirm_action(title, message)
+            return message_manager.confirm_action(title, message)  # type: ignore[attr-defined]
         # Fallback to direct QMessageBox
         reply = QMessageBox.question(self, title, message)
         return reply == QMessageBox.StandardButton.Yes

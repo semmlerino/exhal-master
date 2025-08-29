@@ -2,6 +2,7 @@
 Dialog for specifying custom ROM scan range.
 Allows users to define specific start and end offsets for sprite scanning.
 """
+from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -83,7 +84,7 @@ class ScanRangeDialog(QDialog):
             "• Kirby PAL: 0xC0000 - 0xF0000<br>"
             "• Headers: 0x0 - 0x40000 (rarely has sprites)"
         )
-        ranges_label.setStyleSheet("background-color: #f0f0f0; padding: 10px; margin-top: 10px;")
+        ranges_label.setStyleSheet("background-color: #f0f0f0; color: #000000; padding: 10px; margin-top: 10px;")
         layout.addWidget(ranges_label)
 
         # Buttons

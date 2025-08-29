@@ -13,6 +13,7 @@ Key improvements over mocked version:
 - Memory efficiency: ~12MB vs 410MB for mocked version
 - 65% faster execution with real components
 """
+from __future__ import annotations
 
 import gc
 import time
@@ -40,7 +41,6 @@ from ui.dialogs.manual_offset_unified_integrated import (
     SimpleHistoryTab
 )
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
-
 
 class TestUnifiedDialogIntegrationReal(DialogTestHelper):
     """Test unified dialog integration with real Qt components."""
@@ -325,7 +325,6 @@ class TestUnifiedDialogIntegrationReal(DialogTestHelper):
                 if isinstance(state_before[key], (int, float)):
                     assert abs(state_before[key] - state_after[key]) < 0x10000
 
-
 class TestSignalCoordinatorIntegrationReal(QtTestCase):
     """Test signal coordinator integration with real Qt components."""
 
@@ -398,7 +397,6 @@ class TestSignalCoordinatorIntegrationReal(QtTestCase):
         
         # Loop should be prevented by coordinator's debouncing
         assert loop_count["count"] < max_loops
-
 
 class TestThreadSafetyIntegrationReal(QtTestCase):
     """Test thread safety with real Qt threads and components."""
@@ -499,7 +497,6 @@ class TestThreadSafetyIntegrationReal(QtTestCase):
         # Cleanup
         coordinator.cleanup()
 
-
 class TestPerformanceIntegrationReal(QtTestCase):
     """Test performance with real Qt components."""
 
@@ -584,7 +581,6 @@ class TestPerformanceIntegrationReal(QtTestCase):
         # Target: < 20MB for 50 dialogs
         assert peak_mb < 20
         print(f"Peak memory for 50 real dialogs: {peak_mb:.2f}MB")
-
 
 class TestRealWorldIntegration(DialogTestHelper):
     """Test real-world integration scenarios."""
@@ -689,7 +685,6 @@ class TestRealWorldIntegration(DialogTestHelper):
         # Dialog should still be functional
         assert dialog is not None
 
-
 # Test markers
 pytestmark = [
     pytest.mark.integration,
@@ -706,7 +701,6 @@ pytestmark = [
     pytest.mark.thread_safety,
     pytest.mark.worker_threads,
 ]
-
 
 if __name__ == "__main__":
     # Run with real Qt components

@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -12,10 +14,9 @@ Test data generator for creating test ROMs with known content.
 
 import struct
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 
 from core.hal_compression import HALCompressor
-
 
 class TestROMGenerator:
     """Generate test ROM files with known sprite data."""
@@ -99,7 +100,7 @@ class TestROMGenerator:
     
     @staticmethod
     def insert_sprite_at_offset(rom_data: bytearray, offset: int, sprite_data: bytes, 
-                              compress: bool = False) -> Dict[str, Any]:
+                              compress: bool = False) -> dict[str, Any]:
         """
         Insert sprite data at a specific offset in ROM.
         
@@ -139,7 +140,7 @@ class TestROMGenerator:
         return sprite_info
     
     @staticmethod
-    def create_rom_with_sprites(sprites: List[Dict[str, Any]], rom_size: int = 4 * 1024 * 1024) -> tuple[bytes, List[Dict]]:
+    def create_rom_with_sprites(sprites: list[dict[str, Any]], rom_size: int = 4 * 1024 * 1024) -> tuple[bytes, list[Dict]]:
         """
         Create a ROM with multiple sprites at specified locations.
         
@@ -172,7 +173,7 @@ class TestROMGenerator:
         return bytes(rom_data), sprite_infos
     
     @staticmethod
-    def create_kirby_like_rom() -> tuple[bytes, List[Dict]]:
+    def create_kirby_like_rom() -> tuple[bytes, list[Dict]]:
         """
         Create a ROM with Kirby-like sprite layout.
         
@@ -196,7 +197,7 @@ class TestROMGenerator:
         return TestROMGenerator.create_rom_with_sprites(sprites)
     
     @staticmethod
-    def save_test_rom(path: Path, rom_data: bytes, sprite_infos: List[Dict] = None):
+    def save_test_rom(path: Path, rom_data: bytes, sprite_infos: list[Dict] = None):
         """
         Save test ROM to file with optional metadata.
         
@@ -219,12 +220,10 @@ class TestROMGenerator:
             }
             metadata_path.write_text(json.dumps(metadata, indent=2))
 
-
 # Utility functions for tests
 def generate_test_sprite(tile_count: int = 64, pattern: str = "gradient") -> bytes:
     """Generate test sprite data quickly."""
     return TestROMGenerator.create_4bpp_tile_data(tile_count, pattern)
-
 
 def generate_compressed_sprite(tile_count: int = 64) -> bytes:
     """Generate sprite data (compression requires file I/O)."""

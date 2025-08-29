@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QPixmap
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtWidgets import QApplication
 
 from tests.infrastructure.qt_real_testing import (
@@ -28,7 +28,6 @@ from tests.infrastructure.qt_real_testing import (
     MemoryHelper,
     QtTestCase,
 )
-
 
 @pytest.fixture
 def large_rom_data(tmp_path) -> str:
@@ -45,7 +44,6 @@ def large_rom_data(tmp_path) -> str:
     rom_path.write_bytes(rom_data)
     return str(rom_path)
 
-
 @pytest.fixture
 def massive_sprite_dataset() -> list[dict[str, Any]]:
     """Create a massive sprite dataset for memory testing."""
@@ -60,7 +58,6 @@ def massive_sprite_dataset() -> list[dict[str, Any]]:
         }
         for i in range(5000)  # 5000 sprites
     ]
-
 
 class MockROMCache:
     """Mock ROM cache for testing memory behavior."""
@@ -114,7 +111,6 @@ class MockROMCache:
         if oldest_rom in self.access_times:
             del self.access_times[oldest_rom]
 
-
 class MockThumbnailCache:
     """Mock thumbnail cache for testing memory behavior."""
     
@@ -124,11 +120,11 @@ class MockThumbnailCache:
         Args:
             max_thumbnails: Maximum number of thumbnails to cache
         """
-        self.thumbnails: dict[int, QPixmap] = {}
+        self.thumbnails: dict[int, ThreadSafeTestImage] = {}
         self.max_thumbnails = max_thumbnails
         self.access_order: list[int] = []
     
-    def get_thumbnail(self, offset: int) -> QPixmap | None:
+    def get_thumbnail(self, offset: int) -> ThreadSafeTestImage | None:
         """Get thumbnail from cache."""
         if offset in self.thumbnails:
             # Move to end (most recent)
@@ -137,7 +133,7 @@ class MockThumbnailCache:
             return self.thumbnails[offset]
         return None
     
-    def set_thumbnail(self, offset: int, pixmap: QPixmap):
+    def set_thumbnail(self, offset: int, image: ThreadSafeTestImage):
         """Set thumbnail in cache."""
         # Evict if at capacity
         if len(self.thumbnails) >= self.max_thumbnails:
@@ -145,7 +141,7 @@ class MockThumbnailCache:
             if oldest_offset in self.thumbnails:
                 del self.thumbnails[oldest_offset]
         
-        self.thumbnails[offset] = pixmap
+        self.thumbnails[offset] = image
         self.access_order.append(offset)
     
     def clear_cache(self):
@@ -156,12 +152,11 @@ class MockThumbnailCache:
     def get_cache_size_bytes(self) -> int:
         """Estimate cache size in bytes."""
         total_bytes = 0
-        for pixmap in self.thumbnails.values():
-            if not pixmap.isNull():
+        for image in self.thumbnails.values():
+            if not image.isNull():
                 # Rough estimate: width * height * 4 bytes per pixel (RGBA)
-                total_bytes += pixmap.width() * pixmap.height() * 4
+                total_bytes += image.width() * image.height() * 4
         return total_bytes
-
 
 @pytest.mark.gui
 @pytest.mark.integration
@@ -198,9 +193,9 @@ class TestMemoryManagementIntegration(QtTestCase):
         
         # Create many large thumbnails
         for i in range(150):
-            pixmap = QPixmap(256, 256)
-            pixmap.fill()  # Fill with color
-            cache.set_thumbnail(0x10000 + i * 0x1000, pixmap)
+            image = ThreadSafeTestImage(256, 256)
+            image.fill()  # Fill with color
+            cache.set_thumbnail(0x10000 + i * 0x1000, image)
         
         # Should not exceed maximum
         assert len(cache.thumbnails) <= cache.max_thumbnails
@@ -334,7 +329,9 @@ class TestMemoryManagementIntegration(QtTestCase):
         pixmap_refs = []
         
         for i in range(100):
-            pixmap = QPixmap(512, 512)
+            # Using ThreadSafeTestImage instead of QPixmap for thread safety
+
+            pixmap = ThreadSafeTestImage(512, 512)
             pixmap.fill()
             pixmaps.append(pixmap)
             pixmap_refs.append(weakref.ref(pixmap))
@@ -521,7 +518,6 @@ class TestMemoryManagementIntegration(QtTestCase):
         assert cache.get("key_0") is not None  # Should still be there
         assert cache.get("key_1") is None  # Should be evicted
         assert cache.get("key_5") is not None  # Should be there
-
 
 @pytest.mark.headless
 @pytest.mark.integration

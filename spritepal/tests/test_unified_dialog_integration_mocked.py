@@ -4,6 +4,7 @@ Comprehensive integration tests for the unified manual offset dialog using mocks
 This test suite validates integration points of the unified manual offset dialog
 using MockFactory to create lightweight, fast, and reliable test implementations.
 """
+from __future__ import annotations
 
 import os
 # Force Qt to use offscreen platform to avoid display issues
@@ -25,7 +26,6 @@ except ImportError:
     pass  # Qt not available, tests will use fallback mocks
 
 # No longer using deprecated MockFactory - migrated to RealComponentFactory
-
 
 class TestUnifiedDialogIntegrationMocked:
     """Test unified dialog integration with comprehensive mocking."""
@@ -472,7 +472,6 @@ class TestUnifiedDialogIntegrationMocked:
         assert sprites_found[0][0] == test_offset
         assert f"manual_0x{test_offset:X}" in sprites_found[0][1]
 
-
 class TestSignalCoordinatorIntegrationMocked:
     """Test signal coordinator integration with mocks."""
 
@@ -614,7 +613,6 @@ class TestSignalCoordinatorIntegrationMocked:
         coordinator.cleanup()
         coordinator.cleanup.assert_called()
 
-
 class TestThreadSafetyIntegrationMocked:
     """Test thread safety with mock components."""
 
@@ -748,7 +746,6 @@ class TestThreadSafetyIntegrationMocked:
         assert coordinator.queue_preview_update.call_count == 100  # 5 threads * 20 calls
         assert coordinator.register_worker.call_count == 50  # 5 threads * 10 calls
 
-
 class TestPerformanceIntegrationMocked:
     """Test performance with mock components."""
 
@@ -847,7 +844,6 @@ class TestPerformanceIntegrationMocked:
         # With mocks, these should be very efficient
         assert coordinator.queue_offset_update.call_count == 10000
         assert coordinator.queue_preview_update.call_count == 10000
-
 
 class TestCompatibilityIntegrationMocked:
     """Test compatibility with mock extraction panel."""
@@ -957,7 +953,6 @@ class TestCompatibilityIntegrationMocked:
         panel.on_offset_changed.assert_called_with(0x100000)
         panel.on_sprite_found.assert_called_with(0x200000, "found_sprite")
 
-
 # Test markers - skip manager setup since we use pure mocks
 pytestmark = [
     pytest.mark.integration,
@@ -971,7 +966,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.worker_threads,
 ]
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

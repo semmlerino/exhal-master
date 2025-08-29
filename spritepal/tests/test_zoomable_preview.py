@@ -1,6 +1,7 @@
 """
 Tests for ZoomablePreviewWidget and PreviewPanel
 """
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -23,11 +24,9 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
-
 
 @pytest.mark.gui
 class TestZoomablePreviewWidget:
@@ -152,7 +151,6 @@ class TestZoomablePreviewWidget:
 
         assert widget._pixmap is not None
         assert not widget._pixmap.isNull()
-
 
 @pytest.mark.gui
 class TestPreviewPanel:

@@ -3,6 +3,7 @@ Import/Export Panel for Manual Offset Dialog
 
 Handles importing and exporting sprite offsets to/from JSON files.
 """
+from __future__ import annotations
 
 import json
 import os

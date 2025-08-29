@@ -1,6 +1,7 @@
 """
 Status bar management for MainWindow
 """
+from __future__ import annotations
 
 import logging
 
@@ -11,7 +12,6 @@ from utils.rom_cache import get_rom_cache
 from utils.settings_manager import get_settings_manager
 
 logger = logging.getLogger(__name__)
-
 
 class StatusBarManager:
     """Manages status bar and cache indicators for MainWindow"""

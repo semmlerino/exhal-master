@@ -4,6 +4,7 @@ Comprehensive tests for parallel sprite finder functionality.
 Tests both parallel vs linear performance, result accuracy, cancellation handling,
 adaptive step sizing, and proper mocking for unit tests.
 """
+from __future__ import annotations
 
 import logging
 import tempfile
@@ -16,7 +17,6 @@ import pytest
 from core.parallel_sprite_finder import (
 # Serial execution required: Thread safety concerns
 
-
     AdaptiveSpriteFinder,
     ParallelSpriteFinder,
     SearchChunk,
@@ -26,8 +26,6 @@ from core.sprite_finder import SpriteFinder
 from utils.constants import DEFAULT_SCAN_STEP
 
 logger = logging.getLogger(__name__)
-
-
 
 pytestmark = [
     
@@ -58,7 +56,6 @@ def sample_rom_data():
 
     return bytes(rom_data)
 
-
 @pytest.fixture
 def temp_rom_file(sample_rom_data):
     """Create temporary ROM file for testing."""
@@ -70,7 +67,6 @@ def temp_rom_file(sample_rom_data):
 
     # Cleanup
     Path(temp_path).unlink(missing_ok=True)
-
 
 @pytest.fixture
 def mock_sprite_finder():
@@ -105,7 +101,6 @@ def mock_sprite_finder():
     finder.find_sprite_at_offset.side_effect = mock_find_sprite
     return finder
 
-
 class TestSearchChunk:
     """Test SearchChunk data class."""
 
@@ -122,7 +117,6 @@ class TestSearchChunk:
         """Test size property calculation."""
         chunk = SearchChunk(start=0x1000, end=0x1500, chunk_id=0)
         assert chunk.size == 0x500
-
 
 class TestSearchResult:
     """Test SearchResult data class."""
@@ -145,7 +139,6 @@ class TestSearchResult:
         assert result.compressed_size == 1024
         assert result.confidence == 0.85
         assert result.metadata == metadata
-
 
 class TestParallelSpriteFinder:
     """Test ParallelSpriteFinder class."""
@@ -414,7 +407,6 @@ class TestParallelSpriteFinder:
         # Executor should be shutdown
         assert finder.executor._shutdown
 
-
 class TestAdaptiveSpriteFinder:
     """Test AdaptiveSpriteFinder class."""
 
@@ -520,7 +512,6 @@ class TestAdaptiveSpriteFinder:
         assert expected_pattern_2000 in finder.common_offsets
         assert expected_pattern_3000 in finder.common_offsets
 
-
 @pytest.mark.slow
 class TestParallelPerformance:
     """Performance tests for parallel sprite finder."""
@@ -557,7 +548,6 @@ class TestParallelPerformance:
         assert parallel_time > 0
 
         logger.info(f"Parallel search took {parallel_time:.3f}s")
-
 
 @pytest.mark.benchmark
 class TestBenchmarkParallelFinder:

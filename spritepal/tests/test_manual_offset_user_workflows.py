@@ -4,13 +4,13 @@ User workflow tests for Manual Offset Dialog.
 These tests focus on end-to-end user scenarios using strategic mocking
 to avoid Qt environment complexity while testing real user interactions.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
-
 
 # Test characteristics: Singleton management
 pytestmark = [
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.widget,
     pytest.mark.ci_safe,
 ]
-
 
 @pytest.mark.integration
 @pytest.mark.no_manager_setup
@@ -225,7 +224,6 @@ class TestUserWorkflows:
             # Dialog should remain stable
             assert dialog.isVisible()
             assert ManualOffsetDialogSingleton._instance is dialog
-
 
 @pytest.mark.integration
 @pytest.mark.no_manager_setup

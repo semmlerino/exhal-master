@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Simple VRAM analyzer to extract sprite patterns
 """
@@ -6,7 +8,6 @@ Simple VRAM analyzer to extract sprite patterns
 import os
 import sys
 from pathlib import Path
-
 
 def analyze_vram(vram_path: str):
     """Analyze VRAM dump and show sprite patterns"""
@@ -83,7 +84,6 @@ def analyze_vram(vram_path: str):
             print(f"\n0x{offset:04X} ({desc}): {non_zero}/32 non-zero bytes")
             if non_zero > 0:
                 print(f"  First 16 bytes: {' '.join(f'{b:02X}' for b in tile[:16])}")
-
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

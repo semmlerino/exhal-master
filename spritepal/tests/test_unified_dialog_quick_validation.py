@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -20,7 +22,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from PySide6.QtWidgets import QApplication
-
 
 def test_legacy_implementation():
     """Test that legacy implementation can be created."""
@@ -60,7 +61,6 @@ def test_legacy_implementation():
     
     return True
 
-
 def test_composed_implementation():
     """Test that composed implementation can be created."""
     print("\n" + "="*60)
@@ -98,7 +98,6 @@ def test_composed_implementation():
     dialog.deleteLater()
     
     return True
-
 
 def test_api_compatibility():
     """Test that both implementations have the same API."""
@@ -157,7 +156,6 @@ def test_api_compatibility():
     print("\n✓ API compatibility verified")
     return True
 
-
 def main():
     """Run all validation tests."""
     print("\n" + "#"*60)
@@ -205,7 +203,6 @@ def main():
         import traceback
         traceback.print_exc()
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive tests for division by zero prevention in all scan workers.
 Tests all identified division operations to ensure they handle zero cases.
@@ -13,7 +15,6 @@ from PySide6.QtCore import QObject
 # Add parent directory to path for imports
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 class TestDivisionByZeroFixes:
     """Test all division by zero scenarios in scan workers."""
@@ -294,7 +295,6 @@ class TestDivisionByZeroFixes:
                 
                 # Should handle all boundary conditions
                 worker.run()
-
 
 if __name__ == "__main__":
     # Run tests

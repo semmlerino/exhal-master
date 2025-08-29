@@ -4,6 +4,7 @@ Signal Router Component
 Central signal coordination hub that maintains exact signal emission patterns
 from the original UnifiedManualOffsetDialog.
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SignalRouterComponent(QObject):
     """
@@ -61,7 +61,7 @@ class SignalRouterComponent(QObject):
         logger.debug(f"Emitting validation_failed: {message}")
         self.validation_failed.emit(message)
 
-    def connect_to_tabs(self, tab_manager: 'TabManagerComponent') -> None:
+    def connect_to_tabs(self, tab_manager: TabManagerComponent) -> None:
         """Connect to tab manager signals."""
         with QMutexLocker(self._mutex):
             # Connect to browse tab offset changes
@@ -81,7 +81,7 @@ class SignalRouterComponent(QObject):
                     lambda offset, name="": self.emit_sprite_found(offset, name)
                 )
 
-    def connect_to_workers(self, worker_coordinator: 'WorkerCoordinatorComponent') -> None:
+    def connect_to_workers(self, worker_coordinator: WorkerCoordinatorComponent) -> None:
         """Connect to worker coordinator signals."""
         with QMutexLocker(self._mutex):
             # Connect to preview coordinator if available

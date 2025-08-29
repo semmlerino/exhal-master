@@ -10,6 +10,7 @@ Tests focus on:
 6. Request cancellation and timeout handling
 7. Cache layer interaction and fallback behavior
 """
+from __future__ import annotations
 
 import time
 import uuid
@@ -23,7 +24,6 @@ from PySide6.QtGui import QPixmap
 from core.preview_orchestrator import (
 # Serial execution required: Real Qt components
 
-
     PreviewOrchestrator, 
     PreviewRequest, 
     PreviewData, 
@@ -34,8 +34,6 @@ from core.preview_orchestrator import (
     ErrorType
 )
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
-
 
 pytestmark = [
     
@@ -53,7 +51,6 @@ class MockROMCache:
     """Mock ROM cache for testing"""
     def __init__(self):
         self.cache_dir = "/test/cache"
-
 
 class MockAsyncROMCache(QObject):
     """Mock AsyncROMCache for testing orchestrator integration"""
@@ -80,7 +77,6 @@ class MockAsyncROMCache(QObject):
     def clear_memory_cache(self):
         """Mock memory cache clear"""
         self.memory_cleared = True
-
 
 class MockWorkerPool(QObject):
     """Mock PreviewWorkerPool for testing"""
@@ -109,7 +105,6 @@ class MockWorkerPool(QObject):
         
         # Emit after short delay to simulate work
         QTimer.singleShot(10, lambda: self.preview_ready.emit(request_id, preview_data))
-
 
 class TestPreviewRequest:
     """Test PreviewRequest data structure and ordering"""
@@ -172,7 +167,6 @@ class TestPreviewRequest:
         # Earlier request should come first
         assert early_request < late_request
 
-
 class TestPreviewData:
     """Test PreviewData structure and methods"""
     
@@ -210,7 +204,6 @@ class TestPreviewData:
         expected_pixmap_size = 128 * 128 * 4  # RGBA
         assert data.size_bytes == expected_pixmap_size + 1000
 
-
 class TestPreviewError:
     """Test PreviewError structure"""
     
@@ -230,7 +223,6 @@ class TestPreviewError:
         assert error.details["file"] == "/test/rom.sfc"
         assert not error.recoverable
         assert isinstance(error.timestamp, float)
-
 
 class TestPreviewMetrics:
     """Test PreviewMetrics calculations"""
@@ -273,7 +265,6 @@ class TestPreviewMetrics:
         
         # P99 should be one of the higher values
         assert p99 >= 0.400  # Should capture slow tail
-
 
 class TestPreviewMemoryCache:
     """Test PreviewMemoryCache LRU behavior"""
@@ -362,7 +353,6 @@ class TestPreviewMemoryCache:
         
         assert len(cache._cache) == 0
         assert cache._current_size_bytes == 0
-
 
 class TestPreviewOrchestrator:
     """Test PreviewOrchestrator coordination and async interface"""
@@ -641,7 +631,6 @@ class TestPreviewOrchestrator:
         assert key1 != key3
         assert key1 != key4
 
-
 class TestPreviewOrchestratorIntegration:
     """Integration tests for PreviewOrchestrator with real components"""
     
@@ -732,7 +721,6 @@ class TestPreviewOrchestratorIntegration:
             
             # Should still track the request
             assert request_id in orchestrator._active_requests
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

@@ -9,10 +9,11 @@ Key Patterns Applied:
 - Pattern 2: Mock dialog exec() methods (QT_TESTING_BEST_PRACTICES.md:449-479)
 - Pitfall 1: Qt Container Truthiness (QT_TESTING_BEST_PRACTICES.md:314-331)
 """
+from __future__ import annotations
 
 import contextlib
 import threading
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from unittest.mock import MagicMock, Mock
 
 from .mock_dialogs_base import CallbackSignal, TestDialogBase
@@ -26,7 +27,7 @@ class TestDialog(TestDialogBase):
     to prevent metaclass conflicts and "Fatal Python error: Aborted" crashes.
     """
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.visible = False
         self.modal = True
@@ -99,7 +100,6 @@ class TestDialog(TestDialogBase):
         """Mock isModal() method."""
         return self.modal
 
-
 class TestUnifiedManualOffsetDialog(TestDialog):
     """
     Mock implementation of UnifiedManualOffsetDialog.
@@ -108,7 +108,7 @@ class TestUnifiedManualOffsetDialog(TestDialog):
     the DialogBase metaclass initialization issues.
     """
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
 
         # External signal callbacks for ROM extraction panel integration
@@ -207,11 +207,10 @@ class TestUnifiedManualOffsetDialog(TestDialog):
         """Validation failed signal interface."""
         return CallbackSignal(self.validation_failed_callbacks)
 
-
 class TestSettingsDialog(TestDialog):
     """Test implementation of SettingsDialog."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.settings_changed_callbacks: list[Callable[[dict], None]] = []
         self.settings = {}
@@ -289,11 +288,10 @@ class TestSettingsDialog(TestDialog):
         """Settings changed signal interface."""
         return CallbackSignal(self.settings_changed_callbacks)
 
-
 class TestGridArrangementDialog(TestDialog):
     """Test implementation of GridArrangementDialog."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.arrangement_changed_callbacks: list[Callable[[list], None]] = []
         self.tiles = []
@@ -320,11 +318,10 @@ class TestGridArrangementDialog(TestDialog):
         """Arrangement changed signal interface."""
         return CallbackSignal(self.arrangement_changed_callbacks)
 
-
 class TestRowArrangementDialog(TestDialog):
     """Test implementation of RowArrangementDialog."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.arrangement_updated_callbacks: list[Callable[[list], None]] = []
         self.sprites = []
@@ -353,11 +350,10 @@ class TestRowArrangementDialog(TestDialog):
         """Arrangement updated signal interface."""
         return CallbackSignal(self.arrangement_updated_callbacks)
 
-
 class TestAdvancedSearchDialog(TestDialog):
     """Test implementation of AdvancedSearchDialog."""
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.search_requested_callbacks: list[Callable[[dict], None]] = []
         self.result_selected_callbacks: list[Callable[[int], None]] = []
@@ -386,7 +382,6 @@ class TestAdvancedSearchDialog(TestDialog):
         """Result selected signal interface."""
         return CallbackSignal(self.result_selected_callbacks)
 
-
 class TestResumeScanDialog(TestDialog):
     """Test implementation of ResumeScanDialog."""
 
@@ -395,7 +390,7 @@ class TestResumeScanDialog(TestDialog):
     START_FRESH = "START_FRESH"
     CANCEL = "CANCEL"
 
-    def __init__(self, scan_info: Any = None, parent: Optional[Any] = None):
+    def __init__(self, scan_info: Any = None, parent: Any | None = None):
         # Initialize callbacks first
         self.resume_requested_callbacks: list[Callable[[int], None]] = []
         self.skip_requested_callbacks: list[Callable[[], None]] = []
@@ -503,17 +498,16 @@ class TestResumeScanDialog(TestDialog):
         return CallbackSignal(self.skip_requested_callbacks)
 
     @classmethod
-    def show_resume_dialog(cls, scan_info: dict, parent: Optional[Any] = None) -> str:
+    def show_resume_dialog(cls, scan_info: dict, parent: Any | None = None) -> str:
         """Convenience method to show dialog and return user choice."""
         dialog = cls(scan_info, parent)
         dialog.exec()
         return dialog.get_user_choice()
 
-
 class TestUserErrorDialog(TestDialog):
     """Test implementation of UserErrorDialog."""
 
-    def __init__(self, error_message: str, technical_details: str = "", parent: Optional[Any] = None):
+    def __init__(self, error_message: str, technical_details: str = "", parent: Any | None = None):
         super().__init__(parent)
         self.error_message = error_message
         self.details = technical_details
@@ -522,7 +516,6 @@ class TestUserErrorDialog(TestDialog):
     def set_details(self, details: str) -> None:
         """Set error details."""
         self.details = details
-
 
 class TestDialogSingleton:
     """
@@ -584,8 +577,7 @@ class TestDialogSingleton:
         cls._instance = None
         cls._destroyed = True
 
-
-def create_test_dialog(dialog_class_name: str, parent: Optional[Any] = None) -> TestDialog:
+def create_test_dialog(dialog_class_name: str, parent: Any | None = None) -> TestDialog:
     """
     Factory function to create mock dialogs by class name.
 
@@ -608,7 +600,6 @@ def create_test_dialog(dialog_class_name: str, parent: Optional[Any] = None) -> 
 
     dialog_class = dialog_map.get(dialog_class_name, TestDialog)
     return dialog_class(parent)
-
 
 def patch_dialog_imports():
     """
@@ -656,7 +647,6 @@ def patch_dialog_imports():
         sys.modules[module_name] = test_module
 
     return test_modules
-
 
 # Backward compatibility aliases
 MockQDialog = TestDialog

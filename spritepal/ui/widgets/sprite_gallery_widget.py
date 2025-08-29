@@ -2,8 +2,9 @@
 Sprite gallery widget for displaying multiple sprite thumbnails.
 Provides efficient virtual scrolling using Model/View architecture.
 """
+from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QPixmap
@@ -31,7 +32,6 @@ VIEWPORT_MARGIN = 20
 THUMBNAIL_REQUEST_BATCH_SIZE = 50  # Request thumbnails in batches
 VIEWPORT_BUFFER_ROWS = 2  # Load extra rows above/below viewport
 
-
 class SpriteGalleryWidget(QWidget):
     """Widget displaying a gallery of sprite thumbnails using virtual scrolling."""
 
@@ -41,7 +41,7 @@ class SpriteGalleryWidget(QWidget):
     selection_changed = Signal(list)  # Emits list of selected offsets
     thumbnail_request = Signal(int, int)  # Request thumbnail (offset, priority)
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Initialize the sprite gallery widget.
 
@@ -56,9 +56,9 @@ class SpriteGalleryWidget(QWidget):
         self.spacing = 16  # Proper visual separation
 
         # Model/View components
-        self.model: Optional[SpriteGalleryModel] = None
-        self.delegate: Optional[SpriteGalleryDelegate] = None
-        self.list_view: Optional[QListView] = None
+        self.model: SpriteGalleryModel | None = None
+        self.delegate: SpriteGalleryDelegate | None = None
+        self.list_view: QListView | None = None
 
         # Performance
         self.viewport_timer = QTimer()
@@ -67,7 +67,7 @@ class SpriteGalleryWidget(QWidget):
         self.viewport_timer.setSingleShot(True)
 
         # UI components
-        self.controls_widget: Optional[QWidget] = None
+        self.controls_widget: QWidget | None = None
 
         # Track last visible range to avoid redundant requests
         self._last_visible_range = (-1, -1)
@@ -550,7 +550,7 @@ class SpriteGalleryWidget(QWidget):
             QTimer.singleShot(100, self._update_visible_thumbnails)
             logger.debug("Forced layout update for list view")
 
-    def get_sprite_pixmap(self, offset: int) -> Optional[QPixmap]:
+    def get_sprite_pixmap(self, offset: int) -> QPixmap | None:
         """
         Get the sprite pixmap for a given offset.
 

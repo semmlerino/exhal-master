@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Demonstration tests for critical bug fixes.
 These tests simulate the bug conditions without requiring PySide6.
@@ -8,9 +10,7 @@ import sys
 import threading
 import time
 import weakref
-from typing import Optional
 from unittest.mock import Mock
-
 
 def test_batch_thumbnail_worker_infinite_loop_prevention():
     """
@@ -70,7 +70,6 @@ def test_batch_thumbnail_worker_infinite_loop_prevention():
 
     return elapsed < 1.5
 
-
 def test_memory_cleanup_after_processing():
     """
     Test that ROM data and caches are properly cleaned up.
@@ -80,7 +79,7 @@ def test_memory_cleanup_after_processing():
 
     class MockWorkerWithCleanup:
         def __init__(self):
-            self._rom_data: Optional[bytes] = None
+            self._rom_data: bytes | None = None
             self._cache = {}
 
         def load_rom_data(self, size_mb: int):
@@ -127,7 +126,6 @@ def test_memory_cleanup_after_processing():
         return True
     print("  ❌ FAIL: Memory not fully cleaned up")
     return False
-
 
 def test_worker_cleanup_prevents_thread_leaks():
     """
@@ -179,7 +177,6 @@ def test_worker_cleanup_prevents_thread_leaks():
     window.thumbnail_worker = Mock()
     window.thumbnail_worker.stop = Mock()
 
-
     # Start new scan (should cleanup old workers)
     window.start_new_scan()
 
@@ -193,7 +190,6 @@ def test_worker_cleanup_prevents_thread_leaks():
         return True
     print("  ❌ FAIL: Old workers not cleaned up")
     return False
-
 
 def test_signal_disconnection_prevents_leaks():
     """
@@ -258,7 +254,6 @@ def test_signal_disconnection_prevents_leaks():
     print("  ❌ FAIL: Signals not fully disconnected")
     return False
 
-
 def run_all_tests():
     """Run all critical bug fix tests."""
     print("=" * 60)
@@ -293,7 +288,6 @@ def run_all_tests():
         print("⚠️  Some tests failed - review the fixes")
 
     return passed == total
-
 
 if __name__ == '__main__':
     success = run_all_tests()

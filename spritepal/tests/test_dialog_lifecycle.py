@@ -2,12 +2,12 @@
 Test dialog lifecycle to prevent Qt widget deletion issues.
 These tests ensure dialogs can be safely opened, closed, and reopened.
 """
+from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
-
 
 # Test characteristics: Real GUI components requiring display
 pytestmark = [
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.headless,
     pytest.mark.requires_display,
 ]
-
 
 class TestDialogLifecycle:
     """Test dialog lifecycle management"""
@@ -109,8 +108,6 @@ class TestDialogLifecycle:
         # Now delete parent
         parent.deleteLater()
 
-
-
 class TestDialogReopenScenarios:
     """Test various dialog reopen scenarios"""
 
@@ -141,7 +138,6 @@ class TestDialogReopenScenarios:
 
         # Cleanup
         dialog2.close()
-
 
 def test_dialog_lifecycle_best_practices():
     """Document dialog lifecycle best practices"""

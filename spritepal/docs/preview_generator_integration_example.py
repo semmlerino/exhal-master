@@ -11,9 +11,9 @@ The example demonstrates:
 4. Cache management
 5. Error handling
 """
+from __future__ import annotations
 
 # Example of how to modify ManualOffsetDialogSimplified to use PreviewGenerator
-
 import logging
 
 from utils.preview_generator import (
@@ -23,7 +23,6 @@ from utils.preview_generator import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class ManualOffsetDialogSimplifiedWithPreviewGenerator:
     """Modified ManualOffsetDialogSimplified using PreviewGenerator service."""
@@ -189,7 +188,6 @@ class ManualOffsetDialogSimplifiedWithPreviewGenerator:
         """Get preview cache statistics (new functionality)."""
         return self.preview_generator.get_cache_stats()
 
-
 # Example of integrating with existing UI components
 
 class PreviewCacheStatsWidget:
@@ -212,7 +210,6 @@ class PreviewCacheStatsWidget:
         self.misses_label.setText(f"Cache Misses: {stats['misses']}")
         self.hit_rate_label.setText(f"Hit Rate: {stats['hit_rate']:.1%}")
         self.cache_size_label.setText(f"Cached Items: {stats['cache_size']}/{stats['max_size']}")
-
 
 # Example of performance monitoring
 
@@ -238,7 +235,6 @@ class PreviewPerformanceMonitor:
         if len(self.generation_times) >= 10:
             avg_time = sum(self.generation_times) / len(self.generation_times)
             logger.debug(f"Preview generation avg time: {avg_time:.3f}s")
-
 
 # Benefits of using PreviewGenerator:
 

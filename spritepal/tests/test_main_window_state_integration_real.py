@@ -18,7 +18,7 @@ This replaces test_main_window_state_integration.py which heavily mocked:
 - All signal connections (100+ lines of mock signal handling)
 - All widget interactions (800+ lines of simulated Qt behavior)
 """
-
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -44,7 +44,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
@@ -64,7 +63,6 @@ from core.managers.registry import cleanup_managers, initialize_managers
 
 # Import real MainWindow (not mocked!)
 from ui.main_window import MainWindow
-
 
 class TestRealMainWindowStateIntegration:
     """
@@ -372,7 +370,6 @@ class TestRealMainWindowStateIntegration:
             # Validate real controller integration (vs mock controller)
             assert main_window.controller is not None, "Should have real controller instance"
 
-
 class TestRealMainWindowWorkflowIntegration:
     """
     Test complete real workflows vs mocked workflow simulation.
@@ -480,7 +477,6 @@ class TestRealMainWindowWorkflowIntegration:
             # MainWindow buttons should have real shortcuts
             assert main_window.extract_button.shortcut().toString() == "Ctrl+E", "Real keyboard shortcut"
             assert main_window.open_editor_button.shortcut().toString() == "Ctrl+O", "Real editor shortcut"
-
 
 class TestBugDiscoveryRealVsMocked:
     """
@@ -615,7 +611,6 @@ class TestBugDiscoveryRealVsMocked:
             # This demonstrates the architectural bug: UI state (button enabled)
             # is inconsistent with logic state (_output_path empty)
             # Mocks would never catch this because they don't test real UI state
-
 
 if __name__ == "__main__":
     # Run the tests directly

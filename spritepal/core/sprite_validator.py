@@ -2,6 +2,7 @@
 Enhanced sprite validation for SpritePal
 Provides comprehensive validation for sprites before injection
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -12,7 +13,6 @@ from utils.constants import BYTES_PER_TILE
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpriteValidator:
     """Enhanced sprite validation with detailed error reporting"""

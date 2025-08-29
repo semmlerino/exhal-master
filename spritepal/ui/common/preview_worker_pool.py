@@ -8,6 +8,7 @@ of creating/destroying threads for each preview request. Features:
 - Cancellation support for stale requests
 - Automatic cleanup of idle workers
 """
+from __future__ import annotations
 
 import contextlib
 import queue
@@ -22,7 +23,6 @@ from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class PooledPreviewWorker(SpritePreviewWorker):
     """
@@ -136,62 +136,104 @@ class PooledPreviewWorker(SpritePreviewWorker):
         # Use conservative size for manual offsets during dragging
         expected_size = 4096  # 4KB for fast preview during dragging
 
-        # For manual offset browsing, try raw extraction first
+        # For manual offset browsing, try HAL decompression first
+        # This allows Lua-captured offsets (which are compressed sprite offsets) to work correctly
         tile_data = None
+        decompression_succeeded = False
 
-        # First, try to extract raw uncompressed tile data
-        # This is what manual offset browsing needs - just raw 4bpp tiles
-        try:
-            # Check interruption right before extraction
-            if self.isInterruptionRequested():
-                logger.debug(f"Request {self._current_request_id} interrupted before extraction")
-                return
+        # First, try HAL decompression (for Lua-captured offsets and known sprites)
+        # Try the exact offset first, then nearby offsets if it fails
+        offsets_to_try = [self.offset]
+        
+        # For Lua-captured offsets, also try nearby offsets in case DMA timing was slightly off
+        # Check offsets within 16 bytes before and after
+        for delta in [2, 4, 6, 8, -2, -4, -6, -8, 10, 12, 14, 16, -10, -12, -14, -16]:
+            adjusted_offset = self.offset + delta
+            if 0 <= adjusted_offset < len(rom_data):
+                offsets_to_try.append(adjusted_offset)
+        
+        for try_offset in offsets_to_try:
+            try:
+                # Check interruption right before decompression
+                if self.isInterruptionRequested():
+                    logger.debug(f"Request {self._current_request_id} interrupted before decompression")
+                    return
 
-            # Read raw bytes from ROM at the offset
-            # Manual offset browsing shows raw tiles, not compressed sprites
-            if self.offset + expected_size <= len(rom_data):
-                tile_data = rom_data[self.offset:self.offset + expected_size]
-                logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
-                logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
-            else:
-                # Read what's available up to end of ROM
-                tile_data = rom_data[self.offset:]
-                logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
-                logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
+                if try_offset != self.offset:
+                    logger.debug(f"[TRACE] Trying adjusted offset 0x{try_offset:X} (delta: {try_offset - self.offset:+d})")
+                else:
+                    logger.debug(f"[TRACE] Attempting HAL decompression at offset 0x{try_offset:X}")
+                
+                # Try to extract as compressed sprite
+                compressed_size, tile_data = (
+                    self.extractor.rom_injector.find_compressed_sprite(
+                        rom_data, try_offset, expected_size
+                    )
+                )
+                
+                if tile_data and len(tile_data) > 0:
+                    # Validate that it's reasonable sprite data
+                    # Check if data has some non-zero bytes (not all black)
+                    sample_size = min(100, len(tile_data))
+                    non_zero_count = sum(1 for b in tile_data[:sample_size] if b != 0)
+                    
+                    if non_zero_count > 10:  # At least 10% non-zero in sample
+                        decompression_succeeded = True
+                        if try_offset != self.offset:
+                            logger.info(f"[TRACE] Successfully decompressed using adjusted offset 0x{try_offset:X} (delta: {try_offset - self.offset:+d})")
+                        logger.debug(f"[TRACE] Successfully decompressed {len(tile_data)} bytes from offset 0x{try_offset:X}")
+                        logger.debug(f"[TRACE] Compressed size: {compressed_size} bytes, Compression ratio: {len(tile_data)/compressed_size:.2f}x" if compressed_size > 0 else "[TRACE] No compression size info")
+                        logger.debug(f"[TRACE] First 20 bytes of decompressed data: {tile_data[:20].hex() if tile_data else 'None'}")
+                        # Update the actual offset used for display purposes
+                        self.offset = try_offset
+                        break
+                    else:
+                        logger.debug(f"[TRACE] HAL decompression at 0x{try_offset:X} returned mostly zeros, trying next offset")
+                else:
+                    logger.debug(f"[TRACE] HAL decompression returned empty data at offset 0x{try_offset:X}")
 
-            # Check interruption after extraction
-            if self.isInterruptionRequested():
-                logger.debug(f"Request {self._current_request_id} interrupted after extraction")
-                return
+                # Check interruption after decompression
+                if self.isInterruptionRequested():
+                    logger.debug(f"Request {self._current_request_id} interrupted after decompression")
+                    return
 
-        except Exception as e:
-            # If raw extraction fails, try compressed extraction as fallback
-            logger.debug(f"Raw extraction failed, trying compressed: {e}")
+            except Exception as decomp_error:
+                # HAL decompression failed - this is normal for non-compressed offsets
+                if try_offset == self.offset:
+                    logger.debug(f"[TRACE] HAL decompression failed at offset 0x{try_offset:X}: {decomp_error.__class__.__name__}: {decomp_error}")
+                continue
+        
+        if not decompression_succeeded:
+            logger.debug(f"[TRACE] HAL decompression failed at all attempted offsets near 0x{self.offset:X}")
+            decompression_succeeded = False
+
+        # If HAL decompression failed or returned empty data, fall back to raw tile extraction
+        if not decompression_succeeded or not tile_data:
+            logger.debug(f"[TRACE] Falling back to raw tile extraction for offset 0x{self.offset:X}")
             try:
                 # Check interruption
                 if self.isInterruptionRequested() or self._cancel_requested.is_set():
                     logger.debug(f"Request {self._current_request_id} cancelled")
                     return
 
-                # Try to extract as compressed sprite (fallback for actual compressed sprites)
-                compressed_size, tile_data = (
-                    self.extractor.rom_injector.find_compressed_sprite(
-                        rom_data, self.offset, expected_size
-                    )
-                )
-                logger.debug(f"Found compressed sprite: {compressed_size} bytes compressed")
+                # Read raw bytes from ROM at the offset
+                # This is for manual browsing of non-compressed areas
+                if self.offset + expected_size <= len(rom_data):
+                    tile_data = rom_data[self.offset:self.offset + expected_size]
+                    logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes of raw tile data from offset 0x{self.offset:X}")
+                else:
+                    # Read what's available up to end of ROM
+                    tile_data = rom_data[self.offset:]
+                    logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
+                
+                logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
 
-            except Exception as decomp_error:
-                # Both raw and compressed failed
+            except Exception as e:
+                # Both HAL decompression and raw extraction failed
                 if self.isInterruptionRequested() or self._cancel_requested.is_set():
                     logger.debug(f"Request {self._current_request_id} cancelled during extraction")
                     return
-                # Use raw data anyway for manual browsing (user wants to see something)
-                if self.offset < len(rom_data):
-                    tile_data = rom_data[self.offset:min(self.offset + expected_size, len(rom_data))]
-                    logger.debug(f"Using raw data after compression failed: {len(tile_data)} bytes")
-                else:
-                    raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {decomp_error}") from decomp_error
+                raise ValueError(f"Failed to extract sprite at 0x{self.offset:X}: {e}") from e
 
         # Check cancellation after decompression
         if self._cancel_requested.is_set() or self.isInterruptionRequested():
@@ -222,7 +264,6 @@ class PooledPreviewWorker(SpritePreviewWorker):
         logger.debug(f"[TRACE] Preview data first 20 bytes: {tile_data[:20].hex() if tile_data else 'None'}")
         self.preview_ready.emit(self._current_request_id, tile_data, width, height, self.sprite_name)
         logger.debug("[TRACE] PoolWorker emitted preview_ready signal")
-
 
 class PreviewWorkerPool(QObject):
     """

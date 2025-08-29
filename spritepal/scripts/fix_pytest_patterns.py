@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Fix pytest pattern violations PT017 and PT011."""
 
 import ast
 import re
 import sys
 from pathlib import Path
-
 
 class PytestPatternFixer(ast.NodeTransformer):
     """AST transformer to fix pytest pattern violations."""
@@ -66,7 +67,6 @@ class PytestPatternFixer(ast.NodeTransformer):
             f"with pytest.raises({exc_type}, match=...)"
         ))
 
-
 def fix_pt011_in_file(filepath: Path) -> list[str]:
     """Fix PT011 violations (too broad pytest.raises)."""
     content = filepath.read_text()
@@ -84,7 +84,6 @@ def fix_pt011_in_file(filepath: Path) -> list[str]:
             )
 
     return changes
-
 
 def analyze_file(filepath: Path) -> tuple[list[str], bool]:
     """Analyze a file for pytest pattern violations."""
@@ -113,7 +112,6 @@ def analyze_file(filepath: Path) -> tuple[list[str], bool]:
 
     except Exception as e:
         return [f"Error analyzing file: {e}"], False
-
 
 def suggest_fixes(test_file: Path):
     """Suggest fixes for a test file."""
@@ -162,7 +160,6 @@ def suggest_fixes(test_file: Path):
     print("       some_function()")
     print("   ```")
 
-
 def main():
     """Main function to analyze test files."""
     test_dir = Path("tests")
@@ -201,7 +198,6 @@ def main():
     print("- PT017: Use pytest.raises() instead of try/except with assertions")
     print("- PT011: Use specific exceptions or match parameter with pytest.raises")
     print("\nRun 'ruff check tests/ --fix' to auto-fix some issues")
-
 
 if __name__ == "__main__":
     main()

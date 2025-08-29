@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Unified Manual Offset Dialog Performance Validation Runner
 
@@ -63,7 +65,6 @@ except ImportError as e:
     print(f"❌ Error importing performance tests: {e}")
     print("Please run from the spritepal root directory")
     sys.exit(1)
-
 
 class PerformanceValidationRunner:
     """Standalone performance validation runner."""
@@ -358,7 +359,6 @@ class PerformanceValidationRunner:
         except Exception as e:
             print(f"❌ Failed to export results: {e}")
 
-
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Unified Manual Offset Dialog Performance Validation")
@@ -402,7 +402,6 @@ def main():
     except Exception as e:
         print(f"\n❌ Validation failed with error: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

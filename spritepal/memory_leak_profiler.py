@@ -14,7 +14,6 @@ from typing import Any
 
 import psutil
 
-
 class MemoryMonitor:
     """Monitor memory usage for leak detection."""
 
@@ -54,7 +53,6 @@ class MemoryMonitor:
             f"(initial: {self.initial_memory:.2f}MB, current: {self.measurements[-1]:.2f}MB)"
         )
 
-
 class WeakrefTracker:
     """Track object lifecycle using weakrefs."""
 
@@ -77,7 +75,6 @@ class WeakrefTracker:
         """Get count of still-alive objects."""
         gc.collect()
         return sum(1 for ref in self.refs if ref() is not None)
-
 
 class MemoryLeakProfiler:
     """Combined memory profiler for dialog leak detection."""

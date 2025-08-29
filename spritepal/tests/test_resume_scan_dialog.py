@@ -4,12 +4,12 @@ Tests for ResumeScanDialog component
 Fixed to use proper mocking to avoid Qt fatal errors in headless environments.
 Follows Qt Testing Best Practices by mocking Qt object creation.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import MagicMock, patch
 
 from ui.dialogs import ResumeScanDialog
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -23,7 +23,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.ci_safe,
 ]
-
 
 class TestResumeScanDialog:
     """Test ResumeScanDialog functionality"""

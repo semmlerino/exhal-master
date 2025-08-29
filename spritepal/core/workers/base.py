@@ -4,11 +4,12 @@ Base worker classes for standardized async operations.
 This module provides the foundation for all worker threads in SpritePal,
 ensuring consistent interfaces, proper error handling, and type safety.
 """
+from __future__ import annotations
 
 import weakref
 from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Optional, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
 
 from PySide6.QtCore import QMetaObject, QThread, Signal
 
@@ -29,7 +30,6 @@ logger = get_logger(__name__)
 # Type variables for proper type preservation in decorators
 P = ParamSpec("P")
 R = TypeVar("R")
-
 
 def handle_worker_errors(
     operation_context: str = "operation",
@@ -113,7 +113,6 @@ def handle_worker_errors(
         return wrapper
     return decorator
 
-
 class WorkerMeta(type(QThread)):
     """Metaclass that properly combines QThread and ABC functionality."""
 
@@ -143,7 +142,6 @@ class WorkerMeta(type(QThread)):
 
         return cls
 
-
 class BaseWorker(QThread, metaclass=WorkerMeta):
     """
     Base class for all worker threads with standard signals and behavior.
@@ -163,7 +161,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
     # Standard finished signal - use this instead of QThread.finished
     operation_finished = Signal(bool, str)  # success, message
 
-    def __init__(self, parent: Optional['QObject'] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._is_cancelled = False
         self._is_paused = False
@@ -297,7 +295,6 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         Should emit operation_finished signal when complete.
         """
 
-
 class ManagedWorker(BaseWorker):
     """
     Worker that delegates to a manager for business logic.
@@ -321,8 +318,8 @@ class ManagedWorker(BaseWorker):
     def __init__(
         self,
         manager: BaseManager | None = None,
-        manager_factory: "ManagerFactory | None" = None,
-        parent: Optional['QObject'] = None
+        manager_factory: ManagerFactory | None = None,
+        parent: QObject | None = None
     ) -> None:
         super().__init__(parent)
 

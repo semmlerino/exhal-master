@@ -14,13 +14,14 @@ Usage:
     # Generate migration script
     python -m tests.infrastructure.migration_helpers generate tests/test_controller.py
 """
+from __future__ import annotations
 
 import re
 import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -33,7 +34,6 @@ class MockUsage:
     suggested_replacement: str
     migration_difficulty: str  # "easy", "medium", "hard"
 
-
 @dataclass
 class MigrationStatus:
     """Tracks migration status for a test file."""
@@ -44,7 +44,7 @@ class MigrationStatus:
     cast_operations: int = 0
     mock_imports: list[str] = field(default_factory=list)
     mock_usages: list[MockUsage] = field(default_factory=list)
-    last_analyzed: Optional[float] = None
+    last_analyzed: float | None = None
 
     @property
     def migration_percentage(self) -> float:
@@ -52,7 +52,6 @@ class MigrationStatus:
         if self.total_mocks == 0:
             return 100.0
         return (self.migrated_count / self.total_mocks) * 100
-
 
 class MockToRealMigrator:
     """
@@ -466,7 +465,6 @@ class MockToRealMigrator:
 
         return "\n".join(report_lines)
 
-
 def validate_migration_safety(file_path: Path) -> tuple[bool, list[str]]:
     """
     Validate if a migration is safe to perform.
@@ -512,7 +510,6 @@ def validate_migration_safety(file_path: Path) -> tuple[bool, list[str]]:
         is_safe = False
 
     return is_safe, warnings
-
 
 def main():
     """CLI interface for migration helpers."""
@@ -572,7 +569,6 @@ def main():
 
     else:
         print(f"Unknown command: {command}")
-
 
 if __name__ == "__main__":
     main()

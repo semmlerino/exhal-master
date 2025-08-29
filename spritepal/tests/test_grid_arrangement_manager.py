@@ -1,6 +1,7 @@
 """
 Unit tests for GridArrangementManager and related classes
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -9,14 +10,11 @@ import pytest
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
 
-
     ArrangementType,
     GridArrangementManager,
     TileGroup,
     TilePosition,
 )
-
-
 
 pytestmark = [
     pytest.mark.headless,
@@ -70,7 +68,6 @@ class TestTilePosition:
         assert pos is not None
         assert pos != 42
 
-
 class TestTileGroup:
     """Test the TileGroup dataclass"""
 
@@ -99,7 +96,6 @@ class TestTileGroup:
         assert group.width == 0
         assert group.height == 0
 
-
 class TestArrangementType:
     """Test the ArrangementType enum"""
 
@@ -115,7 +111,6 @@ class TestArrangementType:
         expected_members = {"ROW", "COLUMN", "TILE", "GROUP"}
         actual_members = {member.name for member in ArrangementType}
         assert actual_members == expected_members
-
 
 class TestGridArrangementManager:
     """Test the GridArrangementManager class"""

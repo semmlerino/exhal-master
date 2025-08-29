@@ -8,6 +8,7 @@ This test suite validates:
 4. Protocol compliance with concrete implementations
 5. Error scenarios and cleanup
 """
+from __future__ import annotations
 
 import threading
 import time
@@ -22,7 +23,6 @@ from core.controller import ExtractionController
 from core.managers import (
 # Serial execution required: QApplication management, Thread safety concerns, Real Qt components
 
-
     ExtractionManager,
     InjectionManager,
     get_session_manager,
@@ -34,8 +34,6 @@ from core.protocols.manager_protocols import (
     SessionManagerProtocol,
 )
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
-
 
 pytestmark = [
     
@@ -86,7 +84,6 @@ class SignalCapture(QObject):
                     return True
             time.sleep(0.01)
         return False
-
 
 class TestQtSignalArchitecture:
     """Test Qt signal architecture after controller fixes"""
@@ -280,7 +277,7 @@ class TestQtSignalArchitecture:
         # Simulate error during operation
         try:
             manager._emit_error("Test error", Exception("Simulated error"))
-        except:
+        except Exception:
             pass  # Error emission shouldn't crash
         
         # Verify error signal was emitted
@@ -424,7 +421,6 @@ class TestQtSignalArchitecture:
         for thread_info in signal_capture.signal_threads:
             assert thread_info['is_main']
 
-
 class TestMemoryManagement:
     """Test memory management and leak prevention in signal architecture"""
     
@@ -507,7 +503,6 @@ class TestMemoryManagement:
         assert capture is not None
         assert len(capture.captured_signals) == 1
 
-
 class TestPerformanceImpact:
     """Test performance impact of casting approach"""
     
@@ -572,7 +567,6 @@ class TestPerformanceImpact:
             # Signal delivery should be fast
             assert avg_time < 0.001, f"Average delivery time too high: {avg_time:.6f}s"
             assert max_time < 0.01, f"Max delivery time too high: {max_time:.6f}s"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

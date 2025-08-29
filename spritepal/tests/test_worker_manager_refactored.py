@@ -18,14 +18,11 @@ from ui.common import WorkerManager
 from ui.common.timing_constants import (
 # Test characteristics: Real GUI components requiring display, Thread safety concerns
 
-
     SLEEP_MEDIUM,
     TEST_TIMEOUT_MEDIUM,
     WORKER_TIMEOUT_LONG,
     WORKER_TIMEOUT_SHORT,
 )
-
-
 
 pytestmark = [
     pytest.mark.gui,
@@ -84,7 +81,6 @@ class RealTestWorker(QThread):
         self.requestInterruption()
         self.quit()
 
-
 class SlowStoppingWorker(QThread):
     """Worker that takes time to stop, for testing timeouts."""
     
@@ -113,7 +109,6 @@ class SlowStoppingWorker(QThread):
         self._stop_requested_time = time.time()
         self.requestInterruption()
         super().quit()
-
 
 class TestWorkerManagerReal:
     """Test WorkerManager with real Qt workers."""

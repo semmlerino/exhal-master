@@ -4,6 +4,7 @@ Comprehensive tests for visual similarity search functionality.
 Tests perceptual hash calculation, similarity scoring accuracy, index save/load,
 finding similar sprites, and creating test sprites with known similarities.
 """
+from __future__ import annotations
 
 import logging
 import tempfile
@@ -14,7 +15,6 @@ import pytest
 from core.visual_similarity_search import (
 # Systematic pytest markers applied based on test content analysis
 
-
     SimilarityMatch,
     SpriteGroupFinder,
     SpriteHash,
@@ -23,8 +23,6 @@ from core.visual_similarity_search import (
 from PIL import Image
 
 logger = logging.getLogger(__name__)
-
-
 
 pytestmark = [
     pytest.mark.benchmark,
@@ -51,7 +49,6 @@ def test_image_8x8():
 
     return image
 
-
 @pytest.fixture
 def test_image_16x16():
     """Create a 16x16 test image with gradient."""
@@ -67,7 +64,6 @@ def test_image_16x16():
 
     return image
 
-
 @pytest.fixture
 def similar_test_image(test_image_8x8):
     """Create an image similar to test_image_8x8 but slightly different."""
@@ -80,7 +76,6 @@ def similar_test_image(test_image_8x8):
     pixels[6, 6] = (128, 128, 128)  # Gray instead of black/white
 
     return similar
-
 
 @pytest.fixture
 def different_test_image():
@@ -100,12 +95,10 @@ def different_test_image():
 
     return image
 
-
 @pytest.fixture
 def similarity_engine():
     """Create VisualSimilarityEngine for testing."""
     return VisualSimilarityEngine(hash_size=8)
-
 
 class TestSpriteHash:
     """Test SpriteHash data class."""
@@ -131,7 +124,6 @@ class TestSpriteHash:
         assert np.array_equal(sprite_hash.histogram, histogram)
         assert sprite_hash.metadata == metadata
 
-
 class TestSimilarityMatch:
     """Test SimilarityMatch data class."""
 
@@ -149,7 +141,6 @@ class TestSimilarityMatch:
         assert match.similarity_score == 0.85
         assert match.hash_distance == 5
         assert match.metadata == metadata
-
 
 class TestVisualSimilarityEngine:
     """Test VisualSimilarityEngine class."""
@@ -422,7 +413,6 @@ class TestVisualSimilarityEngine:
         finally:
             export_path.unlink(missing_ok=True)
 
-
 class TestSpriteGroupFinder:
     """Test SpriteGroupFinder class."""
 
@@ -560,7 +550,6 @@ class TestSpriteGroupFinder:
             for i in range(len(animation) - 1):
                 assert animation[i] < animation[i + 1]
 
-
 @pytest.mark.slow
 class TestVisualSimilarityPerformance:
     """Performance tests for visual similarity search."""
@@ -606,7 +595,6 @@ class TestVisualSimilarityPerformance:
         # Should complete in reasonable time
         assert elapsed < 1.0  # Less than 1 second
         logger.info(f"Search in {num_sprites} sprites took {elapsed*1000:.2f}ms")
-
 
 @pytest.mark.benchmark
 class TestBenchmarkVisualSimilarity:

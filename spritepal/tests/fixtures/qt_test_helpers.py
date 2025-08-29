@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 # Type variable for widget factory
 WidgetT = TypeVar('WidgetT', bound=QWidget)
 
-
 class TestParentWidget(QWidget):
     """
     A proper QWidget subclass for use as a parent in tests.
@@ -50,7 +49,6 @@ class TestParentWidget(QWidget):
         super().closeEvent(event)
         event.accept()
 
-
 @pytest.fixture
 def parent_widget(qapp: QApplication) -> Iterator[TestParentWidget]:
     """
@@ -72,7 +70,6 @@ def parent_widget(qapp: QApplication) -> Iterator[TestParentWidget]:
     widget.deleteLater()
     # Process events to ensure deletion
     QApplication.processEvents()
-
 
 @pytest.fixture
 def widget_factory(qapp: QApplication) -> Iterator[Callable[..., WidgetT]]:
@@ -124,7 +121,6 @@ def widget_factory(qapp: QApplication) -> Iterator[Callable[..., WidgetT]]:
     # Process events to ensure deletion
     QApplication.processEvents()
 
-
 def ensure_qt_app() -> QApplication:
     """
     Ensure a QApplication instance exists for testing.
@@ -137,7 +133,6 @@ def ensure_qt_app() -> QApplication:
         app.setApplicationName("SpritePal-Test")
         return app
     return QApplication.instance()
-
 
 class MockableParentWidget(TestParentWidget):
     """
@@ -164,7 +159,6 @@ class MockableParentWidget(TestParentWidget):
         if self.mock_height is not None:
             return self.mock_height
         return super().height()
-
 
 @pytest.fixture
 def mockable_parent_widget(qapp: QApplication) -> Iterator[MockableParentWidget]:

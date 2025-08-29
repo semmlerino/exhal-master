@@ -2,11 +2,11 @@
 Improved batch thumbnail worker using proper moveToThread pattern.
 This demonstrates the correct Qt threading architecture.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 from queue import PriorityQueue
-from typing import Optional
 
 from PySide6.QtCore import (
     QMutex,
@@ -26,7 +26,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class ThumbnailRequest:
     """Request for thumbnail generation."""
@@ -37,7 +36,6 @@ class ThumbnailRequest:
     def __lt__(self, other):
         """For priority queue sorting (lower priority value = higher priority)."""
         return self.priority < other.priority
-
 
 class BatchThumbnailWorker(QObject):
     """
@@ -55,8 +53,8 @@ class BatchThumbnailWorker(QObject):
     def __init__(
         self,
         rom_path: str,
-        rom_extractor: Optional[ROMExtractor] = None,
-        parent: Optional[QObject] = None
+        rom_extractor: ROMExtractor | None = None,
+        parent: QObject | None = None
     ):
         """
         Initialize the batch thumbnail worker.
@@ -89,7 +87,7 @@ class BatchThumbnailWorker(QObject):
         self._cache_size_limit = 100
 
         # ROM data
-        self._rom_data: Optional[bytes] = None
+        self._rom_data: bytes | None = None
 
         # Timer and other QObjects will be created in initialize()
         self._process_timer = None
@@ -235,7 +233,7 @@ class BatchThumbnailWorker(QObject):
 
         self._update_progress()
 
-    def _get_next_request(self) -> Optional[ThumbnailRequest]:
+    def _get_next_request(self) -> ThumbnailRequest | None:
         """Get the next request from the queue (thread-safe)."""
         with QMutexLocker(self._queue_mutex):
             if not self._request_queue.empty():
@@ -245,7 +243,7 @@ class BatchThumbnailWorker(QObject):
                     pass
         return None
 
-    def _get_from_cache(self, key: tuple[int, int]) -> Optional[QPixmap]:
+    def _get_from_cache(self, key: tuple[int, int]) -> QPixmap | None:
         """Get pixmap from cache (thread-safe)."""
         with QMutexLocker(self._cache_mutex):
             return self._cache.get(key)
@@ -279,7 +277,7 @@ class BatchThumbnailWorker(QObject):
             logger.error(f"Failed to load ROM: {e}")
             self.error.emit(f"Failed to load ROM: {e}")
 
-    def _generate_thumbnail(self, request: ThumbnailRequest) -> Optional[QPixmap]:
+    def _generate_thumbnail(self, request: ThumbnailRequest) -> QPixmap | None:
         """
         Generate a thumbnail for a sprite.
 
@@ -339,39 +337,38 @@ class BatchThumbnailWorker(QObject):
 
         logger.debug("Worker cleanup completed")
 
-
 class ThumbnailController(QObject):
     """
     Controller for managing thumbnail worker with proper threading.
     This demonstrates the CORRECT pattern for Qt threading.
     """
 
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
 
-        self.worker: Optional[BatchThumbnailWorker] = None
-        self.thread: Optional[QThread] = None
+        self.worker: BatchThumbnailWorker | None = None
+        self._worker_thread: QThread | None = None
 
-    def start_worker(self, rom_path: str, rom_extractor: Optional[ROMExtractor] = None):
+    def start_worker(self, rom_path: str, rom_extractor: ROMExtractor | None = None):
         """Start the thumbnail worker with proper threading."""
 
         # Create thread and worker
-        self.thread = QThread()
+        self._worker_thread = QThread()
         self.worker = BatchThumbnailWorker(rom_path, rom_extractor)
 
         # Move worker to thread BEFORE connecting signals
-        self.worker.moveToThread(self.thread)
+        self.worker.moveToThread(self._worker_thread)
 
         # Connect initialization
-        self.thread.started.connect(self.worker.initialize)
+        self._worker_thread.started.connect(self.worker.initialize)
 
         # Connect cleanup signals for proper lifecycle
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self._worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
+        self._worker_thread.finished.connect(self._worker_thread.deleteLater)
 
         # Start thread
-        self.thread.start()
+        self._worker_thread.start()
 
         # After thread starts, initialize and start processing
         QTimer.singleShot(100, self.worker.start_processing)
@@ -381,9 +378,9 @@ class ThumbnailController(QObject):
         if self.worker:
             self.worker.stop()
 
-        if self.thread and self.thread.isRunning():
-            self.thread.quit()
-            self.thread.wait(3000)  # Wait up to 3 seconds
+        if self._worker_thread and self._worker_thread.isRunning():
+            self._worker_thread.quit()
+            self._worker_thread.wait(3000)  # Wait up to 3 seconds
 
         self.worker = None
-        self.thread = None
+        self._worker_thread = None

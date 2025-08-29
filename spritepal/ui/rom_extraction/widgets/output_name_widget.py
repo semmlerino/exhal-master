@@ -1,4 +1,5 @@
 """Output name widget for ROM extraction"""
+from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
@@ -14,7 +15,6 @@ BUTTON_MIN_HEIGHT = 32
 COMBO_MIN_WIDTH = 200
 BUTTON_MAX_WIDTH = 150
 LABEL_MIN_WIDTH = 120
-
 
 class OutputNameWidget(BaseExtractionWidget):
     """Widget for managing output file naming"""

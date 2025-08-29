@@ -1,6 +1,7 @@
 """
 ROM validation utilities for SpritePal
 """
+from __future__ import annotations
 
 import struct
 from pathlib import Path
@@ -31,7 +32,6 @@ from utils.rom_exceptions import (
 )
 
 logger = get_logger(__name__)
-
 
 class ROMValidator:
     """Validates SNES ROM files"""

@@ -2,6 +2,7 @@
 ROM palette extraction functionality for SpritePal
 Extracts sprite palettes directly from ROM files
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -10,7 +11,6 @@ from typing import Any
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class ROMPaletteExtractor:
     """Extracts palettes directly from ROM files"""

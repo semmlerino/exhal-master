@@ -1,6 +1,7 @@
 """
 Tests for ROM injection settings persistence
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -14,7 +15,6 @@ from ui.injection_dialog import InjectionDialog
 from utils.constants import (
 # Systematic pytest markers applied based on test content analysis
 
-
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,
@@ -23,8 +23,6 @@ from utils.constants import (
     SETTINGS_NS_ROM_INJECTION,
 )
 from utils.settings_manager import SettingsManager
-
-
 
 pytestmark = [
     pytest.mark.dialog,

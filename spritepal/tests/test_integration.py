@@ -1,4 +1,5 @@
 """Integration tests for SpritePal - testing components working together"""
+from __future__ import annotations
 
 import json
 import shutil
@@ -25,7 +26,6 @@ from utils.constants import (
     VRAM_SPRITE_OFFSET,
 )
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -37,7 +37,6 @@ pytestmark = [
     pytest.mark.signals_slots,
     pytest.mark.slow,
 ]
-
 
 class TestEndToEndWorkflow:
     """Test complete extraction workflows"""
@@ -153,7 +152,6 @@ class TestEndToEndWorkflow:
         # Each should have different palette index
         indices = [p["source"]["palette_index"] for p in palettes_data]
         assert len(set(indices)) == 8
-
 
 class TestVRAMExtractionWorker:
     """Test the VRAMExtractionWorker thread integration"""
@@ -273,7 +271,6 @@ class TestVRAMExtractionWorker:
                 worker.wait(5000)
             cleanup_managers()
 
-
 class TestRealFilePatterns:
     """Test with file patterns matching real SNES dumps"""
 
@@ -347,7 +344,6 @@ class TestRealFilePatterns:
                 data = json.load(f)
                 assert "palette" in data
                 assert "colors" in data["palette"]
-
 
 class TestFullWorkflowIntegration:
     """Test complete integration workflows with mocked Qt components"""

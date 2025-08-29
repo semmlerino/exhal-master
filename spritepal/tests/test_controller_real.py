@@ -13,6 +13,7 @@ This implementation uses:
 - Real worker creation and lifecycle management
 - Real parameter validation and error conditions
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -25,7 +26,6 @@ from PySide6.QtTest import QSignalSpy
 
 from core.controller import ExtractionController
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
 
 # Serial execution required: Real Qt components
 pytestmark = [
@@ -42,7 +42,6 @@ pytestmark = [
     pytest.mark.signals_slots,
     pytest.mark.slow,
 ]
-
 
 class MockMainWindow(QObject):
     """
@@ -130,7 +129,6 @@ class MockMainWindow(QObject):
     def hide_cache_operation_badge(self) -> None:
         """Mock hide cache badge."""
         pass
-
 
 @pytest.mark.no_manager_setup
 class TestExtractionControllerReal:

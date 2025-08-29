@@ -4,8 +4,9 @@ Test Manager Factory for Dependency Injection Testing
 This module provides utilities for creating properly configured test manager
 instances that can be used in dependency injection contexts.
 """
+from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 from unittest.mock import Mock, MagicMock
 
 import pytest
@@ -14,7 +15,6 @@ from core.managers.context import ManagerContext
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.ci_safe,
 ]
-
 
 class TestManagerFactory:
     """

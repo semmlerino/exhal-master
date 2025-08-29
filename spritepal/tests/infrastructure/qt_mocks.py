@@ -4,6 +4,7 @@ Modernized Qt mock components for SpritePal tests.
 This module provides realistic Qt mock implementations that behave consistently
 across all test environments, including headless setups.
 """
+from __future__ import annotations
 
 from typing import Any, Callable
 from unittest.mock import Mock
@@ -17,7 +18,6 @@ except ImportError:
     QT_AVAILABLE = False
     QObject = object
     Signal = Mock
-
 
 # For backward compatibility, MockSignal is now an alias to Signal
 if QT_AVAILABLE:
@@ -54,7 +54,6 @@ else:
                     # In real Qt, signal emission doesn't crash on callback errors
                     pass
 
-
 class SignalHolder(QObject):
     """
     Helper class to hold Qt signals for mock objects.
@@ -66,7 +65,6 @@ class SignalHolder(QObject):
     # Common signals used across tests - defined at class level
     # These will be overridden with specific signal types as needed
     pass
-
 
 def create_signal_holder(**signals):
     """
@@ -100,7 +98,6 @@ def create_signal_holder(**signals):
 
     # Return the holder - it has all common signals pre-defined
     return holder
-
 
 class CommonSignalHolder(QObject):
     """
@@ -179,7 +176,6 @@ class CommonSignalHolder(QObject):
     started = Signal()
     finished = Signal()
 
-
 class TestMainWindowPure:
     """
     Pure Python test double for MainWindow.
@@ -257,7 +253,6 @@ class TestMainWindowPure:
         from .mock_dialogs_base import CallbackSignal
         return CallbackSignal(self.inject_requested_callbacks)
 
-
 # Keep the original Qt-based version for integration tests that need real Qt signals
 class RealTestMainWindow(QObject):
     """
@@ -311,7 +306,6 @@ class RealTestMainWindow(QObject):
         # Add get_output_path method (needed by injection tests)
         self.get_output_path = Mock(return_value="/test/output")
 
-
 class TestExtractionPanelPure:
     """
     Pure Python test double for ExtractionPanel.
@@ -363,7 +357,6 @@ class TestExtractionPanelPure:
         from .mock_dialogs_base import CallbackSignal
         return CallbackSignal(self.mode_changed_callbacks)
 
-
 # Keep Qt-based version for integration tests
 class RealTestExtractionPanel(QObject):
     """
@@ -390,7 +383,6 @@ class RealTestExtractionPanel(QObject):
         self.get_output_base = Mock(return_value="/test/output")
         self.get_vram_offset = Mock(return_value=0xC000)
         self.set_vram_offset = Mock()
-
 
 class TestROMExtractionPanelPure:
     """
@@ -435,7 +427,6 @@ class TestROMExtractionPanelPure:
         from .mock_dialogs_base import CallbackSignal
         return CallbackSignal(self.output_name_changed_callbacks)
 
-
 # Keep Qt-based version for integration tests
 class RealTestROMExtractionPanel(QObject):
     """
@@ -459,7 +450,6 @@ class RealTestROMExtractionPanel(QObject):
         self.get_sprite_offset = Mock(return_value=0x8000)
         self.get_output_base = Mock(return_value="/test/output")
         self.get_sprite_name = Mock(return_value="TestSprite")
-
 
 class MockQWidget:
     """Comprehensive mock implementation of QWidget."""
@@ -487,7 +477,6 @@ class MockQWidget:
         self.setLayout = Mock()
         self.layout = Mock(return_value=None)
 
-
 class MockQDialog(MockQWidget):
     """Mock implementation of QDialog extending QWidget."""
 
@@ -497,7 +486,6 @@ class MockQDialog(MockQWidget):
         self.reject = Mock()
         self.exec = Mock(return_value=0)
         self.result = Mock(return_value=0)
-
 
 class MockQPixmap:
     """Mock implementation of QPixmap for image handling tests."""
@@ -511,7 +499,6 @@ class MockQPixmap:
         self.save = Mock(return_value=True)
         self.isNull = Mock(return_value=False)
         self.scaled = Mock(return_value=self)
-
 
 class MockQLabel(MockQWidget):
     """Mock implementation of QLabel."""
@@ -530,7 +517,6 @@ class MockQLabel(MockQWidget):
 
     def _get_text(self) -> str:
         return self._text
-
 
 class MockQThread:
     """Mock implementation of QThread for worker thread tests."""
@@ -554,7 +540,6 @@ class MockQThread:
             self.finished = MockSignal()
             self.started = MockSignal()
 
-
 class MockQApplication:
     """Mock implementation of QApplication."""
 
@@ -567,7 +552,6 @@ class MockQApplication:
     def instance(cls):
         """Mock class method that returns a mock app instance."""
         return cls()
-
 
 def create_mock_signals() -> dict[str, Any]:
     """
@@ -627,7 +611,6 @@ def create_mock_signals() -> dict[str, Any]:
         "injection_failed": MockSignal(),
     }
 
-
 def create_qt_mock_context():
     """
     Create a complete Qt mock context for headless testing.
@@ -660,7 +643,6 @@ def create_qt_mock_context():
 
     return mock_modules
 
-
 def create_test_main_window(**kwargs):
     """
     Create a test main window for testing.
@@ -670,7 +652,6 @@ def create_test_main_window(**kwargs):
     """
     return TestMainWindowPure(**kwargs)
 
-
 def create_real_test_main_window(**kwargs):
     """
     Create a real Qt-based test main window for integration testing.
@@ -678,7 +659,6 @@ def create_real_test_main_window(**kwargs):
     Use this ONLY when you need real Qt signal behavior for integration tests.
     """
     return RealTestMainWindow(**kwargs)
-
 
 # Backward compatibility - delegates to MockFactory if available
 def create_mock_main_window(**kwargs):
@@ -693,7 +673,6 @@ def create_mock_main_window(**kwargs):
         return factory.create_main_window(**kwargs)
     except ImportError:
         return TestMainWindowPure(**kwargs)
-
 
 # Backward compatibility aliases - point to pure Python versions by default
 TestMainWindow = TestMainWindowPure

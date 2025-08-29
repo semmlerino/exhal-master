@@ -1,4 +1,5 @@
 """Integration tests adapted for headless environments"""
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -21,7 +22,6 @@ from utils.constants import (
     VRAM_SPRITE_OFFSET,
 )
 
-
 # Serial execution required: Thread safety concerns
 pytestmark = [
     
@@ -34,7 +34,6 @@ pytestmark = [
     pytest.mark.signals_slots,
     pytest.mark.unit,
 ]
-
 
 class TestVRAMExtractionWorkerHeadless:
     """Test VRAMExtractionWorker in headless environment"""
@@ -231,7 +230,6 @@ class TestVRAMExtractionWorkerHeadless:
         finally:
             # Clean up managers
             cleanup_managers()
-
 
 class TestWorkerBusinessLogic:
     """Test worker business logic extracted from Qt dependencies"""

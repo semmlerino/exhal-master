@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Analyze import patterns and dependencies in the SpritePal codebase.
 Identifies:
@@ -12,7 +14,6 @@ import ast
 import json
 from collections import defaultdict
 from pathlib import Path
-
 
 class ImportAnalyzer(ast.NodeVisitor):
     """AST visitor to analyze import patterns."""
@@ -122,7 +123,6 @@ class ImportAnalyzer(ast.NodeVisitor):
             else:
                 self.imports.append(import_info)
 
-
 def analyze_file(filepath: Path) -> tuple[list[dict], list[dict]]:
     """Analyze a single Python file for imports."""
     try:
@@ -137,7 +137,6 @@ def analyze_file(filepath: Path) -> tuple[list[dict], list[dict]]:
     except Exception as e:
         print(f"Error analyzing {filepath}: {e}")
         return [], []
-
 
 def build_dependency_graph(project_root: Path) -> dict[str, set[str]]:
     """Build a dependency graph for the entire project."""
@@ -163,7 +162,6 @@ def build_dependency_graph(project_root: Path) -> dict[str, set[str]]:
             conditional_imports_by_file[module_name] = conditional
 
     return dict(dependencies), conditional_imports_by_file
-
 
 def find_circular_imports(dependencies: dict[str, set[str]]) -> list[list[str]]:
     """Find circular import chains."""
@@ -195,7 +193,6 @@ def find_circular_imports(dependencies: dict[str, set[str]]) -> list[list[str]]:
             cycles.append(cycle)
 
     return cycles
-
 
 def main():
     """Main analysis function."""
@@ -259,7 +256,6 @@ def main():
             "circular_imports": cycles,
         }, f, indent=2)
     print(f"\n✅ Detailed report saved to: {report_path}")
-
 
 if __name__ == "__main__":
     main()

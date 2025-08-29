@@ -1,4 +1,6 @@
 #\!/usr/bin/env python3
+from __future__ import annotations
+
 """
 UI Workflow Test Runner for SpritePal
 
@@ -33,7 +35,6 @@ def setup_environment():
     # Ensure proper logging for Qt
     os.environ["QT_LOGGING_RULES"] = "qt.qpa.xcb.xcb_screen=false"
 
-
 def check_dependencies():
     """Check that required dependencies are installed."""
     required_packages = ['pytest', 'pytest-qt', 'PySide6']
@@ -51,7 +52,6 @@ def check_dependencies():
         return False
     
     return True
-
 
 def run_tests(args):
     """Run the UI workflow tests with appropriate configuration."""
@@ -103,7 +103,6 @@ def run_tests(args):
     result = subprocess.run(cmd, cwd=Path(__file__).parent)
     return result.returncode
 
-
 def run_specific_workflow_tests():
     """Run specific workflow tests with detailed reporting."""
     workflows = {
@@ -135,7 +134,6 @@ def run_specific_workflow_tests():
     else:
         print(f"Unknown workflow: {choice}")
         return 1
-
 
 def main():
     """Main entry point."""
@@ -179,7 +177,6 @@ def main():
         return run_specific_workflow_tests()
     else:
         return run_tests(args)
-
 
 if __name__ == "__main__":
     sys.exit(main())

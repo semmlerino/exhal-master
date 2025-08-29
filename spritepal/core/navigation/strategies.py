@@ -18,7 +18,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class AbstractNavigationStrategy(ABC):
     """
     Abstract base class for sprite navigation strategies.
@@ -129,7 +128,6 @@ class AbstractNavigationStrategy(ABC):
         }
         logger.debug(f"Reset statistics for strategy '{self.name}'")
 
-
 class AbstractPatternStrategy(AbstractNavigationStrategy):
     """
     Base class for strategies that learn and use patterns.
@@ -190,7 +188,6 @@ class AbstractPatternStrategy(AbstractNavigationStrategy):
         """Clear all learned patterns."""
         self._patterns.clear()
         logger.info(f"Cleared patterns for strategy '{self.name}'")
-
 
 class AbstractSimilarityStrategy(AbstractNavigationStrategy):
     """
@@ -273,7 +270,6 @@ class AbstractSimilarityStrategy(AbstractNavigationStrategy):
 
         self._max_comparisons = max_comparisons
         logger.debug(f"Set max comparisons to {max_comparisons} for '{self.name}'")
-
 
 class StrategyRegistry:
     """
@@ -376,10 +372,8 @@ class StrategyRegistry:
         self._default_strategy = None
         logger.info("Cleared all navigation strategies")
 
-
 # Global strategy registry instance
 _strategy_registry = StrategyRegistry()
-
 
 def get_strategy_registry() -> StrategyRegistry:
     """Get the global strategy registry."""

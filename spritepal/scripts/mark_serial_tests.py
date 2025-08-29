@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Enhanced script to systematically apply pytest markers to test files.
 
@@ -122,7 +124,6 @@ def analyze_test_file(content: str, filename: str) -> dict[str, Any]:
 
     return analysis
 
-
 def get_marker_list(analysis: dict[str, Any]) -> list[str]:
     """Get comprehensive pytest markers from analysis results."""
     markers = []
@@ -142,7 +143,6 @@ def get_marker_list(analysis: dict[str, Any]) -> list[str]:
 
     # Remove duplicates and sort
     return sorted(set(markers))
-
 
 def add_pytest_markers(file_path: Path, analysis: dict[str, Any]) -> bool:
     """
@@ -222,7 +222,6 @@ def add_pytest_markers(file_path: Path, analysis: dict[str, Any]) -> bool:
         print(f"  ✗ Error writing {file_path.name}: {e}")
         return False
 
-
 def main():
     """Main function to process test files."""
     test_dir = Path('tests')
@@ -294,7 +293,6 @@ def main():
     print("  ")
     print("  # Skip slow tests for quick feedback:")
     print("  pytest -m 'not slow'")
-
 
 if __name__ == '__main__':
     main()

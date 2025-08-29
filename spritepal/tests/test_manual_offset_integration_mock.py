@@ -4,6 +4,7 @@ Mock-based integration tests for Manual Offset Dialog functionality.
 These tests verify the key user-facing behaviors that prevent duplicate sliders
 while using mocks to avoid complex Qt environment setup requirements.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
@@ -23,7 +24,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.rom_data,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestManualOffsetDialogIntegrationMock:
@@ -261,7 +261,6 @@ class TestManualOffsetDialogIntegrationMock:
 
             # ROM data setting should not be called again
             assert mock_dialog_with_ui.set_rom_data.call_count == 1
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

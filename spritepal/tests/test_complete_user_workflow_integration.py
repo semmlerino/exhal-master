@@ -2,6 +2,7 @@
 Integration tests for complete user workflows - Priority 1 test implementation.
 Tests end-to-end user scenarios from file drop to editor launch.
 """
+from __future__ import annotations
 
 import shutil
 import sys
@@ -31,7 +32,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
@@ -52,7 +52,6 @@ from utils.constants import (
     SPRITE_PALETTE_START,
     VRAM_SPRITE_OFFSET,
 )
-
 
 class TestCompleteUserWorkflow:
     """Test complete user workflow scenarios"""
@@ -766,7 +765,6 @@ class TestCompleteUserWorkflow:
         finally:
             # Clean up managers
             cleanup_managers_registry()
-
 
 class TestWorkflowIntegrationPoints:
     """Test specific integration points in the workflow"""

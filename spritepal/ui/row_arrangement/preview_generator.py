@@ -1,6 +1,7 @@
 """
 Preview generation for arranged sprite rows
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any

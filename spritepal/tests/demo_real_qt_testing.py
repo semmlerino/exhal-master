@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Demonstration of Real Qt Testing vs Mock Testing
 
@@ -26,7 +28,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from infrastructure.signal_testing_utils import SignalSpy
 from infrastructure.qt_mocks import MockSignal
 
-
 class DemoDialog(QDialog):
     """Simple dialog for demonstration."""
     
@@ -52,7 +53,6 @@ class DemoDialog(QDialog):
         self.click_count += 1
         self.data_changed.emit(f"Clicked {self.click_count} times")
         self.action_triggered.emit(self.click_count)
-
 
 def test_with_mocks():
     """Test using mock approach (old way)."""
@@ -116,7 +116,6 @@ def test_with_mocks():
     
     return peak, duration
 
-
 def test_with_real_qt():
     """Test using real Qt approach (new way)."""
     print("\n=== REAL QT TESTING APPROACH ===")
@@ -179,7 +178,6 @@ def test_with_real_qt():
     
     return peak, duration
 
-
 def compare_line_counts():
     """Compare line counts between approaches."""
     print("\n=== CODE COMPLEXITY COMPARISON ===")
@@ -219,7 +217,6 @@ def compare_line_counts():
     print("  - ~400 lines of code (37% reduction)")
     print("  - Simple, readable tests")
     print("  - Real behavior validation")
-
 
 def main():
     """Run the demonstration."""
@@ -287,7 +284,6 @@ def main():
     print("=" * 60)
     print("CONCLUSION: Real Qt testing is superior in every metric!")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()

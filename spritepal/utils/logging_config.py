@@ -1,4 +1,5 @@
 """Logging configuration for SpritePal"""
+from __future__ import annotations
 
 import logging
 import logging.handlers
@@ -79,7 +80,7 @@ def setup_logging(
                 return 0
             def tell(self) -> int:
                 return 0
-            def __enter__(self) -> "PermanentNullStream":
+            def __enter__(self) -> PermanentNullStream:
                 return self
             def __exit__(self, *args: Any) -> None:
                 pass
@@ -143,7 +144,6 @@ def setup_logging(
         logger.debug("Debug mode enabled via SPRITEPAL_DEBUG environment variable")
 
     return logger
-
 
 def get_logger(module_name: str) -> logging.Logger:
     """

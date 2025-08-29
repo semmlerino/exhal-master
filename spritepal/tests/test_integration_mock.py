@@ -4,6 +4,7 @@ These tests mock Qt components to test business logic without requiring a displa
 
 MODERNIZED: Uses consolidated mock infrastructure from conftest.py
 """
+from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -14,7 +15,6 @@ import pytest
 from core.controller import ExtractionController
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 @pytest.mark.mock
 class TestVRAMExtractionWorkerMocked:
@@ -103,7 +102,6 @@ class TestVRAMExtractionWorkerMocked:
         assert isinstance(call_args, bytes)
         assert len(call_args) > 0  # Should have PNG data
 
-
 class TestControllerMocked:
     """Test ExtractionController with mocked components"""
 
@@ -139,7 +137,6 @@ class TestControllerMocked:
         assert mock_worker.palettes_ready.connect.called
         assert mock_worker.extraction_finished.connect.called
         assert mock_worker.error.connect.called
-
 
 class TestBusinessLogicOnly:
     """Test pure business logic without Qt dependencies"""

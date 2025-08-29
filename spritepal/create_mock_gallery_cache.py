@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Create mock sprite scan data for the Gallery tab.
 This simulates what a real ROM scan would produce.

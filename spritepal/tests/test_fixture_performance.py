@@ -10,11 +10,11 @@ Expected Results:
 - Isolated tests (fresh managers): 3-4s per test (only when needed)
 - Total test suite: ~30 minutes (from 2+ hours)
 """
+from __future__ import annotations
 
 import time
 import pytest
 from core.managers.registry import ManagerRegistry
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.cache,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestFastUnitTests:
@@ -49,7 +48,6 @@ class TestFastUnitTests:
         test_str = "SpritePal"
         assert len(test_str) == 9
         assert test_str.lower() == "spritepal"
-
 
 class TestSessionManagedTests:
     """Tests using shared session managers - should be fast with managers available."""
@@ -81,7 +79,6 @@ class TestSessionManagedTests:
         # Same instance should be returned
         assert extraction1 is extraction2
 
-
 @pytest.mark.isolated_managers
 class TestIsolatedManagerTests:
     """Tests that need fresh managers - will be slower but necessary for some cases."""
@@ -100,7 +97,6 @@ class TestIsolatedManagerTests:
         # Simulate state change that could affect other tests
         # (In real scenarios, this might be settings changes, cache modifications, etc.)
         assert extraction_manager is not None
-
 
 class TestPerformanceMeasurement:
     """Measure and validate the performance improvements."""
@@ -164,7 +160,6 @@ class TestPerformanceMeasurement:
         # This test serves as documentation of our performance goals
         assert performance_notes["after_optimization"]["improvement"] == "~20x faster"
 
-
 class TestFixtureUsageExamples:
     """Examples showing proper fixture usage patterns."""
     
@@ -194,7 +189,6 @@ class TestFixtureUsageExamples:
         # Safe to modify state without affecting other tests
         assert session_manager is not None
 
-
 class TestMigrationCompatibility:
     """Ensure backward compatibility during migration."""
     
@@ -217,7 +211,6 @@ class TestMigrationCompatibility:
         session_manager = registry.get_session_manager()
         
         assert all([extraction_manager, injection_manager, session_manager])
-
 
 @pytest.mark.benchmark
 class TestBenchmarkValidation:

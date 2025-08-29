@@ -4,6 +4,7 @@ Hex offset input component with validation and decimal conversion
 Provides a standardized hex input widget with optional decimal display,
 exactly replicating the functionality from InjectionDialog.
 """
+from __future__ import annotations
 
 import builtins
 import contextlib
@@ -15,7 +16,6 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class HexOffsetInput(QWidget):
     """

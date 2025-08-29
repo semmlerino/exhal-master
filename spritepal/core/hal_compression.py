@@ -2,6 +2,7 @@
 HAL compression/decompression module for SpritePal.
 Interfaces with exhal/inhal C tools for ROM sprite injection.
 """
+from __future__ import annotations
 
 import atexit
 import builtins
@@ -46,14 +47,11 @@ from utils.safe_logging import (
 
 logger = get_logger(__name__)
 
-
 class HALCompressionError(Exception):
     """Raised when HAL compression/decompression fails"""
 
-
 class HALPoolError(HALCompressionError):
     """Raised when HAL process pool operations fail"""
-
 
 class HALRequest(NamedTuple):
     """Request structure for HAL process pool operations"""
@@ -65,7 +63,6 @@ class HALRequest(NamedTuple):
     fast: bool = False
     request_id: str | None = None
 
-
 class HALResult(NamedTuple):
     """Result structure for HAL process pool operations"""
     success: bool
@@ -73,7 +70,6 @@ class HALResult(NamedTuple):
     size: int | None = None
     error_message: str | None = None
     request_id: str | None = None
-
 
 def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queue, result_queue: mp.Queue) -> None:
     """Worker process function for HAL operations.
@@ -176,7 +172,6 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
 
     worker_logger.debug(f"HAL worker process {os.getpid()} exiting")
 
-
 def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
     """Process decompression request in worker process."""
     try:
@@ -194,7 +189,16 @@ def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
 
         try:
             # Run exhal: exhal romfile offset outfile
-            cmd = [exhal_path, request.rom_path, f"0x{request.offset:X}", output_path]
+            # Ensure offset is properly formatted as hex with type validation
+            if not isinstance(request.offset, int) or request.offset < 0:
+                return HALResult(
+                    success=False,
+                    error_message=f"Invalid offset: {request.offset} (must be non-negative integer)",
+                    request_id=request.request_id
+                )
+            
+            offset_hex = f"0x{request.offset:X}"
+            cmd = [exhal_path, request.rom_path, offset_hex, output_path]
 
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
@@ -226,7 +230,6 @@ def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
             error_message=f"Decompression error: {e!s}",
             request_id=request.request_id
         )
-
 
 def _process_compress(inhal_path: str, request: HALRequest) -> HALResult:
     """Process compression request in worker process."""
@@ -287,7 +290,6 @@ def _process_compress(inhal_path: str, request: HALRequest) -> HALResult:
             request_id=request.request_id
         )
 
-
 class HALProcessPool:
     """Singleton HAL process pool for efficient compression/decompression operations."""
 
@@ -295,7 +297,7 @@ class HALProcessPool:
     _lock = threading.Lock()
     _cleanup_registered = False
 
-    def __new__(cls) -> "HALProcessPool":
+    def __new__(cls) -> HALProcessPool:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -471,7 +473,6 @@ class HALProcessPool:
             if self._result_queue is not None:
                 return self._result_queue.get(timeout=timeout)
             raise HALPoolError("Result queue not initialized")
-
 
         except queue.Empty:
             return HALResult(
@@ -788,7 +789,6 @@ class HALProcessPool:
                     safe_debug(logger, f"Error during singleton reset: {e}")
                 cls._instance = None
                 logger.debug("HAL process pool singleton reset")
-
 
 class HALCompressor:
     """Handles HAL compression/decompression for ROM injection"""
@@ -1272,7 +1272,6 @@ class HALCompressor:
             "pool_size": getattr(self._pool, "_pool_size", 0),
             "mode": "pool" if self._pool.is_initialized else "subprocess"
         }
-
 
 # Module-level cleanup for memory leak prevention
 @suppress_logging_errors

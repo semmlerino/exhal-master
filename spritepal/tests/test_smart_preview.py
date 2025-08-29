@@ -4,6 +4,7 @@ Tests for SmartPreviewCoordinator ROM cache tier functionality.
 Tests that the smart preview coordinator properly stores and retrieves preview data,
 implements batch saving functionality, and integrates correctly with the memory cache.
 """
+from __future__ import annotations
 
 import pytest
 import tempfile
@@ -34,7 +35,6 @@ except ImportError:
 
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from utils.rom_cache import ROMCache
-
 
 class TestSmartPreviewROMCacheTier:
     """Test Smart Preview Coordinator ROM cache tier functionality"""

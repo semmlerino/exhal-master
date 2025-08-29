@@ -1,6 +1,7 @@
 """
 Enhanced tests for PaletteColorizer
 """
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -8,7 +9,6 @@ import pytest
 from PIL import Image
 
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.signals_slots,
     pytest.mark.slow,
 ]
-
 
 class TestPaletteColorizerEnhanced:
     """Enhanced tests for PaletteColorizer functionality"""

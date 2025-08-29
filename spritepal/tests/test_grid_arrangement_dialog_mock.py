@@ -1,6 +1,7 @@
 """
 Mock-based tests for grid arrangement dialog logic (without actual PySide6 imports)
 """
+from __future__ import annotations
 
 import pytest
 import os
@@ -13,14 +14,11 @@ from PIL import Image
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
 
-
     GridArrangementManager,
     TilePosition,
 )
 from ui.row_arrangement.grid_image_processor import GridImageProcessor
 from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
-
-
 
 pytestmark = [
     pytest.mark.dialog,
@@ -44,7 +42,6 @@ class MockSelectionMode:
     ROW = "row"
     COLUMN = "column"
     RECTANGLE = "rectangle"
-
 
 class MockGridArrangementDialog:
     """Mock version of GridArrangementDialog for testing logic"""
@@ -237,7 +234,6 @@ class MockGridArrangementDialog:
             self.manager, self.processor
         )
 
-
 class MockGridGraphicsView:
     """Mock version of GridGraphicsView for testing logic"""
 
@@ -361,7 +357,6 @@ class MockGridGraphicsView:
     def get_zoom_level(self):
         """Get current zoom level"""
         return self.zoom_level
-
 
 class TestGridArrangementDialogLogic:
     """Test grid arrangement dialog logic without UI dependencies"""
@@ -555,7 +550,6 @@ class TestGridArrangementDialogLogic:
             assert "total_tiles" in data
             assert data["total_tiles"] > 0  # Should have some tiles arranged
 
-
 class TestGridGraphicsViewLogic:
     """Test grid graphics view logic without UI dependencies"""
 
@@ -675,7 +669,6 @@ class TestGridGraphicsViewLogic:
         tile_pos = view.select_tile_at_position(31, 31)
         assert tile_pos == TilePosition(1, 1)
 
-
 class TestSelectionModeLogic:
     """Test selection mode logic"""
 
@@ -702,7 +695,6 @@ class TestSelectionModeLogic:
 
         view.selection_mode = MockSelectionMode.RECTANGLE
         assert view.selection_mode == MockSelectionMode.RECTANGLE
-
 
 class TestGridArrangementDialogIntegration:
     """Test complete dialog workflow integration"""

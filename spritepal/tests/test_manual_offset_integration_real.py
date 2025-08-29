@@ -11,6 +11,7 @@ Key improvements over mocked version:
 - Minimal mocks (only for file I/O where needed)
 - Mock density: <0.01 (reduced from 0.125)
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -23,7 +24,6 @@ import pytest
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
-
 
 def is_headless_environment() -> bool:
     """Detect if we're in a headless environment."""
@@ -69,7 +69,6 @@ def is_headless_environment() -> bool:
         # Any exception means we can't access display properly
         return True
 
-
 # Ensure Qt environment is configured
 # Serial execution required: Real Qt components
 pytestmark = [
@@ -92,7 +91,6 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 if not os.environ.get('QT_QPA_PLATFORM'):
     if is_headless_environment():
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
@@ -106,11 +104,9 @@ from ui.dialogs.manual_offset_unified_integrated import (
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton, ROMExtractionPanel
 from tests.infrastructure.qt_real_testing import QtTestCase, EventLoopHelper
 
-
 @pytest.mark.integration
 class TestManualOffsetDialogIntegrationReal(QtTestCase):
     """Integration tests using real Qt components to verify key user workflows."""
-
 
     @pytest.fixture
     def temp_rom_file(self) -> Generator[Path, None, None]:
@@ -438,7 +434,6 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
             qtbot.wait(wait_timeout // 200)  # Small delay
             current_offset = dialog.get_current_offset()
             assert current_offset == offset
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

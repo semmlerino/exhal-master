@@ -4,6 +4,7 @@ Thread-Safe Singleton Base Classes
 Provides thread-safe singleton patterns for both Qt and non-Qt objects.
 Ensures proper synchronization and Qt thread affinity checking.
 """
+from __future__ import annotations
 
 import threading
 from typing import Callable, Generic, TypeVar
@@ -25,7 +26,6 @@ TSingleton = TypeVar("TSingleton")
 TQt = TypeVar("TQt")
 TLazy = TypeVar("TLazy")
 TFactory = TypeVar("TFactory")
-
 
 class ThreadSafeSingleton(Generic[T]):
     """
@@ -141,7 +141,6 @@ class ThreadSafeSingleton(Generic[T]):
         """
         return cls._instance is not None
 
-
 class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
     """
     Thread-safe singleton for Qt objects with thread affinity checking.
@@ -239,7 +238,6 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
             except RuntimeError:
                 logger.warning(f"Could not schedule deletion for {type(instance).__name__} (wrong thread)")
 
-
 class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
     """
     Thread-safe singleton with lazy initialization support.
@@ -291,10 +289,9 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
             cls._instance = None
             cls._initialized = False
 
-
 # Convenience functions for common patterns
 
-def create_simple_singleton(instance_type: "type[TFactory]") -> "type[ThreadSafeSingleton[TFactory]]":
+def create_simple_singleton(instance_type: type[TFactory]) -> type[ThreadSafeSingleton[TFactory]]:
     """
     Create a simple thread-safe singleton class for a given type.
 
@@ -321,8 +318,7 @@ def create_simple_singleton(instance_type: "type[TFactory]") -> "type[ThreadSafe
     SimpleSingleton.__name__ = f"{instance_type.__name__}Singleton"
     return SimpleSingleton
 
-
-def create_qt_singleton(qt_type: "type[TFactory]") -> "type[QtThreadSafeSingleton[TFactory]]":
+def create_qt_singleton(qt_type: type[TFactory]) -> type[QtThreadSafeSingleton[TFactory]]:
     """
     Create a thread-safe Qt singleton class for a given Qt type.
 

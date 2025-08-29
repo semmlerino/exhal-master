@@ -2,17 +2,18 @@
 Integration tests for sprite gallery functionality.
 Tests the complete gallery system including detached windows and thumbnails.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 import pytest
 from PySide6.QtCore import Qt
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QSizePolicy
 
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 from ui.windows.detached_gallery_window import DetachedGalleryWindow
-
 
 @pytest.fixture
 def gallery_tab(qtbot):
@@ -30,7 +31,6 @@ def gallery_tab(qtbot):
 
     return tab
 
-
 @pytest.fixture
 def test_sprites():
     """Create test sprite data."""
@@ -44,7 +44,6 @@ def test_sprites():
         })
     return sprites
 
-
 @pytest.fixture
 def gallery_with_sprites(gallery_tab, test_sprites):
     """Gallery tab with sprites loaded."""
@@ -55,13 +54,14 @@ def gallery_with_sprites(gallery_tab, test_sprites):
     for sprite in test_sprites:
         offset = sprite['offset']
         if offset in gallery_tab.gallery_widget.thumbnails:
-            pixmap = QPixmap(128, 128)
+            # Using ThreadSafeTestImage instead of QPixmap for thread safety
+
+            pixmap = ThreadSafeTestImage(128, 128)
             pixmap.fill(Qt.GlobalColor.darkGray)
             thumbnail = gallery_tab.gallery_widget.thumbnails[offset]
             thumbnail.set_sprite_data(pixmap, sprite)
 
     return gallery_tab
-
 
 class TestSpriteGalleryTab:
     """Test the main sprite gallery tab."""
@@ -121,7 +121,6 @@ class TestSpriteGalleryTab:
 
         # Should be Minimum to prevent expansion
         assert v_policy == QSizePolicy.Policy.Minimum, f"Container should have Minimum policy, has {v_policy.name}"
-
 
 class TestDetachedGalleryWindow:
     """Test the detached gallery window functionality."""
@@ -249,7 +248,6 @@ class TestDetachedGalleryWindow:
         # Check cleanup
         assert tab.detached_window is None
 
-
 class TestGalleryLayoutFixes:
     """Test the layout fixes for empty space issues."""
 
@@ -336,7 +334,6 @@ class TestGalleryLayoutFixes:
         visible_count = sum(1 for t in gallery.thumbnails.values() if t.isVisible())
         assert visible_count == 17
 
-
 class TestGalleryCaching:
     """Test gallery scan result caching."""
 
@@ -399,7 +396,6 @@ class TestGalleryCaching:
         assert len(gallery_tab.sprites_data) == 17
         assert len(gallery_tab.gallery_widget.thumbnails) == 17
 
-
 @pytest.mark.gui
 class TestGalleryIntegration:
     """Full integration tests."""
@@ -430,7 +426,9 @@ class TestGalleryIntegration:
         for sprite in sprites:
             offset = sprite['offset']
             if offset in tab.gallery_widget.thumbnails:
-                pixmap = QPixmap(128, 128)
+                # Using ThreadSafeTestImage instead of QPixmap for thread safety
+
+                pixmap = ThreadSafeTestImage(128, 128)
                 pixmap.fill(Qt.GlobalColor.darkCyan)
                 thumbnail = tab.gallery_widget.thumbnails[offset]
                 thumbnail.set_sprite_data(pixmap, sprite)

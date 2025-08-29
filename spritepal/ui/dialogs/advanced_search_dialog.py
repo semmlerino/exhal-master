@@ -3,6 +3,7 @@ Advanced search dialog for sophisticated sprite searching.
 
 Provides multiple search modes, filters, history, and visual search capabilities.
 """
+from __future__ import annotations
 
 import json
 import logging
@@ -46,7 +47,6 @@ from utils.preview_generator import PreviewGenerator, PreviewRequest
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class SearchFilter:
     """Container for search filter settings."""
@@ -58,7 +58,6 @@ class SearchFilter:
     include_compressed: bool
     include_uncompressed: bool
     confidence_threshold: float
-
 
 @dataclass
 class SearchHistoryEntry:
@@ -73,7 +72,6 @@ class SearchHistoryEntry:
         """Format for display in history list."""
         time_str = self.timestamp.strftime("%H:%M:%S")
         return f"[{time_str}] {self.search_type}: {self.query} ({self.results_count} results)"
-
 
 class SearchWorker(QThread):
     """Worker thread for background searching."""
@@ -843,7 +841,6 @@ class SearchWorker(QThread):
     def emit_error(self, message: str, exception: Exception | None = None) -> None:
         """Emit error signal - compatibility method for decorator."""
         self.error.emit(message)
-
 
 class AdvancedSearchDialog(QDialog):
     """

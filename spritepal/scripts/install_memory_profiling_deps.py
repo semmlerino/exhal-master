@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Install Memory Profiling Dependencies
 
@@ -11,7 +13,6 @@ This script installs the required packages for comprehensive memory leak profili
 
 import subprocess
 import sys
-
 
 def install_package(package_name: str, description: str):
     """Install a package with pip."""

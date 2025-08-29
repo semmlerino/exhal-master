@@ -2,6 +2,7 @@
 Row Arrangement Dialog for SpritePal
 Intuitive drag-and-drop interface for arranging sprite rows
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -30,7 +31,6 @@ from .widgets.row_widgets import DragDropListWidget, RowPreviewWidget
 
 if TYPE_CHECKING:
     from PIL import Image
-
 
 class RowArrangementDialog(SplitterDialog):
     """Dialog for arranging sprite rows with intuitive drag-and-drop interface"""

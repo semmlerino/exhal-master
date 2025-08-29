@@ -7,7 +7,7 @@ This focused test suite addresses the critical issue mentioned in the requiremen
 These tests provide comprehensive validation that the singleton pattern
 successfully prevents duplicate slider creation.
 """
-
+from __future__ import annotations
 
 from unittest.mock import MagicMock
 
@@ -18,12 +18,9 @@ from core.managers.extraction_manager import ExtractionManager
 from ui.rom_extraction_panel import (
 # Test characteristics: Singleton management
 
-
     ManualOffsetDialogSingleton,
     ROMExtractionPanel,
 )
-
-
 
 pytestmark = [
     pytest.mark.dialog,
@@ -272,7 +269,6 @@ class TestNoDuplicateSlidersValidation:
             f"Slider count after reopen: {new_slider_count} vs initial: {initial_slider_count}"
         assert new_spinbox_count == initial_spinbox_count, \
             f"SpinBox count after reopen: {new_spinbox_count} vs initial: {initial_spinbox_count}"
-
 
 # Import necessary Qt widgets at module level to avoid import errors
 from PySide6.QtWidgets import QLabel, QPushButton

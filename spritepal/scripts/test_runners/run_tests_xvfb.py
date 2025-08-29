@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Robust test runner for SpritePal with automatic environment detection and configuration.
 Handles GUI testing across different platforms using pytest-xvfb.
@@ -9,7 +11,6 @@ import os
 import shutil
 import subprocess
 import sys
-
 
 class TestRunner:
     """Manages test execution with proper environment setup."""
@@ -121,7 +122,6 @@ class TestRunner:
         # Run tests
         return subprocess.run(cmd, check=False, env=env).returncode
 
-
 def main():
     """Main entry point."""
     args = sys.argv[1:]
@@ -176,7 +176,6 @@ def main():
     # Run tests
     runner = TestRunner()
     return runner.run_tests(args)
-
 
 if __name__ == "__main__":
     sys.exit(main())

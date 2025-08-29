@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Run pytest for the ultrathink sprite editor project"""
 
 import subprocess
@@ -48,7 +50,6 @@ test_commands = {
     ],
 }
 
-
 def run_tests(test_type="all"):
     """Run tests based on type"""
     if test_type not in test_commands:
@@ -60,7 +61,6 @@ def run_tests(test_type="all"):
     print(f"Running: {' '.join(cmd)}")
 
     return subprocess.call(cmd)
-
 
 if __name__ == "__main__":
     test_type = sys.argv[1] if len(sys.argv) > 1 else "all"

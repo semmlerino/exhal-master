@@ -37,13 +37,11 @@ from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 @dataclass
 class PaletteData:
     """Palette data for sprite preview generation."""
     data: bytes
     format: str = "snes_cgram"  # Format identifier
-
 
 @dataclass
 class PreviewRequest:
@@ -71,7 +69,6 @@ class PreviewRequest:
         )
         return hashlib.md5(str(key_data).encode()).hexdigest()
 
-
 @dataclass
 class PreviewResult:
     """Result of preview generation."""
@@ -81,7 +78,6 @@ class PreviewResult:
     sprite_name: str
     generation_time: float  # Time taken to generate in seconds
     cached: bool = False  # Whether this result came from cache
-
 
 class LRUCache:
     """Thread-safe LRU cache for preview results."""
@@ -175,7 +171,6 @@ class LRUCache:
                 "max_size": self.max_size,
                 "hit_rate": hit_rate
             }
-
 
 class PreviewGenerator(QObject):
     """Consolidated preview generation service with caching and thread safety.
@@ -616,7 +611,6 @@ class PreviewGenerator(QObject):
 
         return img
 
-
     def _get_friendly_error_message(self, error_msg: str) -> str:
         """Convert technical error messages to user-friendly ones.
 
@@ -757,7 +751,6 @@ class PreviewGenerator(QObject):
         # Don't try to access complex objects like cache or mutexes
         # They might already be garbage collected
 
-
 class _PreviewGeneratorSingleton:
     """Thread-safe singleton holder for PreviewGenerator."""
     _instance: PreviewGenerator | None = None
@@ -821,7 +814,6 @@ class _PreviewGeneratorSingleton:
                     cls._instance = None
                     logger.debug("Global PreviewGenerator instance cleaned up")
 
-
 def get_preview_generator() -> PreviewGenerator:
     """Get global preview generator instance with thread-safe initialization.
 
@@ -830,7 +822,6 @@ def get_preview_generator() -> PreviewGenerator:
     """
     return _PreviewGeneratorSingleton.get()
 
-
 def cleanup_preview_generator() -> None:
     """Clean up the global preview generator instance.
 
@@ -838,7 +829,6 @@ def cleanup_preview_generator() -> None:
     instance. It is thread-safe and can be called during application shutdown.
     """
     _PreviewGeneratorSingleton.cleanup()
-
 
 def create_vram_preview_request(vram_path: str,
                                offset: int,
@@ -862,7 +852,6 @@ def create_vram_preview_request(vram_path: str,
         sprite_name=sprite_name or f"vram_0x{offset:06X}",
         size=size
     )
-
 
 def create_rom_preview_request(rom_path: str,
                               offset: int,

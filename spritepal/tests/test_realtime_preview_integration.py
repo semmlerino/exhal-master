@@ -3,10 +3,7 @@ Integration tests for real-time preview updates - Priority 1 test implementation
 Tests real-time preview updates during user interactions.
 Mock Reduction Phase 4.3: Real preview implementation testing.
 """
-
-
-
-
+from __future__ import annotations
 
 import sys
 import tempfile
@@ -31,7 +28,6 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.fixtures.test_preview_helper import (
@@ -44,13 +40,11 @@ from tests.fixtures.test_preview_helper import (
     ensure_headless_qt,
 )
 
-
 # Ensure QApplication exists for all tests
 @pytest.fixture(scope="module", autouse=True)
 def qt_app():
     """Ensure Qt application exists for tests"""
     return ensure_headless_qt()
-
 
 class TestVRAMOffsetPreviewUpdates:
     """Test VRAM offset slider preview updates (Mock Reduction Phase 4.3)"""
@@ -169,7 +163,6 @@ class TestVRAMOffsetPreviewUpdates:
         preview_signals = preview_panel.get_signal_emissions()
         assert len(preview_signals["preview_updates"]) == 0
 
-
 class TestPaletteSwitchingPreviewUpdates:
     """Test palette switching preview updates (Mock Reduction Phase 4.3)"""
 
@@ -287,7 +280,6 @@ class TestPaletteSwitchingPreviewUpdates:
         ]
         assert len(colorized_updates) == 0
 
-
 class TestZoomPanStatePreservation:
     """Test zoom and pan state preservation during updates (Mock Reduction Phase 4.3)"""
 
@@ -325,8 +317,8 @@ class TestZoomPanStatePreservation:
         preview_panel.clear_signal_tracking()
 
         # Simulate real-time update (should preserve state)
-        from PySide6.QtGui import QPixmap
-        mock_pixmap = QPixmap(128, 128)
+        from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
+        mock_pixmap = ThreadSafeTestImage(128, 128)
         preview_panel.update_preview(mock_pixmap, 50)
 
         # Verify zoom/pan state was preserved
@@ -355,8 +347,8 @@ class TestZoomPanStatePreservation:
         preview_panel.clear_signal_tracking()
 
         # Simulate new preview (should reset state)
-        from PySide6.QtGui import QPixmap
-        mock_pixmap = QPixmap(128, 128)
+        from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
+        mock_pixmap = ThreadSafeTestImage(128, 128)
         preview_panel.set_preview(mock_pixmap, 50)
 
         # Verify zoom/pan state was reset
@@ -371,7 +363,6 @@ class TestZoomPanStatePreservation:
         assert len(preview_updates) == 1
         assert preview_updates[0]["type"] == "set"
         assert preview_updates[0]["zoom_reset"] is True
-
 
 class TestPreviewPerformanceIntegration:
     """Test preview performance characteristics (Mock Reduction Phase 4.3)"""
@@ -453,7 +444,6 @@ class TestPreviewPerformanceIntegration:
         # Verify all preview updates were recorded
         preview_signals = preview_panel.get_signal_emissions()
         assert len(preview_signals["preview_updates"]) >= len(rapid_offsets)
-
 
 class TestPreviewErrorHandling:
     """Test preview error handling scenarios (Mock Reduction Phase 4.3)"""
@@ -543,7 +533,6 @@ class TestPreviewErrorHandling:
 
         # Verify update times were recorded for all attempts
         assert len(controller.get_update_times()) == len(test_offsets)
-
 
 class TestPreviewSignalIntegration:
     """Test preview signal integration across components (Mock Reduction Phase 4.3)"""

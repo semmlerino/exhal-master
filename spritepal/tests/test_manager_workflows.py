@@ -1,13 +1,13 @@
 """
 Integration tests for complete UI → Manager workflows
 """
+from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 from tests.fixtures.test_managers import (
 # Systematic pytest markers applied based on test content analysis
-
 
     create_extraction_manager_fixture,
     create_injection_manager_fixture,
@@ -22,8 +22,6 @@ from core.managers import (
 )
 from core.managers.exceptions import ValidationError
 
-
-
 pytestmark = [
     pytest.mark.file_io,
     pytest.mark.headless,
@@ -37,7 +35,6 @@ def setup_managers():
     initialize_managers("TestApp")
     yield
     cleanup_managers()
-
 
 class TestExtractionToInjectionWorkflow:
     """Test complete extraction → injection workflows"""
@@ -181,7 +178,6 @@ class TestExtractionToInjectionWorkflow:
         finally:
             injection_fixture.cleanup()
 
-
 class TestManagerCommunication:
     """Test communication patterns between managers"""
 
@@ -256,7 +252,6 @@ class TestManagerCommunication:
 
         finally:
             injection_fixture.cleanup()
-
 
 class TestManagerStateConsistency:
     """Test manager state consistency during operations"""
@@ -339,7 +334,6 @@ class TestManagerStateConsistency:
         finally:
             extraction_fixture.cleanup()
             injection_fixture.cleanup()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

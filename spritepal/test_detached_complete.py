@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Final test of the complete detached gallery solution.
 Verifies both stretching fix and thumbnail copying work together.

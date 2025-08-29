@@ -5,6 +5,7 @@ This test suite follows Qt Testing Best Practices by properly mocking Qt object 
 to avoid fatal errors in headless environments. Tests focus on singleton behavior
 rather than Qt GUI details.
 """
+from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 import pytest
@@ -23,7 +24,6 @@ pytestmark = [
     pytest.mark.mock_dialogs,
     pytest.mark.rom_data,
 ]
-
 
 @pytest.fixture
 def mock_dialog():
@@ -48,7 +48,6 @@ def mock_dialog():
     dialog.browse_tab = MagicMock()
     dialog.history_tab = MagicMock()
     return dialog
-
 
 @pytest.mark.unit
 class TestManualOffsetDialogSingleton:
@@ -122,7 +121,6 @@ class TestManualOffsetDialogSingleton:
             # Instance should be cleaned up
             assert ManualOffsetDialogSingleton._instance is None
             assert ManualOffsetDialogSingleton._creator_panel is None
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

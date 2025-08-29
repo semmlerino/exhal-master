@@ -2,6 +2,7 @@
 Empty region detection for optimized ROM scanning.
 Identifies regions that can be skipped during sprite searching.
 """
+from __future__ import annotations
 
 import math
 from collections import Counter
@@ -19,7 +20,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class EmptyRegionConfig(NamedTuple):
     """Configuration for empty region detection."""
     entropy_threshold: float = EMPTY_REGION_ENTROPY_THRESHOLD
@@ -27,7 +27,6 @@ class EmptyRegionConfig(NamedTuple):
     pattern_threshold: float = EMPTY_REGION_PATTERN_THRESHOLD
     max_unique_bytes: int = EMPTY_REGION_MAX_UNIQUE_BYTES
     region_size: int = EMPTY_REGION_SIZE
-
 
 @dataclass
 class RegionAnalysis:
@@ -40,7 +39,6 @@ class RegionAnalysis:
     unique_bytes: int
     pattern_score: float
     reason: str = ""
-
 
 class EmptyRegionDetector:
     """Detects empty or non-sprite regions in ROM data for optimized scanning."""

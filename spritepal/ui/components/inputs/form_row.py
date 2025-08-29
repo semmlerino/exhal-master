@@ -4,7 +4,7 @@ Form row layout helper component
 Provides a standardized layout for label + input combinations
 used throughout SpritePal dialogs.
 """
-
+from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
@@ -162,7 +162,6 @@ class FormRow(QWidget):
         """Add stretch to the main layout"""
         self.main_layout.addStretch()
 
-
 def create_horizontal_form_row(
     label_text: str,
     input_widget: QWidget,
@@ -177,7 +176,6 @@ def create_horizontal_form_row(
         label_width=label_width,
         help_text=help_text
     )
-
 
 def create_vertical_form_row(
     label_text: str,

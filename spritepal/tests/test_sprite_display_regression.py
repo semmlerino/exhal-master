@@ -11,6 +11,7 @@ Tests focus on:
 7. UI component interactions
 8. Backward compatibility with existing ROMs and data
 """
+from __future__ import annotations
 
 import tempfile
 import json
@@ -31,7 +32,6 @@ from core.managers.session_manager import SessionManager
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.qt_testing_framework import QtTestingFramework
 
-
 # Serial execution required: Real Qt components
 pytestmark = [
     
@@ -49,7 +49,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.stability,
 ]
-
 
 class TestManualOffsetDialogRegression:
     """Regression tests for manual offset dialog functionality"""
@@ -168,7 +167,6 @@ class TestManualOffsetDialogRegression:
         if hasattr(browse_tab, 'advanced_search_requested'):
             assert browse_tab.advanced_search_requested is not None
 
-
 class TestSpritePreviewWidgetRegression:
     """Regression tests for sprite preview widget functionality"""
     
@@ -259,7 +257,6 @@ class TestSpritePreviewWidgetRegression:
         with qtbot.wait_signal(self.widget.similarity_search_requested, timeout=100):
             self.widget.similarity_search_requested.emit(test_offset)
 
-
 class TestROMExtractionPanelRegression:
     """Regression tests for ROM extraction panel functionality"""
     
@@ -300,7 +297,6 @@ class TestROMExtractionPanelRegression:
         # Should be able to get extraction parameters
         # (Implementation depends on actual panel structure)
         pass
-
 
 class TestSessionManagementRegression:
     """Regression tests for session management functionality"""
@@ -350,7 +346,6 @@ class TestSessionManagementRegression:
         # Should retrieve recent files
         recent_files = self.session_manager.get_recent_files()
         assert test_file in recent_files
-
 
 class TestMainWindowIntegration:
     """Regression tests for main window integration"""
@@ -406,7 +401,6 @@ class TestMainWindowIntegration:
             self.main_window.statusBar.showMessage("Test message")
             self.main_window.statusBar.showMessage.assert_called_with("Test message")
 
-
 class TestErrorHandlingRegression:
     """Regression tests for error handling functionality"""
     
@@ -443,7 +437,6 @@ class TestErrorHandlingRegression:
             assert widget is not None
         finally:
             widget.close()
-
 
 class TestBackwardCompatibilityRegression:
     """Regression tests for backward compatibility"""
@@ -499,7 +492,6 @@ class TestBackwardCompatibilityRegression:
         assert "rom_path" in old_settings
         assert "palette_index" in old_settings
 
-
 class TestUIConsistencyRegression:
     """Regression tests for UI consistency"""
     
@@ -539,7 +531,6 @@ class TestUIConsistencyRegression:
             assert policy is not None
         finally:
             widget.close()
-
 
 class TestPerformanceRegression:
     """Regression tests to ensure performance hasn't degraded"""
@@ -603,7 +594,6 @@ class TestPerformanceRegression:
         
         finally:
             widget.close()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

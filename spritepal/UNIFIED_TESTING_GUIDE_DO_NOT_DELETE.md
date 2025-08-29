@@ -1,5 +1,5 @@
 # Unified Testing Guide - DO NOT DELETE
-*The single source of truth for testing ShotBot with Qt and pytest*
+*The single source of truth for testing SpritePal with Qt and pytest*
 
 ## Table of Contents
 1. [Core Principles](#core-principles)
@@ -58,18 +58,18 @@ controller = Controller(
 
 ### Practical Example
 ```python
-def test_shot_workflow():
+def test_sprite_extraction_workflow():
     # Real components
-    cache = CacheManager(tmp_path)
-    model = ShotModel(cache_manager=cache)
+    rom_cache = ROMCache(tmp_path)
+    extraction_manager = ExtractionManager(cache=rom_cache)
     
-    # Test double for external subprocess
-    model._process_pool = TestProcessPool()
+    # Test double for external HAL compression
+    extraction_manager._hal_compressor = MockHALCompressor()
     
     # Test real integration
-    result = model.refresh_shots()
+    result = extraction_manager.extract_sprites(rom_path, params)
     assert result.success
-    assert cache.get_cached_shots() is not None  # Real cache works
+    assert rom_cache.get_cached_sprites() is not None  # Real cache works
 ```
 
 ---
@@ -148,26 +148,27 @@ def test_async_operation(qtbot):
 
 ### TestProcessPoolManager
 ```python
-class TestProcessPoolManager:
-    """Replace subprocess calls with predictable behavior"""
+class MockHALCompressor:
+    """Replace HAL compression calls with predictable behavior"""
     def __init__(self):
-        self.commands = []
-        self.outputs = ["workspace /test/path"]
-        self.command_completed = TestSignal()
-        self.command_failed = TestSignal()
+        self.compressions = []
+        self.decompressions = []
+        self.compression_complete = TestSignal()
+        self.decompression_complete = TestSignal()
     
-    def execute_workspace_command(self, command, **kwargs):
-        self.commands.append(command)
-        output = self.outputs[0] if self.outputs else ""
-        self.command_completed.emit(command, output)
-        return output
+    def compress(self, data: bytes, format: str = "3bpp") -> bytes:
+        self.compressions.append((data, format))
+        # Return predictable compressed data
+        compressed = b"\x00" * (len(data) // 2)
+        self.compression_complete.emit(len(compressed))
+        return compressed
     
-    def set_outputs(self, *outputs):
-        self.outputs = list(outputs)
-    
-    @classmethod
-    def get_instance(cls):
-        return cls()
+    def decompress(self, data: bytes, format: str = "3bpp") -> bytes:
+        self.decompressions.append((data, format))
+        # Return predictable decompressed data
+        decompressed = b"\xFF" * (len(data) * 2)
+        self.decompression_complete.emit(len(decompressed))
+        return decompressed
 ```
 
 ### MockMainWindow (Real Qt Signals, Mock Behavior)
@@ -176,32 +177,43 @@ class MockMainWindow(QObject):
     """Real Qt object with signals, mocked behavior"""
     
     # Real Qt signals
-    extract_requested = pyqtSignal()
-    file_opened = pyqtSignal(str)
+    extraction_started = pyqtSignal()
+    rom_loaded = pyqtSignal(str)
+    sprite_found = pyqtSignal(int, object)
     
     def __init__(self):
         super().__init__()
         # Mock attributes
         self.status_bar = Mock()
-        self.current_file = None
+        self.rom_path = None
+        self.rom_size = 0x400000
     
     def get_extraction_params(self):
-        return {"vram_path": "/test/path"}  # Test data
+        return {
+            "rom_path": "/test/rom.sfc",
+            "start_offset": 0x200000,
+            "format": "3bpp"
+        }  # Test data
 ```
 
 ### Factory Fixtures
 ```python
 @pytest.fixture
-def make_shot():
-    """Factory for Shot objects"""
-    def _make_shot(show="test", seq="seq1", shot="0010"):
-        return Shot(show, seq, shot, f"/shows/{show}/{seq}/{shot}")
-    return _make_shot
+def make_sprite_data():
+    """Factory for sprite test data"""
+    def _make_sprite(offset=0x200000, size=0x800, format="3bpp"):
+        return {
+            "offset": offset,
+            "size": size,
+            "format": format,
+            "data": b"\xFF" * size
+        }
+    return _make_sprite
 
 @pytest.fixture
-def real_cache_manager(tmp_path):
-    """Real cache with temp storage"""
-    return CacheManager(cache_dir=tmp_path / "cache")
+def real_rom_cache(tmp_path):
+    """Real ROM cache with temp storage"""
+    return ROMCache(cache_dir=tmp_path / "rom_cache")
 ```
 
 ---
@@ -578,13 +590,13 @@ def test_controller():
 ### Command Patterns
 ```python
 # Run tests
-python run_tests.py  # Never use pytest directly
+pytest tests/  # Run all tests
 
 # With coverage
-python run_tests.py --cov
+pytest --cov=spritepal tests/
 
 # Specific test
-python run_tests.py tests/unit/test_shot_model.py::TestShot::test_creation
+pytest tests/test_extraction_manager.py::TestExtractionManager::test_extract_sprites
 ```
 
 ### Common Fixtures
@@ -603,20 +615,20 @@ def caplog(): ...           # Capture logs
 ```python
 # ❌ BEFORE - Excessive mocking
 def test_bad(self):
-    with patch.object(model._process_pool, 'execute') as mock:
-        mock.return_value = "data"
-        model.refresh()
+    with patch.object(manager._hal_compressor, 'decompress') as mock:
+        mock.return_value = b"\xFF" * 100
+        manager.extract_sprite(offset)
         mock.assert_called()  # Testing mock
 
 # ✅ AFTER - Test double with real behavior
 def test_good(self):
-    model._process_pool = TestProcessPool()
-    model._process_pool.outputs = ["workspace /test/path"]
+    manager._hal_compressor = MockHALCompressor()
+    test_rom_data = b"\x42" * 0x800
     
-    result = model.refresh()
+    result = manager.extract_sprite(0x200000, test_rom_data)
     
     assert result.success  # Testing behavior
-    assert len(model.get_shots()) == 1
+    assert len(manager.get_extracted_sprites()) == 1
 ```
 
 ### Anti-Patterns Summary
@@ -645,6 +657,51 @@ mock.assert_called_once()
 
 ---
 
+## GUI Window Prevention in Tests
+
+### The Challenge
+Qt widgets that call `show()`, `showFullScreen()`, or dialog `exec()` can cause tests to:
+- Hang waiting for user interaction
+- Display flickering windows during test runs  
+- Steal focus from other applications
+- Fail in CI/CD environments
+
+### Solutions (in order of preference)
+
+#### 1. Mock Dialog exec() Methods (Recommended by pytest-qt)
+```python
+def test_dialog(qtbot, monkeypatch):
+    # Mock the exec() method to return immediately
+    monkeypatch.setattr(MyDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    
+    dialog = MyDialog()
+    result = dialog.exec()  # Returns immediately
+    assert result == QDialog.DialogCode.Accepted
+```
+
+#### 2. Use pytest-timeout to Prevent Hanging Tests
+```ini
+# pytest.ini
+addopts = 
+    --timeout=30
+    --timeout-method=thread
+```
+
+#### 3. Set QT_QPA_PLATFORM=offscreen (Limited effectiveness)
+```bash
+QT_QPA_PLATFORM=offscreen pytest tests/
+```
+
+#### 4. Use xvfb for Virtual Display (Linux/CI)
+```bash
+xvfb-run -a pytest tests/
+```
+
+### Important Notes
+- **Monkeypatching Qt base classes doesn't work** - Qt uses C++ bindings
+- **Mock at the specific dialog/widget level** - Not at QWidget/QDialog base
+- **Always set a timeout** - Prevents infinite hangs from GUI blocking
+
 ## Summary
 
 **Philosophy**: Test behavior, not implementation.
@@ -653,12 +710,24 @@ mock.assert_called_once()
 
 **Qt-Specific**: Respect the event loop, signals are first-class, threading rules are FATAL.
 
-**Key Metrics**:
-- Test speed: 60% faster (no subprocess overhead)
+**GUI Prevention**: Mock dialog exec() methods, use timeouts, avoid actual window display.
+
+**Key Metrics** (SpritePal-specific):
+- Test speed: 60% faster (no HAL subprocess overhead)
 - Bug discovery: 200% increase (real integration)
 - Maintenance: 75% less (fewer mock updates)
+- Memory safety: 100% (ThreadSafeTestImage prevents crashes)
+
+**SpritePal Testing Focus Areas**:
+- ROM extraction/injection workflows
+- Sprite detection and validation
+- Palette management
+- Manual offset dialog singleton behavior
+- Grid arrangement and preview generation
+- Worker thread lifecycle management
+- Cache consistency
 
 ---
-*Last Updated: 2025-08-17 | Critical Reference - DO NOT DELETE*
+*Last Updated: 2025-08-18 | SpritePal Testing Reference - DO NOT DELETE*
 
-**Recent Addition**: Qt Threading Safety section added - critical for preventing Qt threading violations that cause "Fatal Python error: Aborted" crashes.
+**Critical**: ThreadSafeTestImage implementation required to prevent Qt threading violations that cause "Fatal Python error: Aborted" crashes in worker tests.

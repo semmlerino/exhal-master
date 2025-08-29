@@ -38,6 +38,7 @@ from PySide6.QtWidgets import QApplication
 Each test is designed to catch regressions and ensure the stability fixes
 remain effective under various stress conditions.
 """
+from __future__ import annotations
 
 import gc
 import threading
@@ -49,7 +50,6 @@ import pytest
 from core.managers.base_manager import BaseManager
 from core.managers.registry import ManagerRegistry
 from ui.common.worker_manager import WorkerManager
-
 
 class TestWorkerCancellationStability:
     """Test WorkerManager safe cancellation mechanisms."""
@@ -193,7 +193,6 @@ class TestWorkerCancellationStability:
         # Verify safe handling - no terminate() should be called
         assert not hasattr(mock_worker, "terminate") or not mock_worker.terminate.called
         mock_worker.deleteLater.assert_called_once()
-
 
 class TestTOCTOURaceConditionStability:
     """Test fixes for Time-of-Check-Time-of-Use race conditions."""
@@ -392,7 +391,6 @@ class TestTOCTOURaceConditionStability:
         assert result_container[0] is True, "Long operation should succeed"
         assert not manager.has_active_operations(), "Manager should have no active operations after completion"
 
-
 class TestCircularReferenceStability:
     """Test fixes for circular references and memory leaks."""
 
@@ -564,7 +562,6 @@ class TestCircularReferenceStability:
         # Verify manager was garbage collected
         assert manager_ref() is None, "Manager should be garbage collected"
 
-
 class TestBaseManagerStability:
     """Test base manager stability patterns."""
 
@@ -657,7 +654,6 @@ class TestBaseManagerStability:
         assert all(results), "All operations should succeed"
         assert len(results) == 10, f"Should have 10 results, got {len(results)}"
         assert not manager.has_active_operations(), "No operations should be active after completion"
-
 
 class TestMemoryStabilityPatterns:
     """Test memory management stability patterns."""
@@ -761,7 +757,6 @@ class TestMemoryStabilityPatterns:
         # If we get here without memory issues, test passed
         assert True, "Stress test should complete without memory issues"
 
-
 # Performance and stress test markers
 pytestmark = [
     pytest.mark.stability,
@@ -777,7 +772,6 @@ pytestmark = [
     pytest.mark.thread_safety,
     pytest.mark.unit,
 ]
-
 
 if __name__ == "__main__":
     # Run the test suite

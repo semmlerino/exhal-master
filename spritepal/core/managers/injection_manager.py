@@ -1,6 +1,7 @@
 """
 Manager for handling all injection operations (VRAM and ROM)
 """
+from __future__ import annotations
 
 import json
 import os
@@ -16,13 +17,13 @@ except ImportError:
 from PySide6.QtCore import QObject, QThread, Signal
 
 if TYPE_CHECKING:
-    from core.injector import InjectionWorker
-    from core.rom_injector import ROMInjectionWorker
+    from ui.workers.injection_worker import InjectionWorker
+    from ui.workers.rom_injection_worker import ROMInjectionWorker
 
     from .session_manager import SessionManager
 
-from core.injector import InjectionWorker
-from core.rom_injector import ROMInjectionWorker
+from ui.workers.injection_worker import InjectionWorker
+from ui.workers.rom_injection_worker import ROMInjectionWorker
 from ui.common import WorkerManager
 from utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
@@ -72,12 +73,11 @@ class InjectionManager(BaseManager):
             WorkerManager.cleanup_worker(self._current_worker, timeout=5000)
         self._current_worker = None
 
-    def _get_session_manager(self) -> "SessionManager":
-        """Get session manager with late import to avoid circular dependencies"""
-        # Delayed import to avoid circular dependency:
-        # injection_manager -> session_manager -> injection_manager
-        from . import get_session_manager  # noqa: PLC0415
-        return get_session_manager()
+    def _get_session_manager(self) -> SessionManager:
+        """Get session manager via dependency injection container"""
+        from core.di_container import inject
+        from core.protocols.manager_protocols import SessionManagerProtocol
+        return inject(SessionManagerProtocol)
 
     def start_injection(self, params: dict[str, Any]) -> bool:
         """
@@ -480,11 +480,10 @@ class InjectionManager(BaseManager):
             # Cache miss - load from ROM file
             self._logger.debug(f"Cache miss, loading ROM info from file: {rom_path}")
 
-            # Get extraction manager to read ROM header
-            # Delayed import to avoid circular dependency:
-            # injection_manager -> extraction_manager -> injection_manager
-            from . import get_extraction_manager  # noqa: PLC0415
-            extraction_manager = get_extraction_manager()
+            # Get extraction manager via dependency injection container
+            from core.di_container import inject
+            from core.protocols.manager_protocols import ExtractionManagerProtocol
+            extraction_manager = inject(ExtractionManagerProtocol)
             header = extraction_manager.read_rom_header(rom_path)
 
             result: dict[str, Any] = {
@@ -932,7 +931,7 @@ class InjectionManager(BaseManager):
             Dictionary with scan progress or None if not cached
         """
         rom_cache = get_rom_cache()
-        return rom_cache.get_scan_progress(rom_path, scan_params)
+        return rom_cache.get_partial_scan_results(rom_path, scan_params)
 
     def save_scan_progress(self, rom_path: str, scan_params: dict[str, Any],
                           found_sprites: list[dict[str, Any]], current_offset: int,

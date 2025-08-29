@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Integration test to verify custom range scanning works end-to-end.
 This simulates the complete workflow of using the custom range feature.

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Fix remaining Mock parent issues in test files."""
 
 import re
 from pathlib import Path
-
 
 def fix_remaining_mock_issues(filepath: Path) -> None:
     """Fix remaining Mock parent issues that the automated script missed."""
@@ -85,7 +86,6 @@ def fix_remaining_mock_issues(filepath: Path) -> None:
     filepath.write_text(content)
     print(f"Fixed remaining issues in {filepath}")
 
-
 def main():
     """Main function to fix remaining Mock parent issues."""
     test_file = Path("tests/test_cross_dialog_integration.py")
@@ -96,7 +96,6 @@ def main():
 
     print(f"Fixing remaining Mock parent issues in {test_file}")
     fix_remaining_mock_issues(test_file)
-
 
 if __name__ == "__main__":
     main()

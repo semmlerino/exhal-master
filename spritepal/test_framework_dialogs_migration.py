@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive test suite for framework dialogs migration.
 
@@ -16,7 +18,7 @@ Test Strategy:
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Generator
+from typing import Generator
 import pytest
 
 # Add project root to Python path
@@ -48,12 +50,11 @@ except ImportError as e:
         'TabPosition': type('TabPosition', (), {'North': 0})
     })()
 
-
 class TestFrameworkDialogsMigration:
     """Test framework dialogs migration"""
     
     @pytest.fixture(scope="class")
-    def qt_app(self) -> Generator[Optional[QApplication], None, None]:
+    def qt_app(self) -> Generator[QApplication | None, None, None]:
         """Create QApplication instance if Qt is available"""
         if not HAS_QT:
             yield None
@@ -122,7 +123,6 @@ class TestFrameworkDialogsMigration:
         for module in modules_to_clear:
             if module in sys.modules:
                 del sys.modules[module]
-
 
 class TestTabbedDialog(TestFrameworkDialogsMigration):
     """Test TabbedDialog with both implementations"""
@@ -232,7 +232,6 @@ class TestTabbedDialog(TestFrameworkDialogsMigration):
         finally:
             dialog.close()
             dialog.deleteLater()
-
 
 class TestSplitterDialog(TestFrameworkDialogsMigration):
     """Test SplitterDialog with both implementations"""
@@ -359,7 +358,6 @@ class TestSplitterDialog(TestFrameworkDialogsMigration):
             dialog.close()
             dialog.deleteLater()
 
-
 class TestDerivedDialogs(TestFrameworkDialogsMigration):
     """Test dialogs that inherit from framework dialogs"""
     
@@ -392,7 +390,6 @@ class TestDerivedDialogs(TestFrameworkDialogsMigration):
             # Note: Not creating instance as it requires complex setup
         except ImportError as e:
             pytest.skip(f"GridArrangementDialog import failed: {e}")
-
 
 class TestImplementationCompatibility(TestFrameworkDialogsMigration):
     """Test compatibility between implementations"""
@@ -497,7 +494,6 @@ class TestImplementationCompatibility(TestFrameworkDialogsMigration):
         assert results['legacy'] == results['composed'], \
             f"Implementation differences: legacy={results['legacy']}, composed={results['composed']}"
 
-
 class TestImportOnly:
     """Test imports work without Qt"""
     
@@ -523,7 +519,6 @@ class TestImportOnly:
             assert callable(is_composed_dialogs_enabled)
         except ImportError as e:
             pytest.fail(f"Failed to import feature flag utilities: {e}")
-
 
 if __name__ == "__main__":
     print("Framework Dialogs Migration Test Suite")

@@ -48,7 +48,6 @@ def process_data(items: list[Any]) -> dict[str, Any]:
         print("Formatted code:")
         print(formatted_code[:200] + "..." if len(formatted_code) > 200 else formatted_code)
 
-
 def example_test_validation():
     """Example of test code validation."""
     print("\n=== Test Code Validation Example ===")
@@ -78,7 +77,6 @@ def helper_function():  # This should trigger warning
     print(f"Issues found: {len(issues)}")
     for issue in issues:
         print(f"  - {issue}")
-
 
 def example_qt_validation():
     """Example of Qt code validation."""
@@ -111,7 +109,6 @@ class MyWidget(QWidget):
     print(f"Issues found: {len(issues)}")
     for issue in issues:
         print(f"  - {issue}")
-
 
 def example_agent_workflow():
     """Example of how an agent would use validation in its workflow."""
@@ -167,7 +164,6 @@ import os  # This import should be at top
     except ValueError as e:
         print(f"Agent workflow failed: {e}")
 
-
 def example_file_validation():
     """Example of validating existing files."""
     print("\n=== File Validation Example ===")
@@ -194,7 +190,6 @@ def good_function(param: str) -> str:
     # Clean up
     temp_file.unlink()
 
-
 def example_strict_mode():
     """Example of validation in strict mode."""
     print("\n=== Strict Mode Example ===")
@@ -214,7 +209,6 @@ def function_without_return_type(param):  # Missing type hints
     print("\nStrict mode:")
     is_valid, _, issues = validate_generated_code(code_with_warnings, strict_mode=True)
     print(f"Valid: {is_valid}, Issues: {len(issues)}")
-
 
 if __name__ == '__main__':
     """Run all validation examples."""

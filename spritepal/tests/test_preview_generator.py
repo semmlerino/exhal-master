@@ -4,6 +4,7 @@ Tests for PreviewGenerator service.
 Tests the consolidated preview generation logic including caching,
 thread safety, error handling, and different preview types.
 """
+from __future__ import annotations
 
 import time
 from unittest.mock import Mock, patch
@@ -11,9 +12,9 @@ from unittest.mock import Mock, patch
 import pytest
 from PIL import Image
 from PySide6.QtGui import QPixmap
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from utils.preview_generator import (
 # Test characteristics: Timer usage
-
 
     LRUCache,
     PaletteData,
@@ -24,8 +25,6 @@ from utils.preview_generator import (
     create_vram_preview_request,
     get_preview_generator,
 )
-
-
 
 pytestmark = [
     pytest.mark.benchmark,
@@ -63,7 +62,7 @@ class TestLRUCache:
         cache = LRUCache(max_size=3)
 
         # Create mock preview result
-        pixmap = QPixmap(64, 64)
+        pixmap = ThreadSafeTestImage(64, 64)
         pil_image = Image.new("RGB", (64, 64))
         result = PreviewResult(
             pixmap=pixmap,
@@ -95,7 +94,7 @@ class TestLRUCache:
         # Create test results
         results = []
         for i in range(3):
-            pixmap = QPixmap(64, 64)
+            pixmap = ThreadSafeTestImage(64, 64)
             pil_image = Image.new("RGB", (64, 64))
             result = PreviewResult(
                 pixmap=pixmap,
@@ -126,7 +125,7 @@ class TestLRUCache:
         cache = LRUCache(max_size=2)
 
         # Create test results
-        pixmap = QPixmap(64, 64)
+        pixmap = ThreadSafeTestImage(64, 64)
         pil_image = Image.new("RGB", (64, 64))
         result1 = PreviewResult(pixmap, pil_image, 16, "sprite1", 0.1)
         result2 = PreviewResult(pixmap, pil_image, 16, "sprite2", 0.1)
@@ -151,7 +150,7 @@ class TestLRUCache:
         cache = LRUCache(max_size=5)
 
         # Add some items
-        pixmap = QPixmap(64, 64)
+        pixmap = ThreadSafeTestImage(64, 64)
         pil_image = Image.new("RGB", (64, 64))
         for i in range(3):
             result = PreviewResult(pixmap, pil_image, 16, f"sprite_{i}", 0.1)
@@ -166,7 +165,6 @@ class TestLRUCache:
         # Verify all items are gone
         for i in range(3):
             assert cache.get(f"key_{i}") is None
-
 
 class TestPreviewRequest:
     """Test preview request functionality."""
@@ -226,7 +224,6 @@ class TestPreviewRequest:
         # Different palettes should produce different cache keys
         assert request1.cache_key() != request2.cache_key()
 
-
 class TestPreviewGenerator:
     """Test the main PreviewGenerator class."""
 
@@ -234,7 +231,8 @@ class TestPreviewGenerator:
     def generator(self, qtbot):
         """Create a preview generator for testing."""
         gen = PreviewGenerator(cache_size=5, debounce_delay_ms=10)
-        qtbot.addWidget(gen)
+        # Note: PreviewGenerator is a QObject, not a QWidget, so we don't use qtbot.addWidget
+        # qtbot will still handle cleanup of QObject signals/connections
         yield gen
         gen.cleanup()
 
@@ -278,31 +276,31 @@ class TestPreviewGenerator:
         assert generator._extraction_manager_ref() is mock_extraction_manager
         assert generator._rom_extractor_ref() is mock_rom_extractor
 
-    @patch("utils.preview_generator.pil_to_qpixmap")
-    def test_vram_preview_generation(self, mock_pil_to_qpixmap, generator, mock_extraction_manager):
+    def test_vram_preview_generation(self, generator, mock_extraction_manager):
         """Test VRAM preview generation."""
-        # Setup mocks
-        mock_pixmap = Mock(spec=QPixmap)
-        mock_pixmap.size.return_value.width.return_value = 128
-        mock_pixmap.size.return_value.height.return_value = 128
-        mock_pil_to_qpixmap.return_value = mock_pixmap
+        with patch("utils.preview_generator.pil_to_qpixmap") as mock_pil_to_qpixmap:
+            # Setup mocks
+            mock_pixmap = Mock(spec=QPixmap)
+            mock_pixmap.size.return_value.width.return_value = 128
+            mock_pixmap.size.return_value.height.return_value = 128
+            mock_pil_to_qpixmap.return_value = mock_pixmap
 
-        generator.set_managers(extraction_manager=mock_extraction_manager)
+            generator.set_managers(extraction_manager=mock_extraction_manager)
 
-        # Create request
-        request = create_vram_preview_request("/path/to/vram.bin", 0x8000, "test_sprite")
+            # Create request
+            request = create_vram_preview_request("/path/to/vram.bin", 0x8000, "test_sprite")
 
-        # Generate preview
-        result = generator.generate_preview(request)
+            # Generate preview
+            result = generator.generate_preview(request)
 
-        assert result is not None
-        assert result.sprite_name == "test_sprite"
-        assert result.tile_count == 16
-        assert result.pixmap is mock_pixmap
-        assert result.generation_time > 0
+            assert result is not None
+            assert result.sprite_name == "test_sprite"
+            assert result.tile_count == 16
+            assert result.pixmap is mock_pixmap
+            assert result.generation_time > 0
 
-        # Verify extraction manager was called
-        mock_extraction_manager.generate_preview.assert_called_once_with("/path/to/vram.bin", 0x8000)
+            # Verify extraction manager was called
+            mock_extraction_manager.generate_preview.assert_called_once_with("/path/to/vram.bin", 0x8000)
 
     def test_preview_caching(self, generator, mock_extraction_manager):
         """Test that previews are cached correctly."""
@@ -440,7 +438,6 @@ class TestPreviewGenerator:
         assert generator._extraction_manager_ref is None
         assert generator._rom_extractor_ref is None
 
-
 class TestHelperFunctions:
     """Test helper functions."""
 
@@ -486,7 +483,6 @@ class TestHelperFunctions:
         assert gen1 is gen2
         assert isinstance(gen1, PreviewGenerator)
 
-
 def test_preview_generation_performance():
     """Test preview generation performance."""
     # Create a mock extraction manager that simulates realistic work
@@ -515,7 +511,6 @@ def test_preview_generation_performance():
         assert generation_time < 1.0  # Should be fast with mocks
 
     generator.cleanup()
-
 
 def test_cache_performance():
     """Test cache performance with many items."""

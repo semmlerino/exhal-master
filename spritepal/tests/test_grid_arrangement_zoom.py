@@ -1,6 +1,7 @@
 """
 Test zoom functionality in grid arrangement dialog
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -14,7 +15,6 @@ from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsScene
 from ui.grid_arrangement_dialog import GridGraphicsView, SelectionMode
 from ui.row_arrangement.grid_arrangement_manager import TilePosition
 
-
 # Serial execution required: QApplication management
 pytestmark = [
     
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 @pytest.mark.gui
 class TestGridGraphicsViewZoom:
@@ -310,7 +309,6 @@ class TestGridGraphicsViewZoom:
         if hasattr(self, "app"):
             self.app.quit()
 
-
 @pytest.mark.gui
 class TestGridArrangementDialogZoomIntegration:
     """Test zoom integration with GridArrangementDialog"""
@@ -373,7 +371,6 @@ class TestGridArrangementDialogZoomIntegration:
         """Clean up test fixtures"""
         if hasattr(self, "app"):
             self.app.quit()
-
 
 class TestGridArrangementDialogZoomIntegrationHeadless:
     """Test zoom integration logic without Qt dependencies"""

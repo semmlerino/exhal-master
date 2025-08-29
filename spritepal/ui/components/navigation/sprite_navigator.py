@@ -48,7 +48,6 @@ NAVIGATION_STEP_SMALL = 0x100
 NAVIGATION_STEP_MEDIUM = 0x1000
 NAVIGATION_STEP_LARGE = 0x10000
 
-
 class SpriteThumbnail(QWidget):
     """A small preview widget for nearby sprites"""
 
@@ -152,7 +151,6 @@ class SpriteThumbnail(QWidget):
         """)
         if self.offset_label:
             self.offset_label.setText("--")
-
 
 class SpriteNavigator(QWidget):
     """

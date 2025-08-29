@@ -1,4 +1,5 @@
 """Worker thread for searching next/previous valid sprite"""
+from __future__ import annotations
 
 import threading
 from pathlib import Path
@@ -15,7 +16,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SpriteSearchWorker(QThread):
     """Worker thread for searching next/previous valid sprite"""
 
@@ -25,7 +25,7 @@ class SpriteSearchWorker(QThread):
     progress = Signal(int, int)  # current, total
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 direction: int, extractor: "ROMExtractor", parent=None):
+                 direction: int, extractor: ROMExtractor, parent=None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.start_offset = start_offset

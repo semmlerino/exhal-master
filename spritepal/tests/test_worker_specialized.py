@@ -4,8 +4,7 @@ Unit tests for specialized worker base classes.
 Tests the ExtractionWorkerBase, InjectionWorkerBase, ScanWorkerBase,
 and PreviewWorkerBase classes for proper specialized signal handling.
 """
-
-
+from __future__ import annotations
 
 from unittest.mock import Mock
 
@@ -30,7 +29,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 class TestExtractionWorkerBase:
     """Test the ExtractionWorkerBase specialized class."""
@@ -88,7 +86,6 @@ class TestExtractionWorkerBase:
         assert extraction_spy.count() == 1
         assert extraction_spy.at(0) == [mock_files]
 
-
 class TestInjectionWorkerBase:
     """Test the InjectionWorkerBase specialized class."""
 
@@ -140,7 +137,6 @@ class TestInjectionWorkerBase:
         worker.injection_finished.emit(True, "Injection successful")
         assert injection_spy.count() == 1
         assert injection_spy.at(0) == [True, "Injection successful"]
-
 
 class TestScanWorkerBase:
     """Test the ScanWorkerBase specialized class."""
@@ -261,7 +257,6 @@ class TestScanWorkerBase:
         assert standard_progress_spy.count() == 1
         assert standard_progress_spy.at(0) == [100, "Scanning 15/10"]  # Should cap at 100%
 
-
 class TestPreviewWorkerBase:
     """Test the PreviewWorkerBase specialized class."""
 
@@ -333,7 +328,6 @@ class TestPreviewWorkerBase:
         # Should also emit standard error signal
         assert error_spy.count() == 1
         assert error_spy.at(0)[0] == "Test error"
-
 
 @pytest.fixture
 def qtbot():

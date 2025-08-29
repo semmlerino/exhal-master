@@ -24,7 +24,6 @@ from .strategies import get_strategy_registry
 
 logger = get_logger(__name__)
 
-
 class NavigationManager(BaseManager):
     """
     Manager for intelligent sprite navigation operations.
@@ -361,7 +360,8 @@ class NavigationManager(BaseManager):
 
                 for strategy in similarity_strategies:
                     try:
-                        similarity = strategy._calculate_similarity(reference_sprite, sprite)
+                        # Strategy has _calculate_similarity checked above
+                        similarity = strategy._calculate_similarity(reference_sprite, sprite)  # type: ignore[attr-defined]
                         if similarity > 0.5:  # Minimum similarity threshold
                             all_results.append((sprite, similarity))
                         break  # Use first strategy result
@@ -581,7 +581,6 @@ class NavigationManager(BaseManager):
         # This would trigger more intensive pattern analysis
         # in a separate thread to avoid blocking the UI
         logger.debug(f"Triggered background learning for {rom_path}")
-
 
 class NavigationException(Exception):
     """Navigation-specific error."""

@@ -1,6 +1,7 @@
 """
 Constants for SpritePal
 """
+from __future__ import annotations
 
 # SNES Memory offsets and sizes
 VRAM_SPRITE_OFFSET = 0xC000  # Default sprite offset in VRAM

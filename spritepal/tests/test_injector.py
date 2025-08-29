@@ -1,4 +1,5 @@
 """Tests for sprite injector functionality"""
+from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
@@ -20,7 +21,6 @@ pytestmark = [
 ]
 
 from core.injector import InjectionWorker, SpriteInjector, encode_4bpp_tile
-
 
 # Module-level fixtures for shared use
 @pytest.fixture
@@ -47,7 +47,6 @@ def temp_sprite_image(tmp_path):
     img.save(sprite_path)
     return sprite_path
 
-
 @pytest.fixture
 def temp_vram(tmp_path):
     """Create a temporary VRAM file"""
@@ -56,7 +55,6 @@ def temp_vram(tmp_path):
     with open(vram_path, "wb") as f:
         f.write(vram_data)
     return vram_path
-
 
 @pytest.fixture
 def temp_metadata(tmp_path):
@@ -69,7 +67,6 @@ def temp_metadata(tmp_path):
     with open(metadata_path, "w") as f:
         json.dump(metadata, f)
     return metadata_path
-
 
 class TestEncode4bppTile:
     """Test the 4bpp tile encoding function"""
@@ -124,7 +121,6 @@ class TestEncode4bppTile:
         assert encoded[1] == 0xFF  # bp1
         assert encoded[16] == 0xFF  # bp2
         assert encoded[17] == 0xFF  # bp3
-
 
 class TestSpriteInjector:
     """Test the SpriteInjector class"""
@@ -338,7 +334,6 @@ class TestSpriteInjector:
         info = injector.get_extraction_info()
 
         assert info is None
-
 
 class TestInjectionWorker:
     """Test the InjectionWorker thread"""

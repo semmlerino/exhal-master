@@ -4,6 +4,7 @@ Widget factory utilities for common UI patterns
 Provides factory methods for creating standardized widgets with consistent
 styling and behavior throughout the SpritePal application.
 """
+from __future__ import annotations
 
 import os
 from typing import Callable
@@ -265,7 +266,6 @@ class WidgetFactory:
             if filename:
                 path_edit.setText(filename)
 
-
 # Convenience functions for common widget patterns
 def create_checkbox_with_tooltip(
     text: str,
@@ -275,7 +275,6 @@ def create_checkbox_with_tooltip(
     """Convenience function for creating checkboxes with tooltips"""
     return WidgetFactory.create_checkbox_with_tooltip(text, tooltip, checked)
 
-
 def create_browse_layout(
     label_text: str,
     placeholder: str = "",
@@ -283,7 +282,6 @@ def create_browse_layout(
 ) -> tuple[QWidget, QLineEdit, QPushButton]:
     """Convenience function for creating browse layouts"""
     return WidgetFactory.create_browse_layout(label_text, placeholder, initial_path)
-
 
 def create_info_label(text: str, word_wrap: bool = True) -> QLabel:
     """Convenience function for creating info labels"""

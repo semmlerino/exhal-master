@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Manual test runner for ROM cache functionality"""
 
 import inspect
@@ -27,7 +29,6 @@ class SpritePointer:
         self.address = address
         self.compressed_size = compressed_size
         self.offset_variants = offset_variants
-
 
 def test_basic_cache_operations():
     """Test basic cache save and load operations"""
@@ -114,7 +115,6 @@ def test_basic_cache_operations():
 
     return True
 
-
 def test_singleton_behavior():
     """Test the singleton cache instance"""
     print("\n=== Testing Singleton Behavior ===")
@@ -131,7 +131,6 @@ def test_singleton_behavior():
         return True
     print("✗ Singleton returns different instances")
     return False
-
 
 def test_cache_with_ui_integration():
     """Test cache integration with UI components"""
@@ -158,7 +157,6 @@ def test_cache_with_ui_integration():
         return True  # This is acceptable
 
     return True
-
 
 def main():
     """Run all manual tests"""
@@ -189,7 +187,6 @@ def main():
         return 0
     print("❌ Some tests failed!")
     return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

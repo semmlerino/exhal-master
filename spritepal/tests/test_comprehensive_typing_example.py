@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 TestDataDict: TypeAlias = dict[str, Any]
 ParameterSet: TypeAlias = tuple[Any, ...]
 
-
 class TestComprehensiveTypingExample:
     """Demonstrate comprehensive typing patterns in test classes."""
 
@@ -250,7 +249,6 @@ class TestComprehensiveTypingExample:
         assert async_test_data["async_operation"] == "setup"
         assert hasattr(mock_main_window, "extract_requested")
 
-
 # Standalone test functions with proper typing
 def test_standalone_function_with_types(
     mock_extraction_manager: MockExtractionManagerProtocol,
@@ -259,7 +257,6 @@ def test_standalone_function_with_types(
     mock_extraction_manager.validate_extraction_params.return_value = True
     result = mock_extraction_manager.validate_extraction_params({})
     assert result is True
-
 
 @pytest.mark.parametrize(
     ("input_data", "expected_output"),
@@ -278,7 +275,6 @@ def test_standalone_parametrized_with_types(
     assert len(input_data) == expected_output
     assert isinstance(input_data, (bytes, bytearray))
 
-
 # Type-safe helper functions
 def create_test_sprite_data(
     size: int,
@@ -287,14 +283,12 @@ def create_test_sprite_data(
     """Create test sprite data with proper typing."""
     return bytearray([pattern] * size)
 
-
 def validate_sprite_format(
     data: bytes | bytearray,
     expected_size: int,
 ) -> bool:
     """Validate sprite format with proper typing."""
     return len(data) == expected_size and all(isinstance(b, int) for b in data)
-
 
 # Demonstrate Protocol usage in test helpers
 class TestSpriteValidator:
@@ -307,7 +301,6 @@ class TestSpriteValidator:
     ) -> bool:
         """Validate sprite data using a validator protocol."""
         return validator(data)
-
 
 # Example test using the helper class
 def test_protocol_usage_with_types() -> None:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Script to capture a screenshot of the Gallery tab using Qt's built-in functionality.
 Works with xvfb for headless environments.

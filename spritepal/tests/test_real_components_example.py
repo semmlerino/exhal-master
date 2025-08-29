@@ -14,7 +14,6 @@ from typing import Any
 from tests.infrastructure.real_component_factory import (
 # Serial execution required: Real Qt components
 
-
     RealComponentFactory,
     TypedManagerFactory,
     TypedWorkerFactory,
@@ -43,8 +42,6 @@ from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
 from core.workers.specialized import ExtractionWorkerBase as ExtractionWorker, InjectionWorkerBase as InjectionWorker
-
-
 
 pytestmark = [
     
@@ -108,7 +105,6 @@ class TestRealComponentFactory:
             assert hasattr(worker, "run")
             assert hasattr(worker, "progress")
 
-
 class TestManagerTestContext:
     """Tests demonstrating ManagerTestContext usage."""
 
@@ -154,7 +150,6 @@ class TestManagerTestContext:
             
             # Worker should complete successfully
             assert completed or not worker.isRunning()
-
 
 class TestTypedWorkerBase:
     """Tests demonstrating typed worker patterns."""
@@ -211,7 +206,6 @@ class TestTypedWorkerBase:
             # Clean up
             helper.cleanup()
 
-
 class TestDataRepository:
     """Tests demonstrating TestDataRepository usage."""
 
@@ -248,7 +242,6 @@ class TestDataRepository:
         validation = repo.validate_data_set("medium_test")
         assert validation["valid"] or len(validation["issues"]) > 0
         assert "data_set" in validation
-
 
 class TestMigrationFromMockFactory:
     """Examples showing migration from MockFactory to RealComponentFactory."""
@@ -310,7 +303,6 @@ class TestMigrationFromMockFactory:
             # This is real integration testing, not mocking!
             assert completed or not extract_worker.isRunning()
 
-
 # Pytest fixtures demonstrating the new infrastructure
 
 @pytest.fixture
@@ -319,13 +311,11 @@ def real_factory():
     with RealComponentFactory() as factory:
         yield factory
 
-
 @pytest.fixture
 def test_context():
     """Fixture providing ManagerTestContext."""
     with manager_context("all") as ctx:
         yield ctx
-
 
 @pytest.fixture
 def extraction_manager_real():
@@ -335,7 +325,6 @@ def extraction_manager_real():
     yield manager
     manager.cleanup()
 
-
 @pytest.fixture
 def injection_manager_real():
     """Fixture providing real InjectionManager."""
@@ -343,7 +332,6 @@ def injection_manager_real():
     manager = factory.create_with_test_data("medium")
     yield manager
     manager.cleanup()
-
 
 # Example of a complete test using the new infrastructure
 
@@ -381,7 +369,6 @@ def test_complete_extraction_workflow_real_components(test_context: ManagerTestC
     assert completed or not worker.isRunning()
     
     # This is a real integration test with actual components!
-
 
 if __name__ == "__main__":
     # Run example tests

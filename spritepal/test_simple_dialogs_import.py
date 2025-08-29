@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Simple import test for dialogs migration.
 Tests that the dialogs can be imported with the new import path.

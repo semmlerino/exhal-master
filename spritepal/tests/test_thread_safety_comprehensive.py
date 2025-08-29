@@ -41,7 +41,6 @@ from ui.workers.batch_thumbnail_worker import (
     ThumbnailWorkerController,
 )
 
-
 class ThreadSafetyValidator:
     """Helper class to validate thread safety."""
 
@@ -68,7 +67,6 @@ class ThreadSafetyValidator:
         """Assert no thread safety violations occurred."""
         assert not self.violations, f"Thread safety violations: {self.violations}"
 
-
 class ConcurrencyTester(QObject):
     """Helper to test concurrent signal emissions."""
 
@@ -88,12 +86,10 @@ class ConcurrencyTester(QObject):
         with QMutexLocker(self.mutex):
             self.received_values.append(value)
 
-
 @pytest.fixture
 def test_rom_data():
     """Create test ROM data."""
     return bytearray(b'\x00\x01\x02\x03' * 256 * 32)  # 32KB of test data
-
 
 @pytest.fixture
 def mock_qimage():
@@ -102,7 +98,6 @@ def mock_qimage():
     image = QImage(32, 32, QImage.Format.Format_RGBA8888)
     image.fill(0)  # Fill with transparent black
     return image
-
 
 class TestLRUCacheThreadSafety:
     """Test thread safety of LRU cache implementation."""
@@ -228,7 +223,6 @@ class TestLRUCacheThreadSafety:
         stats = cache.get_stats()
         assert stats['hits'] > 0
         assert stats['misses'] > 0
-
 
 class TestBatchThumbnailWorkerThreadSafety:
     """Test thread safety of BatchThumbnailWorker."""
@@ -367,7 +361,6 @@ class TestBatchThumbnailWorkerThreadSafety:
         # Note: Full thread boundary testing requires actual Qt event loop
         # which is complex to test in unit tests. This is a basic check.
 
-
 class TestWorkerControllerThreadSafety:
     """Test thread safety of ThumbnailWorkerController."""
 
@@ -415,7 +408,6 @@ class TestWorkerControllerThreadSafety:
 
         # Should handle without errors
         controller.cleanup()
-
 
 class TestRaceConditionPrevention:
     """Test prevention of specific race conditions."""
@@ -494,7 +486,6 @@ class TestRaceConditionPrevention:
                 "already stopped" in str(e).lower() for e in cleanup_errors
             )
 
-
 class TestDeadlockPrevention:
     """Test prevention of deadlock scenarios."""
 
@@ -536,7 +527,6 @@ class TestDeadlockPrevention:
 
             # Should complete without deadlock
             assert elapsed < 0.5, f"Operations took {elapsed:.2f}s, possible deadlock"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

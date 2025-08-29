@@ -1,6 +1,7 @@
 """
 Output settings management for MainWindow
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Protocol
@@ -27,7 +28,6 @@ class OutputSettingsActionsProtocol(Protocol):
     def get_current_vram_path(self) -> str:
         """Get current VRAM path for browse dialog default directory"""
         ...
-
 
 class OutputSettingsManager(QObject):
     """Manages output settings section for MainWindow"""

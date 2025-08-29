@@ -4,9 +4,10 @@ Tests for dark theme component styling functions.
 This module tests the component-specific styling functions from ui.styles.components.py
 following TDD principles with real CSS generation and validation.
 """
+from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
@@ -35,7 +36,6 @@ from ui.styles.components import (
     get_tab_style,
 )
 from ui.styles.theme import COLORS, DIMENSIONS, FONTS
-
 
 class TestButtonStyling:
     """Test button styling function with different variations."""
@@ -106,7 +106,6 @@ class TestButtonStyling:
         assert COLORS["light_gray"] in default_css  # Default background
         assert COLORS["primary"] in primary_css    # Primary background
 
-
 class TestInputStyling:
     """Test input field styling functions."""
 
@@ -165,7 +164,6 @@ class TestInputStyling:
         assert COLORS["input_background"] in css
         assert COLORS["border"] in css
 
-
 class TestPanelStyling:
     """Test panel and groupbox styling functions."""
 
@@ -201,7 +199,6 @@ class TestPanelStyling:
         assert COLORS["background"] in css
         assert COLORS["text_primary"] in css
 
-
 class TestStatusStyling:
     """Test status indicator styling functions."""
 
@@ -224,7 +221,6 @@ class TestStatusStyling:
         assert "border-left:" in css
         assert COLORS["success"] in css
 
-
 class TestProgressStyling:
     """Test progress bar styling function."""
 
@@ -239,7 +235,6 @@ class TestProgressStyling:
         # Should use primary color for progress
         assert COLORS["primary"] in css
 
-
 class TestTabStyling:
     """Test tab widget styling function."""
 
@@ -252,7 +247,6 @@ class TestTabStyling:
         assert "QTabBar::tab {" in css
         assert "QTabBar::tab:selected {" in css
         assert "QTabBar::tab:hover {" in css
-
 
 class TestTextStyling:
     """Test various text styling functions."""
@@ -306,7 +300,6 @@ class TestTextStyling:
         
         assert COLORS["danger"] in css
 
-
 class TestPreviewStyling:
     """Test preview widget styling functions."""
 
@@ -345,7 +338,6 @@ class TestPreviewStyling:
         # Should use dark preview background consistently
         assert COLORS["preview_background"] in css
 
-
 class TestHexLabelStyling:
     """Test hex/code label styling function."""
 
@@ -372,7 +364,6 @@ class TestHexLabelStyling:
         
         assert COLORS[color] in css
 
-
 class TestSliderStyling:
     """Test slider styling function."""
 
@@ -392,7 +383,6 @@ class TestSliderStyling:
         
         assert COLORS[color] in css
 
-
 class TestSplitterStyling:
     """Test splitter styling function."""
 
@@ -411,7 +401,6 @@ class TestSplitterStyling:
         assert "QSplitter::handle:hover {" in css
         assert "QSplitter::handle:pressed {" in css
 
-
 class TestDialogStyling:
     """Test dialog-specific styling functions."""
 
@@ -421,7 +410,6 @@ class TestDialogStyling:
         
         assert "QDialogButtonBox {" in css
         assert "QDialogButtonBox QPushButton {" in css
-
 
 class TestScrollAreaStyling:
     """Test scroll area styling function."""
@@ -439,11 +427,10 @@ class TestScrollAreaStyling:
         expected_color = COLORS[bg_color]
         assert expected_color in css
 
-
 class TestCSSValidation:
     """Test CSS validation utilities and patterns."""
 
-    def _validate_css_structure(self, css: str) -> List[str]:
+    def _validate_css_structure(self, css: str) -> list[str]:
         """Validate basic CSS structure and return any issues found."""
         issues = []
         
@@ -497,7 +484,6 @@ class TestCSSValidation:
         # Test with zero dimensions
         css = get_splitter_style(handle_width=0)
         assert isinstance(css, str)
-
 
 @pytest.mark.headless
 class TestComponentStylingHeadless:

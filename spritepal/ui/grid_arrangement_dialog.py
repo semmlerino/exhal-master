@@ -57,7 +57,6 @@ class SelectionMode(Enum):
     COLUMN = "column"
     RECTANGLE = "rectangle"
 
-
 class GridGraphicsView(QGraphicsView):
     """Custom graphics view for grid-based sprite selection"""
 
@@ -660,7 +659,6 @@ class GridGraphicsView(QGraphicsView):
             self.hover_rect.setZValue(0.5)  # Below selection
             scene.addItem(self.hover_rect)
 
-
 class GridArrangementDialog(SplitterDialog):
     """Dialog for grid-based sprite arrangement with row and column support"""
 
@@ -1165,7 +1163,7 @@ class GridArrangementDialog(SplitterDialog):
             else:
                 item_text = str(key)
 
-            if self.arrangement_list:
+            if self.arrangement_list and label:
                 self.arrangement_list.addItem(item_text)
 
     def _update_preview(self):

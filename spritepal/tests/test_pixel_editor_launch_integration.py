@@ -2,6 +2,7 @@
 Integration tests for pixel editor launch functionality - Priority 2 test implementation.
 Tests external pixel editor subprocess integration.
 """
+from __future__ import annotations
 
 import os
 import shutil
@@ -30,12 +31,10 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
-
 
 @pytest.fixture(autouse=True)
 def setup_managers():
@@ -43,7 +42,6 @@ def setup_managers():
     initialize_managers("TestApp")
     yield
     cleanup_managers()
-
 
 @pytest.fixture
 def sample_sprite_file():
@@ -60,7 +58,6 @@ def sample_sprite_file():
 
     # Cleanup
     shutil.rmtree(temp_dir)
-
 
 @pytest.fixture
 def sample_launcher_file():
@@ -81,7 +78,6 @@ if __name__ == "__main__":
 
     # Cleanup
     shutil.rmtree(temp_dir)
-
 
 class TestPixelEditorLaunchIntegration:
     """Test pixel editor launch integration"""
@@ -484,7 +480,6 @@ class TestPixelEditorLaunchIntegration:
                 controller.open_in_editor
             )
 
-
 class TestPixelEditorLaunchErrorRecovery:
     """Test error recovery scenarios for pixel editor launch"""
 
@@ -634,7 +629,6 @@ class TestPixelEditorLaunchErrorRecovery:
 
             # Verify subprocess was attempted
             mock_popen.assert_called_once()
-
 
 class TestPixelEditorLaunchPerformance:
     """Test performance characteristics of pixel editor launch"""

@@ -75,7 +75,6 @@ class PaletteColorWidget(QWidget):
         self.setToolTip(f"Color {self.index}: RGB({color[0]}, {color[1]}, {color[2]})")
         self.update()
 
-
 class PaletteWidget(QFrame):
     """Widget for displaying a single palette"""
 
@@ -139,7 +138,6 @@ class PaletteWidget(QFrame):
                 self.label.setText(f"{self.palette_index}: {name}")
         elif self.label:
             self.label.setText(f"{self.palette_index}")
-
 
 class PalettePreviewWidget(QWidget):
     """Widget for previewing multiple palettes"""

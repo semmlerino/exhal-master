@@ -5,8 +5,9 @@ This component manages standard Qt dialog signals (finished, rejected, destroyed
 It's designed to avoid Qt metaclass system issues with signals in complex inheritance hierarchies
 by providing clean signal proxies in a separate QObject.
 """
+from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog
@@ -31,7 +32,7 @@ class QtDialogSignalManager(QObject):
     rejected = Signal()
     destroyed = Signal()
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """
         Initialize the Qt dialog signal manager.
 

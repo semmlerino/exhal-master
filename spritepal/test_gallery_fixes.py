@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to verify the gallery layout fixes.
 Tests that all sprites are visible and no empty space appears.

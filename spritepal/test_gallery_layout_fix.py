@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test script to verify sprite gallery tab layout fix.
 
@@ -15,7 +17,7 @@ Run with: python test_gallery_layout_fix.py
 import sys
 import os
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any
 from dataclasses import dataclass
 
 # Add the spritepal directory to the Python path
@@ -86,7 +88,7 @@ class GalleryLayoutTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        self.test_results: List[TestResult] = []  # type: ignore[attr-defined]
+        self.test_results: list[TestResult] = []  # type: ignore[attr-defined]
         self.gallery_tab: SpriteGalleryTab = None
         self.mock_rom_extractor = MockRomExtractor()
         
@@ -182,7 +184,7 @@ class GalleryLayoutTestWindow(QMainWindow):
         # Set ROM data in gallery
         self.gallery_tab.set_rom_data(test_rom_path, rom_size, self.mock_rom_extractor)
         
-    def _generate_mock_sprites(self, count: int) -> List[Dict[str, Any]]:
+    def _generate_mock_sprites(self, count: int) -> list[dict[str, Any]]:
         """Generate mock sprite data for testing."""
         sprites = []
         base_offset = 0x200000
@@ -225,7 +227,7 @@ class GalleryLayoutTestWindow(QMainWindow):
                 str(e)
             ))
     
-    def _check_few_sprites_layout(self, sprites: List[Dict[str, Any]]):
+    def _check_few_sprites_layout(self, sprites: list[dict[str, Any]]):
         """Check the layout for few sprites."""
         try:
             gallery_widget = self.gallery_tab.gallery_widget
@@ -304,7 +306,7 @@ class GalleryLayoutTestWindow(QMainWindow):
                 str(e)
             ))
     
-    def _check_many_sprites_scrolling(self, sprites: List[Dict[str, Any]]):
+    def _check_many_sprites_scrolling(self, sprites: list[dict[str, Any]]):
         """Check scrolling behavior with many sprites."""
         try:
             gallery_widget = self.gallery_tab.gallery_widget

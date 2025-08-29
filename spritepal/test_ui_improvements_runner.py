@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test runner for SpritePal UI improvements integration tests.
 
@@ -20,11 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 def is_display_available() -> bool:
     """Check if display is available for GUI testing."""
     return bool(os.environ.get("DISPLAY"))
-
 
 def run_headless_tests() -> int:
     """Run headless regression tests."""
@@ -37,7 +37,6 @@ def run_headless_tests() -> int:
     ]
     
     return subprocess.run(cmd).returncode
-
 
 def run_gui_tests() -> int:
     """Run GUI integration tests."""
@@ -65,7 +64,6 @@ def run_gui_tests() -> int:
         ]
     
     return subprocess.run(cmd).returncode
-
 
 def run_validation_test() -> int:
     """Run a simple validation test to ensure the test file is working."""
@@ -116,7 +114,6 @@ except Exception as e:
     
     return result.returncode
 
-
 def main():
     """Main test runner function."""
     parser = argparse.ArgumentParser(description="Run SpritePal UI improvements integration tests")
@@ -155,7 +152,6 @@ def main():
         print(f"\n✗ Some tests failed (return code: {total_return_code})")
     
     return total_return_code
-
 
 if __name__ == "__main__":
     sys.exit(main())

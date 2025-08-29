@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Demonstration of migration adapter integration testing without Qt dependencies.
 
@@ -54,7 +56,6 @@ def demo_feature_flag_system():
         print(f"❌ Could not import feature flag system: {e}")
     
     print()
-
 
 def demo_test_structure():
     """Demonstrate the test structure and patterns."""
@@ -116,7 +117,6 @@ def demo_test_structure():
     print(f"🎯 Total Integration Tests: {total_tests}")
     print()
 
-
 def demo_testing_approach():
     """Demonstrate the testing approach and patterns."""
     print("Testing Approach Demonstration")
@@ -137,7 +137,6 @@ def demo_testing_approach():
         print(f"🔬 {approach}:")
         print(f"   {description}")
         print()
-
 
 def demo_test_fixtures():
     """Demonstrate the test fixtures and their purposes."""
@@ -178,7 +177,6 @@ def demo_test_fixtures():
         print(f"   Purpose: {details['purpose']}")
         print(f"   Benefit: {details['benefit']}")
         print()
-
 
 def demo_test_execution_flow():
     """Demonstrate how tests would execute."""
@@ -225,7 +223,6 @@ def demo_test_execution_flow():
         else:
             print(f"   {step}")
 
-
 def demo_expected_benefits():
     """Demonstrate the expected benefits of the integration tests."""
     print("Expected Benefits Demonstration")
@@ -265,7 +262,6 @@ def demo_expected_benefits():
             print(f"   • {item}")
         print()
 
-
 def main():
     """Main demonstration function."""
     print("DialogBaseMigrationAdapter Integration Testing Demo")
@@ -289,7 +285,6 @@ def main():
         except Exception as e:
             print(f"❌ Error in {demo_func.__name__}: {e}")
             print()
-
 
 if __name__ == "__main__":
     main()

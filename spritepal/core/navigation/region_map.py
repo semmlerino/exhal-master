@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class SpriteRegionMap:
     """
     Efficient spatial data structure for sprite locations.

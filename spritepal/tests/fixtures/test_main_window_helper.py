@@ -1,6 +1,7 @@
 """
 Helper for testing with real MainWindow components in a controlled environment
 """
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -12,7 +13,6 @@ from PySide6.QtWidgets import QLabel, QStatusBar
 
 from ui.palette_preview import PalettePreviewWidget
 from ui.zoomable_preview import PreviewPanel
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 class TestMainWindowHelper(QObject):
     """Helper for managing real MainWindow components in tests"""

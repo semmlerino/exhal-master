@@ -1,4 +1,6 @@
 # Fixed singleton.py
+from __future__ import annotations
+
 """
 Thread-safe singleton implementation for SpritePal.
 
@@ -10,7 +12,6 @@ import threading
 from typing import Any, ClassVar, TypeVar
 
 T = TypeVar("T")
-
 
 class ThreadSafeSingleton(type):
     """
@@ -53,7 +54,6 @@ class ThreadSafeSingleton(type):
         """Clear all singleton instances (useful for testing)."""
         with cls._lock:
             cls._instances.clear()
-
 
 class SimpleSingleton(type):
     """

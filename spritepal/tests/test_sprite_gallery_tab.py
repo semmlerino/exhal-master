@@ -13,6 +13,7 @@ Tests cover:
 - Export functionality and error handling
 - UI state management and lazy loading
 """
+from __future__ import annotations
 
 import json
 import sys
@@ -28,7 +29,10 @@ if "--no-qt" not in sys.argv:
     from PySide6.QtWidgets import QApplication
 
 from core.sprite_finder import SpriteFinder
-
+from tests.infrastructure.test_doubles import (
+    MockCacheManager, MockGalleryWidget, MockProgressDialog, 
+    MockSpriteFinderExternal, TestDoubleFactory
+)
 
 def create_mock_gallery_tab():
     """Create a mock SpriteGalleryTab for testing without Qt dependencies."""
@@ -42,15 +46,19 @@ def create_mock_gallery_tab():
             tab.rom_path = None
             tab.rom_size = 0
             tab.sprites_data = []
-            tab.gallery_widget = Mock()
+            
+            # Use test doubles for external dependencies
+            tab.gallery_widget = TestDoubleFactory.create_gallery_widget()
             tab.info_label = Mock()
             tab.toolbar = Mock()
             tab.compare_btn = Mock()
             tab.palette_btn = Mock()
             tab.thumbnail_worker = None
             tab.progress_dialog = None
+            
+            # Add cache manager test double
+            tab._cache_manager = MockCacheManager()
             return tab
-
 
 class TestSpriteGalleryCaching:
     """Unit tests for the gallery caching mechanism."""
@@ -81,8 +89,19 @@ class TestSpriteGalleryCaching:
             {"offset": 0x201000, "tile_count": 32}
         ]
 
-        # Mock the cache path to use temp directory
+        # Use cache manager test double
         cache_file = tmp_path / "test_cache.json"
+        tab._cache_manager.save_cache(tab.rom_path, {
+            "version": 2,
+            "rom_path": tab.rom_path,
+            "rom_size": tab.rom_size,
+            "sprite_count": len(tab.sprites_data),
+            "sprites": tab.sprites_data,
+            "scan_mode": tab.scan_mode,
+            "timestamp": time.time()
+        })
+        
+        # Verify real _save_scan_cache behavior by calling it with mock path
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             tab._save_scan_cache()
 
@@ -118,7 +137,10 @@ class TestSpriteGalleryCaching:
         with open(cache_file, 'w') as f:
             json.dump(cache_data, f)
 
-        # Try to load cache for a different ROM
+        # Try to load cache for a different ROM using test double
+        tab._cache_manager.save_cache("/different/rom.sfc", cache_data)
+        
+        # Try loading cache for different ROM path - should fail validation
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             result = tab._load_scan_cache("/my/rom.sfc")
 
@@ -140,7 +162,10 @@ class TestSpriteGalleryCaching:
         with open(cache_file, 'w') as f:
             json.dump(cache_data, f)
 
-        # Try to load old cache
+        # Try to load old cache using test double
+        tab._cache_manager.save_cache(str(tmp_path / "test.sfc"), cache_data)
+        
+        # Try loading old version cache - should fail validation
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             result = tab._load_scan_cache(str(tmp_path / "test.sfc"))
 
@@ -166,10 +191,13 @@ class TestSpriteGalleryCaching:
         with open(cache_file, 'w') as f:
             json.dump(cache_data, f)
 
-        # Load cache
+        # Load cache using test double
+        tab._cache_manager.save_cache(str(tmp_path / "test.sfc"), cache_data)
+        
+        # Load cache - keep _refresh_thumbnails real but mock external dependencies
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
-            with patch.object(tab, '_refresh_thumbnails'):  # Mock thumbnail refresh
-                result = tab._load_scan_cache(str(tmp_path / "test.sfc"))
+            # Keep internal logic real, only mock external dependencies if needed
+            result = tab._load_scan_cache(str(tmp_path / "test.sfc"))
 
         # Should succeed
         assert result is True
@@ -178,7 +206,6 @@ class TestSpriteGalleryCaching:
         tab.info_label.setText.assert_called_once()
         call_args = tab.info_label.setText.call_args[0][0]
         assert "3." in call_args or "2.9" in call_args  # ~3 hours old
-
 
 class TestSpriteGalleryScanning:
     """Integration tests for sprite scanning functionality."""
@@ -302,7 +329,6 @@ class TestSpriteGalleryScanning:
         # Progress should show "Found:" count
         assert any("Found:" in label for label in progress_labels)
 
-
 class TestSpriteGalleryIntegration:
     """Integration tests for gallery tab with other components."""
 
@@ -400,7 +426,6 @@ class TestSpriteGalleryIntegration:
             # Quick mode uses larger steps (0x800-0x1000)
             assert max(step_sizes) >= 0x800
 
-
 class TestGalleryRobustness:
     """Test error handling and edge cases."""
 
@@ -466,7 +491,6 @@ class TestGalleryRobustness:
         mock_warning.assert_called_once()
         assert "No ROM" in str(mock_warning.call_args)
 
-
 @pytest.mark.gui
 class TestGalleryWithQt:
     """Tests that require real Qt components."""
@@ -520,7 +544,6 @@ class TestGalleryWithQt:
         # Check dialog showed scan options
         assert any("Quick Scan" in text for text in dialog_text)
         assert any("Thorough Scan" in text for text in dialog_text)
-
 
 # New comprehensive test classes for missing functionality
 
@@ -638,7 +661,6 @@ class TestBatchThumbnailWorkerIntegration:
         mock_worker.wait.assert_called_once()
         assert tab.thumbnail_worker is None
 
-
 class TestSpriteGalleryWidgetIntegration:
     """Test SpriteGalleryWidget functionality and integration."""
 
@@ -710,7 +732,6 @@ class TestSpriteGalleryWidgetIntegration:
         export_sheet_action.setEnabled.assert_called_with(True)
         # Other actions should not be affected
         other_action.setEnabled.assert_not_called()
-
 
 class TestSpriteGalleryExportFunctionality:
     """Test sprite export functionality with proper mocking."""
@@ -807,7 +828,6 @@ class TestSpriteGalleryExportFunctionality:
 
             mock_info.assert_called_once()
             assert "Not Implemented" in mock_info.call_args[0][1]
-
 
 class TestSpriteGalleryErrorHandling:
     """Test comprehensive error handling scenarios."""
@@ -930,7 +950,6 @@ class TestSpriteGalleryErrorHandling:
         # Should still queue thumbnails
         mock_worker.queue_thumbnail.assert_called_once()
 
-
 class TestSpriteGalleryParametrizedEdgeCases:
     """Parametrized tests for edge cases and boundary conditions."""
 
@@ -950,7 +969,6 @@ class TestSpriteGalleryParametrizedEdgeCases:
 
         # Mock ROM data of specified size
         rom_data = b'\x00' * rom_size
-
 
         with patch('builtins.open', create=True) as mock_open:
             mock_open.return_value.__enter__.return_value.read.return_value = rom_data
@@ -1043,7 +1061,6 @@ class TestSpriteGalleryParametrizedEdgeCases:
         # Should use expected number of ranges (at least 1, up to expected)
         assert range_count >= 1
         # Note: Exact count may vary due to early cancellation
-
 
 # Enhanced Qt integration tests with real widgets
 @pytest.mark.gui
@@ -1152,7 +1169,6 @@ class TestSpriteGalleryTabSignalSlotIntegration:
         # Verify buttons have signal connections
         assert compare_btn.clicked.receivers() > 0
         assert palette_btn.clicked.receivers() > 0
-
 
 @pytest.mark.gui
 class TestSpriteGalleryTabUIStateManagement:
@@ -1302,7 +1318,6 @@ class TestSpriteGalleryTabUIStateManagement:
         # Verify info label shows scan results
         expected_text = "Found 2 sprites in rom.sfc"
         assert real_gallery_tab.info_label.text() == expected_text
-
 
 @pytest.mark.gui
 class TestSpriteGalleryTabRealWidgetInteraction:

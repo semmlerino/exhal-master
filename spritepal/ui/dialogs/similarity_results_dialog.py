@@ -3,6 +3,7 @@ Dialog for displaying visual similarity search results.
 
 Shows similar sprites with thumbnails, similarity scores, and allows navigation.
 """
+from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
@@ -23,7 +24,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class SimilarityResultWidget(QFrame):
     """Widget displaying a single similarity search result."""
 
@@ -40,12 +40,14 @@ class SimilarityResultWidget(QFrame):
                 border: 2px solid #ddd;
                 border-radius: 8px;
                 background-color: #f9f9f9;
+                color: #000000;
                 margin: 4px;
                 padding: 8px;
             }
             SimilarityResultWidget:hover {
                 border-color: #4488dd;
                 background-color: #f0f8ff;
+                color: #000000;
             }
         """)
 
@@ -123,7 +125,6 @@ class SimilarityResultWidget(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.sprite_selected.emit(self.match.offset)
         super().mousePressEvent(event)
-
 
 class SimilarityResultsDialog(BaseDialog):
     """Dialog showing visual similarity search results."""
@@ -207,7 +208,6 @@ class SimilarityResultsDialog(BaseDialog):
         """Handle sprite selection."""
         self.sprite_selected.emit(offset)
         self.accept()  # Close dialog after selection
-
 
 def show_similarity_results(
     matches: list[SimilarityMatch],

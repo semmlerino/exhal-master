@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Direct runner for integration tests that bypasses pytest collection issues.
 """
@@ -22,7 +24,6 @@ def run_tests():
 
     try:
         from PySide6.QtWidgets import QApplication
-
 
         # Create QApplication
         app = QApplication.instance() or QApplication(sys.argv)

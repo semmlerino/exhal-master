@@ -1,7 +1,7 @@
 """
 Component-specific styling functions for SpritePal UI
 """
-
+from __future__ import annotations
 
 from .theme import COLORS, DIMENSIONS, FONTS, get_disabled_state_style
 
@@ -638,7 +638,6 @@ def get_scroll_area_style(background_color: str = "background") -> str:
     }}
     """
 
-
 def get_dark_preview_style() -> str:
     """
     Get comprehensive dark theme styling for sprite preview areas
@@ -665,7 +664,6 @@ def get_dark_preview_style() -> str:
         background-color: {COLORS["preview_background"]};
     }}
     """
-
 
 def get_dark_panel_style() -> str:
     """

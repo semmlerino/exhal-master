@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Capture screenshots of the gallery tab in normal and maximized states.
 This will show visually whether the empty space issue is fixed.

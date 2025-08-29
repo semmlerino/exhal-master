@@ -1,4 +1,5 @@
 """Base UI components for SpritePal"""
+from __future__ import annotations
 
 # Import DialogBase through the feature flag selector
 # This allows switching between legacy and composed implementations

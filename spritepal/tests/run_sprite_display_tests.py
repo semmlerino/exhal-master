@@ -17,13 +17,13 @@ Options:
     --verbose       Verbose output
     --parallel      Run tests in parallel (if pytest-xdist available)
 """
+from __future__ import annotations
 
 import argparse
 import subprocess
 import sys
 from pathlib import Path
 import time
-
 
 class SpriteDisplayTestRunner:
     """Comprehensive test runner for sprite display fix"""
@@ -256,7 +256,6 @@ class SpriteDisplayTestRunner:
         
         return total_failed == 0
 
-
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
@@ -327,7 +326,6 @@ def main():
     
     # Exit with appropriate code
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,7 @@
 Settings dialog for SpritePal application
 Provides user interface for configuring application preferences
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Stability Test Runner
 
@@ -9,7 +11,6 @@ Provides detailed output about which fixes are being validated.
 import subprocess
 import sys
 from pathlib import Path
-
 
 def run_stability_tests():
     """Run the Phase 1 stability test suite with reporting."""

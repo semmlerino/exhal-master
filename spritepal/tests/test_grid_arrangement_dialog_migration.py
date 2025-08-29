@@ -6,6 +6,7 @@ while using the new SplitterDialog architecture.
 
 This is a real Qt integration test that requires a GUI environment.
 """
+from __future__ import annotations
 
 import contextlib
 import os
@@ -16,7 +17,6 @@ from PIL import Image
 
 from ui.components import SplitterDialog
 from ui.grid_arrangement_dialog import GridArrangementDialog
-
 
 # Skip in headless environments - this tests real Qt dialog behavior
 pytestmark = [
@@ -34,7 +34,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.rom_data,
 ]
-
 
 class TestGridArrangementDialogMigration:
     """Test GridArrangementDialog migration to SplitterDialog architecture"""

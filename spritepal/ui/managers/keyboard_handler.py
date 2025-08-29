@@ -1,6 +1,7 @@
 """
 Keyboard shortcut handling for MainWindow
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
@@ -11,7 +12,6 @@ if TYPE_CHECKING:
     from ui.managers.output_settings_manager import OutputSettingsManager
     from ui.managers.tab_coordinator import TabCoordinator
     from ui.managers.toolbar_manager import ToolbarManager
-
 
 class KeyboardActionsProtocol(Protocol):
     """Protocol defining the interface for keyboard actions"""
@@ -28,15 +28,14 @@ class KeyboardActionsProtocol(Protocol):
         """Open manual offset dialog"""
         ...
 
-
 class KeyboardShortcutHandler(QObject):
     """Handles keyboard shortcuts for MainWindow"""
 
     def __init__(
         self,
-        tab_coordinator: "TabCoordinator",
-        output_settings_manager: "OutputSettingsManager",
-        toolbar_manager: "ToolbarManager",
+        tab_coordinator: TabCoordinator,
+        output_settings_manager: OutputSettingsManager,
+        toolbar_manager: ToolbarManager,
         actions_handler: KeyboardActionsProtocol
     ) -> None:
         """Initialize keyboard shortcut handler

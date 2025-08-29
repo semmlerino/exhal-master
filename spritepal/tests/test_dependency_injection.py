@@ -4,6 +4,7 @@ Test suite for the dependency injection system.
 This module validates that the context-based dependency injection system
 works correctly and provides the expected isolation between tests.
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
@@ -12,7 +13,6 @@ import time
 
 from core.managers.context import (
 # Serial execution required: Thread safety concerns
-
 
     ManagerContext, 
     manager_context, 
@@ -33,8 +33,6 @@ from core.managers import (
     get_session_manager
 )
 from core.managers.exceptions import ManagerError
-
-
 
 pytestmark = [
     
@@ -131,7 +129,6 @@ class TestManagerContext:
         assert child.has_manager("injection")  # From parent
         assert child.has_manager("extraction")  # From child
 
-
 class TestContextManager:
     """Test the context manager functionality."""
     
@@ -173,7 +170,6 @@ class TestContextManager:
             
             # Back to outer context
             assert get_current_context() is outer_context
-
 
 class TestGlobalAccessorIntegration:
     """Test that global accessor functions work with contexts."""
@@ -218,7 +214,6 @@ class TestGlobalAccessorIntegration:
         manager = get_injection_manager()
         assert manager is mock_injection
         mock_registry.get_injection_manager.assert_called_once()
-
 
 class TestInjectableClasses:
     """Test the injectable base classes."""
@@ -273,7 +268,6 @@ class TestInjectableClasses:
         with manager_context_factory({"injection": mock_injection}):
             widget = TestWidget()
             assert widget.get_injection_manager() is mock_injection
-
 
 class TestThreadSafety:
     """Test thread safety of the context system."""
@@ -351,7 +345,6 @@ class TestThreadSafety:
         assert results["thread1"] == "thread1_manager"
         assert results["thread2"] == "thread2_manager"
 
-
 class TestContextValidation:
     """Test context validation and debugging utilities."""
     
@@ -418,7 +411,6 @@ class TestContextValidation:
                 assert "parent" in debug_info
                 assert "extraction" in debug_info
                 assert "injection" in debug_info
-
 
 class TestRealWorldScenarios:
     """Test real-world usage scenarios."""

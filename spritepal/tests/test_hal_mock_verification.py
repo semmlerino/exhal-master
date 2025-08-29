@@ -1,10 +1,10 @@
 """
 Simple test to verify HAL mocking is working correctly.
 """
+from __future__ import annotations
 
 import pytest
 from pathlib import Path
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -19,7 +19,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
 ]
-
 
 def test_hal_is_mocked():
     """Verify that HAL is automatically mocked for unit tests."""
@@ -39,7 +38,6 @@ def test_hal_is_mocked():
         print("❌ HAL is REAL (unexpected for unit tests)")
         # This shouldn't happen in unit tests
         pytest.fail("HAL should be mocked for unit tests")
-
 
 @pytest.mark.real_hal
 def test_hal_is_real_with_marker(tmp_path):
@@ -62,7 +60,6 @@ def test_hal_is_real_with_marker(tmp_path):
         # Verify it has the expected real attributes
         assert hasattr(compressor, 'exhal_path')
         assert hasattr(compressor, 'inhal_path')
-
 
 def test_mock_hal_performance():
     """Test that mock HAL operations are fast."""

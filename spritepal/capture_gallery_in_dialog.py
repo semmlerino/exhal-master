@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Capture screenshot of the gallery tab within its parent dialog window.
 Shows the complete context with all UI elements.

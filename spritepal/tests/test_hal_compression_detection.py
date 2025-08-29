@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -229,7 +231,6 @@ class TestHALToolDetection(unittest.TestCase):
             self.assertIn("compile_hal_tools.py", error_message)
             self.assertIn("platform", error_message)
 
-
 class TestHALToolDetectionRegression(unittest.TestCase):
     """Regression tests to prevent the working directory bug from reoccurring"""
 
@@ -306,7 +307,6 @@ class TestHALToolDetectionRegression(unittest.TestCase):
                     cleanup_managers()
                 except Exception:
                     pass  # Ignore cleanup errors
-
 
 if __name__ == '__main__':
     unittest.main()

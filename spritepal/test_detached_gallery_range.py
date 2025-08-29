@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test the custom range scanning feature in detached gallery window.
 This verifies the feature is complete and working.

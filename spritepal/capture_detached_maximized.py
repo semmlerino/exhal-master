@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Capture screenshot of the detached gallery window when maximized.
 Shows the final solution working without stretching issues.

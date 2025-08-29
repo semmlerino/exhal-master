@@ -11,6 +11,7 @@ Tests focus on:
 7. Worker pool performance validation
 8. End-to-end pipeline performance
 """
+from __future__ import annotations
 
 import asyncio
 import time
@@ -31,7 +32,6 @@ from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 from tests.infrastructure.real_component_factory import RealComponentFactory
 from tests.infrastructure.qt_testing_framework import QtTestingFramework
 
-
 # Serial execution required: Thread safety concerns, Real Qt components
 pytestmark = [
     
@@ -47,7 +47,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.worker_threads,
 ]
-
 
 class PerformanceTestData:
     """Generate consistent test data for performance benchmarks"""
@@ -96,7 +95,6 @@ class PerformanceTestData:
             })
         
         return sprites
-
 
 class TestAsyncROMCachePerformance:
     """Performance tests for AsyncROMCache"""
@@ -285,7 +283,6 @@ class TestAsyncROMCachePerformance:
         # Should not exceed reasonable bounds
         assert total_growth < 50 * 1024 * 1024, f"Total memory growth too high: {total_growth/1024/1024:.1f}MB"
 
-
 class TestPreviewOrchestratorPerformance:
     """Performance tests for PreviewOrchestrator"""
     
@@ -365,7 +362,7 @@ class TestPreviewOrchestratorPerformance:
             try:
                 request = self.orchestrator._request_queue.get_nowait()
                 priorities_seen.append(request.priority.value)
-            except:
+            except Exception:
                 break
         
         # Should be sorted by priority (lower values = higher priority)
@@ -453,7 +450,6 @@ class TestPreviewOrchestratorPerformance:
         assert total_time < 10.0, f"Total time too long: {total_time:.2f}s"
         
         print(f"Concurrent orchestrator: {total_requests} requests, avg={avg_request_time*1000:.2f}ms")
-
 
 class TestSmartPreviewCoordinatorPerformance:
     """Performance tests for SmartPreviewCoordinator"""
@@ -597,7 +593,6 @@ class TestSmartPreviewCoordinatorPerformance:
         assert avg_response_time < 0.01, f"Average response too slow: {avg_response_time*1000:.2f}ms"
         
         print(f"Cache optimization: {hit_rate:.1f}% hit rate, avg={avg_response_time*1000:.2f}ms")
-
 
 class TestEndToEndPerformance:
     """End-to-end performance tests for the complete sprite display pipeline"""
@@ -806,7 +801,6 @@ class TestEndToEndPerformance:
         
         print(f"Scrubbing simulation: {fps}fps, {frame_drop_rate:.1f}% drops, "
               f"avg={avg_frame_time*1000:.2f}ms, max={max_frame_time*1000:.2f}ms")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short", "-m", "performance"])

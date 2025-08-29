@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 pytestmark = [
     pytest.mark.dialog,
     pytest.mark.headless,
@@ -14,7 +16,6 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 from PySide6.QtCore import QObject
 
 from ui.components.base.composed.message_dialog_manager import MessageDialogManager
-
 
 class TestMessageDialogManager:
     """Test suite for MessageDialogManager."""

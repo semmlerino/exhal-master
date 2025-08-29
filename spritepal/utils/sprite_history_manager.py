@@ -4,6 +4,7 @@ Sprite history management utilities.
 This module provides non-Qt history management for sprite tracking,
 including duplicate prevention, limit enforcement, and data management.
 """
+from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any

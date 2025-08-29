@@ -24,22 +24,20 @@ Usage:
         is_composed_dialogs_enabled
     )
 """
+from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Union, Type, Any
+from typing import TYPE_CHECKING, Any
 
 from utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from .dialog_base import DialogBase as DialogBaseType
-    from .dialog_base import InitializationOrderError as InitializationOrderErrorType
     from .composed.migration_adapter import DialogBaseMigrationAdapter
 
 logger = get_logger(__name__)
 
 # Feature flag environment variable
 FEATURE_FLAG_ENV_VAR = "SPRITEPAL_USE_COMPOSED_DIALOGS"
-
 
 def is_composed_dialogs_enabled() -> bool:
     """Check if composed dialogs are enabled via feature flag.
@@ -50,7 +48,6 @@ def is_composed_dialogs_enabled() -> bool:
     flag_value = os.environ.get(FEATURE_FLAG_ENV_VAR, "0").lower()
     return flag_value in ("1", "true", "yes", "on")
 
-
 def get_dialog_implementation() -> str:
     """Get the current dialog implementation type.
 
@@ -58,7 +55,6 @@ def get_dialog_implementation() -> str:
         str: Either "legacy" or "composed" indicating which implementation is active.
     """
     return "composed" if is_composed_dialogs_enabled() else "legacy"
-
 
 def set_dialog_implementation(use_composed: bool) -> None:
     """Set the dialog implementation type via environment variable.
@@ -75,11 +71,10 @@ def set_dialog_implementation(use_composed: bool) -> None:
     os.environ[FEATURE_FLAG_ENV_VAR] = "1" if use_composed else "0"
     logger.info(f"Dialog implementation set to: {'composed' if use_composed else 'legacy'}")
 
-
 # Import the appropriate implementation based on feature flag
 # Handle import gracefully for testing environments without Qt
-DialogBase: Type[Any] = None  # type: ignore[assignment]
-InitializationOrderError: Type[Any] = None  # type: ignore[assignment]
+DialogBase: type[Any] = None  # type: ignore[assignment]
+InitializationOrderError: type[Any] = None  # type: ignore[assignment]
 _implementation_source = "none"
 
 try:
@@ -89,20 +84,28 @@ try:
             from .composed.migration_adapter import (
                 DialogBaseMigrationAdapter,
             )
-            from .composed.migration_adapter import InitializationOrderError as ComposedInitializationOrderError
+            from .composed.migration_adapter import (
+                InitializationOrderError as ComposedInitializationOrderError,
+            )
             DialogBase = DialogBaseMigrationAdapter  # type: ignore[assignment]
             InitializationOrderError = ComposedInitializationOrderError  # type: ignore[assignment]
             _implementation_source = "composed.migration_adapter"
         except ImportError as e:
             logger.error(f"Failed to import composed dialog implementation: {e}")
             logger.warning("Falling back to legacy dialog implementation")
-            from .dialog_base import DialogBase as LegacyDialogBase, InitializationOrderError as LegacyInitializationOrderError
+            from .dialog_base import DialogBase as LegacyDialogBase
+            from .dialog_base import (
+                InitializationOrderError as LegacyInitializationOrderError,
+            )
             DialogBase = LegacyDialogBase  # type: ignore[assignment]
             InitializationOrderError = LegacyInitializationOrderError  # type: ignore[assignment]
             _implementation_source = "dialog_base (fallback)"
     else:
         logger.info("Using legacy dialog implementation (DialogBase)")
-        from .dialog_base import DialogBase as LegacyDialogBase, InitializationOrderError as LegacyInitializationOrderError
+        from .dialog_base import DialogBase as LegacyDialogBase
+        from .dialog_base import (
+            InitializationOrderError as LegacyInitializationOrderError,
+        )
         DialogBase = LegacyDialogBase  # type: ignore[assignment]
         InitializationOrderError = LegacyInitializationOrderError  # type: ignore[assignment]
         _implementation_source = "dialog_base"

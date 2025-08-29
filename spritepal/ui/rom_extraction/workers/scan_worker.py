@@ -1,8 +1,9 @@
 """Worker thread for scanning ROM for sprite offsets"""
+from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
@@ -14,7 +15,6 @@ from core.workers.base import BaseWorker, handle_worker_errors
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class SpriteScanWorker(BaseWorker):
     """Worker thread for scanning ROM for sprite offsets"""
@@ -29,7 +29,7 @@ class SpriteScanWorker(BaseWorker):
     progress_detailed = Signal(int, int)  # current, total
 
     def __init__(self, rom_path: str, extractor, use_cache: bool = True,
-                 start_offset: Optional[int] = None, end_offset: Optional[int] = None, parent: "QObject | None" = None):
+                 start_offset: int | None = None, end_offset: int | None = None, parent: QObject | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.extractor = extractor

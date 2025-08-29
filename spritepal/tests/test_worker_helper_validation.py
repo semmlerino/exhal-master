@@ -1,11 +1,11 @@
 """
 Validation tests for worker creation and behavior
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
 from PySide6.QtCore import QThread
-
 
 # Test characteristics: Thread safety concerns
 pytestmark = [
@@ -19,7 +19,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestWorkerHelperValidation:
     """Test worker creation and behavior"""

@@ -15,6 +15,7 @@ Key layout requirements tested:
 7. Layout constants are applied consistently
 8. Window resizing maintains proper proportions
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -27,13 +28,11 @@ from PySide6.QtGui import QResizeEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QSplitter, QTabWidget, QWidget
 
-
 def is_headless_environment() -> bool:
     """Detect if we're in a headless environment."""
     # For layout tests, we can work with offscreen rendering
     # Only skip if explicitly requested to avoid GUI tests
     return os.environ.get("SKIP_GUI_TESTS", "").lower() in ("1", "true", "yes")
-
 
 # Configure Qt environment for headless testing
 if not os.environ.get('QT_QPA_PLATFORM'):
@@ -96,7 +95,6 @@ class MockQtBot:
         loop.exec()
         timer.stop()
         check_timer.stop()
-
 
 class TestManualOffsetDialogLayout(QtTestCase):
     """Test suite for Manual Offset Dialog layout behavior."""
@@ -485,7 +483,6 @@ class TestManualOffsetDialogLayout(QtTestCase):
             sizes = splitter.sizes()
             assert all(size > 0 for size in sizes), f"Panels should remain positive in rapid resize {i}"
             assert sizes[0] >= MIN_LEFT_PANEL_WIDTH, f"Minimum width should be maintained in rapid resize {i}"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

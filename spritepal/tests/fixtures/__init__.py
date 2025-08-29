@@ -6,6 +6,7 @@ test data generators, and common test utilities.
 
 This module uses lazy loading to avoid Qt dependency chains in headless environments.
 """
+from __future__ import annotations
 
 import os
 from typing import Any, Callable
@@ -41,7 +42,6 @@ def _get_qt_mocks():
             "MockSignal": Mock,
         }
 
-
 def _is_headless_environment() -> bool:
     """Detect if we're in a headless environment where Qt is not available."""
     if os.environ.get("CI"):
@@ -56,7 +56,6 @@ def _is_headless_environment() -> bool:
     except Exception:
         return True
 
-
 def _get_real_factory():
     """Lazy import and return RealComponentFactory for Qt-enabled environments."""
     try:
@@ -64,7 +63,6 @@ def _get_real_factory():
         return RealComponentFactory()
     except ImportError as e:
         raise RuntimeError(f"Cannot import RealComponentFactory in headless environment: {e}")
-
 
 class _HeadlessFallbackFactory:
     """Lightweight fallback factory for headless environments."""
@@ -122,13 +120,11 @@ class _HeadlessFallbackFactory:
         mock.save = Mock(return_value=True)
         return mock
 
-
 def _get_factory():
     """Get the appropriate factory based on environment."""
     if _is_headless_environment():
         return _HeadlessFallbackFactory()
     return _get_real_factory()
-
 
 # Create backward compatibility functions with lazy loading
 def create_mock_drag_drop_event():
@@ -138,30 +134,25 @@ def create_mock_drag_drop_event():
         return factory.create_drag_drop_event()
     return None
 
-
 def create_mock_extraction_manager():
     """Create a mock extraction manager, using lazy loading for Qt dependencies."""
     factory = _get_factory()
     return factory.create_extraction_manager()
-
 
 def create_mock_extraction_worker():
     """Create a mock extraction worker, using lazy loading for Qt dependencies."""
     factory = _get_factory()
     return factory.create_extraction_worker()
 
-
 def create_mock_file_dialogs():
     """Create mock file dialogs, using lazy loading for Qt dependencies."""
     factory = _get_factory()
     return factory.create_file_dialogs()
 
-
 def create_mock_main_window():
     """Create a mock main window, using lazy loading for Qt dependencies."""
     factory = _get_factory()
     return factory.create_main_window()
-
 
 def create_mock_qimage():
     """Create a mock QImage, using lazy loading for Qt dependencies."""
@@ -170,7 +161,6 @@ def create_mock_qimage():
         return factory.create_qimage()
     return None
 
-
 # Make Qt mocks available at module level for backward compatibility
 def __getattr__(name: str):
     """Provide lazy access to Qt mocks."""
@@ -178,7 +168,6 @@ def __getattr__(name: str):
     if name in qt_mocks:
         return qt_mocks[name]
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
-
 
 __all__ = [
     "MockQLabel",

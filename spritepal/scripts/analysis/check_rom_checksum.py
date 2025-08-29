@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Check ROM checksum to debug sprite selection issue."""
 
 import struct
 from pathlib import Path
-
 
 def calculate_snes_checksum(rom_data: bytes) -> int:
     """Calculate SNES ROM checksum."""

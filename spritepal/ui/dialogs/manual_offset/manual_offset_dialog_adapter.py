@@ -9,7 +9,7 @@ on a feature flag.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 # Conditional imports to avoid hard dependency on PySide6
 try:
@@ -40,8 +40,7 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
 
-
-def _get_implementation_class() -> type[Union[ManualOffsetDialogCore, LegacyDialog, QDialog]]:
+def _get_implementation_class() -> type[ManualOffsetDialogCore | LegacyDialog | QDialog]:
     """
     Get the appropriate implementation class based on feature flag.
 
@@ -71,7 +70,6 @@ def _get_implementation_class() -> type[Union[ManualOffsetDialogCore, LegacyDial
             def __init__(self, *args: Any, **kwargs: Any) -> None:
                 pass
         return DummyDialog  # type: ignore[return-value]
-
 
 class ManualOffsetDialogAdapter:
     """

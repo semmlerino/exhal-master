@@ -5,6 +5,7 @@ This factory creates real manager instances using the worker-owned pattern,
 replacing problematic manager mocking with actual implementations that
 can catch architectural bugs.
 """
+from __future__ import annotations
 
 import sys
 import tempfile
@@ -63,7 +64,7 @@ class RealManagerFixtureFactory:
         self._created_managers: list[QObject] = []
         self._temp_dirs: list[str] = []
 
-    def create_extraction_manager(self, isolated: bool = True) -> "ExtractionManager":
+    def create_extraction_manager(self, isolated: bool = True) -> ExtractionManager:
         """
         Create a real ExtractionManager instance.
 
@@ -87,7 +88,7 @@ class RealManagerFixtureFactory:
         self._created_managers.append(manager)
         return manager
 
-    def create_injection_manager(self, isolated: bool = True) -> "InjectionManager":
+    def create_injection_manager(self, isolated: bool = True) -> InjectionManager:
         """
         Create a real InjectionManager instance.
 
@@ -114,7 +115,7 @@ class RealManagerFixtureFactory:
         self._created_managers.append(manager)
         return manager
 
-    def create_session_manager(self, isolated: bool = True, temp_settings: bool = True) -> "SessionManager":
+    def create_session_manager(self, isolated: bool = True, temp_settings: bool = True) -> SessionManager:
         """
         Create a real SessionManager instance.
 
@@ -219,7 +220,6 @@ class RealManagerFixtureFactory:
             "qt_object_valid": not hasattr(manager, "isValid") or manager.isValid(),
         }
 
-
 class WorkerOwnedManagerFixture:
     """
     Specialized fixture for worker-owned managers.
@@ -276,25 +276,21 @@ class WorkerOwnedManagerFixture:
         """Clean up the worker-owned fixture."""
         self.factory.cleanup()
 
-
 # Convenience functions for common testing patterns
-def create_real_extraction_manager(qt_parent: QObject | None = None) -> "ExtractionManager":
+def create_real_extraction_manager(qt_parent: QObject | None = None) -> ExtractionManager:
     """Create a real extraction manager for testing."""
     factory = RealManagerFixtureFactory(qt_parent)
     return factory.create_extraction_manager(isolated=True)
 
-
-def create_real_injection_manager(qt_parent: QObject | None = None) -> "InjectionManager":
+def create_real_injection_manager(qt_parent: QObject | None = None) -> InjectionManager:
     """Create a real injection manager for testing."""
     factory = RealManagerFixtureFactory(qt_parent)
     return factory.create_injection_manager(isolated=True)
 
-
-def create_real_session_manager(qt_parent: QObject | None = None) -> "SessionManager":
+def create_real_session_manager(qt_parent: QObject | None = None) -> SessionManager:
     """Create a real session manager for testing."""
     factory = RealManagerFixtureFactory(qt_parent)
     return factory.create_session_manager(isolated=True)
-
 
 def create_worker_owned_fixture(worker_parent: QObject | None = None) -> WorkerOwnedManagerFixture:
     """Create a worker-owned manager fixture."""

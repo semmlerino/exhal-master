@@ -1,6 +1,7 @@
 """
 Tests for row arrangement refactored components
 """
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch
@@ -10,14 +11,11 @@ from PIL import Image
 from ui.row_arrangement import (
 # Systematic pytest markers applied based on test content analysis
 
-
     ArrangementManager,
     PaletteColorizer,
     PreviewGenerator,
     RowImageProcessor,
 )
-
-
 
 pytestmark = [
     pytest.mark.file_io,
@@ -126,7 +124,6 @@ class TestRowImageProcessor:
             assert "index" in row
             assert isinstance(row["image"], Image.Image)
 
-
 class TestArrangementManager:
     """Test the ArrangementManager component"""
 
@@ -215,7 +212,6 @@ class TestArrangementManager:
         assert manager.get_arranged_indices() == []
         manager.arrangement_cleared.emit.assert_called_once()
         manager.arrangement_changed.emit.assert_called_once()
-
 
 class TestPaletteColorizer:
     """Test the PaletteColorizer component"""
@@ -318,7 +314,6 @@ class TestPaletteColorizer:
             result2 = colorizer.get_display_image(0, test_image)
             mock_apply.assert_not_called()  # Should use cache
             assert result2 is result1  # Same object
-
 
 class TestPreviewGenerator:
     """Test the PreviewGenerator component"""

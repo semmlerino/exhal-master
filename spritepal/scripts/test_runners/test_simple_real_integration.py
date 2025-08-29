@@ -3,7 +3,7 @@ Simple real integration test to validate testing infrastructure with pytest.
 
 This test validates the core functionality without complex dialogs that might hang.
 """
-
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -20,7 +20,6 @@ from tests.infrastructure import (
     TestApplicationFactory,
     TestDataRepository,
 )
-
 
 class TestSimpleRealIntegration:
     """Simple real integration tests to validate infrastructure."""
@@ -137,7 +136,6 @@ class TestSimpleRealIntegration:
         state2 = manager2._active_operations
 
         assert state1 is not state2, "Isolated managers should have separate state"
-
 
 if __name__ == "__main__":
     # Run the simple tests directly

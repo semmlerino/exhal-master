@@ -1,4 +1,5 @@
 """Tests for validation utilities"""
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
@@ -26,7 +27,6 @@ from utils.validation import (
     validate_tile_count,
     validate_vram_file,
 )
-
 
 class TestFileValidation:
     """Test file validation functions"""
@@ -220,7 +220,6 @@ class TestFileValidation:
         finally:
             Path(f.name).unlink()
 
-
 class TestValidationEdgeCases:
     """Test edge cases in validation"""
 
@@ -250,7 +249,6 @@ class TestValidationEdgeCases:
         finally:
             Path(f.name).unlink()
 
-
 class TestOffsetValidation:
     """Test offset validation function"""
 
@@ -277,7 +275,6 @@ class TestOffsetValidation:
         is_valid, error_msg = validate_offset(0xFFFF, 0x10000)
         assert is_valid is True
         assert error_msg == ""
-
 
 class TestTileCountValidation:
     """Test tile count validation"""
@@ -307,7 +304,6 @@ class TestTileCountValidation:
 
         is_valid, error_msg = validate_tile_count(150, max_count=100)
         assert is_valid is False
-
 
 class TestFilenameeSanitization:
     """Test filename sanitization"""

@@ -1,4 +1,6 @@
 #\!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Verify the simple dialogs migration by checking import paths.
 This script performs static analysis without requiring Qt runtime.

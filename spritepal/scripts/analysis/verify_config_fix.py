@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Verify the sprite configuration fix."""
 
 import os
@@ -8,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core.sprite_config_loader import SpriteConfigLoader
-
 
 def test_config_loading():
     """Test that sprites can now be loaded for the ROM."""

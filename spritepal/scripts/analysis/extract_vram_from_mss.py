@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Extract VRAM data from MSS savestates to find sprite patterns."""
 
 import zlib
 from pathlib import Path
-
 
 def extract_vram_from_mss(mss_path: str) -> bytes:
     """Extract VRAM data from MSS savestate file."""

@@ -1,6 +1,7 @@
 """
 ROM backup utilities for SpritePal
 """
+from __future__ import annotations
 
 import shutil
 from datetime import datetime, timezone
@@ -11,7 +12,6 @@ from utils.logging_config import get_logger
 from utils.rom_exceptions import ROMBackupError
 
 logger = get_logger(__name__)
-
 
 class ROMBackupManager:
     """Manages ROM backups before modifications"""

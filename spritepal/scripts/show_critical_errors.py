@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Quick script to show critical basedpyright errors.
 Useful for focusing on the most important type issues.

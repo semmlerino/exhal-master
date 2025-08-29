@@ -4,18 +4,18 @@ Demonstration of injection_manager mock to real conversion.
 This shows the pattern for converting test_cross_dialog_integration.py
 from mocked injection_manager methods to real implementations.
 """
+from __future__ import annotations
 
 import json
 import os
 import tempfile
-from typing import Generator, Optional
+from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 from tests.infrastructure import (
 # Systematic pytest markers applied based on test content analysis
-
 
     TestApplicationFactory,
 )
@@ -26,8 +26,6 @@ from core.managers import (
     get_injection_manager,
     initialize_managers,
 )
-
-
 
 pytestmark = [
     pytest.mark.dialog,
@@ -172,7 +170,6 @@ class TestInjectionManagerRealConversion:
         controller.start_injection()
         # Should not crash, should show appropriate error message
         assert True, "Real injection_manager should handle invalid paths gracefully"
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

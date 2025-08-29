@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Analyze VRAM dumps to identify sprite patterns and search for them in ROM
 """
-
 
 import os
 import sys
@@ -170,7 +171,6 @@ class VRAMAnalyzer:
                 if compressed_locations:
                     logger.info(f"  Found in {len(compressed_locations)} compressed blocks")
 
-
 def main():
     """Main entry point"""
     if len(sys.argv) < 2:
@@ -190,7 +190,6 @@ def main():
 
     analyzer = VRAMAnalyzer()
     analyzer.analyze_dumps(vram_path, rom_path)
-
 
 if __name__ == "__main__":
     main()

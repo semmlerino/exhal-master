@@ -17,7 +17,7 @@ except ImportError:
 try:
     from typing_extensions import override
 except ImportError:
-    from typing_extensions import override
+    from utils.type_aliases import override
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
@@ -37,7 +37,6 @@ from .specialized import (
 
 logger = get_logger(__name__)
 
-
 # Type definitions for extraction parameters
 class VRAMExtractionParams(TypedDict):
     """Type definition for VRAM extraction parameters"""
@@ -50,7 +49,6 @@ class VRAMExtractionParams(TypedDict):
     oam_path: NotRequired[str | None]
     vram_offset: NotRequired[int | None]
 
-
 class ROMExtractionParams(TypedDict):
     """Type definition for ROM extraction parameters"""
     rom_path: str
@@ -58,7 +56,6 @@ class ROMExtractionParams(TypedDict):
     output_base: str
     sprite_name: str
     cgram_path: NotRequired[str | None]
-
 
 class VRAMExtractionWorker(ExtractionWorkerBase):
     """
@@ -74,7 +71,6 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
         self.params = params
         self._operation_name = "VRAMExtractionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -127,7 +123,6 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
 
         logger.info(f"{self._operation_name}: Extraction completed successfully")
 
-
 class ROMExtractionWorker(ExtractionWorkerBase):
     """
     Worker for ROM extraction operations.
@@ -142,7 +137,6 @@ class ROMExtractionWorker(ExtractionWorkerBase):
         self.params = params
         self._operation_name = "ROMExtractionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -187,7 +181,6 @@ class ROMExtractionWorker(ExtractionWorkerBase):
 
         logger.info(f"{self._operation_name}: ROM extraction completed successfully")
 
-
 # Worker-owned manager pattern (Phase 2 architecture)
 class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMixin):
     """
@@ -220,7 +213,6 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
         self.params = params
         self._operation_name = "WorkerOwnedVRAMExtractionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -273,7 +265,6 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
 
         logger.info(f"{self._operation_name}: Extraction completed successfully")
 
-
 class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMixin):
     """
     ROM extraction worker that owns its own ExtractionManager instance.
@@ -305,7 +296,6 @@ class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMix
         self.params = params
         self._operation_name = "WorkerOwnedROMExtractionWorker"
 
-    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)

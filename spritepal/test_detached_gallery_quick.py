@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Quick test to verify the detached gallery window fixes the stretching issue.
 """

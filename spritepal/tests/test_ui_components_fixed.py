@@ -1,6 +1,7 @@
 """
 Fixed tests for UI components
 """
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -20,9 +21,7 @@ pytestmark = [
     pytest.mark.requires_display,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 class TestROMMapWidgetFixed:
     """Test ROMMapWidget functionality with proper setup"""

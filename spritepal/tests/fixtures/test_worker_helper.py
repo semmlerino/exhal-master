@@ -1,14 +1,13 @@
 """
 Test worker helpers for synchronous execution in tests
 """
-
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
 import pytest
 from core.workers import ROMExtractionWorker, VRAMExtractionWorker
-
 
 # Test characteristics: Thread safety concerns
 pytestmark = [
@@ -22,7 +21,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestExtractionWorker(VRAMExtractionWorker):
     """Test-specific ExtractionWorker that runs synchronously"""
@@ -43,7 +41,6 @@ class TestExtractionWorker(VRAMExtractionWorker):
         """Override for test compatibility"""
         return True
 
-
 class TestROMExtractionWorker(ROMExtractionWorker):
     """Test-specific ROMExtractionWorker that runs synchronously"""
 
@@ -62,7 +59,6 @@ class TestROMExtractionWorker(ROMExtractionWorker):
     def wait(self, timeout: int = 0) -> bool:
         """Override for test compatibility"""
         return True
-
 
 class TestExtractionController:
     """Test-specific controller that uses synchronous workers"""
@@ -142,7 +138,6 @@ class TestExtractionController:
     def _cleanup_worker(self) -> None:
         """Cleanup worker (simplified for test)"""
         self.worker = None
-
 
 class TestWorkerHelper:
     """Helper for creating test injection workers and scenarios"""

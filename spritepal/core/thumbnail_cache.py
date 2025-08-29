@@ -2,11 +2,12 @@
 Thumbnail cache for sprite gallery performance optimization.
 Provides disk and memory caching for generated thumbnails.
 """
+from __future__ import annotations
 
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtGui import QPixmap
 
@@ -14,11 +15,10 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class ThumbnailCache:
     """Cache system for sprite thumbnails."""
 
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Path | None = None):
         """
         Initialize the thumbnail cache.
 
@@ -89,7 +89,7 @@ class ThumbnailCache:
         offset: int,
         size: int,
         palette_index: int = 8
-    ) -> Optional[QPixmap]:
+    ) -> QPixmap | None:
         """
         Get a thumbnail from cache.
 
@@ -271,10 +271,8 @@ class ThumbnailCache:
             # Return a placeholder hash
             return hashlib.sha256(rom_path.encode()).hexdigest()
 
-
 # Global cache instance
-_thumbnail_cache: Optional[ThumbnailCache] = None
-
+_thumbnail_cache: ThumbnailCache | None = None
 
 def get_thumbnail_cache() -> ThumbnailCache:
     """Get the global thumbnail cache instance."""

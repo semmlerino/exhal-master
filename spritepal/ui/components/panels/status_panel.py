@@ -3,11 +3,11 @@ Status Panel for Manual Offset Dialog
 
 Displays detection status, progress information, scanning progress, and cache status.
 """
+from __future__ import annotations
 
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from ui.styles import get_muted_text_style, get_panel_style
-from utils.rom_cache import get_rom_cache
 
 
 class StatusPanel(QWidget):
@@ -123,6 +123,8 @@ class StatusPanel(QWidget):
         if not hasattr(self, "cache_status_widget"):
             return
 
+        cache_enabled = True
+
         try:
             from utils.rom_cache import (
                 get_rom_cache,  # Delayed import to avoid circular dependency
@@ -133,61 +135,61 @@ class StatusPanel(QWidget):
 
             settings_manager = get_settings_manager()
             cache_enabled = settings_manager.get_cache_enabled()
+
+            if cache_enabled:
+                try:
+                    rom_cache = get_rom_cache()
+                    stats = rom_cache.get_cache_stats()
+
+                    # Update icon
+                    if self.cache_icon_label:
+                        self.cache_icon_label.setText("✓")
+                    if self.cache_icon_label:
+                        self.cache_icon_label.setStyleSheet("color: green; font-weight: bold;")
+
+                    # Update info
+                    total_files = stats.get("total_files", 0)
+                    size_bytes = stats.get("total_size_bytes", 0)
+                    size_mb = size_bytes / (1024 * 1024)
+
+                    if self.cache_info_label:
+                        self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
+
+                    # Update tooltip
+                    sprite_caches = stats.get("sprite_location_caches", 0)
+                    rom_caches = stats.get("rom_info_caches", 0)
+                    scan_caches = stats.get("scan_progress_caches", 0)
+
+                    tooltip = "ROM Cache Statistics:\n"
+                    tooltip += f"Total items: {total_files}\n"
+                    tooltip += f"- Sprite locations: {sprite_caches}\n"
+                    tooltip += f"- ROM info: {rom_caches}\n"
+                    tooltip += f"- Scan progress: {scan_caches}\n"
+                    tooltip += f"Total size: {size_mb:.1f} MB"
+
+                    self.cache_status_widget.setToolTip(tooltip)
+
+                except Exception:
+                    # Error getting stats
+                    if self.cache_icon_label:
+                        self.cache_icon_label.setText("⚠")
+                    if self.cache_icon_label:
+                        self.cache_icon_label.setStyleSheet("color: orange; font-weight: bold;")
+                    if self.cache_info_label:
+                        self.cache_info_label.setText("Error")
+                    self.cache_status_widget.setToolTip("Error reading cache statistics")
+            else:
+                # Cache disabled
+                if self.cache_icon_label:
+                    self.cache_icon_label.setText("✗")
+                if self.cache_icon_label:
+                    self.cache_icon_label.setStyleSheet("color: gray; font-weight: bold;")
+                if self.cache_info_label:
+                    self.cache_info_label.setText("Disabled")
+                self.cache_status_widget.setToolTip("ROM caching is disabled")
         except Exception:
-            # If settings manager isn't available, assume cache is enabled
-            cache_enabled = True
-
-        if cache_enabled:
-            try:
-                rom_cache = get_rom_cache()
-                stats = rom_cache.get_cache_stats()
-
-                # Update icon
-                if self.cache_icon_label:
-                    self.cache_icon_label.setText("✓")
-                if self.cache_icon_label:
-                    self.cache_icon_label.setStyleSheet("color: green; font-weight: bold;")
-
-                # Update info
-                total_files = stats.get("total_files", 0)
-                size_bytes = stats.get("total_size_bytes", 0)
-                size_mb = size_bytes / (1024 * 1024)
-
-                if self.cache_info_label:
-                    self.cache_info_label.setText(f"{total_files} items, {size_mb:.1f}MB")
-
-                # Update tooltip
-                sprite_caches = stats.get("sprite_location_caches", 0)
-                rom_caches = stats.get("rom_info_caches", 0)
-                scan_caches = stats.get("scan_progress_caches", 0)
-
-                tooltip = "ROM Cache Statistics:\n"
-                tooltip += f"Total items: {total_files}\n"
-                tooltip += f"- Sprite locations: {sprite_caches}\n"
-                tooltip += f"- ROM info: {rom_caches}\n"
-                tooltip += f"- Scan progress: {scan_caches}\n"
-                tooltip += f"Total size: {size_mb:.1f} MB"
-
-                self.cache_status_widget.setToolTip(tooltip)
-
-            except Exception:
-                # Error getting stats
-                if self.cache_icon_label:
-                    self.cache_icon_label.setText("⚠")
-                if self.cache_icon_label:
-                    self.cache_icon_label.setStyleSheet("color: orange; font-weight: bold;")
-                if self.cache_info_label:
-                    self.cache_info_label.setText("Error")
-                self.cache_status_widget.setToolTip("Error reading cache statistics")
-        else:
-            # Cache disabled
-            if self.cache_icon_label:
-                self.cache_icon_label.setText("✗")
-            if self.cache_icon_label:
-                self.cache_icon_label.setStyleSheet("color: gray; font-weight: bold;")
-            if self.cache_info_label:
-                self.cache_info_label.setText("Disabled")
-            self.cache_status_widget.setToolTip("ROM caching is disabled")
+            # Import failed or settings manager error
+            pass
 
     def update_cache_status(self) -> None:
         """Public method to update cache status (called externally)"""

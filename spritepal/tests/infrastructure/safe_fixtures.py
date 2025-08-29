@@ -96,7 +96,6 @@ FixtureType = TypeVar('FixtureType')
 _active_fixtures: weakref.WeakSet[Any] = weakref.WeakSet()
 _fixture_cleanup_lock = threading.Lock()
 
-
 @runtime_checkable
 class SafeQtBotProtocol(Protocol):
     """Protocol for safe qtbot implementations (real or mock)."""
@@ -109,7 +108,6 @@ class SafeQtBotProtocol(Protocol):
     def keyPress(self, widget: Any, key: Any, modifier: Any = None) -> None: ...
     def mouseClick(self, widget: Any, button: Any, **kwargs: Any) -> None: ...
 
-
 @runtime_checkable
 class SafeQApplicationProtocol(Protocol):
     """Protocol for safe QApplication implementations (real or mock)."""
@@ -120,7 +118,6 @@ class SafeQApplicationProtocol(Protocol):
     def primaryScreen(self) -> Any: ...
     @classmethod
     def instance(cls) -> Any: ...
-
 
 @runtime_checkable
 class SafeWidgetProtocol(Protocol):
@@ -133,7 +130,6 @@ class SafeWidgetProtocol(Protocol):
     def isVisible(self) -> bool: ...
     def update(self) -> None: ...
     def resize(self, width: int, height: int) -> None: ...
-
 
 class SafeQtBot:
     """
@@ -249,7 +245,6 @@ class SafeQtBot:
         except Exception as e:
             logger.warning(f"Error during qtbot cleanup: {e}")
 
-
 class SafeQApplication:
     """
     Safe QApplication wrapper that works in both headless and GUI environments.
@@ -341,11 +336,9 @@ class SafeQApplication:
 
         self._app = None
 
-
 class WidgetCreationError(Exception):
     """Raised when widget creation fails."""
     pass
-
 
 class SafeWidgetFactory:
     """
@@ -474,7 +467,6 @@ class SafeWidgetFactory:
 
         self._created_widgets.clear()
 
-
 class SafeDialogFactory:
     """
     Factory for creating dialogs safely with crash prevention.
@@ -592,7 +584,6 @@ class SafeDialogFactory:
 
         self._created_dialogs.clear()
 
-
 class SafeFixtureManager:
     """
     Central manager for safe fixture lifecycle and cleanup.
@@ -662,10 +653,8 @@ class SafeFixtureManager:
             self._dialog_factories.clear()
             self._cleanup_functions.clear()
 
-
 # Global fixture manager instance
 _fixture_manager = SafeFixtureManager()
-
 
 # Factory functions for creating safe fixtures
 
@@ -711,7 +700,6 @@ def create_safe_qtbot(request: FixtureRequest | None = None, timeout_override: i
 
     return qtbot  # type: ignore[return-value]  # Runtime protocol compliance
 
-
 def create_safe_qapp(args: list[str] | None = None) -> SafeQApplicationProtocol:
     """
     Create safe QApplication that works in both headless and GUI environments.
@@ -738,7 +726,6 @@ def create_safe_qapp(args: list[str] | None = None) -> SafeQApplicationProtocol:
 
     return app  # type: ignore[return-value]  # Runtime protocol compliance
 
-
 def create_safe_widget_factory() -> SafeWidgetFactory:
     """
     Create safe widget factory for environment-appropriate widget creation.
@@ -750,7 +737,6 @@ def create_safe_widget_factory() -> SafeWidgetFactory:
     _fixture_manager.register_widget_factory(factory)
     return factory
 
-
 def create_safe_dialog_factory() -> SafeDialogFactory:
     """
     Create safe dialog factory for environment-appropriate dialog creation.
@@ -761,7 +747,6 @@ def create_safe_dialog_factory() -> SafeDialogFactory:
     factory = SafeDialogFactory()
     _fixture_manager.register_dialog_factory(factory)
     return factory
-
 
 @contextmanager
 def safe_qt_context(request: FixtureRequest | None = None) -> Generator[dict[str, Any], None, None]:
@@ -803,7 +788,6 @@ def safe_qt_context(request: FixtureRequest | None = None) -> Generator[dict[str
     finally:
         # Cleanup is handled by fixture manager
         logger.info("Exiting safe Qt context")
-
 
 def validate_fixture_environment() -> dict[str, Any]:
     """
@@ -866,11 +850,9 @@ def validate_fixture_environment() -> dict[str, Any]:
 
     return results
 
-
 def cleanup_all_fixtures() -> None:
     """Global cleanup function for all fixtures."""
     _fixture_manager.cleanup_all()
-
 
 # Error reporting functions
 
@@ -914,7 +896,6 @@ def report_fixture_error(fixture_name: str, error: Exception, request: FixtureRe
         stacklevel=3
     )
 
-
 # Compatibility and migration helpers
 
 def migrate_to_safe_fixtures(test_function: Callable[..., Any]) -> Callable[..., Any]:
@@ -947,7 +928,6 @@ def migrate_to_safe_fixtures(test_function: Callable[..., Any]) -> Callable[...,
         return test_function(*args, **kwargs)
 
     return wrapper
-
 
 # Export all public functions and classes
 __all__ = [

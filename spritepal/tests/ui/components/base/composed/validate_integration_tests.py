@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Validation script for the migration adapter integration tests.
 
@@ -11,9 +13,9 @@ import ast
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any
 
-def analyze_test_file(file_path: Path) -> Dict[str, Any]:
+def analyze_test_file(file_path: Path) -> dict[str, Any]:
     """Analyze the test file structure and content."""
     
     with open(file_path, 'r') as f:
@@ -78,8 +80,7 @@ def analyze_test_file(file_path: Path) -> Dict[str, Any]:
     
     return analysis
 
-
-def validate_test_coverage(analysis: Dict[str, Any]) -> List[str]:
+def validate_test_coverage(analysis: dict[str, Any]) -> list[str]:
     """Validate that all required test scenarios are covered."""
     
     issues = []
@@ -105,8 +106,7 @@ def validate_test_coverage(analysis: Dict[str, Any]) -> List[str]:
     
     return issues
 
-
-def validate_test_structure(analysis: Dict[str, Any]) -> List[str]:
+def validate_test_structure(analysis: dict[str, Any]) -> list[str]:
     """Validate the overall test structure."""
     
     issues = []
@@ -142,8 +142,7 @@ def validate_test_structure(analysis: Dict[str, Any]) -> List[str]:
     
     return issues
 
-
-def check_specific_requirements(analysis: Dict[str, Any]) -> List[str]:
+def check_specific_requirements(analysis: dict[str, Any]) -> list[str]:
     """Check for specific requirements mentioned in the task."""
     
     issues = []
@@ -165,8 +164,7 @@ def check_specific_requirements(analysis: Dict[str, Any]) -> List[str]:
     
     return issues
 
-
-def analyze_test_class_coverage(analysis: Dict[str, Any]) -> None:
+def analyze_test_class_coverage(analysis: dict[str, Any]) -> None:
     """Analyze coverage by test class."""
     
     print("\nTest Class Coverage Analysis:")
@@ -178,7 +176,6 @@ def analyze_test_class_coverage(analysis: Dict[str, Any]) -> None:
             print(f"  - {method}")
         print(f"  Total: {test_class['method_count']} tests")
         print()
-
 
 def main():
     """Main validation function."""
@@ -234,7 +231,6 @@ def main():
         for issue in all_issues:
             print(f"  - {issue}")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

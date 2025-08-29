@@ -12,6 +12,7 @@ Key Features:
 - Zero breaking changes to existing code
 - Clean migration path for future dependency injection
 """
+from __future__ import annotations
 
 import atexit
 import threading
@@ -40,7 +41,7 @@ class ManagerContext:
     def __init__(
         self,
         managers: dict[str, Any] | None = None,
-        parent: 'ManagerContext | None' = None,
+        parent: ManagerContext | None = None,
         name: str = "unnamed"
     ) -> None:
         """
@@ -159,7 +160,7 @@ class ManagerContext:
         self,
         managers: dict[str, Any] | None = None,
         name: str = "child"
-    ) -> 'ManagerContext':
+    ) -> ManagerContext:
         """
         Create a child context that inherits from this context.
 
@@ -222,7 +223,6 @@ class ManagerContext:
 
     def __repr__(self) -> str:
         return f"ManagerContext(name='{self._name}', managers={list(self._managers.keys())})"
-
 
 class ThreadLocalContextManager:
     """
@@ -338,7 +338,6 @@ class ThreadLocalContextManager:
         if logger is not None:
             safe_debug(logger, "Cleaned up all thread context references")
 
-
 # Global instance for thread-local context management
 _context_manager = ThreadLocalContextManager()
 
@@ -356,7 +355,6 @@ def _cleanup_context_manager():
 
 atexit.register(_cleanup_context_manager)
 
-
 def get_current_context() -> ManagerContext | None:
     """
     Get the current manager context for this thread.
@@ -368,7 +366,6 @@ def get_current_context() -> ManagerContext | None:
         return None
     return _context_manager.get_current_context()
 
-
 def set_current_context(context: ManagerContext | None) -> None:
     """
     Set the current manager context for this thread.
@@ -379,7 +376,6 @@ def set_current_context(context: ManagerContext | None) -> None:
     if _context_manager is None:
         return
     _context_manager.set_current_context(context)
-
 
 @contextmanager
 def manager_context(
@@ -423,7 +419,6 @@ def manager_context(
         set_current_context(old_context)
         logger.debug(f"Exited manager context '{name}'")
 
-
 class ContextValidator:
     """
     Utilities for validating manager contexts and debugging context issues.
@@ -449,7 +444,8 @@ class ContextValidator:
 
                 # Check if manager has is_initialized method and is initialized
                 if hasattr(manager, 'is_initialized'):
-                    if not manager.is_initialized():
+                    is_initialized_method = manager.is_initialized
+                    if callable(is_initialized_method) and not is_initialized_method():
                         errors.append(f"{manager_name} manager not properly initialized")
                 else:
                     # For mock managers or managers without is_initialized

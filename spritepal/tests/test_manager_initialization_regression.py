@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+
 import pytest
 
 pytestmark = [
@@ -22,7 +24,6 @@ from unittest.mock import patch
 
 from core.managers import get_extraction_manager, get_injection_manager, get_session_manager
 from core.managers.exceptions import ManagerError
-
 
 class TestManagerInitializationRegression(unittest.TestCase):
     """Test that manager initialization works from any working directory"""
@@ -197,8 +198,6 @@ class TestManagerInitializationRegression(unittest.TestCase):
             with self.subTest(directory=dir_path):
                 self.assertIsNotNone(manager)
                 self.assertTrue(hasattr(manager, 'start_injection'))
-
-
 
 if __name__ == '__main__':
     unittest.main()

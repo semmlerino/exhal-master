@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Capture screenshot of the full application context:
 Main window with Manual Offset dialog opened, showing the Gallery tab.
@@ -12,8 +14,9 @@ from pathlib import Path
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from PySide6.QtCore import Qt, QTimer
 from typing import cast
+
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication
 
@@ -325,12 +328,10 @@ class FullContextCapture:
         # Run the application
         return self.app.exec()
 
-
 def main():
     """Main entry point."""
     capture = FullContextCapture()
     return capture.run()
-
 
 if __name__ == "__main__":
     sys.exit(main())

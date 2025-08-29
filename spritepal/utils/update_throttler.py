@@ -5,6 +5,7 @@ This module provides pure Python implementations for throttling and debouncing
 updates, useful for handling rapid UI events, file system changes, and other
 high-frequency update scenarios.
 """
+from __future__ import annotations
 
 import threading
 import time
@@ -12,7 +13,6 @@ from collections import deque
 from typing import Any, Callable, Generic, TypeVar
 
 T = TypeVar('T')
-
 
 class UpdateThrottler(Generic[T]):
     """
@@ -125,7 +125,6 @@ class UpdateThrottler(Generic[T]):
                 self._timer.cancel()
                 self._timer = None
 
-
 class RateLimiter:
     """
     Fixed-rate limiter for throttling actions.
@@ -217,7 +216,6 @@ class RateLimiter:
         with self._lock:
             self._last_action_time = 0.0
             self._burst_count = 0
-
 
 class BatchUpdateCollector(Generic[T]):
     """
@@ -326,7 +324,6 @@ class BatchUpdateCollector(Generic[T]):
         """
         with self._lock:
             return list(self._queue)
-
 
 class LastWriteWinsQueue(Generic[T]):
     """

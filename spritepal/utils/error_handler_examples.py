@@ -70,7 +70,6 @@ class ExampleWorker(QObject):
         self.finished.emit(sprites)
         return sprites
 
-
 # Example 2: Qt Widget with Error Handling Mixin
 class ExampleWidget(QWidget, ErrorHandlerMixin):
     """
@@ -119,7 +118,6 @@ class ExampleWidget(QWidget, ErrorHandlerMixin):
 
             # More processing...
             self.update_sprite_display(sprite_data)
-
 
 # Example 3: Manager Integration
 class ExampleManager:
@@ -198,7 +196,6 @@ class ExampleManager:
 
         return results
 
-
 # Example 4: Legacy Integration
 class LegacyIntegrationExample:
     """
@@ -270,7 +267,6 @@ class LegacyIntegrationExample:
                 e, "SpriteExtractor", "extracting sprites from ROM"
             )
 
-
 # Example 5: Testing Integration
 def demonstrate_error_statistics():
     """Demonstrate error statistics gathering"""
@@ -298,7 +294,6 @@ def demonstrate_error_statistics():
 
     return stats
 
-
 # Example usage functions
 def example_worker_usage():
     """Demonstrate worker error handling usage"""
@@ -310,7 +305,6 @@ def example_worker_usage():
 
     # This will trigger error handling if file doesn't exist
     worker.extract_sprites("test_rom.smc")
-
 
 def example_widget_usage():
     """Demonstrate widget error handling usage"""
@@ -326,7 +320,6 @@ def example_widget_usage():
     # Show error statistics
     stats = widget.get_error_statistics()
     print(f"Widget error stats: {stats}")
-
 
 if __name__ == "__main__":
     # Run demonstrations

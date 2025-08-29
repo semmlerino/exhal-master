@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Standalone launcher for the Detached Sprite Gallery.
 Run this script to open the gallery window independently for testing or demonstration.
@@ -205,7 +207,6 @@ class StandaloneGalleryLauncher:
             status_label.setText(f"{len(sprites)} demo sprites loaded")
 
         print(f"✅ Created gallery with {len(sprites)} colorful demo sprites")
-
 
     def run(self):
         """Run the standalone gallery."""

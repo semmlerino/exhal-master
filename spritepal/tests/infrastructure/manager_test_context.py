@@ -26,7 +26,6 @@ from .test_data_repository import get_test_data_repository
 
 M = TypeVar("M", bound=BaseManager)
 
-
 class ManagerTestContext:
     """
     Context manager for safe manager lifecycle management in tests.
@@ -254,7 +253,6 @@ class ManagerTestContext:
         """Context manager exit with cleanup."""
         self.cleanup()
 
-
 @contextlib.contextmanager
 def manager_context(*manager_types: str) -> Iterator[ManagerTestContext]:
     """
@@ -279,7 +277,6 @@ def manager_context(*manager_types: str) -> Iterator[ManagerTestContext]:
     finally:
         context.cleanup()
 
-
 @contextlib.contextmanager
 def isolated_manager_test() -> Iterator[ManagerTestContext]:
     """
@@ -297,7 +294,6 @@ def isolated_manager_test() -> Iterator[ManagerTestContext]:
         yield context
     finally:
         context.cleanup()
-
 
 class ParallelManagerContext:
     """
@@ -361,7 +357,6 @@ class ParallelManagerContext:
             else:
                 with self._lock:
                     self._available_contexts.append(context)
-
 
 # Pytest fixtures (if pytest is available)
 try:

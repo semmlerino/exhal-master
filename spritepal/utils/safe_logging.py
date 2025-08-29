@@ -4,6 +4,7 @@ Safe logging utilities for cleanup operations.
 This module provides utilities to prevent "I/O operation on closed file" errors
 during application shutdown when logging infrastructure is being torn down.
 """
+from __future__ import annotations
 
 import logging
 import sys
@@ -23,7 +24,7 @@ def is_logging_available() -> bool:
             return False
 
         # Check if logging handlers are still available
-        if not hasattr(logging, '_handlers') or not logging._handlers:  # pyright: ignore[reportPrivateUsage]
+        if not hasattr(logging, '_handlers') or not logging._handlers:  # type: ignore[attr-defined]
             return False
 
         # Try to get a logger and check if it has handlers
@@ -32,7 +33,6 @@ def is_logging_available() -> bool:
     except (AttributeError, ValueError, RuntimeError):
         # Logging system is in an invalid state
         return False
-
 
 def safe_log(logger: logging.Logger, level: int, message: str, *args: Any, **kwargs: Any) -> None:
     """
@@ -54,26 +54,21 @@ def safe_log(logger: logging.Logger, level: int, message: str, *args: Any, **kwa
         # Logging system is shut down or in invalid state
         pass
 
-
 def safe_debug(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
     """Safely log a debug message."""
     safe_log(logger, logging.DEBUG, message, *args, **kwargs)
-
 
 def safe_info(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
     """Safely log an info message."""
     safe_log(logger, logging.INFO, message, *args, **kwargs)
 
-
 def safe_warning(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
     """Safely log a warning message."""
     safe_log(logger, logging.WARNING, message, *args, **kwargs)
 
-
 def safe_error(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) -> None:
     """Safely log an error message."""
     safe_log(logger, logging.ERROR, message, *args, **kwargs)
-
 
 def suppress_logging_errors(func):
     """

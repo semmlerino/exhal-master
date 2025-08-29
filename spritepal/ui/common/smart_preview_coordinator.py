@@ -41,13 +41,11 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class DragState(Enum):
     """Slider drag state for different preview strategies."""
     IDLE = auto()         # Not dragging, normal operations
     DRAGGING = auto()     # Actively dragging slider
     SETTLING = auto()     # Just released, waiting for final update
-
 
 class PreviewRequest:
     """Represents a preview request with priority and cancellation support."""
@@ -68,7 +66,6 @@ class PreviewRequest:
     def __lt__(self, other):
         """Support priority queue ordering."""
         return self.priority > other.priority  # Higher priority first
-
 
 class SmartPreviewCoordinator(QObject):
     """
@@ -189,7 +186,7 @@ class SmartPreviewCoordinator(QObject):
 
     def set_ui_update_callback(self, callback: Callable[[int], None]) -> None:
         """Set callback for immediate UI updates during dragging."""
-        self._ui_update_callback = callback
+        self._ui_update_callback = callback  # type: ignore[assignment]
 
     def set_rom_data_provider(self, provider: Callable[[], tuple[str, Any, Any]]) -> None:
         """Set provider for ROM data needed for preview generation.
@@ -431,7 +428,9 @@ class SmartPreviewCoordinator(QObject):
                         if non_zero_count > 0:  # Has some non-zero data
                             logger.debug(f"[TRACE] Valid ROM cache hit: {len(tile_data)} bytes, {non_zero_count}/100 non-zero")
                             # Store in memory cache for faster future access
-                            self._cache.put(cache_key, rom_cache_data)
+                            # Ensure sprite_name is not None for cache storage
+                            cache_data = (tile_data, width, height, sprite_name or "")
+                            self._cache.put(cache_key, cache_data)
                             self.preview_cached.emit(tile_data, width, height, sprite_name)
                             self._cache_stats["rom_hits"] += 1
                             logger.debug(f"[SIGNAL_FLOW] ROM cache hit signal emitted for 0x{offset:06X}")

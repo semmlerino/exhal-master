@@ -2,17 +2,14 @@
 Comprehensive tests for ROM scanning functionality.
 Tests the scan_for_sprites method and related quality assessment features.
 """
-
-
-
-
-
-from unittest.mock import patch
+from __future__ import annotations
 
 import pytest
 
 from core.rom_extractor import ROMExtractor
-
+from tests.infrastructure.test_doubles import (
+    MockHALCompressor, TestDoubleFactory, setup_hal_mocking
+)
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -26,6 +23,29 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
+class CustomMockHALCompressor(MockHALCompressor):
+    """Custom HAL compressor for ROM scanning tests with specific size control."""
+    
+    def __init__(self):
+        super().__init__()
+        self._sprite_responses = {}  # Map offset to (compressed_size, decompressed_data)
+        
+    def configure_sprite_response(self, offset: int, compressed_size: int, decompressed_data: bytes):
+        """Configure specific response for a ROM offset."""
+        self._sprite_responses[offset] = (compressed_size, decompressed_data)
+        
+    def decompress_from_rom(self, rom_path: str, offset: int, output_path: str = None) -> bytes:
+        """Return configured sprite data or raise exception."""
+        if offset in self._sprite_responses:
+            _, decompressed_data = self._sprite_responses[offset]
+            if output_path:
+                from pathlib import Path
+                Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+                Path(output_path).write_bytes(decompressed_data)
+            return decompressed_data
+        else:
+            # Default behavior - raise exception for unknown offsets
+            raise Exception("No sprite found")
 
 class TestROMScanning:
     """Test ROM scanning functionality with comprehensive coverage"""
@@ -57,19 +77,81 @@ class TestROMScanning:
 
     def test_scan_for_sprites_basic_functionality(self, rom_extractor, mock_rom_file):
         """Test basic sprite scanning functionality"""
-        # Mock the hal compression to return predictable results
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            # Return valid sprite data for our test offsets
-            def mock_find_sprite(rom_data, offset):
-                if offset in [0x8000, 0x10000, 0x18000]:
-                    # Return mock decompressed sprite data (16 tiles = 512 bytes)
-                    sprite_data = b"\x00" * 512  # 16 tiles of sprite data
-                    return 64, sprite_data  # compressed_size=64, decompressed_data=512 bytes
-                raise Exception("No sprite found")
+        # Set up custom HAL compressor with specific responses
+        mock_hal = CustomMockHALCompressor()
+        
+        # Configure responses for test offsets (16 tiles = 512 bytes)
+        sprite_data = b"\x00" * 512
+        mock_hal.configure_sprite_response(0x8000, 64, sprite_data)
+        mock_hal.configure_sprite_response(0x10000, 64, sprite_data)
+        mock_hal.configure_sprite_response(0x18000, 64, sprite_data)
+        
+        # Replace the HAL compressor
+        rom_extractor.rom_injector.hal_compressor = mock_hal
 
-            mock_decompress.side_effect = mock_find_sprite
+        # Run the scan
+        results = rom_extractor.scan_for_sprites(
+            mock_rom_file,
+            start_offset=0x8000,
+            end_offset=0x20000,
+            step=0x1000
+        )
 
-            # Run the scan
+        # Verify results
+        assert len(results) == 3
+        assert all(sprite["tile_count"] == 16 for sprite in results)
+        # Note: compressed_size comes from _estimate_compressed_size, not our mock
+        # So we verify decompressed_size instead
+        assert all(sprite["decompressed_size"] == 512 for sprite in results)
+
+        # Check that offsets are correct
+        found_offsets = [sprite["offset"] for sprite in results]
+        assert 0x8000 in found_offsets
+        assert 0x10000 in found_offsets
+        assert 0x18000 in found_offsets
+
+    def test_scan_for_sprites_end_offset_exceeds_rom(self, rom_extractor, mock_rom_file):
+        """Test scanning when end offset exceeds ROM size"""
+        # Set up HAL compressor that returns no sprites
+        mock_hal = CustomMockHALCompressor()
+        rom_extractor.rom_injector.hal_compressor = mock_hal
+
+        # Try to scan beyond ROM size
+        results = rom_extractor.scan_for_sprites(
+            mock_rom_file,
+            start_offset=0x10000,
+            end_offset=0x100000,  # Way beyond 128KB ROM
+            step=0x1000
+        )
+
+        # Should complete without error and return empty results
+        assert isinstance(results, list)
+
+    def test_scan_for_sprites_quality_filtering(self, rom_extractor, mock_rom_file):
+        """Test that sprites are sorted by quality score"""
+        from unittest.mock import patch
+        
+        # Set up custom HAL compressor with different sprite data
+        mock_hal = CustomMockHALCompressor()
+        mock_hal.configure_sprite_response(0x8000, 32, b"\x00" * 512)  # Good sprite
+        mock_hal.configure_sprite_response(0x10000, 48, b"\x11" * 512)  # Better sprite  
+        mock_hal.configure_sprite_response(0x18000, 16, b"\x22" * 512)  # Different sprite
+        
+        rom_extractor.rom_injector.hal_compressor = mock_hal
+
+        # Mock quality assessment (still need this since it's on rom_extractor)
+        with patch.object(rom_extractor, "_assess_sprite_quality") as mock_quality:
+            def mock_assess_quality(sprite_data):
+                if sprite_data == b"\x11" * 512:
+                    return 95.0  # Highest quality
+                if sprite_data == b"\x00" * 512:
+                    return 85.0  # Medium quality
+                if sprite_data == b"\x22" * 512:
+                    return 75.0  # Lower quality
+                return 0.0
+
+            mock_quality.side_effect = mock_assess_quality
+
             results = rom_extractor.scan_for_sprites(
                 mock_rom_file,
                 start_offset=0x8000,
@@ -77,130 +159,64 @@ class TestROMScanning:
                 step=0x1000
             )
 
-            # Verify results
+            # Verify results are sorted by quality (highest first)
             assert len(results) == 3
-            assert all(sprite["tile_count"] == 16 for sprite in results)
-            assert all(sprite["compressed_size"] == 64 for sprite in results)
-            assert all(sprite["decompressed_size"] == 512 for sprite in results)
-
-            # Check that offsets are correct
-            found_offsets = [sprite["offset"] for sprite in results]
-            assert 0x8000 in found_offsets
-            assert 0x10000 in found_offsets
-            assert 0x18000 in found_offsets
-
-    def test_scan_for_sprites_end_offset_exceeds_rom(self, rom_extractor, mock_rom_file):
-        """Test scanning when end offset exceeds ROM size"""
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            mock_decompress.side_effect = Exception("No sprite found")
-
-            # Try to scan beyond ROM size
-            results = rom_extractor.scan_for_sprites(
-                mock_rom_file,
-                start_offset=0x10000,
-                end_offset=0x100000,  # Way beyond 128KB ROM
-                step=0x1000
-            )
-
-            # Should complete without error and return empty results
-            assert isinstance(results, list)
-
-    def test_scan_for_sprites_quality_filtering(self, rom_extractor, mock_rom_file):
-        """Test that sprites are sorted by quality score"""
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            with patch.object(rom_extractor, "_assess_sprite_quality") as mock_quality:
-                # Return different quality scores for different offsets
-                def mock_find_sprite(rom_data, offset):
-                    if offset == 0x8000:
-                        return 32, b"\x00" * 512  # Good sprite (16 tiles)
-                    if offset == 0x10000:
-                        return 48, b"\x11" * 512  # Better sprite (16 tiles)
-                    if offset == 0x18000:
-                        return 16, b"\x22" * 512  # Smaller sprite (16 tiles)
-                    raise Exception("No sprite found")
-
-                def mock_assess_quality(sprite_data):
-                    if sprite_data == b"\x11" * 512:
-                        return 95.0  # Highest quality
-                    if sprite_data == b"\x00" * 512:
-                        return 85.0  # Medium quality
-                    if sprite_data == b"\x22" * 512:
-                        return 75.0  # Lower quality
-                    return 0.0
-
-                mock_decompress.side_effect = mock_find_sprite
-                mock_quality.side_effect = mock_assess_quality
-
-                results = rom_extractor.scan_for_sprites(
-                    mock_rom_file,
-                    start_offset=0x8000,
-                    end_offset=0x20000,
-                    step=0x1000
-                )
-
-                # Verify results are sorted by quality (highest first)
-                assert len(results) == 3
-                assert results[0]["quality"] == 95.0  # Best quality first
-                assert results[1]["quality"] == 85.0
-                assert results[2]["quality"] == 75.0
+            assert results[0]["quality"] == 95.0  # Best quality first
+            assert results[1]["quality"] == 85.0
+            assert results[2]["quality"] == 75.0
 
     def test_scan_for_sprites_alignment_validation(self, rom_extractor, mock_rom_file):
         """Test sprite alignment validation during scanning"""
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            # Test different sprite sizes
-            def mock_find_sprite(rom_data, offset):
-                if offset == 0x8000:
-                    # Perfect alignment (512 bytes = 16 tiles * 32 bytes)
-                    return 64, b"\x00" * 512
-                if offset == 0x10000:
-                    # Minor misalignment (520 bytes = 16 tiles + 8 extra)
-                    return 68, b"\x11" * 520
-                if offset == 0x18000:
-                    # Too small (32 bytes = 1 tile, less than minimum 16)
-                    return 16, b"\x22" * 32
-                raise Exception("No sprite found")
+        from unittest.mock import patch
+        
+        # Set up custom HAL compressor with different alignment scenarios
+        mock_hal = CustomMockHALCompressor()
+        mock_hal.configure_sprite_response(0x8000, 64, b"\x00" * 512)  # Perfect alignment (16 tiles)
+        mock_hal.configure_sprite_response(0x10000, 68, b"\x11" * 520)  # Minor misalignment (16 tiles + 8 extra)
+        mock_hal.configure_sprite_response(0x18000, 16, b"\x22" * 32)   # Too small (1 tile)
+        
+        rom_extractor.rom_injector.hal_compressor = mock_hal
 
-            mock_decompress.side_effect = mock_find_sprite
+        with patch.object(rom_extractor, "_assess_sprite_quality", return_value=80.0):
+            results = rom_extractor.scan_for_sprites(
+                mock_rom_file,
+                start_offset=0x8000,
+                end_offset=0x20000,
+                step=0x1000
+            )
 
-            with patch.object(rom_extractor, "_assess_sprite_quality", return_value=80.0):
-                results = rom_extractor.scan_for_sprites(
-                    mock_rom_file,
-                    start_offset=0x8000,
-                    end_offset=0x20000,
-                    step=0x1000
-                )
+            # Should only find 2 sprites (16+ tiles), not the 1-tile sprite
+            assert len(results) == 2
 
-                # Should only find 2 sprites (16+ tiles), not the 1-tile sprite
-                assert len(results) == 2
+            # Check alignment status
+            perfect_sprite = next((s for s in results if s["offset"] == 0x8000), None)
+            misaligned_sprite = next((s for s in results if s["offset"] == 0x10000), None)
 
-                # Check alignment status
-                perfect_sprite = next((s for s in results if s["offset"] == 0x8000), None)
-                misaligned_sprite = next((s for s in results if s["offset"] == 0x10000), None)
+            assert perfect_sprite is not None
+            assert perfect_sprite["alignment"] == "perfect"
+            assert perfect_sprite["tile_count"] == 16
 
-                assert perfect_sprite is not None
-                assert perfect_sprite["alignment"] == "perfect"
-                assert perfect_sprite["tile_count"] == 16
-
-                assert misaligned_sprite is not None
-                assert misaligned_sprite["alignment"] == "8 extra bytes"
-                assert misaligned_sprite["tile_count"] == 16
+            assert misaligned_sprite is not None
+            assert misaligned_sprite["alignment"] == "8 extra bytes"
+            assert misaligned_sprite["tile_count"] == 16
 
     def test_scan_for_sprites_large_range_completion(self, rom_extractor, mock_rom_file):
         """Test that scanning completes successfully over a large range"""
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            mock_decompress.side_effect = Exception("No sprite found")
+        # Set up HAL compressor that returns no sprites  
+        mock_hal = CustomMockHALCompressor()
+        rom_extractor.rom_injector.hal_compressor = mock_hal
 
-            # Run a scan that should complete without errors
-            results = rom_extractor.scan_for_sprites(
-                mock_rom_file,
-                start_offset=0x0,
-                end_offset=0x20000,  # Large range
-                step=0x1000  # Reasonable step size
-            )
+        # Run a scan that should complete without errors
+        results = rom_extractor.scan_for_sprites(
+            mock_rom_file,
+            start_offset=0x0,
+            end_offset=0x20000,  # Large range
+            step=0x1000  # Reasonable step size
+        )
 
-            # Should complete and return empty list (no sprites found)
-            assert isinstance(results, list)
-            assert len(results) == 0
+        # Should complete and return empty list (no sprites found)
+        assert isinstance(results, list)
+        assert len(results) == 0
 
     def test_scan_for_sprites_exception_handling(self, rom_extractor):
         """Test scanning with invalid ROM file"""
@@ -217,19 +233,18 @@ class TestROMScanning:
 
     def test_scan_for_sprites_empty_results(self, rom_extractor, mock_rom_file):
         """Test scanning when no valid sprites are found"""
-        with patch.object(rom_extractor.rom_injector, "find_compressed_sprite") as mock_decompress:
-            # Always fail decompression
-            mock_decompress.side_effect = Exception("No sprite found")
+        # Set up HAL compressor that always fails
+        mock_hal = CustomMockHALCompressor()
+        rom_extractor.rom_injector.hal_compressor = mock_hal
 
-            results = rom_extractor.scan_for_sprites(
-                mock_rom_file,
-                start_offset=0x8000,
-                end_offset=0x10000,
-                step=0x1000
-            )
+        results = rom_extractor.scan_for_sprites(
+            mock_rom_file,
+            start_offset=0x8000,
+            end_offset=0x10000,
+            step=0x1000
+        )
 
-            assert results == []
-
+        assert results == []
 
 class TestROMSpriteQualityAssessment:
     """Test ROM sprite quality assessment functionality"""
@@ -302,7 +317,6 @@ class TestROMSpriteQualityAssessment:
         assert 0.0 <= quality_with_embedded <= 1.0
         assert 0.0 <= quality_without_embedded <= 1.0
 
-
 class TestROMExtractorAdvancedFeatures:
     """Test advanced ROM extractor features for better coverage"""
 
@@ -333,6 +347,9 @@ class TestROMExtractorAdvancedFeatures:
 
     def test_get_known_sprite_locations_with_kirby_rom(self, rom_extractor, tmp_path):
         """Test getting known sprite locations for a Kirby ROM"""
+        from unittest.mock import patch
+        from core.rom_injector import SpritePointer
+        
         # Create a ROM with KIRBY in the title
         rom_path = tmp_path / "kirby_test.sfc"
         rom_data = bytearray(64 * 1024)  # 64KB ROM
@@ -351,7 +368,7 @@ class TestROMExtractorAdvancedFeatures:
         rom_path.write_bytes(rom_data)
 
         # Mock the rom injector's find_sprite_locations method
-        from core.rom_injector import SpritePointer
+        # Note: This is still using patch because find_sprite_locations is not HAL-related
         with patch.object(rom_extractor.rom_injector, "find_sprite_locations") as mock_find_locations:
             mock_locations = {
                 "kirby_normal": SpritePointer(offset=0x8000, bank=0x10, address=0x0000),

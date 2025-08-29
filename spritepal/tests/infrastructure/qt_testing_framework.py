@@ -5,6 +5,7 @@ Provides reusable patterns and utilities for testing Qt components with
 real implementations instead of mocks, focusing on catching architectural
 bugs and ensuring proper Qt lifecycle management.
 """
+from __future__ import annotations
 
 import time
 from contextlib import contextmanager, suppress
@@ -41,7 +42,7 @@ class QtTestingFramework:
         self._signal_spies: list[QSignalSpy] = []
         self._timers: list[QTimer] = []
 
-    def create_widget_test_context(self, widget_class: type, *args, **kwargs) -> "WidgetTestContext":
+    def create_widget_test_context(self, widget_class: type, *args, **kwargs) -> WidgetTestContext:
         """
         Create a test context for a Qt widget.
 
@@ -54,7 +55,7 @@ class QtTestingFramework:
         """
         return WidgetTestContext(self, widget_class, *args, **kwargs)
 
-    def create_dialog_test_context(self, dialog_class: type, *args, **kwargs) -> "DialogTestContext":
+    def create_dialog_test_context(self, dialog_class: type, *args, **kwargs) -> DialogTestContext:
         """
         Create a test context for a Qt dialog.
 
@@ -67,7 +68,7 @@ class QtTestingFramework:
         """
         return DialogTestContext(self, dialog_class, *args, **kwargs)
 
-    def create_worker_test_context(self, worker_class: type, *args, **kwargs) -> "WorkerTestContext":
+    def create_worker_test_context(self, worker_class: type, *args, **kwargs) -> WorkerTestContext:
         """
         Create a test context for a worker thread.
 
@@ -141,7 +142,7 @@ class QtTestingFramework:
         """Process Qt events."""
         TestApplicationFactory.process_events(timeout_ms)
 
-    def create_timer_context(self, interval_ms: int, callback: Callable) -> "TimerTestContext":
+    def create_timer_context(self, interval_ms: int, callback: Callable) -> TimerTestContext:
         """
         Create a test context for Qt timer operations.
 
@@ -182,7 +183,6 @@ class QtTestingFramework:
         self._created_widgets.clear()
         self._signal_spies.clear()
         self._timers.clear()
-
 
 class WidgetTestContext:
     """Test context for Qt widgets with proper lifecycle management."""
@@ -237,7 +237,6 @@ class WidgetTestContext:
             "size": (self.widget.width(), self.widget.height()),
         }
 
-
 class DialogTestContext:
     """Test context for Qt dialogs with proper modal handling."""
 
@@ -288,7 +287,6 @@ class DialogTestContext:
             "parent_type": type(self.dialog.parent()).__name__ if self.dialog.parent() else None,
             "result": self.dialog.result(),
         }
-
 
 class WorkerTestContext:
     """Test context for worker threads with real QThread testing."""
@@ -392,7 +390,6 @@ class WorkerTestContext:
 
         return result
 
-
 class TimerTestContext:
     """Test context for Qt timer operations."""
 
@@ -444,7 +441,6 @@ class TimerTestContext:
         self.timer.stop()
         return self.callback_count
 
-
 # Convenience functions for common testing patterns
 @contextmanager
 def qt_widget_test(widget_class: type, *args, **kwargs):
@@ -456,7 +452,6 @@ def qt_widget_test(widget_class: type, *args, **kwargs):
     finally:
         framework.cleanup()
 
-
 @contextmanager
 def qt_dialog_test(dialog_class: type, *args, **kwargs):
     """Context manager for Qt dialog testing."""
@@ -467,7 +462,6 @@ def qt_dialog_test(dialog_class: type, *args, **kwargs):
     finally:
         framework.cleanup()
 
-
 @contextmanager
 def qt_worker_test(worker_class: type, *args, **kwargs):
     """Context manager for Qt worker testing."""
@@ -477,7 +471,6 @@ def qt_worker_test(worker_class: type, *args, **kwargs):
             yield worker
     finally:
         framework.cleanup()
-
 
 def validate_qt_object_lifecycle(obj: QObject) -> dict[str, Any]:
     """Validate Qt object lifecycle for debugging."""

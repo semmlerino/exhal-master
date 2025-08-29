@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 SpritePal - Modern Sprite Extraction Tool
 Simplifies sprite extraction with automatic palette association
@@ -76,7 +78,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
     # Call the default handler to maintain normal behavior
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
 
 class SpritePalApp(QApplication):
     """Main application class for SpritePal"""
@@ -436,7 +437,6 @@ class SpritePalApp(QApplication):
         """Show the main window"""
         self.main_window.show()
 
-
 def main():
     """Main entry point"""
     # Initialize logging (will use SPRITEPAL_DEBUG env var if set)
@@ -490,7 +490,6 @@ def main():
         logger.info("Managers cleaned up")
 
     sys.exit(result)
-
 
 if __name__ == "__main__":
     main()

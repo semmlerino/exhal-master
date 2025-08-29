@@ -7,6 +7,7 @@ transformation process.
 
 Run with: pytest tests/examples/example_migration.py -v
 """
+from __future__ import annotations
 
 from unittest.mock import Mock, cast
 
@@ -96,7 +97,6 @@ class TestManagerCreationMigration:
         # 3. Tests validate actual business logic
         # 4. More resilient to refactoring
 
-
 # ============================================================================
 # MIGRATION EXAMPLE 2: Worker Testing
 # ============================================================================
@@ -178,7 +178,6 @@ class TestWorkerTestingMigration:
         # 2. Real Qt signal emission
         # 3. Authentic worker lifecycle
         # 4. Tests actual worker logic
-
 
 # ============================================================================
 # MIGRATION EXAMPLE 3: UI Component Testing
@@ -263,7 +262,6 @@ class TestUIComponentMigration:
         # 3. Real event handling
         # 4. Proper widget lifecycle
 
-
 # ============================================================================
 # MIGRATION EXAMPLE 4: Test Fixture Migration
 # ============================================================================
@@ -345,7 +343,6 @@ class TestFixtureMigration:
         test_params = {"vram_path": "/test/vram.dmp"}
         is_valid = extraction.validate_extraction_params(test_params)
         assert isinstance(is_valid, bool)
-
 
 # ============================================================================
 # MIGRATION EXAMPLE 5: Complex Integration Test Migration
@@ -451,7 +448,6 @@ class TestComplexIntegrationMigration:
         # 3. Resilient to implementation changes
         # 4. Minimal maintenance overhead
 
-
 # ============================================================================
 # MIGRATION HELPER FUNCTIONS
 # ============================================================================
@@ -514,7 +510,6 @@ def analyze_mock_usage_in_test_method(test_method_source: str) -> dict:
 
     return analysis
 
-
 def generate_migration_plan(test_file_path: str) -> str:
     """
     Generate a migration plan for a test file.
@@ -554,7 +549,6 @@ Resources: See tests/examples/ for migration patterns
 """
 
     return plan
-
 
 # Example usage of migration helpers
 if __name__ == "__main__":

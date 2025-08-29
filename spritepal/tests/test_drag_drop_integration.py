@@ -2,6 +2,7 @@
 Integration tests for drag & drop functionality - Priority 1 test implementation.
 Tests file drag & drop handling across UI components.
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -26,12 +27,10 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # We'll test the core drag-drop logic without Qt dependencies
 from utils.constants import VRAM_SPRITE_OFFSET
-
 
 class TestDragDropIntegration:
     """Test drag & drop functionality integration"""
@@ -292,7 +291,6 @@ class TestDragDropIntegration:
         assert drop_zone.file_path == ""
         assert not drop_zone.file_dropped.emit.called
 
-
 class TestExtractionPanelIntegration:
     """Test ExtractionPanel drag & drop integration"""
 
@@ -419,7 +417,6 @@ class TestExtractionPanelIntegration:
         # Verify extraction is NOT ready (missing CGRAM)
         panel.extraction_ready.emit.assert_called_with(False)
 
-
 class TestDragDropErrorHandling:
     """Test drag & drop error handling scenarios"""
 
@@ -516,7 +513,6 @@ class TestDragDropErrorHandling:
         # Verify no file was set
         assert mock_drop_zone.file_path == ""
         assert not mock_drop_zone.file_dropped.emit.called
-
 
 class TestDragDropSignalIntegration:
     """Test drag & drop signal integration"""

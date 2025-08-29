@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Fix common attribute access issues automatically.
 
 This script addresses the 131 reportAttributeAccessIssue errors found by basedpyright.
@@ -11,7 +13,6 @@ It handles:
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple, Set
 
 # Qt Enum fixes - PySide6 uses different enum access patterns
 QT_ENUM_REPLACEMENTS = [
@@ -78,7 +79,7 @@ IMPORT_REPLACEMENTS = [
      'import ui.main_window as main_window'),
 ]
 
-def fix_qt_enums(content: str) -> Tuple[str, int]:
+def fix_qt_enums(content: str) -> tuple[str, int]:
     """Fix Qt enum access patterns for PySide6 compatibility.
     
     Returns:
@@ -94,7 +95,7 @@ def fix_qt_enums(content: str) -> Tuple[str, int]:
     
     return content, total_replacements
 
-def fix_imports(content: str) -> Tuple[str, int]:
+def fix_imports(content: str) -> tuple[str, int]:
     """Fix import statements with known issues.
     
     Returns:
@@ -110,7 +111,7 @@ def fix_imports(content: str) -> Tuple[str, int]:
     
     return content, total_replacements
 
-def add_type_ignores_for_tests(content: str, file_path: Path) -> Tuple[str, int]:
+def add_type_ignores_for_tests(content: str, file_path: Path) -> tuple[str, int]:
     """Add type: ignore comments for known test infrastructure issues.
     
     Only applies to test files.

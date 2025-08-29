@@ -3,6 +3,7 @@ Layout Manager Component
 
 Enhanced layout management with superior visual design for composed implementation.
 """
+from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any
@@ -23,7 +24,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class LayoutManagerComponent:
     """
     Layout manager that chooses enhanced or legacy layout based on implementation.
@@ -39,7 +39,7 @@ class LayoutManagerComponent:
     MIN_MINI_MAP_HEIGHT = 30  # Mini ROM map minimum height
     MIN_LEFT_PANEL_WIDTH = 380  # Minimum left panel width
 
-    def __init__(self, dialog: 'ManualOffsetDialogCore'):
+    def __init__(self, dialog: ManualOffsetDialogCore):
         """Initialize the layout manager component."""
         self.dialog = dialog
 

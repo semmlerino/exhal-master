@@ -1,6 +1,7 @@
 """
 Test sprite validation functionality
 """
+from __future__ import annotations
 
 import json
 import os
@@ -11,7 +12,6 @@ from PIL import Image
 
 from core.sprite_validator import SpriteValidator
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -21,7 +21,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.no_manager_setup,  # Pure unit tests for sprite validation
 ]
-
 
 class TestSpriteValidator:
     """Test sprite validation"""
@@ -239,7 +238,6 @@ class TestSpriteValidator:
 
             assert is_valid  # Still valid, just warning
             assert any("Tile count mismatch" in w for w in warnings)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

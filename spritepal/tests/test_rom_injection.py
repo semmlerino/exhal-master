@@ -1,6 +1,7 @@
 """
 Tests for ROM injection functionality
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -11,7 +12,6 @@ import pytest
 
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.rom_injector import ROMHeader, ROMInjector
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.mock_only,
     pytest.mark.unit,
 ]
-
 
 class TestHALCompression(unittest.TestCase):
     """Test HAL compression/decompression"""
@@ -73,7 +72,6 @@ class TestHALCompression(unittest.TestCase):
                 compressor.compress_to_file(large_data, "output.bin")
 
             assert "too large" in str(cm.value)
-
 
 class TestROMInjector(unittest.TestCase):
     """Test ROM injection functionality"""
@@ -165,7 +163,6 @@ class TestROMInjector(unittest.TestCase):
             assert pointer.bank is not None
             assert pointer.address is not None
 
-
 @pytest.mark.gui
 class TestROMInjectionDialog(unittest.TestCase):
     """Test ROM injection dialog (requires Qt)"""
@@ -194,7 +191,6 @@ class TestROMInjectionDialog(unittest.TestCase):
         assert hasattr(dialog, "output_rom_selector")
         assert hasattr(dialog, "sprite_location_combo")
         assert hasattr(dialog, "fast_compression_check")
-
 
 if __name__ == "__main__":
     unittest.main()

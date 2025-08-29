@@ -1,4 +1,5 @@
 """Image utility functions for SpritePal"""
+from __future__ import annotations
 
 import io
 
@@ -8,7 +9,6 @@ from PySide6.QtGui import QPixmap
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
     """
@@ -65,7 +65,6 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
         return None
     else:
         return None
-
 
 def create_checkerboard_pattern(
     width: int,

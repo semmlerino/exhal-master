@@ -10,6 +10,7 @@ Tests focus on:
 6. Thread safety and concurrent access patterns
 7. Cache expiration and cleanup
 """
+from __future__ import annotations
 
 import json
 import tempfile
@@ -40,7 +41,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.worker_threads,
 ]
-
 
 class TestCacheWorker:
     """Test the CacheWorker background thread functionality"""
@@ -209,7 +209,6 @@ class TestCacheWorker:
         
         args = blocker.args
         assert args[1] == test_data
-
 
 class TestAsyncROMCache:
     """Test the AsyncROMCache coordination and async interface"""
@@ -471,7 +470,6 @@ class TestAsyncROMCache:
         # Thread should be dedicated (not main thread)
         assert self.async_cache._worker_thread != QThread.currentThread()
 
-
 class TestAsyncROMCacheIntegration:
     """Integration tests for AsyncROMCache with real file system operations"""
     
@@ -664,7 +662,6 @@ class TestAsyncROMCacheIntegration:
         
         del cache_instance
 
-
 # Benchmark tests for performance validation
 class TestAsyncROMCacheBenchmarks:
     """Benchmark tests to validate caching performance improvements"""
@@ -714,7 +711,6 @@ class TestAsyncROMCacheBenchmarks:
         assert isinstance(result, str)
         assert len(result) > 0
         assert f"{offset:08x}" in result
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

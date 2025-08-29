@@ -4,6 +4,7 @@ Integration tests for ROM cache UI components.
 Tests the visual display and user interactions with cache status indicators,
 progress tracking, and the resume scan dialog.
 """
+from __future__ import annotations
 
 import os
 import time
@@ -21,7 +22,6 @@ from ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
 from ui.rom_extraction.widgets.sprite_selector_widget import (
 # Systematic pytest markers applied based on test content analysis
 
-
     SpriteSelectorWidget,
 )
 from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
@@ -29,8 +29,6 @@ from ui.rom_extraction_panel import ROMExtractionPanel
 from utils.rom_cache import ROMCache
 
 # Manager setup is handled by conftest.py setup_managers fixture
-
-
 
 pytestmark = [
     pytest.mark.benchmark,
@@ -55,7 +53,6 @@ def temp_cache_dir(tmp_path):
     cache_dir.mkdir()
     return str(cache_dir)
 
-
 @pytest.fixture
 def test_rom_file(tmp_path):
     """Create a test ROM file."""
@@ -68,13 +65,11 @@ def test_rom_file(tmp_path):
     rom_file.write_bytes(rom_data)
     return str(rom_file)
 
-
 @pytest.fixture
 def rom_cache(temp_cache_dir):
     """Create a ROM cache instance with temporary directory."""
     return ROMCache(cache_dir=temp_cache_dir)
     # No close needed - SQLite connection handled automatically
-
 
 class TestROMFileWidgetCacheDisplay:
     """Test cache status display in ROMFileWidget."""
@@ -244,7 +239,6 @@ class TestROMFileWidgetCacheDisplay:
         info_text = widget.rom_info_label.text()
         assert "💾" not in info_text
         assert "cached" not in info_text
-
 
 class TestSpriteScanWorkerCacheIntegration:
     """Test cache integration in sprite scanning workflow."""
@@ -491,7 +485,6 @@ class TestSpriteScanWorkerCacheIntegration:
         assert all(0 <= p <= 100 for p in cache_progresses)
         # Don't check for 100% since we may terminate early
 
-
 class TestResumeScanDialog:
     """Test ResumeScanDialog user interactions."""
 
@@ -570,7 +563,6 @@ class TestResumeScanDialog:
         qtbot.mouseClick(dialog.cancel_button, Qt.MouseButton.LeftButton)
 
         assert dialog.get_user_choice() == ResumeScanDialog.CANCEL
-
 
 class TestROMExtractionPanelCacheUI:
     """Test cache UI updates in ROMExtractionPanel during scanning."""
@@ -658,7 +650,6 @@ class TestROMExtractionPanelCacheUI:
 
         # Verify partial scan was detected
         assert partial_scan_detected
-
 
 class TestCacheUIEndToEnd:
     """Test complete cache UI workflow from start to finish."""

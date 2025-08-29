@@ -1,6 +1,7 @@
 """
 Integration tests for the grid arrangement system
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -12,7 +13,6 @@ from PIL import Image
 from ui.row_arrangement.grid_arrangement_manager import (
 # Systematic pytest markers applied based on test content analysis
 
-
     ArrangementType,
     GridArrangementManager,
     TileGroup,
@@ -21,8 +21,6 @@ from ui.row_arrangement.grid_arrangement_manager import (
 from ui.row_arrangement.grid_image_processor import GridImageProcessor
 from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
-
-
 
 pytestmark = [
     pytest.mark.file_io,

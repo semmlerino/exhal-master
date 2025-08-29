@@ -1,0 +1,299 @@
+"""
+Dependency injection container for SpritePal.
+Breaks circular dependencies and improves testability.
+"""
+from __future__ import annotations
+
+import logging
+from threading import Lock
+from typing import Any, Callable, Protocol, TypeVar
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar('T')
+
+class DIContainer:
+    """
+    Simple dependency injection container for managing application dependencies.
+
+    Features:
+    - Singleton instances
+    - Factory functions
+    - Thread-safe operations
+    - Lazy initialization
+    - Protocol/interface based registration
+    """
+
+    def __init__(self):
+        """Initialize the DI container."""
+        self._singletons: dict[Type, Any] = {}
+        self._factories: dict[Type, Callable[[], Any]] = {}
+        self._lock = Lock()
+        logger.debug("DIContainer initialized")
+
+    def register_singleton(self, interface: type[T], implementation: T) -> None:
+        """
+        Register a singleton instance.
+
+        Args:
+            interface: The interface/protocol type
+            implementation: The implementation instance
+        """
+        with self._lock:
+            self._singletons[interface] = implementation
+            logger.debug(f"Registered singleton: {interface.__name__} -> {implementation.__class__.__name__}")
+
+    def register_factory(self, interface: type[T], factory: Callable[[], T]) -> None:
+        """
+        Register a factory function for lazy initialization.
+
+        Args:
+            interface: The interface/protocol type
+            factory: Function that creates an instance
+        """
+        with self._lock:
+            self._factories[interface] = factory
+            logger.debug(f"Registered factory for: {interface.__name__}")
+
+    def get(self, interface: type[T]) -> T:
+        """
+        Get an instance of the requested type.
+
+        Args:
+            interface: The interface/protocol type to retrieve
+
+        Returns:
+            Instance of the requested type
+
+        Raises:
+            ValueError: If no registration exists for the interface
+        """
+        with self._lock:
+            # Check singletons first
+            if interface in self._singletons:
+                return self._singletons[interface]
+
+            # Check factories
+            if interface in self._factories:
+                # Create instance and store as singleton
+                instance = self._factories[interface]()
+                self._singletons[interface] = instance
+                logger.debug(f"Created singleton from factory: {interface.__name__}")
+                return instance
+
+            raise ValueError(f"No registration for {interface.__name__}")
+
+    def get_optional(self, interface: type[T]) -> T | None:
+        """
+        Get an instance if registered, otherwise return None.
+
+        Args:
+            interface: The interface/protocol type to retrieve
+
+        Returns:
+            Instance or None if not registered
+        """
+        try:
+            return self.get(interface)
+        except ValueError:
+            return None
+
+    def has(self, interface: Type) -> bool:
+        """
+        Check if an interface is registered.
+
+        Args:
+            interface: The interface/protocol type to check
+
+        Returns:
+            True if registered, False otherwise
+        """
+        with self._lock:
+            return interface in self._singletons or interface in self._factories
+
+    def clear(self) -> None:
+        """Clear all registrations (useful for testing)."""
+        with self._lock:
+            self._singletons.clear()
+            self._factories.clear()
+            logger.debug("DIContainer cleared")
+
+    def unregister(self, interface: Type) -> None:
+        """
+        Remove a registration.
+
+        Args:
+            interface: The interface/protocol type to remove
+        """
+        with self._lock:
+            self._singletons.pop(interface, None)
+            self._factories.pop(interface, None)
+            logger.debug(f"Unregistered: {interface.__name__}")
+
+# Global container instance
+_container = DIContainer()
+
+def get_container() -> DIContainer:
+    """
+    Get the global DI container instance.
+
+    Returns:
+        The global DIContainer instance
+    """
+    return _container
+
+def register_singleton(interface: type[T], implementation: T) -> None:
+    """
+    Convenience function to register a singleton.
+
+    Args:
+        interface: The interface/protocol type
+        implementation: The implementation instance
+    """
+    _container.register_singleton(interface, implementation)
+
+def register_factory(interface: type[T], factory: Callable[[], T]) -> None:
+    """
+    Convenience function to register a factory.
+
+    Args:
+        interface: The interface/protocol type
+        factory: Function that creates an instance
+    """
+    _container.register_factory(interface, factory)
+
+def inject(interface: type[T]) -> T:
+    """
+    Convenience function to get an injected dependency.
+
+    Args:
+        interface: The interface/protocol type
+
+    Returns:
+        Instance of the requested type
+    """
+    return _container.get(interface)
+
+def reset_container() -> None:
+    """Reset the container (mainly for testing)."""
+    _container.clear()
+
+def configure_container(use_consolidated: bool = True) -> None:
+    """
+    Configure the DI container with application dependencies.
+
+    This function sets up all the necessary bindings for the application.
+    It should be called during application initialization.
+
+    Args:
+        use_consolidated: Whether to use consolidated managers (default: True)
+    """
+    # Import protocols
+    from core.protocols.manager_protocols import (
+        ExtractionManagerProtocol,
+        InjectionManagerProtocol,
+        NavigationManagerProtocol,
+        SessionManagerProtocol,
+    )
+
+    if use_consolidated:
+        # Register consolidated managers with adapters
+        register_factory(
+            SessionManagerProtocol,
+            lambda: _get_consolidated_session_adapter()
+        )
+
+        register_factory(
+            ExtractionManagerProtocol,
+            lambda: _get_consolidated_extraction_adapter()
+        )
+
+        register_factory(
+            InjectionManagerProtocol,
+            lambda: _get_consolidated_injection_adapter()
+        )
+    else:
+        # Register original managers
+        register_factory(
+            SessionManagerProtocol,
+            lambda: _get_or_create_session_manager()
+        )
+
+        register_factory(
+            ExtractionManagerProtocol,
+            lambda: _get_or_create_extraction_manager()
+        )
+
+        register_factory(
+            InjectionManagerProtocol,
+            lambda: _get_or_create_injection_manager()
+        )
+
+    # Navigation manager is always from core operations (if available)
+    register_factory(
+        NavigationManagerProtocol,
+        lambda: _get_or_create_navigation_manager()
+    )
+
+    logger.info(f"DI container configured (consolidated={use_consolidated})")
+
+# Helper functions for lazy manager creation
+def _get_consolidated_session_adapter():
+    """Get session adapter from consolidated ApplicationStateManager."""
+    from core.managers import get_application_state_manager
+    return get_application_state_manager().get_session_adapter()
+
+def _get_consolidated_extraction_adapter():
+    """Get extraction adapter from consolidated CoreOperationsManager."""
+    from core.managers import get_core_operations_manager
+    return get_core_operations_manager().get_extraction_adapter()
+
+def _get_consolidated_injection_adapter():
+    """Get injection adapter from consolidated CoreOperationsManager."""
+    from core.managers import get_core_operations_manager
+    return get_core_operations_manager().get_injection_adapter()
+
+def _get_or_create_session_manager():
+    """Get or create session manager."""
+    from core.managers import get_session_manager
+    return get_session_manager()
+
+def _get_or_create_extraction_manager():
+    """Get or create extraction manager."""
+    from core.managers import get_extraction_manager
+    return get_extraction_manager()
+
+def _get_or_create_injection_manager():
+    """Get or create injection manager."""
+    from core.managers import get_injection_manager
+    return get_injection_manager()
+
+def _get_or_create_navigation_manager():
+    """Get or create navigation manager."""
+    try:
+        from core.managers import get_core_operations_manager
+        core_mgr = get_core_operations_manager()
+        return core_mgr._get_navigation_manager()
+    except:
+        # Fallback to direct navigation manager if available
+        from core.managers import get_navigation_manager
+        return get_navigation_manager()
+
+# Example usage with protocols
+if __name__ == "__main__":
+    # Example protocol
+    class DatabaseProtocol(Protocol):
+        def query(self, sql: str) -> list: ...
+
+    # Example implementation
+    class SQLiteDatabase:
+        def query(self, sql: str) -> list:
+            return ["result1", "result2"]
+
+    # Register
+    register_singleton(DatabaseProtocol, SQLiteDatabase())
+
+    # Use
+    db = inject(DatabaseProtocol)
+    results = db.query("SELECT * FROM users")
+    print(f"Query results: {results}")

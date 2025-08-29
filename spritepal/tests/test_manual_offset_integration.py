@@ -11,6 +11,7 @@ Tests focus on:
 7. Error handling in the complete workflow
 8. Performance of the integrated system
 """
+from __future__ import annotations
 
 import tempfile
 import time
@@ -23,7 +24,6 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QApplication, QSlider
 
 from tests.infrastructure.qt_testing_framework import QtTestingFramework
-
 
 # Mock dialog class to avoid Qt initialization issues
 class MockUnifiedManualOffsetDialog(QObject):
@@ -129,7 +129,6 @@ class MockUnifiedManualOffsetDialog(QObject):
         self._on_slider_pressed = Mock()
         self._on_slider_released = Mock()
 
-
 class MockExtractionManager:
     """Mock extraction manager for dialog testing"""
     def __init__(self):
@@ -146,7 +145,6 @@ class MockExtractionManager:
         mock_extractor = Mock()
         mock_extractor.extract_sprite_data = Mock(return_value=b"mock_sprite_data")
         return mock_extractor
-
 
 class MockPreviewWidget:
     """Mock preview widget for testing"""
@@ -167,7 +165,6 @@ class MockPreviewWidget:
         """Mock error display"""
         self.error_calls.append(message)
 
-
 # Serial execution required: Real Qt components
 pytestmark = [
     pytest.mark.mock_gui,
@@ -185,24 +182,20 @@ pytestmark = [
     pytest.mark.slow,
 ]
 
-
 @pytest.fixture
 def mock_dialog():
     """Fixture providing a mock dialog for tests"""
     return MockUnifiedManualOffsetDialog()
-
 
 @pytest.fixture
 def mock_preview_widget():
     """Fixture providing a mock preview widget"""
     return MockPreviewWidget()
 
-
 @pytest.fixture
 def mock_extraction_manager():
     """Fixture providing a mock extraction manager"""
     return MockExtractionManager()
-
 
 class TestManualOffsetDialogSliderIntegration:
     """Test slider integration in manual offset dialog"""
@@ -417,7 +410,6 @@ class TestManualOffsetDialogSliderIntegration:
         # Should have made signal emissions
         assert browse_tab.offset_changed.emit.call_count >= 2
 
-
 class TestManualOffsetDialogHistoryIntegration:
     """Test history tab integration with sprite tracking"""
     
@@ -489,7 +481,6 @@ class TestManualOffsetDialogHistoryIntegration:
             # Should have emitted the signal
             history_tab.clear_requested.emit.assert_called()
 
-
 class TestManualOffsetDialogSearchIntegration:
     """Test search functionality integration"""
     
@@ -546,7 +537,6 @@ class TestManualOffsetDialogSearchIntegration:
             
             # Should have emitted the signal
             browse_tab.advanced_search_requested.emit.assert_called()
-
 
 class TestManualOffsetDialogPerformance:
     """Test performance characteristics of the integrated system"""
@@ -637,7 +627,6 @@ class TestManualOffsetDialogPerformance:
         except ImportError:
             pytest.skip("psutil not available for memory testing")
 
-
 class TestManualOffsetDialogErrorRecovery:
     """Test error recovery in the integrated system"""
     
@@ -702,7 +691,6 @@ class TestManualOffsetDialogErrorRecovery:
             browse_tab.offset_changed.emit(0x200000)
         except Exception as e:
             pytest.fail(f"Dialog crashed on missing widget: {e}")
-
 
 class TestManualOffsetDialogRealWorldScenarios:
     """Test real-world usage scenarios"""
@@ -811,7 +799,6 @@ class TestManualOffsetDialogRealWorldScenarios:
                 self.dialog._update_rom_info.assert_called()
         
         # Should handle ROM switching gracefully
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

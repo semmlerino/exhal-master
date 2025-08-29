@@ -7,7 +7,6 @@ import time
 import sys
 from pathlib import Path
 
-
 # Serial execution required: QApplication management, HAL process pool
 pytestmark = [
     
@@ -18,7 +17,6 @@ pytestmark = [
     pytest.mark.qt_real,
     pytest.mark.requires_display,
 ]
-
 
 class TestInfrastructureVerification:
     
@@ -121,7 +119,6 @@ class TestInfrastructureVerification:
         
         # Should be very fast after first access
         assert avg_time < 0.1, f"Manager access too slow: {avg_time:.2f}s"
-
 
 def pytest_sessionfinish(session, exitstatus):
     """Print summary at end of session"""

@@ -1,7 +1,7 @@
 """
 Palette colorization for sprite images with caching
 """
-
+from __future__ import annotations
 
 from PIL import Image
 from PySide6.QtCore import QObject, Signal

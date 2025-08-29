@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Audit script to find potential Qt boolean evaluation issues in the codebase.
 
@@ -54,11 +56,9 @@ OK_PATTERNS = [
     r"\.isEnabled\s*\(\s*\)",
 ]
 
-
 def is_qt_object(var_name: str) -> bool:
     """Check if a variable name looks like a Qt object."""
     return any(re.search(pattern, var_name) for pattern in QT_OBJECT_PATTERNS)
-
 
 def is_ok_pattern(line: str, match_start: int) -> bool:
     """Check if the match is actually part of an OK pattern."""
@@ -66,7 +66,6 @@ def is_ok_pattern(line: str, match_start: int) -> bool:
     context = line[max(0, match_start - 20):min(len(line), match_start + 50)]
 
     return any(re.search(ok_pattern, context) for ok_pattern in OK_PATTERNS)
-
 
 def audit_file(file_path: Path) -> list[tuple[int, str, str, str]]:
     """Audit a single Python file for Qt boolean evaluation issues."""
@@ -97,7 +96,6 @@ def audit_file(file_path: Path) -> list[tuple[int, str, str, str]]:
                         issues.append((line_num, var_name, issue_type, line.strip()))
 
     return issues
-
 
 def audit_codebase(root_dir: Path) -> None:
     """Audit the entire codebase for Qt boolean evaluation issues."""
@@ -160,7 +158,6 @@ def audit_codebase(root_dir: Path) -> None:
         print("✅ No Qt boolean evaluation issues found!")
 
     print("\n📝 See docs/qt_boolean_evaluation_pitfall.md for more information")
-
 
 if __name__ == "__main__":
     # Run audit from the spritepal directory

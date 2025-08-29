@@ -4,6 +4,7 @@ Test fixture managers for real extraction/injection logic
 Provides real manager instances with test data instead of mocks,
 improving test reliability and reducing mocking overhead.
 """
+from __future__ import annotations
 
 import os
 import sys
@@ -22,7 +23,6 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from core.managers import ExtractionManager, InjectionManager, SessionManager
@@ -34,7 +34,6 @@ from ui.row_arrangement.grid_image_processor import GridImageProcessor
 from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
 from ui.row_arrangement.preview_generator import PreviewGenerator
-
 
 class TestExtractionManagerFixture:
     """Test fixture providing real ExtractionManager with test data"""
@@ -129,7 +128,6 @@ class TestExtractionManagerFixture:
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
-
 class TestInjectionManagerFixture:
     """Test fixture providing real InjectionManager with test data"""
 
@@ -194,7 +192,6 @@ class TestInjectionManagerFixture:
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
-
 class TestGridArrangementManagerFixture:
     """Test fixture providing real GridArrangementManager with test data"""
 
@@ -232,7 +229,6 @@ class TestGridArrangementManagerFixture:
             TilePosition(2, 0), TilePosition(2, 1), TilePosition(2, 2), TilePosition(2, 3),
             TilePosition(3, 0), TilePosition(3, 1), TilePosition(3, 2), TilePosition(3, 3),
         ]
-
 
 class TestGridImageProcessorFixture:
     """Test fixture providing real GridImageProcessor with test data"""
@@ -286,7 +282,6 @@ class TestGridImageProcessorFixture:
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
-
 class TestPaletteColorizerFixture:
     """Test fixture providing real PaletteColorizer with test data"""
 
@@ -321,7 +316,6 @@ class TestPaletteColorizerFixture:
         """Get the test palettes dictionary"""
         return self.colorizer.get_palettes()
 
-
 class TestPreviewGeneratorFixture:
     """Test fixture providing real PreviewGenerator with test data"""
 
@@ -343,7 +337,6 @@ class TestPreviewGeneratorFixture:
         """Get the colorizer"""
         return self.colorizer
 
-
 class TestSessionManagerFixture:
     """Test fixture providing real SessionManager for testing"""
 
@@ -363,37 +356,30 @@ class TestSessionManagerFixture:
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
-
 # Convenience functions for creating test fixtures
 def create_extraction_manager_fixture(temp_dir: str | None = None) -> TestExtractionManagerFixture:
     """Create a test extraction manager fixture"""
     return TestExtractionManagerFixture(temp_dir)
 
-
 def create_injection_manager_fixture(temp_dir: str | None = None) -> TestInjectionManagerFixture:
     """Create a test injection manager fixture"""
     return TestInjectionManagerFixture(temp_dir)
-
 
 def create_grid_arrangement_fixture(rows: int = 4, cols: int = 4) -> TestGridArrangementManagerFixture:
     """Create a test grid arrangement manager fixture"""
     return TestGridArrangementManagerFixture(rows, cols)
 
-
 def create_grid_processor_fixture(temp_dir: str | None = None) -> TestGridImageProcessorFixture:
     """Create a test grid image processor fixture"""
     return TestGridImageProcessorFixture(temp_dir)
-
 
 def create_colorizer_fixture() -> TestPaletteColorizerFixture:
     """Create a test palette colorizer fixture"""
     return TestPaletteColorizerFixture()
 
-
 def create_preview_generator_fixture() -> TestPreviewGeneratorFixture:
     """Create a test preview generator fixture"""
     return TestPreviewGeneratorFixture()
-
 
 def create_session_manager_fixture(temp_dir: str | None = None) -> TestSessionManagerFixture:
     """Create a test session manager fixture"""

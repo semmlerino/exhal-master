@@ -766,7 +766,6 @@ class MockFactory:
             "history_tab": history_tab,
         }
 
-
 # Convenience functions for backward compatibility
 def create_mock_main_window(**kwargs: Any) -> MockMainWindowProtocol:
     """Backward compatibility function.
@@ -782,7 +781,6 @@ def create_mock_main_window(**kwargs: Any) -> MockMainWindowProtocol:
     )
     return MockFactory.create_main_window(**kwargs)
 
-
 def create_mock_extraction_worker() -> MockExtractionWorkerProtocol:
     """Backward compatibility function.
 
@@ -796,7 +794,6 @@ def create_mock_extraction_worker() -> MockExtractionWorkerProtocol:
         stacklevel=2
     )
     return MockFactory.create_extraction_worker()
-
 
 def create_mock_extraction_manager() -> MockExtractionManagerProtocol:
     """Backward compatibility function.
@@ -812,16 +809,13 @@ def create_mock_extraction_manager() -> MockExtractionManagerProtocol:
     )
     return MockFactory.create_extraction_manager()
 
-
 def create_unified_dialog_services() -> dict[str, Mock]:
     """Convenience function for unified dialog service mocks."""
     return MockFactory.create_unified_dialog_services()
 
-
 def create_signal_coordinator(services: dict[str, Mock | None] | None = None) -> MockSignalCoordinatorProtocol:
     """Convenience function for signal coordinator mock."""
     return MockFactory.create_signal_coordinator(services)
-
 
 def create_manual_offset_dialog_tabs() -> dict[str, Mock]:
     """Convenience function for dialog tab mocks."""

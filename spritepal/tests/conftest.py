@@ -77,13 +77,17 @@ import pytest
 # Add parent directories to path - centralized path setup
 sys.path.insert(0, str(Path(__file__).parent.parent))  # Add spritepal directory
 
+# Import segfault skip configuration
 # Lazy imports for manager functions - imported in fixtures to reduce startup overhead
 # from core.managers import cleanup_managers, initialize_managers
 # from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
-
 # Import consolidated mock utilities
 import contextlib
 
+from .conftest_segfault_skip import *  # noqa: F403
+
+# Import timeout configuration
+from .conftest_timeout import *  # noqa: F403
 from .infrastructure.environment_detection import (
     configure_qt_for_environment,
     get_environment_info,
@@ -140,7 +144,6 @@ DEFAULT_SIGNAL_TIMEOUT = 5000 if (os.environ.get("CI") or IS_HEADLESS) else 2000
 DEFAULT_WAIT_TIMEOUT = 3000 if (os.environ.get("CI") or IS_HEADLESS) else 1000
 DEFAULT_WORKER_TIMEOUT = 10000 if (os.environ.get("CI") or IS_HEADLESS) else 5000
 
-
 def pytest_addoption(parser: Any) -> None:
     """Add custom command line options for HAL testing."""
     parser.addoption(
@@ -149,7 +152,6 @@ def pytest_addoption(parser: Any) -> None:
         default=False,
         help="Use real HAL process pool instead of mocks (slower)"
     )
-
 
 def pytest_configure(config: Any) -> None:
     """Configure pytest with unified markers for SpritePal tests."""
@@ -252,7 +254,6 @@ def pytest_configure(config: Any) -> None:
     if not use_real_hal:
         configure_hal_mocking(use_mocks=True, deterministic=True)
 
-
 def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """
     Modify test collection based on environment capabilities and marker logic.
@@ -325,6 +326,8 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
         if ("serial" in item.keywords and "parallel_safe" in item.keywords):
             warnings.warn(f"Test {item.name} has conflicting serial/parallel_safe markers", UserWarning, stacklevel=2)
 
+# Note: GUI popup prevention is handled via QT_QPA_PLATFORM environment variable
+# Set QT_QPA_PLATFORM=offscreen to run tests without GUI windows
 
 @pytest.fixture(scope="session", autouse=True)
 def qt_environment_setup() -> Iterator[None]:
@@ -346,7 +349,6 @@ def qt_environment_setup() -> Iterator[None]:
         # In GUI environments or with xvfb, let pytest-qt handle Qt setup
         # Qt environment variables are already configured by configure_qt_for_environment()
         yield
-
 
 @pytest.fixture(scope="session")
 def session_managers() -> Iterator[None]:
@@ -380,7 +382,6 @@ def session_managers() -> Iterator[None]:
     if app and not IS_HEADLESS:
         app.processEvents()
 
-
 @pytest.fixture
 def fast_managers(session_managers: None) -> Iterator[None]:
     """
@@ -398,8 +399,7 @@ def fast_managers(session_managers: None) -> Iterator[None]:
     # Just depend on session_managers, no additional work needed
     yield
 
-
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def setup_managers(request: FixtureRequest) -> Iterator[None]:
     """
     Setup managers for all tests (per-test isolation).
@@ -430,14 +430,29 @@ def setup_managers(request: FixtureRequest) -> Iterator[None]:
     if app is None and not IS_HEADLESS:
         app = QApplication([])
 
-    initialize_managers("TestApp")
-    yield
-    cleanup_managers()
+    try:
+        initialize_managers("TestApp")
+        yield
+    finally:
+        # Safe cleanup with error handling to prevent segfaults
+        try:
+            cleanup_managers()
+        except (RuntimeError, AttributeError) as e:
+            # Qt objects may already be deleted, log but don't crash
+            import logging
+            logging.getLogger(__name__).debug(f"Manager cleanup warning: {e}")
+        except Exception as e:
+            # Unexpected cleanup error, log but continue
+            import logging
+            logging.getLogger(__name__).warning(f"Manager cleanup error: {e}")
 
-    # Process events to ensure cleanup completes
-    if app and not IS_HEADLESS:
-        app.processEvents()
-
+        # Process events safely
+        try:
+            if app and not IS_HEADLESS:
+                app.processEvents()
+        except (RuntimeError, AttributeError):
+            # QApplication may be deleted, ignore
+            pass
 
 @pytest.fixture
 def test_data_factory() -> Callable[..., bytearray]:
@@ -506,7 +521,6 @@ def test_data_factory() -> Callable[..., bytearray]:
 
     return _create_test_data
 
-
 @pytest.fixture
 def temp_files() -> Iterator[Callable[[bytes, str], str]]:
     """
@@ -533,7 +547,6 @@ def temp_files() -> Iterator[Callable[[bytes, str], str]]:
             Path(file_path).unlink(missing_ok=True)
         except OSError:
             pass  # File might already be deleted
-
 
 @pytest.fixture
 def standard_test_params(
@@ -568,7 +581,6 @@ def standard_test_params(
         "oam_data": oam_data,
     }
 
-
 @pytest.fixture
 def minimal_sprite_data(
     test_data_factory: Callable[..., bytearray],
@@ -587,7 +599,6 @@ def minimal_sprite_data(
         "tile_count": 8,
     }
 
-
 # Consolidated mock fixtures using RealComponentFactory
 @pytest.fixture
 def real_factory() -> RealComponentFactory:
@@ -603,12 +614,10 @@ def mock_main_window(real_factory: RealComponentFactory) -> MockMainWindowProtoc
     """Provide a fully configured mock main window using real components."""
     return real_factory.create_main_window()
 
-
 @pytest.fixture
 def mock_extraction_worker(real_factory: RealComponentFactory) -> Mock:  # Would be MockExtractionWorkerProtocol if it existed
     """Provide a fully configured mock extraction worker using real components."""
     return real_factory.create_extraction_worker()
-
 
 @pytest.fixture(scope="class")
 def mock_extraction_manager() -> MockExtractionManagerProtocol:
@@ -622,12 +631,10 @@ def mock_extraction_manager() -> MockExtractionManagerProtocol:
     factory = RealComponentFactory()
     return factory.create_extraction_manager()
 
-
 @pytest.fixture
 def mock_injection_manager(real_factory: RealComponentFactory) -> MockInjectionManagerProtocol:
     """Provide a fully configured injection manager using real components."""
     return real_factory.create_injection_manager()
-
 
 @pytest.fixture(scope="class")
 def mock_session_manager() -> MockSessionManagerProtocol:
@@ -640,7 +647,6 @@ def mock_session_manager() -> MockSessionManagerProtocol:
     """
     factory = RealComponentFactory()
     return factory.create_session_manager()
-
 
 @pytest.fixture(scope="class")
 def mock_settings_manager() -> Mock:
@@ -674,7 +680,6 @@ def mock_settings_manager() -> Mock:
 def mock_file_dialogs(real_factory: RealComponentFactory) -> dict[str, Mock]:
     """Provide mock file dialog functions."""
     return real_factory.create_file_dialogs()
-
 
 # HAL-specific fixtures
 @pytest.fixture
@@ -718,7 +723,6 @@ def hal_pool(request, tmp_path):
         pool.shutdown()
         MockHALProcessPool.reset_singleton()
 
-
 @pytest.fixture
 def hal_compressor(request, tmp_path):
     """
@@ -752,7 +756,6 @@ def hal_compressor(request, tmp_path):
         if compressor._pool:
             compressor._pool.shutdown()
 
-
 @pytest.fixture(autouse=True)
 def auto_mock_hal(request, monkeypatch):
     """
@@ -782,7 +785,6 @@ def auto_mock_hal(request, monkeypatch):
     with contextlib.suppress(Exception):
         MockHALProcessPool.reset_singleton()
 
-
 @pytest.fixture
 def mock_hal_tools(tmp_path):
     """
@@ -791,7 +793,6 @@ def mock_hal_tools(tmp_path):
     Returns tuple of (exhal_path, inhal_path).
     """
     return create_mock_hal_tools(tmp_path)
-
 
 @pytest.fixture
 def hal_test_data() -> dict[str, bytes]:
@@ -809,7 +810,6 @@ def hal_test_data() -> dict[str, bytes]:
         "ones": b"\xff" * 0x1000,   # 4KB ones
     }
 
-
 @pytest.fixture(scope="class")
 def rom_cache() -> Mock:
     """Class-scoped ROM cache fixture for performance optimization.
@@ -826,7 +826,6 @@ def rom_cache() -> Mock:
 def mock_rom_cache(real_factory: RealComponentFactory) -> Mock:
     """Alias for rom_cache fixture for backward compatibility."""
     return real_factory.create_rom_cache()
-
 
 # Dependency Injection fixtures
 @pytest.fixture
@@ -886,13 +885,11 @@ def manager_context_factory() -> Callable[[dict[str, Any] | list[str] | None, st
 
     return _create_context
 
-
 @pytest.fixture
 def test_injection_manager() -> Mock:
     """Provide a test injection manager instance."""
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_test_injection_manager()
-
 
 @pytest.fixture
 def test_extraction_manager() -> Mock:
@@ -900,13 +897,11 @@ def test_extraction_manager() -> Mock:
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_test_extraction_manager()
 
-
 @pytest.fixture
 def test_session_manager() -> Mock:
     """Provide a test session manager instance."""
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_test_session_manager()
-
 
 @pytest.fixture
 def complete_test_context() -> Any:  # ManagerContext type
@@ -914,13 +909,11 @@ def complete_test_context() -> Any:  # ManagerContext type
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_complete_test_context()
 
-
 @pytest.fixture
 def minimal_injection_context() -> Any:  # ManagerContext type
     """Provide a minimal context with just injection manager for dialog tests."""
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_minimal_test_context(["injection"], name="dialog_test")
-
 
 # Real manager fixtures (with mocked I/O for file system independence)
 # Naming convention:
@@ -941,7 +934,6 @@ def real_extraction_manager() -> ExtractionManager:
     # Keep real validation and business logic - no mocking of non-existent attributes
     return manager
 
-
 @pytest.fixture
 def real_injection_manager() -> InjectionManager:
     """Create real InjectionManager for testing.
@@ -955,7 +947,6 @@ def real_injection_manager() -> InjectionManager:
     # Keep real validation and business logic - no mocking of non-existent attributes
     return manager
 
-
 @pytest.fixture
 def real_session_manager(tmp_path) -> SessionManager:
     """Create real SessionManager for testing with temporary directory."""
@@ -964,10 +955,9 @@ def real_session_manager(tmp_path) -> SessionManager:
     settings_file = tmp_path / "test_settings.json"
     return SessionManager("TestApp", settings_file)
 
-
 # Safe Qt fixtures for both headless and GUI environments
 @pytest.fixture
-def safe_qtbot(qtbot: Any) -> MockQtBotProtocol:
+def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
     """Provide a qtbot that works in both headless and GUI environments."""
     if IS_HEADLESS:
         # Create a mock qtbot for headless environments
@@ -977,8 +967,9 @@ def safe_qtbot(qtbot: Any) -> MockQtBotProtocol:
         mock_qtbot.waitUntil = Mock()
         mock_qtbot.addWidget = Mock()
         return mock_qtbot  # pyright: ignore[reportReturnType]  # Mock qtbot for headless
+    # Only request real qtbot when not headless
+    qtbot = request.getfixturevalue('qtbot')
     return qtbot  # pyright: ignore[reportReturnType]  # Real qtbot in GUI environments
-
 
 # High-frequency fixture optimizations for 68.6% performance improvement
 # These fixtures are optimized based on usage analysis:
@@ -990,7 +981,6 @@ def safe_qtbot(qtbot: Any) -> MockQtBotProtocol:
 # - rom_cache: 48 uses → class scope (~10 instances)
 # - mock_settings_manager: 44 uses → class scope (~10 instances)
 # - mock_session_manager: 26 uses → class scope (~8 instances)
-
 
 # Enhanced Safe Fixture Implementations
 
@@ -1017,7 +1007,6 @@ def enhanced_safe_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
         # Cleanup handled by fixture manager
         pass
 
-
 @pytest.fixture(scope="session")
 def enhanced_safe_qapp() -> SafeQApplicationProtocol:
     """
@@ -1041,7 +1030,6 @@ def enhanced_safe_qapp() -> SafeQApplicationProtocol:
         # Cleanup handled by fixture manager
         pass
 
-
 @pytest.fixture
 def safe_widget_factory_fixture(request: FixtureRequest):
     """
@@ -1061,7 +1049,6 @@ def safe_widget_factory_fixture(request: FixtureRequest):
         from .infrastructure.safe_fixtures import SafeWidgetFactory
         yield SafeWidgetFactory(headless=True)
 
-
 @pytest.fixture
 def safe_dialog_factory_fixture(request: FixtureRequest):
     """
@@ -1080,7 +1067,6 @@ def safe_dialog_factory_fixture(request: FixtureRequest):
         # Provide mock factory as fallback
         from .infrastructure.safe_fixtures import SafeDialogFactory
         yield SafeDialogFactory(headless=True)
-
 
 @pytest.fixture
 def safe_qt_environment(request: FixtureRequest):
@@ -1108,7 +1094,6 @@ def safe_qt_environment(request: FixtureRequest):
             'env_info': get_environment_info(),
         }
 
-
 # Override pytest-qt fixtures to use safe versions
 
 @pytest.fixture
@@ -1116,13 +1101,11 @@ def enhanced_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
     """Override pytest-qt qtbot with enhanced safe version."""
     return request.getfixturevalue('enhanced_safe_qtbot')
 
-
 @pytest.fixture(scope="session")
 def enhanced_qapp() -> SafeQApplicationProtocol:
     """Override pytest-qt qapp with enhanced safe version."""
     # Delegate to our enhanced safe fixture
     return create_safe_qapp()
-
 
 # Session-level cleanup fixture
 
@@ -1140,7 +1123,6 @@ def cleanup_safe_fixtures_session():
         import logging
         logging.getLogger(__name__).warning(f"Error during safe fixtures cleanup: {e}")
 
-
 # Validation fixture for debugging
 
 @pytest.fixture
@@ -1154,7 +1136,6 @@ def fixture_validation_report():
                 pytest.skip(f"Fixture validation failed: {fixture_validation_report['errors']}")
     """
     return validate_fixture_environment()
-
 
 # Helper fixtures for gradual migration
 
@@ -1178,7 +1159,6 @@ def real_qtbot(request: FixtureRequest):
     except Exception as e:
         pytest.skip(f"Real qtbot not available: {e}")
 
-
 @pytest.fixture
 def mock_qtbot():
     """
@@ -1188,7 +1168,6 @@ def mock_qtbot():
     """
     from .infrastructure.safe_fixtures import SafeQtBot
     return SafeQtBot(headless=True)
-
 
 # Environment-specific fixture selection
 
@@ -1206,7 +1185,6 @@ def adaptive_qtbot(request: FixtureRequest):
     if request.node.get_closest_marker("qt_mock"):
         return request.getfixturevalue('mock_qtbot')
     return request.getfixturevalue('enhanced_safe_qtbot')
-
 
 # Configuration and debugging helpers
 
@@ -1472,7 +1450,6 @@ def safe_qapp(qt_app: Any) -> Any:  # QApplication | Mock but avoid circular imp
     """
     return qt_app
 
-
 @pytest.fixture(autouse=True)
 def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """
@@ -1543,25 +1520,21 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
                     import time
                     time.sleep(0.01)  # Fallback to regular sleep
 
-
 # Timeout fixtures for consistent signal waiting across tests
 @pytest.fixture
 def signal_timeout() -> int:
     """Provide configurable timeout for Qt signal waiting."""
     return DEFAULT_SIGNAL_TIMEOUT
 
-
 @pytest.fixture
 def wait_timeout() -> int:
     """Provide configurable timeout for general Qt operations."""
     return DEFAULT_WAIT_TIMEOUT
 
-
 @pytest.fixture
 def worker_timeout() -> int:
     """Provide configurable timeout for worker thread operations."""
     return DEFAULT_WORKER_TIMEOUT
-
 
 @pytest.fixture
 def timeout_config() -> dict[str, int]:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Headless test for sprite gallery layout fix verification.
 Tests that the empty space issue has been resolved.

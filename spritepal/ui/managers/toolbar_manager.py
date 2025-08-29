@@ -1,6 +1,7 @@
 """
 Toolbar and action button management for MainWindow
 """
+from __future__ import annotations
 
 from typing import Protocol
 
@@ -33,7 +34,6 @@ class ToolbarActionsProtocol(Protocol):
     def on_inject_clicked(self) -> None:
         """Handle inject button click"""
         ...
-
 
 class ToolbarManager(QObject):
     """Manages action buttons and toolbar for MainWindow"""

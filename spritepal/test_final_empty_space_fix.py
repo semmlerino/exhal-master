@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Final test for the empty space fix in sprite gallery.
 Verifies that the main_widget and container don't expand beyond content.

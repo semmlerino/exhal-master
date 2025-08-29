@@ -30,7 +30,6 @@ from tests.infrastructure.qt_real_testing import (
 )
 from ui.windows.detached_gallery_window import DetachedGalleryWindow
 
-
 @pytest.fixture
 def test_rom_file(tmp_path) -> str:
     """Create a test ROM file."""
@@ -39,7 +38,6 @@ def test_rom_file(tmp_path) -> str:
     rom_data = b'SNES' + b'\x00' * (1024 * 1024 - 4)  # 1MB ROM
     rom_path.write_bytes(rom_data)
     return str(rom_path)
-
 
 @pytest.fixture
 def mock_extraction_manager():
@@ -53,7 +51,6 @@ def mock_extraction_manager():
         'sprite_3': Mock(offset=0x30000),
     }
     return manager
-
 
 @pytest.fixture
 def mock_scan_worker():
@@ -71,7 +68,6 @@ def mock_scan_worker():
     worker.wait.return_value = True
     return worker
 
-
 @pytest.fixture
 def mock_thumbnail_worker():
     """Create mock thumbnail worker."""
@@ -83,7 +79,6 @@ def mock_thumbnail_worker():
     worker.isRunning.return_value = False
     worker.cleanup = Mock()
     return worker
-
 
 @pytest.mark.gui
 @pytest.mark.integration
@@ -188,7 +183,7 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         assert self.window.scan_timeout_timer is None
     
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
-    @patch('ui.windows.detached_gallery_window.BatchThumbnailWorker')
+    @patch('ui.workers.batch_thumbnail_worker.BatchThumbnailWorker')
     def test_thumbnail_generation_lifecycle(
         self,
         mock_thumbnail_worker_class,
@@ -435,7 +430,6 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         assert self.window.scan_worker is None
         assert self.window.thumbnail_worker is None
 
-
 @pytest.mark.gui
 @pytest.mark.integration
 @pytest.mark.performance
@@ -510,7 +504,6 @@ class TestGalleryWindowPerformance(QtTestCase):
         
         # Should handle resizes smoothly (< 2 seconds for all resizes)
         assert resize_time < 2.0, f"Window resizing took {resize_time:.2f}s, too slow"
-
 
 @pytest.mark.headless 
 @pytest.mark.integration

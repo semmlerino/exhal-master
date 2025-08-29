@@ -4,6 +4,7 @@ Common assertion functions for SpritePal tests.
 This module provides reusable assertion functions that check common
 conditions across tests, reducing duplication and improving consistency.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
@@ -29,7 +30,6 @@ def assert_valid_sprite_data(data: bytes, expected_size: int | None = None):
     # Check that data isn't all zeros (which might indicate empty/invalid data)
     non_zero_bytes = sum(1 for byte in data if byte != 0)
     assert non_zero_bytes > 0, "Sprite data cannot be all zeros"
-
 
 def assert_valid_palette_data(palette_data: list[list[int]], expected_palettes: int = 16):
     """
@@ -57,7 +57,6 @@ def assert_valid_palette_data(palette_data: list[list[int]], expected_palettes: 
                 assert isinstance(component, int), f"RGB component {k} must be an integer"
                 assert 0 <= component <= 255, f"RGB component {k} must be 0-255, got {component}"
 
-
 def assert_valid_metadata(metadata: dict[str, Any]):
     """
     Assert that sprite metadata is valid and complete.
@@ -82,7 +81,6 @@ def assert_valid_metadata(metadata: dict[str, Any]):
     assert isinstance(metadata["palette_count"], int), "Palette count must be an integer"
     assert metadata["palette_count"] > 0, "Palette count must be positive"
 
-
 def assert_manager_state(manager: Any, expected_state: str):
     """
     Assert that a manager is in the expected state.
@@ -99,7 +97,6 @@ def assert_manager_state(manager: Any, expected_state: str):
     actual_state = manager.get_state()
     assert actual_state == expected_state, f"Expected state '{expected_state}', got '{actual_state}'"
 
-
 def assert_files_exist(file_paths: list[str]):
     """
     Assert that all specified files exist.
@@ -115,7 +112,6 @@ def assert_files_exist(file_paths: list[str]):
         assert path.exists(), f"File does not exist: {file_path}"
         assert path.is_file(), f"Path is not a file: {file_path}"
 
-
 def assert_signal_emitted(signal_mock: Any, expected_count: int = 1):
     """
     Assert that a mock signal was emitted the expected number of times.
@@ -130,7 +126,6 @@ def assert_signal_emitted(signal_mock: Any, expected_count: int = 1):
     assert hasattr(signal_mock, "emit"), "Signal mock must have emit method"
     assert signal_mock.emit.call_count == expected_count, \
         f"Signal emitted {signal_mock.emit.call_count} times, expected {expected_count}"
-
 
 def assert_image_properties(image_path: str, expected_width: int, expected_height: int):
     """

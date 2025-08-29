@@ -1,6 +1,7 @@
 """
 Manager for session state and application settings
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -12,7 +13,6 @@ from .base_manager import BaseManager
 from .exceptions import SessionError, ValidationError
 
 T = TypeVar("T")
-
 
 class SessionManager(BaseManager):
     """Manages session state and application settings"""
@@ -58,7 +58,6 @@ class SessionManager(BaseManager):
         """Save settings on cleanup"""
         if self._session_dirty:
             self.save_session()
-
 
     def _load_settings(self) -> dict[str, Any]:
         """Load settings from file"""

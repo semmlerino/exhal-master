@@ -4,9 +4,10 @@ Worker Coordinator Component
 Manages SimplePreviewCoordinator and all workers with thread safety.
 Enhanced for superior visual design in composed implementation.
 """
+from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
@@ -21,7 +22,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class WorkerCoordinatorComponent:
     """
     Manages worker threads and preview coordination for the Manual Offset Dialog.
@@ -34,11 +34,11 @@ class WorkerCoordinatorComponent:
         """Initialize the worker coordinator."""
         self.dialog = dialog
         self._mutex = QMutex()
-        self.preview_widget: Optional[SpritePreviewWidget] = None
-        self.mini_rom_map: Optional[ROMMapWidget] = None
-        self._preview_coordinator: Optional[SimplePreviewCoordinator] = None
-        self.preview_worker: Optional[Any] = None
-        self.search_worker: Optional[Any] = None
+        self.preview_widget: SpritePreviewWidget | None = None
+        self.mini_rom_map: ROMMapWidget | None = None
+        self._preview_coordinator: SimplePreviewCoordinator | None = None
+        self.preview_worker: Any | None = None
+        self.search_worker: Any | None = None
 
     def create_right_panel(self) -> QWidget:
         """Create the right panel with preview widget."""
@@ -56,6 +56,7 @@ class WorkerCoordinatorComponent:
                 panel.setStyleSheet("""
                     QWidget {
                         background-color: #fcfcfc;
+                        color: #000000;
                         border-radius: 8px;
                     }
                 """)
@@ -95,7 +96,7 @@ class WorkerCoordinatorComponent:
 
             return panel
 
-    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: 'ExtractionManager') -> None:
+    def set_rom_data(self, rom_path: str, rom_size: int, extraction_manager: ExtractionManager) -> None:
         """Update worker coordinator with ROM data."""
         with QMutexLocker(self._mutex):
             # Set up preview coordinator with ROM data
@@ -114,11 +115,11 @@ class WorkerCoordinatorComponent:
                 # Update preview widget if available
                 if self.preview_widget and hasattr(self.preview_widget, 'set_rom_data'):
                     rom_extractor = extraction_manager.get_rom_extractor()
-                    self.preview_widget.set_rom_data(  # type: ignore[attr-defined]rom_path, rom_extractor)
+                    self.preview_widget.set_rom_data(rom_path, rom_extractor)  # type: ignore[attr-defined]
 
                 # Update mini ROM map if available
                 if self.mini_rom_map and hasattr(self.mini_rom_map, 'set_rom_data'):
-                    self.mini_rom_map.set_rom_data(rom_path, rom_size)
+                    self.mini_rom_map.set_rom_data(rom_path, rom_size)  # type: ignore[attr-defined]
 
             except ImportError as e:
                 logger.warning(f"SimplePreviewCoordinator not available: {e}")

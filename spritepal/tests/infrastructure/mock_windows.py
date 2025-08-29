@@ -9,9 +9,10 @@ Following Qt Testing Best Practices:
 - Lightweight mocks with real Qt signals
 - No heavy initialization or resource loading
 """
+from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from unittest.mock import Mock
 
 from .mock_dialogs_base import CallbackSignal
@@ -25,7 +26,7 @@ class TestMainWindow:
     For integration tests that require real Qt, use RealMainWindow instead.
     """
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         self.parent_widget = parent
 
         # Callback-based signals
@@ -144,7 +145,6 @@ class TestMainWindow:
         """Window closing signal interface."""
         return CallbackSignal(self.window_closing_callbacks)
 
-
 class TestWorkerBase:
     """
     Pure Python test worker that provides callback-based signals without Qt dependencies.
@@ -152,7 +152,7 @@ class TestWorkerBase:
     This avoids QThread inheritance to prevent metaclass conflicts and thread cleanup issues.
     """
 
-    def __init__(self, parent: Optional[Any] = None):
+    def __init__(self, parent: Any | None = None):
         self.parent_widget = parent
 
         # Callback-based signals
@@ -235,11 +235,10 @@ class TestWorkerBase:
         """Warning signal interface."""
         return CallbackSignal(self.warning_callbacks)
 
-
 class TestExtractionWorker(TestWorkerBase):
     """Test extraction worker for testing."""
 
-    def __init__(self, params: dict, parent: Optional[Any] = None):
+    def __init__(self, params: dict, parent: Any | None = None):
         super().__init__(parent)
         self.extraction_completed_callbacks: list[Callable[[dict], None]] = []
         self.params = params
@@ -261,11 +260,10 @@ class TestExtractionWorker(TestWorkerBase):
         """Extraction completed signal interface."""
         return CallbackSignal(self.extraction_completed_callbacks)
 
-
 class TestInjectionWorker(TestWorkerBase):
     """Test injection worker for testing."""
 
-    def __init__(self, params: dict, parent: Optional[Any] = None):
+    def __init__(self, params: dict, parent: Any | None = None):
         super().__init__(parent)
         self.injection_completed_callbacks: list[Callable[[bool], None]] = []
         self.params = params
@@ -285,7 +283,6 @@ class TestInjectionWorker(TestWorkerBase):
     def injection_completed(self):
         """Injection completed signal interface."""
         return CallbackSignal(self.injection_completed_callbacks)
-
 
 class MockWorkerManager:
     """
@@ -326,7 +323,6 @@ class MockWorkerManager:
         """Class method for global cleanup."""
         pass  # Mock implementation
 
-
 def create_test_main_window() -> TestMainWindow:
     """
     Factory function to create a properly configured TestMainWindow.
@@ -345,7 +341,6 @@ def create_test_main_window() -> TestMainWindow:
 
     return window
 
-
 def patch_main_window_creation(monkeypatch):
     """
     Patch MainWindow creation to use TestMainWindow.
@@ -359,7 +354,6 @@ def patch_main_window_creation(monkeypatch):
     import sys
     if 'ui.main_window' in sys.modules:
         sys.modules['ui.main_window'].MainWindow = TestMainWindow
-
 
 # Backward compatibility aliases
 MockMainWindow = TestMainWindow

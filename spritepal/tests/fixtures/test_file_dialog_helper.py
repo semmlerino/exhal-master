@@ -4,6 +4,7 @@ Test File Dialog Helper for testing file selection with real QFileDialog compone
 Provides TestFileDialogHelper that uses real QFileDialog instances but allows
 predetermined responses for testing without user interaction.
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -12,7 +13,6 @@ from typing import Any
 
 import pytest
 from PySide6.QtWidgets import QFileDialog
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -28,7 +28,6 @@ pytestmark = [
     pytest.mark.widget,
     pytest.mark.ci_safe,
 ]
-
 
 class TestFileDialogHelper:
     """
@@ -139,7 +138,6 @@ class TestFileDialogHelper:
             else:
                 raise AssertionError(f"Dialog {dialog_type}: Expected {key} not found in dialog config")
 
-
 class TestFileHelper:
     """
     Helper for creating temporary test files for file dialog testing.
@@ -206,7 +204,6 @@ class TestFileHelper:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.cleanup()
-
 
 # Convenience functions for easy test usage
 def create_file_dialog_helper() -> TestFileDialogHelper:

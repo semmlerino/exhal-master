@@ -17,6 +17,7 @@ Architecture Patterns:
 - Legacy: Workers use global singleton managers (for backward compatibility)
 - Modern: Workers own their managers via factory pattern (recommended for new code)
 """
+from __future__ import annotations
 
 from .base import BaseWorker, ManagedWorker
 from .extraction import (

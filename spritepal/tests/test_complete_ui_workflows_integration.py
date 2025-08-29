@@ -62,7 +62,6 @@ from core.controller import ExtractionController
 from core.managers.registry import initialize_managers, cleanup_managers
 from utils.settings_manager import SettingsManager
 
-
 class TestCompleteUIWorkflowsIntegration:
     """
     Integration tests for complete UI workflows using real Qt widgets.
@@ -779,7 +778,6 @@ class TestCompleteUIWorkflowsIntegration:
             qtbot.wait(50)
             # Should not crash or freeze
             assert main_window.isVisible(), "UI should remain functional after post-error interactions"
-
 
 if __name__ == "__main__":
     # Run tests when executed directly

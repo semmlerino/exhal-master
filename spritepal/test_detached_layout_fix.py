@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test that the detached gallery layout is fixed - no cut-off, no empty space.
 """

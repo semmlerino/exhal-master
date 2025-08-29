@@ -8,7 +8,7 @@ Features:
 - Direct offset jumping
 - Smart mode integration
 """
-
+from __future__ import annotations
 
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
@@ -27,7 +27,6 @@ from utils.logging_config import get_logger
 from utils.sprite_regions import SpriteRegion
 
 logger = get_logger(__name__)
-
 
 class RegionJumpWidget(QWidget):
     """

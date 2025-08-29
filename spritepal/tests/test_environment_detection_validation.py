@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Test validation for the comprehensive environment detection system.
 
@@ -39,7 +41,6 @@ pytestmark = [
     pytest.mark.no_manager_setup,  # Pure utility functions for environment detection
 ]
 
-
 @headless_safe
 def test_environment_detection_basic():
     """Test basic environment detection functions work."""
@@ -54,7 +55,6 @@ def test_environment_detection_basic():
     assert isinstance(env_info.has_display, bool)
     assert isinstance(env_info.pyside6_available, bool)
 
-
 @headless_safe
 def test_environment_report_generation():
     """Test that environment report can be generated without errors."""
@@ -68,7 +68,6 @@ def test_environment_report_generation():
     assert "SpritePal Test Environment Report" in report
     assert "Platform:" in report
     assert "Environment Detection:" in report
-
 
 @headless_safe
 def test_convenience_functions():
@@ -87,7 +86,6 @@ def test_convenience_functions():
     assert isinstance(has_display, bool)
     assert isinstance(has_xvfb, bool)
 
-
 @headless_safe
 def test_qt_configuration():
     """Test Qt configuration helper."""
@@ -97,14 +95,12 @@ def test_qt_configuration():
     # Test passes if no exception was raised
     assert True
 
-
 @ci_safe
 @headless_safe
 def test_decorators_do_not_interfere():
     """Test that decorators can be stacked without issues."""
     # This test should run in all environments
     assert True
-
 
 # Skip decorator tests - these will test the skip logic
 
@@ -114,13 +110,11 @@ def test_skip_in_ci_decorator():
     # If this runs, we're not in CI
     assert not is_ci_environment()
 
-
 @skip_if_no_display("Testing skip_if_no_display decorator")  
 def test_skip_if_no_display_decorator():
     """This test should be skipped if no display is available."""
     # If this runs, we should have a display
     assert has_display_available()
-
 
 @requires_display
 def test_requires_display_decorator():
@@ -128,13 +122,11 @@ def test_requires_display_decorator():
     # If this runs, we should not be in headless mode
     assert not is_headless_environment()
 
-
 @skip_if_wsl("Testing skip_if_wsl decorator")
 def test_skip_if_wsl_decorator():
     """This test should be skipped on WSL."""
     # If this runs, we should not be on WSL
     assert not is_wsl_environment()
-
 
 # Environment-specific tests that demonstrate the system working
 
@@ -146,7 +138,6 @@ def test_environment_specific_skip():
     """Example of using environment detection in skip conditions."""
     # This should only run in non-CI environments
     assert True
-
 
 def test_environment_consistency():
     """Test that environment detection is internally consistent."""
@@ -166,7 +157,6 @@ def test_environment_consistency():
     # (unless explicitly forced)
     if env_info.has_display and not env_info.is_ci:
         print(f"Has display but headless: {env_info.is_headless} (might be forced)")
-
 
 if __name__ == "__main__":
     # If run directly, print environment report

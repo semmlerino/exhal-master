@@ -4,6 +4,7 @@ File selector component with browse functionality
 Provides a standardized file selection widget with path input and browse button,
 exactly replicating the file selection patterns from InjectionDialog.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Callable

@@ -1,6 +1,7 @@
 """
 Common UI utilities and helpers.
 """
+from __future__ import annotations
 
 from .collapsible_group_box import CollapsibleGroupBox
 from .error_handler import ErrorHandler, get_error_handler, reset_error_handler

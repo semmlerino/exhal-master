@@ -1,6 +1,7 @@
 """
 Visual sprite validation to distinguish real character sprites from garbage data
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -18,7 +19,6 @@ else:
         cv2 = None
 
 logger = get_logger(__name__)
-
 
 class SpriteVisualValidator:
     """Validates if image data contains actual character sprites vs garbage pixels"""

@@ -28,7 +28,6 @@ from tests.infrastructure.qt_real_testing import (
     ThreadSafetyHelper,
 )
 
-
 class MockWorker(QThread):
     """Mock worker for testing lifecycle management."""
     
@@ -73,7 +72,6 @@ class MockWorker(QThread):
         self.stop()
         if self.isRunning():
             self.wait(1000)  # Wait up to 1 second
-
 
 class WorkerManager:
     """Test worker manager for lifecycle testing."""
@@ -145,7 +143,6 @@ class WorkerManager:
         """Get count of active workers."""
         return len(self.active_workers)
 
-
 @pytest.fixture
 def worker_manager():
     """Create a worker manager for testing."""
@@ -153,7 +150,6 @@ def worker_manager():
     yield manager
     # Clean up all workers after test
     manager.cleanup_all_workers()
-
 
 @pytest.mark.gui
 @pytest.mark.integration
@@ -390,7 +386,6 @@ class TestWorkerLifecycleManagementIntegration(QtTestCase):
         assert memory_increase < 50, f"Memory increased by {memory_increase:.1f} MB"
         assert thread_increase <= 3, f"Thread count increased by {thread_increase}"
 
-
 @pytest.mark.gui
 @pytest.mark.integration
 class TestWorkerManagerPatterns(QtTestCase):
@@ -492,7 +487,6 @@ class TestWorkerManagerPatterns(QtTestCase):
         # (In real test we'd wait for signals, here we'll cleanup manually)
         pool.cleanup_all()
         assert pool.get_active_count() == 0
-
 
 @pytest.mark.headless
 @pytest.mark.integration

@@ -5,6 +5,7 @@ Provides consistent access to real test data files (VRAM, ROM, CGRAM, etc.)
 instead of creating temporary mock data in each test. This improves test
 reliability and ensures tests use realistic data patterns.
 """
+from __future__ import annotations
 
 import os
 import shutil
@@ -16,7 +17,6 @@ from typing import Any
 import pytest
 from PIL import Image
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -27,7 +27,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.slow,
 ]
-
 
 @dataclass
 class TestDataSet:
@@ -46,7 +45,6 @@ class TestDataSet:
             self.sprite_images = []
         if self.metadata_files is None:
             self.metadata_files = []
-
 
 class TestDataRepository:
     """
@@ -517,7 +515,6 @@ class TestDataRepository:
         self._temp_files.clear()
         self._temp_dirs.clear()
 
-
 class _TestDataRepositorySingleton:
     """Singleton holder for TestDataRepository."""
     _instance: TestDataRepository | None = None
@@ -536,27 +533,22 @@ class _TestDataRepositorySingleton:
             cls._instance.cleanup()
             cls._instance = None
 
-
 def get_test_data_repository() -> TestDataRepository:
     """Get the global test data repository instance."""
     return _TestDataRepositorySingleton.get()
 
-
 def cleanup_test_data_repository() -> None:
     """Clean up the global test data repository."""
     _TestDataRepositorySingleton.cleanup()
-
 
 # Convenience functions
 def get_vram_test_data(size: str = "medium") -> dict[str, Any]:
     """Get VRAM test data."""
     return get_test_data_repository().get_vram_extraction_data(size)
 
-
 def get_rom_test_data(size: str = "medium") -> dict[str, Any]:
     """Get ROM test data."""
     return get_test_data_repository().get_rom_extraction_data(size)
-
 
 def get_injection_test_data(size: str = "medium") -> dict[str, Any]:
     """Get injection test data."""

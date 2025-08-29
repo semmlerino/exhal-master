@@ -1,6 +1,7 @@
 """
 Extended tests for PaletteManager class to improve coverage
 """
+from __future__ import annotations
 
 import json
 import sys
@@ -20,12 +21,10 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core.palette_manager import PaletteManager
 from utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START
-
 
 class TestPaletteManagerExtended:
     """Extended tests for PaletteManager functionality"""

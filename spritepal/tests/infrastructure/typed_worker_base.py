@@ -21,7 +21,6 @@ W = TypeVar("W", bound=QThread)
 P = TypeVar("P")  # Parameter type
 R = TypeVar("R")  # Result type
 
-
 class TypedWorkerBase(QThread, Generic[M, P, R]):
     """
     Generic base class for type-safe workers.
@@ -129,7 +128,6 @@ class TypedWorkerBase(QThread, Generic[M, P, R]):
         if not self.check_interruption():
             self.progress_signal.emit(value)
 
-
 class ExtractionWorkerBase(TypedWorkerBase[M, P, R]):
     """
     Base class for extraction workers with type safety.
@@ -160,7 +158,6 @@ class ExtractionWorkerBase(TypedWorkerBase[M, P, R]):
         if not self.check_interruption():
             self.preview_ready_signal.emit(preview_data)
 
-
 class InjectionWorkerBase(TypedWorkerBase[M, P, R]):
     """
     Base class for injection workers with type safety.
@@ -190,7 +187,6 @@ class InjectionWorkerBase(TypedWorkerBase[M, P, R]):
         """
         if not self.check_interruption():
             self.compression_progress_signal.emit(progress)
-
 
 class WorkerTestHelper(Generic[W]):
     """
@@ -291,7 +287,6 @@ class WorkerTestHelper(Generic[W]):
             self._worker = None
         self._signals_received.clear()
 
-
 class TypedWorkerValidator:
     """
     Validator for ensuring worker type safety.
@@ -383,7 +378,6 @@ class TypedWorkerValidator:
 
         return cast(R | None, result)
 
-
 # Example concrete implementations for testing
 
 class TestExtractionWorker(ExtractionWorkerBase["ExtractionManager", dict[str, Any], list[Any]]):
@@ -410,7 +404,6 @@ class TestExtractionWorker(ExtractionWorkerBase["ExtractionManager", dict[str, A
 
         return results
 
-
 class TestInjectionWorker(InjectionWorkerBase["InjectionManager", dict[str, Any], bool]):
     """
     Example injection worker for testing.
@@ -429,7 +422,6 @@ class TestInjectionWorker(InjectionWorkerBase["InjectionManager", dict[str, Any]
             self.emit_compression_progress(i * 10)
 
         return True
-
 
 # Pytest fixtures (if pytest is available)
 try:

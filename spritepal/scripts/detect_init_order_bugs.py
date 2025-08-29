@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Detect potential initialization order bugs in the codebase.
 
@@ -127,7 +129,6 @@ class InitOrderDetector(ast.NodeVisitor):
                     "severity": "warning"
                 })
 
-
 def analyze_file(filepath: Path) -> list[dict[str, Any]]:
     """Analyze a single Python file for initialization order issues."""
     try:
@@ -141,7 +142,6 @@ def analyze_file(filepath: Path) -> list[dict[str, Any]]:
     except Exception as e:
         print(f"Error analyzing {filepath}: {e}")
         return []
-
 
 def main():
     """Main function to scan the project."""
@@ -206,7 +206,6 @@ def main():
         print(f"\nDetailed report saved to: {report_path}")
 
     return len(errors) if all_issues else 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

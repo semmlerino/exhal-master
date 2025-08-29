@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """Analyze test failures and categorize them by root cause."""
 
 import subprocess

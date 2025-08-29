@@ -4,9 +4,10 @@ Status bar manager component for handling dialog status bars.
 This component manages status bar creation, updates, and permanent widgets.
 It's designed to be composed into dialogs via the DialogBase composition system.
 """
+from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QStatusBar, QWidget
@@ -26,7 +27,7 @@ class StatusBarManager(QObject):
     # Signal emitted when status message changes
     status_changed = Signal(str)
 
-    def __init__(self, parent: Optional[QObject] = None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """
         Initialize the status bar manager.
 
@@ -34,7 +35,7 @@ class StatusBarManager(QObject):
             parent: Optional parent QObject for proper cleanup
         """
         super().__init__(parent)
-        self._status_bar: Optional[QStatusBar] = None
+        self._status_bar: QStatusBar | None = None
         self._permanent_widgets: dict[str, QWidget] = {}
 
     def initialize(self, context: Any) -> None:
@@ -193,7 +194,7 @@ class StatusBarManager(QObject):
         return self._status_bar is not None
 
     @property
-    def status_bar(self) -> Optional[QStatusBar]:
+    def status_bar(self) -> QStatusBar | None:
         """
         Get the underlying QStatusBar widget.
 

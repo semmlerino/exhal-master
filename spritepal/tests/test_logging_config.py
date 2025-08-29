@@ -1,6 +1,7 @@
 """
 Test logging configuration functionality
 """
+from __future__ import annotations
 
 import logging
 import logging.handlers
@@ -11,7 +12,6 @@ from unittest.mock import patch
 import pytest
 
 from utils.logging_config import get_logger, setup_logging
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -26,7 +26,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.no_manager_setup,  # Pure unit tests for logging configuration
 ]
-
 
 class TestSetupLogging:
     """Test setup_logging function"""
@@ -333,7 +332,6 @@ class TestSetupLogging:
             with pytest.raises((FileExistsError, NotADirectoryError, OSError)):
                 setup_logging(log_dir=log_dir)
 
-
 class TestGetLogger:
     """Test get_logger function"""
 
@@ -409,7 +407,6 @@ class TestGetLogger:
                 content = f.read()
                 assert "Test message from module" in content
                 assert "spritepal.test_module" in content
-
 
 class TestLoggingIntegration:
     """Test integration between setup_logging and get_logger"""
@@ -492,7 +489,6 @@ class TestLoggingIntegration:
                 assert "An error occurred" in content
                 assert "ValueError: Test exception" in content
                 assert "Traceback" in content
-
 
 if __name__ == "__main__":
     pytest.main([__file__])

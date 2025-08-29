@@ -2,6 +2,7 @@
 Real integration tests for recent UI improvements.
 Tests dark theme, window sizing, and signal architecture working together.
 """
+from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import Qt, QTimer
@@ -18,7 +19,6 @@ try:
     REAL_QT_AVAILABLE = True
 except ImportError:
     REAL_QT_AVAILABLE = False
-
 
 class TestUIImprovementsIntegration:
     """Integration tests for UI improvements that work in headless mode."""
@@ -64,7 +64,6 @@ class TestUIImprovementsIntegration:
         # Check signal attributes exist (even if Qt isn't initialized)
         assert hasattr(UnifiedManualOffsetDialog, 'offset_changed')
         assert hasattr(UnifiedManualOffsetDialog, 'sprite_found')
-
 
 @pytest.mark.gui
 @pytest.mark.skipif(not REAL_QT_AVAILABLE, reason="Requires real Qt widgets")
@@ -145,7 +144,6 @@ class TestUIImprovementsRealQt:
         style = button.styleSheet()
         assert "qlineargradient" in style.lower() or "gradient" in style.lower()
 
-
 class TestIntegrationWithMocks:
     """Integration tests using mocks for components."""
     
@@ -186,7 +184,6 @@ class TestIntegrationWithMocks:
         mock_dialog.offset_changed.connect.assert_called_once()
         mock_dialog.sprite_found.connect.assert_called_once()
         assert mock_dialog._custom_signals_connected == True
-
 
 if __name__ == "__main__":
     # Run tests that work without display

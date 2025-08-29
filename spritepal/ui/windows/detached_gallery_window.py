@@ -2,9 +2,10 @@
 Detached gallery window for displaying sprites without layout constraints.
 Opens in a separate window to avoid parent layout stretch issues.
 """
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QKeyEvent
@@ -41,7 +42,6 @@ from utils.settings_manager import get_settings_manager
 
 logger = get_logger(__name__)
 
-
 class DetachedGalleryWindow(QMainWindow):
     """Standalone window for sprite gallery display."""
 
@@ -50,7 +50,7 @@ class DetachedGalleryWindow(QMainWindow):
     window_closed = Signal()  # Emits when window is closed
     sprite_extracted = Signal(str, int)  # path, offset - for successful extraction
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Initialize the detached gallery window.
 
@@ -65,23 +65,23 @@ class DetachedGalleryWindow(QMainWindow):
 
         # State
         self.sprites_data: list[dict[str, Any]] = []
-        self.rom_path: Optional[str] = None
+        self.rom_path: str | None = None
         self.rom_size: int = 0
-        self.scan_worker: Optional[SpriteScanWorker] = None
-        self.thumbnail_controller: Optional[ThumbnailWorkerController] = None
+        self.scan_worker: SpriteScanWorker | None = None
+        self.thumbnail_controller: ThumbnailWorkerController | None = None
         self.scanning: bool = False
-        self.scan_timeout_timer: Optional[QTimer] = None
+        self.scan_timeout_timer: QTimer | None = None
 
         # Core managers
         self.extraction_manager = get_extraction_manager()
         self.rom_extractor = self.extraction_manager.get_rom_extractor()
 
         # UI Components (initialized in _setup_ui)
-        self.gallery_widget: Optional[SpriteGalleryWidget] = None
+        self.gallery_widget: SpriteGalleryWidget | None = None
         self.status_bar: QStatusBar  # Always initialized in _setup_ui
         self.progress_bar: QProgressBar  # Always initialized in _setup_ui
-        self.scan_results_text: Optional[QTextEdit] = None
-        self.fullscreen_viewer: Optional[FullscreenSpriteViewer] = None
+        self.scan_results_text: QTextEdit | None = None
+        self.fullscreen_viewer: FullscreenSpriteViewer | None = None
 
         self._setup_ui()
 
@@ -783,7 +783,7 @@ class DetachedGalleryWindow(QMainWindow):
         # Start scan with custom range
         self._start_scan(start_offset, end_offset)
 
-    def _start_scan(self, start_offset: Optional[int] = None, end_offset: Optional[int] = None):
+    def _start_scan(self, start_offset: int | None = None, end_offset: int | None = None):
         """Start the ROM scanning process."""
         if not self.rom_path:
             self.status_bar.showMessage("No ROM loaded - cannot start scan")

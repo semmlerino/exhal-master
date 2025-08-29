@@ -4,6 +4,7 @@ Test constants validation and usage in Phase 2 improvements.
 Validates that constants are properly defined, used consistently,
 and that the replacement of magic numbers is effective.
 """
+from __future__ import annotations
 
 from unittest.mock import patch
 
@@ -11,7 +12,6 @@ import pytest
 
 from ui.common import spacing_constants
 from utils import constants
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.no_manager_setup,  # Pure unit tests for constants validation
 ]
-
 
 class TestConstantsValidation:
     """Test constants definition and validation"""
@@ -167,7 +166,6 @@ class TestConstantsValidation:
             assert magic_number == constant_value, \
                 f"Magic number {hex(magic_number)} doesn't match constant value {constant_value}"
 
-
 class TestSpacingConstantsValidation:
     """Test UI spacing constants validation"""
 
@@ -258,7 +256,6 @@ class TestSpacingConstantsValidation:
         # Zoom should allow reasonable magnification
         max_magnified_size = spacing_constants.PREVIEW_MIN_SIZE * spacing_constants.MAX_ZOOM
         assert max_magnified_size >= 2560, "Maximum zoom should allow reasonable magnification"
-
 
 class TestConstantUsageValidation:
     """Test that constants are being used correctly in the codebase"""

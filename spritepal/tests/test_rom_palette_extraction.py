@@ -1,6 +1,7 @@
 """
 Test ROM palette extraction functionality
 """
+from __future__ import annotations
 
 import json
 import os
@@ -9,7 +10,6 @@ import tempfile
 import pytest
 
 from core.rom_palette_extractor import ROMPaletteExtractor
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -22,7 +22,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.ci_safe,
 ]
-
 
 class TestROMPaletteExtraction:
     """Test ROM palette extraction"""
@@ -185,7 +184,6 @@ class TestROMPaletteExtraction:
             for idx in range(8, 12):
                 assert len(palettes[idx]) == 16
                 assert all(len(color) == 3 for color in palettes[idx])
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

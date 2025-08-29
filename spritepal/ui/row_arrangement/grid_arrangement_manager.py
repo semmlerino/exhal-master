@@ -1,6 +1,7 @@
 """
 Grid-based arrangement state management for flexible sprite organization
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
@@ -16,7 +17,6 @@ class ArrangementType(Enum):
     COLUMN = "column"
     TILE = "tile"
     GROUP = "group"
-
 
 @dataclass
 class TilePosition:
@@ -35,7 +35,6 @@ class TilePosition:
             and self.col == other.col
         )
 
-
 @dataclass
 class TileGroup:
     """Represents a group of tiles that should stay together"""
@@ -45,7 +44,6 @@ class TileGroup:
     width: int  # Group width in tiles
     height: int  # Group height in tiles
     name: str | None = None
-
 
 class GridArrangementManager(QObject):
     """Manages grid-based sprite tile arrangements with support for rows, columns, and custom groups"""

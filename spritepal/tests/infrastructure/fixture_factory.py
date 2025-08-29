@@ -51,7 +51,6 @@ Thread Safety:
 - Resource sharing controls
 """
 
-
 from __future__ import annotations
 
 import logging
@@ -64,7 +63,6 @@ from typing import (
     Any,
     Callable,
     TypeVar,
-    Union,
 )
 
 if TYPE_CHECKING:
@@ -93,7 +91,6 @@ logger = logging.getLogger(__name__)
 # Type variables
 T = TypeVar('T')
 FixtureType = TypeVar('FixtureType')
-
 
 @dataclass
 class FixtureConfiguration:
@@ -176,7 +173,6 @@ class FixtureConfiguration:
                 'performance_monitoring': False,
             }
 
-
 class FixtureCreationError(Exception):
     """Raised when fixture creation fails."""
 
@@ -184,7 +180,6 @@ class FixtureCreationError(Exception):
         self.fixture_type = fixture_type
         self.original_error = original_error
         super().__init__(f"Failed to create {fixture_type}: {original_error}")
-
 
 class FixtureRegistry:
     """
@@ -199,7 +194,7 @@ class FixtureRegistry:
         self._fixtures: weakref.WeakSet[Any] = weakref.WeakSet()
         self._qtbots: list[SafeQtBot] = []
         self._qapps: list[SafeQApplication] = []
-        self._factories: list[Union[SafeWidgetFactory, SafeDialogFactory]] = []
+        self._factories: list[SafeWidgetFactory | SafeDialogFactory] = []
         self._cleanup_callbacks: list[Callable[[], None]] = []
 
     def register_qtbot(self, qtbot: SafeQtBot) -> None:
@@ -214,7 +209,7 @@ class FixtureRegistry:
             self._qapps.append(qapp)
             self._fixtures.add(qapp)
 
-    def register_factory(self, factory: Union[SafeWidgetFactory, SafeDialogFactory]) -> None:
+    def register_factory(self, factory: SafeWidgetFactory | SafeDialogFactory) -> None:
         """Register factory for management."""
         with self._lock:
             self._factories.append(factory)
@@ -276,7 +271,6 @@ class FixtureRegistry:
 
             if errors:
                 logger.warning(f"Cleanup errors occurred: {'; '.join(errors)}")
-
 
 class QtFixtureFactory:
     """
@@ -570,7 +564,6 @@ class QtFixtureFactory:
             with suppress(Exception):
                 self.cleanup_all()
 
-
 # Factory validator utility
 
 class FixtureValidator:
@@ -606,7 +599,6 @@ class FixtureValidator:
         from .safe_fixtures import validate_fixture_environment
         return validate_fixture_environment()
 
-
 # Convenience functions for common patterns
 
 def create_test_qt_factory(
@@ -634,7 +626,6 @@ def create_test_qt_factory(
 
     return QtFixtureFactory(config)
 
-
 def create_performance_qt_factory() -> QtFixtureFactory:
     """
     Create Qt fixture factory optimized for performance.
@@ -650,7 +641,6 @@ def create_performance_qt_factory() -> QtFixtureFactory:
     )
 
     return QtFixtureFactory(config)
-
 
 def create_development_qt_factory() -> QtFixtureFactory:
     """
@@ -673,7 +663,6 @@ def create_development_qt_factory() -> QtFixtureFactory:
     )
 
     return QtFixtureFactory(config)
-
 
 # Export public interface
 __all__ = [

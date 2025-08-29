@@ -8,14 +8,11 @@ import tempfile
 from core.managers import (
 # Systematic pytest markers applied based on test content analysis
 
-
     are_managers_initialized,
     cleanup_managers,
     get_extraction_manager,
     initialize_managers,
 )
-
-
 
 pytestmark = [
     pytest.mark.file_io,

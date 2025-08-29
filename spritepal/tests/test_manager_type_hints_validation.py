@@ -4,6 +4,7 @@ Test type hints validation for manager classes from Phase 2.
 Tests runtime type checking and validates that type hints correctly
 represent the actual behavior of manager methods.
 """
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,6 @@ from core.managers.exceptions import ManagerError, ValidationError
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -29,7 +29,6 @@ pytestmark = [
     pytest.mark.ci_safe,
     pytest.mark.signals_slots,
 ]
-
 
 class TestManagerTypeHintsValidation:
     """Test that manager type hints match runtime behavior"""

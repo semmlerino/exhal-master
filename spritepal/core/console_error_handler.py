@@ -4,6 +4,7 @@ Console-based error handler for fallback scenarios.
 This provides a real implementation that logs errors to console instead of
 silently swallowing them like MockErrorHandler does.
 """
+from __future__ import annotations
 
 import sys
 import traceback
@@ -12,7 +13,6 @@ from typing import Any
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 
 class ConsoleErrorHandler:
     """

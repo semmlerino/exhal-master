@@ -2,6 +2,8 @@
 # pyright: reportPrivateUsage=false  # Allow testing private methods
 # pyright: reportUnknownMemberType=warning  # Mock attributes are dynamic
 
+from __future__ import annotations
+
 """
 Unit tests for worker base classes.
 
@@ -21,7 +23,6 @@ from PySide6.QtTest import QSignalSpy
 from core.managers.base_manager import BaseManager
 from core.workers.base import BaseWorker, ManagedWorker
 
-
 # Serial execution required: QApplication management
 pytestmark = [
     
@@ -31,7 +32,6 @@ pytestmark = [
     pytest.mark.requires_display,
     pytest.mark.signals_slots,
 ]
-
 
 class TestBaseWorker:
     """Test the BaseWorker base class."""
@@ -184,7 +184,6 @@ class TestBaseWorker:
         worker.wait_if_paused()  # Should exit immediately
 
         # Test passed if we reach here without hanging
-
 
 class TestManagedWorker:
     """Test the ManagedWorker base class."""
@@ -352,7 +351,6 @@ class TestManagedWorker:
 
         # Verify cleanup was called despite exception
         assert worker.cleanup_called
-
 
 @pytest.fixture
 def qtbot():

@@ -1,4 +1,5 @@
 """Integration tests for sprite injection workflow"""
+from __future__ import annotations
 
 import os
 import tempfile
@@ -10,7 +11,6 @@ from core.extractor import SpriteExtractor
 from core.injector import InjectionWorker, SpriteInjector
 from core.palette_manager import PaletteManager
 
-
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
     pytest.mark.file_io,
@@ -20,7 +20,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 class TestInjectionWorkflowIntegration:
     """Test complete injection workflow integration"""

@@ -1,4 +1,5 @@
 """Comprehensive tests for ROM cache functionality."""
+from __future__ import annotations
 
 import json
 import os
@@ -11,7 +12,6 @@ import pytest
 
 from core.rom_injector import SpritePointer
 from utils.rom_cache import ROMCache, get_rom_cache
-
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
@@ -29,7 +29,6 @@ pytestmark = [
     pytest.mark.slow,
     pytest.mark.worker_threads,
 ]
-
 
 class TestROMCacheCore:
     """Test core ROMCache functionality."""
@@ -644,7 +643,6 @@ class TestROMCacheCore:
             assert str(cache.cache_dir).startswith(tempfile.gettempdir())
             assert cache.cache_enabled is True
 
-
 class TestROMCacheSingleton:
     """Test the global ROM cache singleton."""
 
@@ -682,7 +680,6 @@ class TestROMCacheSingleton:
         loaded = cache2.get_sprite_locations(test_rom_file)
         assert loaded is not None
         assert "test" in loaded
-
 
 class TestROMCacheIntegration:
     """Test ROM cache integration with UI components."""
@@ -779,7 +776,6 @@ class TestROMCacheIntegration:
         assert len(progress["found_sprites"]) == 2
         assert progress["current_offset"] == 0xC3000
 
-
 class TestROMCacheErrorHandling:
     """Test error handling in ROM cache."""
 
@@ -841,7 +837,6 @@ class TestROMCacheErrorHandling:
         # Should return None for incompatible version
         loaded = rom_cache.get_sprite_locations(test_rom_file)
         assert loaded is None
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

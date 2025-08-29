@@ -50,7 +50,6 @@ pytestmark = [
     pytest.mark.ci_safe,
 ]
 
-
 class TestSafeFixtureBasics:
     """Test basic safe fixture functionality."""
     
@@ -108,7 +107,6 @@ class TestSafeFixtureBasics:
         
         # Test cleanup
         factory.cleanup()
-
 
 class TestSafeFixtureEnvironmentAdaptation:
     """Test that fixtures adapt correctly to different environments."""
@@ -171,7 +169,6 @@ class TestSafeFixtureEnvironmentAdaptation:
         assert env_info is not None
         assert hasattr(env_info, 'is_headless')
 
-
 class TestSafeFixtureErrorHandling:
     """Test error handling and fallback mechanisms."""
     
@@ -208,7 +205,6 @@ class TestSafeFixtureErrorHandling:
         # Should not raise exceptions even if called multiple times
         cleanup_all_fixtures()
         cleanup_all_fixtures()
-
 
 class TestSafeFixtureCompatibility:
     """Test compatibility with existing pytest-qt patterns."""
@@ -252,7 +248,6 @@ class TestSafeFixtureCompatibility:
         for _ in range(5):
             qapp.processEvents()
 
-
 class TestSafeFixturePerformance:
     """Test performance aspects of safe fixtures."""
     
@@ -288,7 +283,6 @@ class TestSafeFixturePerformance:
         
         # Cleanup should be fast
         assert cleanup_time < 1.0
-
 
 class TestSafeFixtureIntegration:
     """Test integration with other test infrastructure."""
@@ -329,7 +323,6 @@ class TestSafeFixtureIntegration:
         from tests.infrastructure.safe_fixtures import create_safe_qtbot
         qtbot = create_safe_qtbot()
         assert qtbot is not None
-
 
 # Specialized validation tests
 
@@ -393,7 +386,6 @@ class TestSafeFixtureStressValidation:
         assert len(errors) == 0, f"Concurrent usage errors: {errors}"
         assert len(results) == 3
 
-
 # Environment-specific tests
 
 @pytest.mark.ci_safe
@@ -410,7 +402,6 @@ def test_ci_environment_compatibility():
     ]
     
     assert len(critical_errors) == 0, f"Critical errors in CI: {critical_errors}"
-
 
 def test_fixture_documentation_accuracy():
     """Test that fixture behavior matches documentation."""
@@ -438,7 +429,6 @@ def test_fixture_documentation_accuracy():
     documented_methods = ['processEvents', 'quit', 'exit']
     for method in documented_methods:
         assert hasattr(qapp, method), f"qapp missing documented method: {method}"
-
 
 if __name__ == "__main__":
     # Allow running as script for quick validation

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Comprehensive Test Categorization Script with pytest Markers
 
@@ -281,7 +283,6 @@ class TestFileAnalyzer:
 
         return markers
 
-
 class TestCategorizer:
     """Main class for categorizing and updating test files."""
 
@@ -445,7 +446,6 @@ class TestCategorizer:
 
         return '\n'.join(report)
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Categorize tests with pytest markers",
@@ -487,7 +487,6 @@ def main():
         print(f"\nUpdated {updated_count} files with new markers")
 
     print(f"\nCategorization complete. Report available at: {report_path}")
-
 
 if __name__ == '__main__':
     main()

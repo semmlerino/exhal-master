@@ -5,6 +5,7 @@ These tests focus specifically on the singleton pattern behavior
 without requiring complex Qt setup, using pure mocking to verify
 the critical singleton functionality.
 """
+from __future__ import annotations
 
 import sys
 from unittest.mock import MagicMock, Mock, patch
@@ -32,12 +33,10 @@ pytestmark = [
     pytest.mark.signals_slots,
 ]
 
-
 patch_dialog_imports()
 
 # Now safe to import the singleton after patching
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
-
 
 @pytest.mark.no_manager_setup
 @pytest.mark.unit

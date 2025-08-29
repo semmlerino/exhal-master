@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Simple import test for ResumeScanDialog pilot migration.
 
@@ -11,7 +13,6 @@ import sys
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 
 def test_feature_flag_controls():
     """Test that feature flag controls work correctly."""
@@ -41,7 +42,6 @@ def test_feature_flag_controls():
     set_dialog_implementation(False)
     print("✓ Feature flag controls working correctly")
     return True
-
 
 def test_import_with_implementation(use_composed: bool):
     """Test importing ResumeScanDialog with specific implementation."""
@@ -127,7 +127,6 @@ def test_import_with_implementation(use_composed: bool):
         traceback.print_exc()
         return False
 
-
 def test_base_dialog_source():
     """Test that BaseDialog comes from the expected source."""
     print("\n" + "="*60)
@@ -168,7 +167,6 @@ def test_base_dialog_source():
         print("ℹ Same implementation loaded (likely in test mode without Qt)")
     
     return True
-
 
 def main():
     """Main test runner."""
@@ -215,7 +213,6 @@ def main():
         print("\n✗ FAILURE: Some tests failed!")
         print("  Check the output above for details.")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,4 +1,5 @@
 """Input validation utilities for SpritePal security"""
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -24,7 +25,6 @@ CGRAM_EXTENSIONS = {".dmp", ".bin", ".cgram", ".pal"}
 OAM_EXTENSIONS = {".dmp", ".bin", ".oam"}
 IMAGE_EXTENSIONS = {".png"}
 JSON_EXTENSIONS = {".json"}
-
 
 def validate_file_path(
     file_path: str,
@@ -61,7 +61,6 @@ def validate_file_path(
 
     return True, ""
 
-
 def _validate_path_properties(
     path: Path,
     file_path: str,
@@ -94,31 +93,25 @@ def _validate_path_properties(
 
     return ""
 
-
 def validate_vram_file(file_path: str) -> tuple[bool, str]:
     """Validate a VRAM dump file."""
     return validate_file_path(file_path, VRAM_EXTENSIONS, MAX_VRAM_SIZE)
-
 
 def validate_cgram_file(file_path: str) -> tuple[bool, str]:
     """Validate a CGRAM dump file."""
     return validate_file_path(file_path, CGRAM_EXTENSIONS, MAX_CGRAM_SIZE)
 
-
 def validate_oam_file(file_path: str) -> tuple[bool, str]:
     """Validate an OAM dump file."""
     return validate_file_path(file_path, OAM_EXTENSIONS, MAX_OAM_SIZE)
-
 
 def validate_image_file(file_path: str) -> tuple[bool, str]:
     """Validate an image file."""
     return validate_file_path(file_path, IMAGE_EXTENSIONS, MAX_IMAGE_SIZE)
 
-
 def validate_json_file(file_path: str) -> tuple[bool, str]:
     """Validate a JSON file."""
     return validate_file_path(file_path, JSON_EXTENSIONS, MAX_JSON_SIZE)
-
 
 def validate_offset(offset: int, max_offset: int) -> tuple[bool, str]:
     """Validate an offset value."""
@@ -128,7 +121,6 @@ def validate_offset(offset: int, max_offset: int) -> tuple[bool, str]:
         return False, f"Offset {offset} exceeds maximum: {max_offset}"
     return True, ""
 
-
 def validate_tile_count(count: int, max_count: int = MAX_TILE_COUNT_DEFAULT) -> tuple[bool, str]:
     """Validate tile count to prevent excessive memory usage."""
     if count < 0:
@@ -136,7 +128,6 @@ def validate_tile_count(count: int, max_count: int = MAX_TILE_COUNT_DEFAULT) -> 
     if count > max_count:
         return False, f"Tile count {count} exceeds maximum: {max_count}"
     return True, ""
-
 
 def sanitize_filename(filename: str) -> str:
     """

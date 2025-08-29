@@ -1,4 +1,5 @@
 """ROM file selector widget for ROM extraction"""
+from __future__ import annotations
 
 from typing import Any
 
@@ -21,7 +22,6 @@ BUTTON_MIN_HEIGHT = 32
 COMBO_MIN_WIDTH = 200
 BUTTON_MAX_WIDTH = 150
 LABEL_MIN_WIDTH = 120
-
 
 class ROMFileWidget(BaseExtractionWidget):
     """Widget for selecting and displaying ROM file information"""

@@ -112,7 +112,6 @@ def enhanced_handle_worker_errors(
         return wrapper
     return decorator
 
-
 def qt_error_handler(
     operation: str,
     component: str | None = None,
@@ -146,7 +145,6 @@ def qt_error_handler(
 
         return wrapper
     return decorator
-
 
 def file_operation_handler(
     operation: str,
@@ -200,7 +198,6 @@ def file_operation_handler(
         return wrapper
     return decorator
 
-
 def validation_handler(
     operation: str,
     input_attr: str | None = None,
@@ -248,7 +245,6 @@ def validation_handler(
         return wrapper
     return decorator
 
-
 class ErrorHandlerMixin:
     """
     Mixin class that provides error handling capabilities to any class.
@@ -289,7 +285,6 @@ class ErrorHandlerMixin:
             return {}
         return self._error_handler.get_error_statistics()
 
-
 # Utility functions for common patterns
 
 def create_safe_method(
@@ -329,7 +324,6 @@ def create_safe_method(
             return default_return
 
     return safe_wrapper
-
 
 def batch_error_handler(
     operations: list[tuple[Callable, str]],

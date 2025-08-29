@@ -1,8 +1,8 @@
 """Minimal controller tests without complex fixtures"""
+from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock
-
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -14,7 +14,6 @@ pytestmark = [
     pytest.mark.unit,
     pytest.mark.ci_safe,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestControllerMinimal:

@@ -3,6 +3,7 @@ Component Factory for Manual Offset Dialog
 
 Handles creation, dependency injection, and lifecycle management of all dialog components.
 """
+from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
@@ -21,7 +22,6 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class ComponentFactory:
     """
     Factory for creating and wiring dialog components.
@@ -30,7 +30,7 @@ class ComponentFactory:
     and proper wiring to ensure components work together correctly.
     """
 
-    def __init__(self, dialog: 'ManualOffsetDialogCore') -> None:
+    def __init__(self, dialog: ManualOffsetDialogCore) -> None:
         """Initialize the component factory."""
         self.dialog = dialog
 

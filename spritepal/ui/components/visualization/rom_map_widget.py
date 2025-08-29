@@ -25,7 +25,6 @@ MAX_SPRITES_IN_MAP = 10000  # Maximum sprites to keep in memory
 SPRITE_CLEANUP_THRESHOLD = 12000  # Start cleanup when we exceed this
 SPRITE_CLEANUP_TARGET = 8000  # Clean down to this many sprites
 
-
 class ROMMapWidget(QWidget):
     """Visual representation of ROM with sprite locations"""
 

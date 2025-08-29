@@ -1,8 +1,7 @@
 """
 Tests for sprite region detection and management functionality.
 """
-
-
+from __future__ import annotations
 
 import time
 
@@ -11,14 +10,11 @@ import pytest
 from utils.sprite_regions import (
 # Systematic pytest markers applied based on test content analysis
 
-
     RegionUpdateManager,
     SpriteRegion,
     SpriteRegionClassifier,
     SpriteRegionDetector,
 )
-
-
 
 pytestmark = [
     pytest.mark.benchmark,
@@ -113,7 +109,6 @@ class TestSpriteRegion:
         # Low quality
         region.average_quality = 0.3
         assert region.quality_category == "low"
-
 
 class TestSpriteRegionDetector:
     """Test SpriteRegionDetector functionality"""
@@ -290,7 +285,6 @@ class TestSpriteRegionDetector:
         for i, region in enumerate(regions):
             assert region.region_id == i
 
-
 class TestSpriteRegionClassifier:
     """Test region classification functionality"""
 
@@ -379,7 +373,6 @@ class TestSpriteRegionClassifier:
         # This region is so unusual it should either be unknown or have very low confidence
         assert region_type == "unknown" or confidence <= 0.3, f"Got {region_type} with confidence {confidence}"
 
-
 class TestRegionUpdateManager:
     """Test dynamic region update functionality"""
 
@@ -463,7 +456,6 @@ class TestRegionUpdateManager:
         manager.add_discovered_sprite(0x300000, 0.9)
         assert callback_count == 1
 
-
 class TestPerformance:
     """Test performance with large sprite counts"""
 
@@ -517,7 +509,6 @@ class TestPerformance:
 
         # Should be very fast
         assert elapsed < 0.1  # 100ms for 1000 lookups
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

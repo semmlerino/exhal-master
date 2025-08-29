@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-
 class LinearNavigationStrategy(AbstractNavigationStrategy):
     """
     Linear navigation strategy that mimics traditional sequential scanning.
@@ -154,8 +153,6 @@ class LinearNavigationStrategy(AbstractNavigationStrategy):
         # Use most common region type among nearby sprites
         region_types = [sprite.region_type for sprite, _ in nearby_sprites]
         return Counter(region_types).most_common(1)[0][0]
-
-
 
 class PatternBasedStrategy(AbstractPatternStrategy):
     """
@@ -296,7 +293,6 @@ class PatternBasedStrategy(AbstractPatternStrategy):
         # This would analyze gaps that could fit common sprite sizes
         # Implementation would be similar to spacing patterns
 
-
     def _apply_region_patterns(self, region_data: dict[str, Any], context: NavigationContext) -> list[NavigationHint]:
         """Generate hints based on region organization patterns."""
         hints = []
@@ -345,7 +341,6 @@ class PatternBasedStrategy(AbstractPatternStrategy):
                 offset_map[offset] = hint
 
         return list(offset_map.values())
-
 
 class SimilarityStrategy(AbstractSimilarityStrategy):
     """
@@ -421,7 +416,6 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
         # Higher confidence with more reference data
         ref_count_factor = min(1.0, len(self.reference_sprites) / self.max_reference_sprites)
         return 0.4 + (ref_count_factor * 0.4)
-
 
     def _calculate_similarity(self, sprite1: SpriteLocation, sprite2: SpriteLocation) -> float:
         """Calculate similarity between two sprites."""
@@ -520,7 +514,6 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
 
         return list(offset_map.values())
 
-
 class HybridNavigationStrategy(AbstractNavigationStrategy):
     """
     Hybrid strategy combining multiple navigation approaches.
@@ -612,7 +605,6 @@ class HybridNavigationStrategy(AbstractNavigationStrategy):
             pattern_conf * self.strategy_weights["pattern"] +
             similarity_conf * self.strategy_weights["similarity"]
         )
-
 
     def _create_weighted_hint(self, hint: NavigationHint, weight: float, strategy_name: str) -> NavigationHint:
         """Create a weighted version of a hint."""

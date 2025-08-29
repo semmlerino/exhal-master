@@ -28,7 +28,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtCore import QMutex, QMutexLocker, QThread, QTimer
-from PySide6.QtGui import QPixmap
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtWidgets import QApplication
 
 from tests.infrastructure.environment_detection import (
@@ -46,7 +46,6 @@ from ui.workers.batch_thumbnail_worker import BatchThumbnailWorker, ThumbnailReq
 
 # Configure Qt for the detected environment to prevent crashes
 configure_qt_for_environment()
-
 
 class WorkerThreadWrapper:
     """Wrapper to make BatchThumbnailWorker behave like a QThread for tests."""
@@ -124,7 +123,6 @@ class WorkerThreadWrapper:
         """Forward any other attribute access to the worker."""
         return getattr(self.worker, name)
 
-
 @pytest.fixture
 def test_rom_file(tmp_path) -> str:
     """Create a test ROM file with some sprite data."""
@@ -141,7 +139,6 @@ def test_rom_file(tmp_path) -> str:
     rom_path.write_bytes(rom_data)
     return str(rom_path)
 
-
 @pytest.fixture
 def mock_rom_extractor():
     """Create mock ROM extractor."""
@@ -156,7 +153,6 @@ def mock_rom_extractor():
     extractor.rom_injector.find_compressed_sprite = mock_find_compressed_sprite
     return extractor
 
-
 @pytest.fixture
 def mock_tile_renderer():
     """Create mock tile renderer."""
@@ -168,7 +164,6 @@ def mock_tile_renderer():
     renderer.render_tiles.return_value = mock_image
     
     return renderer
-
 
 @pytest.mark.gui
 @pytest.mark.integration
@@ -482,7 +477,6 @@ class TestBatchThumbnailWorkerIntegration(QtTestCase):
         assert not worker.isRunning()
         # May have received error signals but should not crash
 
-
 @pytest.mark.gui
 @pytest.mark.integration
 @pytest.mark.performance
@@ -558,7 +552,6 @@ class TestBatchThumbnailWorkerPerformance(QtTestCase):
             # Should clean up most memory
             assert memory_after_cleanup < memory_increase * 0.5, "Poor memory cleanup"
 
-
 @pytest.mark.gui
 @pytest.mark.integration
 @pytest.mark.slow
@@ -629,7 +622,6 @@ class TestBatchThumbnailWorkerThreadSafety(QtTestCase):
                 assert thread_id == main_thread_id, "Signal not received in main thread"
             
             worker.cleanup()
-
 
 @pytest.mark.headless
 @pytest.mark.integration

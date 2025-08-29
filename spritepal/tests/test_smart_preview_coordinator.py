@@ -11,6 +11,7 @@ Tests focus on:
 7. Signal chain integration (sliderPressed/sliderReleased)
 8. Error handling and recovery patterns
 """
+from __future__ import annotations
 
 import time
 import weakref
@@ -24,14 +25,11 @@ from PySide6.QtWidgets import QSlider
 from ui.common.smart_preview_coordinator import (
 # Serial execution required: QApplication management, Real Qt components
 
-
     SmartPreviewCoordinator,
     DragState,
     PreviewRequest
 )
 from tests.infrastructure.real_component_factory import RealComponentFactory
-
-
 
 pytestmark = [
     
@@ -79,7 +77,6 @@ class MockPreviewCache:
             "size": len(self.cache_data)
         }
 
-
 class MockPreviewWorkerPool(QObject):
     """Mock PreviewWorkerPool for testing"""
     from PySide6.QtCore import Signal
@@ -110,7 +107,6 @@ class MockPreviewWorkerPool(QObject):
         """Mock stale request cleanup"""
         self.cleanup_calls.append(time.time())
 
-
 class MockROMCache:
     """Mock ROM cache for testing"""
     def __init__(self):
@@ -133,7 +129,6 @@ class MockROMCache:
     def get_cache_status(self, rom_path):
         """Mock cache status"""
         return "ready" if rom_path else "no_cache"
-
 
 class TestPreviewRequest:
     """Test PreviewRequest data structure"""
@@ -171,7 +166,6 @@ class TestPreviewRequest:
         
         # Higher priority should come first
         assert high_priority < low_priority
-
 
 class TestSmartPreviewCoordinator:
     """Test SmartPreviewCoordinator functionality"""
@@ -560,7 +554,6 @@ class TestSmartPreviewCoordinator:
             # Should achieve reasonable cache hit rate
             assert hit_rate > 0.3  # At least 30% hit rate with repeated offsets
 
-
 class TestSmartPreviewCoordinatorIntegration:
     """Integration tests with real Qt components"""
     
@@ -615,7 +608,6 @@ class TestSmartPreviewCoordinatorIntegration:
         
         coordinator.cleanup()
         del coordinator
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

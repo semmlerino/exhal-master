@@ -2,6 +2,7 @@
 State management for ROM extraction workflow
 Provides a state machine to manage extraction operations and prevent conflicts
 """
+from __future__ import annotations
 
 from enum import Enum, auto
 from typing import ClassVar
@@ -18,7 +19,6 @@ class ExtractionState(Enum):
     SEARCHING_SPRITE = auto()        # Searching for next/prev sprite
     EXTRACTING = auto()              # Performing extraction
     ERROR = auto()                   # Error state
-
 
 class ExtractionStateManager(QObject):
     """Manages extraction workflow state and transitions"""

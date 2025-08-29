@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
 Universal screenshot capture script with incrementing filenames.
 Works with xvfb for headless environments.
@@ -6,7 +8,6 @@ Works with xvfb for headless environments.
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QWidget
@@ -101,7 +102,7 @@ def capture_widget_screenshot(widget: QWidget, name: str = "screenshot", descrip
         logger.error(f"Screenshot error: {e}")
         return False
 
-def capture_manual_offset_dialog(tab_name: Optional[str] = None):
+def capture_manual_offset_dialog(tab_name: str | None = None):
     """
     Capture screenshot of the manual offset dialog.
 

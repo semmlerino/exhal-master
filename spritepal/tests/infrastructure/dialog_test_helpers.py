@@ -11,9 +11,10 @@ Key Features:
 - Cross-dialog communication testing
 - State persistence validation
 """
+from __future__ import annotations
 
 import weakref
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 
 from PySide6.QtCore import QObject, QPoint, Qt, QTimer
 from PySide6.QtTest import QTest
@@ -37,7 +38,6 @@ from PySide6.QtWidgets import (
 from .qt_real_testing import EventLoopHelper, QtTestCase
 
 D = TypeVar("D", bound=QDialog)
-
 
 class DialogTestHelper(QtTestCase):
     """Helper class for testing Qt dialogs with real components."""
@@ -293,7 +293,6 @@ class DialogTestHelper(QtTestCase):
 
         EventLoopHelper.process_events(10)
 
-
 class DialogFactory:
     """Factory for creating test dialogs with standard components."""
 
@@ -329,7 +328,7 @@ class DialogFactory:
     @staticmethod
     def create_input_dialog(
         title: str = "Input Dialog",
-        fields: Optional[dict[str, type]] = None
+        fields: dict[str, type | None] | None = None
     ) -> QDialog:
         """
         Create a dialog with input fields.
@@ -381,7 +380,7 @@ class DialogFactory:
     @staticmethod
     def create_tab_dialog(
         title: str = "Tab Dialog",
-        tabs: Optional[list[str]] = None
+        tabs: list[str | None] | None = None
     ) -> QDialog:
         """
         Create a dialog with tab widget.
@@ -420,7 +419,6 @@ class DialogFactory:
         layout.addWidget(button_box)
 
         return dialog
-
 
 class ModalDialogTester:
     """Helper for testing modal dialogs."""
@@ -470,7 +468,6 @@ class ModalDialogTester:
         result = dialog.exec()
 
         return result
-
 
 class CrossDialogCommunicationTester:
     """Helper for testing communication between dialogs."""
@@ -566,5 +563,4 @@ class CrossDialogCommunicationTester:
     def clear_log(self):
         """Clear signal log."""
         self.signal_log.clear()
-
 

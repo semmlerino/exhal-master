@@ -4,6 +4,7 @@ Unit tests for extraction worker implementations.
 Tests the VRAMExtractionWorker and ROMExtractionWorker classes to ensure
 proper manager delegation, signal handling, and error management.
 """
+from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
@@ -13,7 +14,6 @@ from PySide6.QtTest import QSignalSpy
 
 from core.managers.base_manager import BaseManager
 from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
-
 
 # Serial execution required: QApplication management
 pytestmark = [
@@ -25,7 +25,6 @@ pytestmark = [
     pytest.mark.rom_data,
     pytest.mark.signals_slots,
 ]
-
 
 @pytest.mark.no_manager_setup
 class TestVRAMExtractionWorker:
@@ -266,7 +265,6 @@ class TestVRAMExtractionWorker:
             worker.disconnect_manager_signals()
             mock_connection.disconnect.assert_called()
 
-
 @pytest.mark.no_manager_setup
 class TestROMExtractionWorker:
     """Test the ROMExtractionWorker class."""
@@ -419,7 +417,6 @@ class TestROMExtractionWorker:
             # Performing operation should raise InterruptedError
             with pytest.raises(InterruptedError, match="Operation was cancelled"):
                 worker.perform_operation()
-
 
 @pytest.fixture
 def qtbot():

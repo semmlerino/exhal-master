@@ -18,8 +18,8 @@
   "ui": {
     "window_width": 1567,
     "window_height": 1016,
-    "window_x": 685,
-    "window_y": 230
+    "window_x": 680,
+    "window_y": 171
   },
   "paths": {
     "default_dumps_dir": "/home/gabrielh/Documents/Mesen2/Debugger",
@@ -31,5 +31,12 @@
     "oam": [],
     "rom": [],
     "max_recent": 10
+  },
+  "cache": {
+    "enabled": true,
+    "max_size_mb": 500,
+    "expiration_days": 30,
+    "auto_cleanup": true,
+    "show_indicators": true
   }
 }

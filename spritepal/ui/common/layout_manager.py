@@ -12,6 +12,7 @@ Best Practices Enforced:
 4. Configure layouts with proper margins and spacing
 5. Handle tab-specific layout requirements
 """
+from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -339,7 +340,6 @@ class LayoutManager:
         """
         LayoutManager.set_size_policies(widget, QSizePolicy.Policy.Fixed,
                                        QSizePolicy.Policy.Expanding)
-
 
 # Module-level convenience functions for common operations
 def apply_compact_layout(widget: QWidget) -> None:
