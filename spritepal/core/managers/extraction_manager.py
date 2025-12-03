@@ -244,39 +244,34 @@ class ExtractionManager(BaseManager):
             self.extraction_progress.emit(f"Extracting {sprite_name} from ROM...")
 
             output_file = f"{output_base}.png"
-            try:
-                result = self._ensure_rom_extractor().extract_sprite_from_rom(
-                    rom_path, offset, output_file
-                )
+            result = self._ensure_rom_extractor().extract_sprite_from_rom(
+                rom_path, offset, output_file
+            )
 
-                if result:
-                    # Create PIL image for preview
-                    img = Image.open(output_file)
+            if result:
+                # Create PIL image for preview using context manager to prevent resource leak
+                with Image.open(output_file) as img:
                     tile_count = (img.width * img.height) // (8 * 8)
+                    # Copy image data before context exits (signal receiver needs valid data)
+                    img_copy = img.copy()
 
-                    extracted_files.append(output_file)
-                    self.preview_generated.emit(img, tile_count)
+                extracted_files.append(output_file)
+                self.preview_generated.emit(img_copy, tile_count)
 
-                    # Extract palettes if CGRAM provided
-                    if cgram_path:
-                        self._update_progress(operation, 50, 100)
-                        extracted_files.extend(
-                            self._extract_palettes(
-                                cgram_path, output_base, output_file,
-                                None, rom_path, offset,
-                                tile_count, True, True
-                            )
+                # Extract palettes if CGRAM provided
+                if cgram_path:
+                    self._update_progress(operation, 50, 100)
+                    extracted_files.extend(
+                        self._extract_palettes(
+                            cgram_path, output_base, output_file,
+                            None, rom_path, offset,
+                            tile_count, True, True
                         )
-                else:
-                    self._raise_extraction_failed("Failed to extract sprite from ROM")
+                    )
+            else:
+                self._raise_extraction_failed("Failed to extract sprite from ROM")
 
-            except (OSError, PermissionError) as e:
-                self._handle_file_io_error(e, operation, "ROM extraction")
-            except (ValueError, TypeError) as e:
-                self._handle_data_format_error(e, operation, "ROM extraction")
-            except Exception as e:
-                self._handle_operation_error(e, operation, ExtractionError, "ROM extraction")
-
+            # Only emit success signals if extraction actually succeeded
             self._update_progress(operation, 100, 100)
             self.extraction_progress.emit("ROM extraction complete!")
             self.files_created.emit(extracted_files)
@@ -334,18 +329,38 @@ class ExtractionManager(BaseManager):
             name = sprite_name or f"offset_0x{offset:X}"
             self._logger.debug(f"Generating preview for {name} at offset 0x{offset:X}")
 
-            # Use ROM extractor to get raw tile data
-            # This would need to be implemented in ROMExtractor
-            # For now, we'll use a simplified approach
+            # Calculate preview dimensions and expected data size
             width = DEFAULT_PREVIEW_WIDTH
             height = DEFAULT_PREVIEW_HEIGHT
             tile_count = (width * height) // (8 * 8)
+            expected_bytes = tile_count * BYTES_PER_TILE
 
-            # Read raw data from ROM
+            # Validate offset against ROM size BEFORE reading
+            rom_size = Path(rom_path).stat().st_size
+            if offset >= rom_size:
+                raise ValueError(
+                    f"Offset 0x{offset:X} exceeds ROM size 0x{rom_size:X}"
+                )
+
+            available_bytes = rom_size - offset
+            if expected_bytes > available_bytes:
+                raise ValueError(
+                    f"Insufficient data at offset 0x{offset:X}: "
+                    f"need {expected_bytes} bytes, only {available_bytes} available"
+                )
+
+            # Read raw data from ROM with validation
             with Path(rom_path).open("rb") as f:
                 f.seek(offset)
                 # 4bpp = 32 bytes per tile
-                tile_data = f.read(tile_count * BYTES_PER_TILE)
+                tile_data = f.read(expected_bytes)
+
+                # Verify we got the expected amount of data
+                if len(tile_data) != expected_bytes:
+                    raise OSError(
+                        f"Incomplete read at offset 0x{offset:X}: "
+                        f"got {len(tile_data)}/{expected_bytes} bytes"
+                    )
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "preview generation")

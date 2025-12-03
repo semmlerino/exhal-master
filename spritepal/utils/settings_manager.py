@@ -129,19 +129,19 @@ class SettingsManager:
         if last_used and Path(last_used).exists():
             return last_used
 
-        # Fall back to default dumps directory
+        # Fall back to default dumps directory (platform-appropriate)
         default_dir = str(
             self.get(
                 "paths",
                 "default_dumps_dir",
-                r"C:\Users\gabri\OneDrive\Dokumente\Mesen2\Debugger"
+                str(Path.home() / "Documents" / "Mesen2" / "Debugger")
             )
         )
         if default_dir and Path(default_dir).exists():
             return default_dir
 
-        # Final fallback to current directory
-        return str(Path.cwd())
+        # Final fallback to home directory (not CWD for better portability)
+        return str(Path.home())
 
     def set_last_used_directory(self, directory: str) -> None:
         """Set the last used directory"""
