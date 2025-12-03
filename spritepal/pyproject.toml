@@ -6,15 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "spritepal"
 version = "2.0.0"
 description = "SNES sprite extraction and injection tool"
-readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "SpritePal Team"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -26,6 +24,7 @@ dependencies = [
     "PySide6>=6.5.0",
     "Pillow>=9.0.0",
     "numpy>=1.21.0",
+    "psutil>=7.1.3",
 ]
 
 [project.optional-dependencies]
@@ -35,10 +34,15 @@ dev = [
     "pytest-xvfb>=3.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
+    "pytest-timeout>=2.0.0",
     "ruff>=0.1.0",
     "basedpyright>=1.8.0",
-    "mypy>=1.5.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "ui*", "utils*"]
+exclude = ["tests*", "Mesen2*", "mesen2_*", "extracted_*", "sprite_*", "test_*", "SpriteWiki_*"]
 
 [tool.basedpyright]
 # Use recommended mode with additional strictness for tests
@@ -46,7 +50,7 @@ typeCheckingMode = "recommended"
 pythonVersion = "3.9"
 pythonPlatform = "All"
 venvPath = "."
-venv = "venv"
+venv = ".venv"
 
 # Include test files for comprehensive type checking
 include = [

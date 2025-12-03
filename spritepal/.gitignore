@@ -81,4 +81,4 @@ config/test_profiles/
 # Generated analysis reports
 typecheck_report_*.json
 import_analysis_report.json
-init_order_issues.json
+init_order_issues.json.venv/
