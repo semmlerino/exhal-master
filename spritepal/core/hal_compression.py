@@ -196,7 +196,7 @@ def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
                     error_message=f"Invalid offset: {request.offset} (must be non-negative integer)",
                     request_id=request.request_id
                 )
-            
+
             offset_hex = f"0x{request.offset:X}"
             cmd = [exhal_path, request.rom_path, offset_hex, output_path]
 

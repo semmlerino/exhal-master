@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from threading import Lock
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Callable, Protocol, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -274,7 +274,7 @@ def _get_or_create_navigation_manager():
         from core.managers import get_core_operations_manager
         core_mgr = get_core_operations_manager()
         return core_mgr._get_navigation_manager()
-    except:
+    except Exception:
         # Fallback to direct navigation manager if available
         from core.managers import get_navigation_manager
         return get_navigation_manager()

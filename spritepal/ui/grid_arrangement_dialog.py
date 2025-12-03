@@ -1163,7 +1163,7 @@ class GridArrangementDialog(SplitterDialog):
             else:
                 item_text = str(key)
 
-            if self.arrangement_list and label:
+            if self.arrangement_list and item_text:
                 self.arrangement_list.addItem(item_text)
 
     def _update_preview(self):

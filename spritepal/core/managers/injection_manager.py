@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 
     from .session_manager import SessionManager
 
+from ui.common import WorkerManager
 from ui.workers.injection_worker import InjectionWorker
 from ui.workers.rom_injection_worker import ROMInjectionWorker
-from ui.common import WorkerManager
 from utils.constants import (
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,

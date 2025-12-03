@@ -9,17 +9,16 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 # Only import Qt for type checking and the worker class
 if TYPE_CHECKING:
-    from PySide6.QtCore import QThread, Signal
+    pass
 
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.injector import SpriteInjector
 from core.rom_validator import ROMValidator
 from core.sprite_config_loader import SpriteConfigLoader
-from core.sprite_validator import SpriteValidator
 from utils.constants import (
     ROM_CHECKSUM_COMPLEMENT_MASK,
     ROM_HEADER_OFFSET_HIROM,

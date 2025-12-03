@@ -536,7 +536,7 @@ class MonitoringManager(BaseManager):
                 )
                 self._health_timer.daemon = True
                 self._health_timer.start()
-        
+
         # Start first timer
         self._health_timer = threading.Timer(
             self._health_check_interval / 1000.0,  # Convert ms to seconds

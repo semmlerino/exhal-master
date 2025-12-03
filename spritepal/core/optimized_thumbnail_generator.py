@@ -62,7 +62,7 @@ class ThumbnailCache:
             cache_ttl: Time-to-live in seconds for cached items
         """
         # L1: Memory cache (LRU)
-        self._memory_cache: dict[str, Image.Image] = OrderedDict()
+        self._memory_cache: OrderedDict[str, Image.Image] = OrderedDict()
         self._memory_size = memory_size
         self._memory_lock = Lock()
 
@@ -479,6 +479,7 @@ class OptimizedThumbnailGenerator:
 def create_optimized_generator(
     rom_extractor,
     tile_renderer,
+    rom_path: str | Path,
     max_workers: int = 4
 ) -> OptimizedThumbnailGenerator:
     """

@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QObject, Signal
 
 from core.extractor import SpriteExtractor
-from ui.workers.injection_worker import InjectionWorker
 from core.palette_manager import PaletteManager
 from core.rom_extractor import ROMExtractor
-from ui.workers.rom_injection_worker import ROMInjectionWorker
 from ui.common import WorkerManager
+from ui.workers.injection_worker import InjectionWorker
+from ui.workers.rom_injection_worker import ROMInjectionWorker
 from utils.constants import (
     DEFAULT_PREVIEW_HEIGHT,
     DEFAULT_PREVIEW_WIDTH,
@@ -423,7 +423,7 @@ class ExtractionAdapter(ExtractionManager):
 
         # Set up required attributes that parent methods expect
         self._rom_extractor = core_manager._rom_extractor
-        
+
         # Forward signals
         core_manager.extraction_progress.connect(self.extraction_progress.emit)
         core_manager.preview_generated.connect(self.preview_generated.emit)

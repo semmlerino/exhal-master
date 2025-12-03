@@ -4,10 +4,8 @@ This module contains the Qt-specific worker thread for ROM injection.
 """
 from __future__ import annotations
 
-import logging
 import time
 from pathlib import Path
-from typing import Any
 
 from PySide6.QtCore import QThread, Signal
 

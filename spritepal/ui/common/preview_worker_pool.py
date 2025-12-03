@@ -144,14 +144,14 @@ class PooledPreviewWorker(SpritePreviewWorker):
         # First, try HAL decompression (for Lua-captured offsets and known sprites)
         # Try the exact offset first, then nearby offsets if it fails
         offsets_to_try = [self.offset]
-        
+
         # For Lua-captured offsets, also try nearby offsets in case DMA timing was slightly off
         # Check offsets within 16 bytes before and after
         for delta in [2, 4, 6, 8, -2, -4, -6, -8, 10, 12, 14, 16, -10, -12, -14, -16]:
             adjusted_offset = self.offset + delta
             if 0 <= adjusted_offset < len(rom_data):
                 offsets_to_try.append(adjusted_offset)
-        
+
         for try_offset in offsets_to_try:
             try:
                 # Check interruption right before decompression
@@ -163,20 +163,20 @@ class PooledPreviewWorker(SpritePreviewWorker):
                     logger.debug(f"[TRACE] Trying adjusted offset 0x{try_offset:X} (delta: {try_offset - self.offset:+d})")
                 else:
                     logger.debug(f"[TRACE] Attempting HAL decompression at offset 0x{try_offset:X}")
-                
+
                 # Try to extract as compressed sprite
                 compressed_size, tile_data = (
                     self.extractor.rom_injector.find_compressed_sprite(
                         rom_data, try_offset, expected_size
                     )
                 )
-                
+
                 if tile_data and len(tile_data) > 0:
                     # Validate that it's reasonable sprite data
                     # Check if data has some non-zero bytes (not all black)
                     sample_size = min(100, len(tile_data))
                     non_zero_count = sum(1 for b in tile_data[:sample_size] if b != 0)
-                    
+
                     if non_zero_count > 10:  # At least 10% non-zero in sample
                         decompression_succeeded = True
                         if try_offset != self.offset:
@@ -187,8 +187,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                         # Update the actual offset used for display purposes
                         self.offset = try_offset
                         break
-                    else:
-                        logger.debug(f"[TRACE] HAL decompression at 0x{try_offset:X} returned mostly zeros, trying next offset")
+                    logger.debug(f"[TRACE] HAL decompression at 0x{try_offset:X} returned mostly zeros, trying next offset")
                 else:
                     logger.debug(f"[TRACE] HAL decompression returned empty data at offset 0x{try_offset:X}")
 
@@ -202,7 +201,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                 if try_offset == self.offset:
                     logger.debug(f"[TRACE] HAL decompression failed at offset 0x{try_offset:X}: {decomp_error.__class__.__name__}: {decomp_error}")
                 continue
-        
+
         if not decompression_succeeded:
             logger.debug(f"[TRACE] HAL decompression failed at all attempted offsets near 0x{self.offset:X}")
             decompression_succeeded = False
@@ -225,7 +224,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
                     # Read what's available up to end of ROM
                     tile_data = rom_data[self.offset:]
                     logger.debug(f"[TRACE] Extracted {len(tile_data)} bytes (to EOF) from offset 0x{self.offset:X}")
-                
+
                 logger.debug(f"[TRACE] First 20 bytes of raw data: {tile_data[:20].hex() if tile_data else 'None'}")
 
             except Exception as e:

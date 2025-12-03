@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image
-from typing_extensions import override
 
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,

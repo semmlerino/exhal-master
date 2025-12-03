@@ -38,7 +38,7 @@ class SpritePreviewWorker(BaseWorker):
     @handle_worker_errors("sprite preview loading", handle_interruption=True)
     def run(self):
         """Load sprite preview in background"""
-        
+
         logger.info(f"[PREVIEW_WORKER] Starting preview for sprite_name='{self.sprite_name}' at offset=0x{self.offset:06X}")
         logger.debug(f"[PREVIEW_WORKER] ROM path: {self.rom_path}")
 
@@ -127,14 +127,13 @@ class SpritePreviewWorker(BaseWorker):
 
             # Try HAL decompression first for all sprites (including manual offset browsing)
             # This allows Lua-captured offsets to work correctly
-            decompression_succeeded = False
             compressed_size = 0
-            
+
             # First attempt: Try HAL decompression
             try:
                 logger.debug(f"[PREVIEW_WORKER] Attempting HAL decompression at 0x{self.offset:06X}")
                 decompression_start = time.time()
-                
+
                 # Check if we have offset variants and expected size from sprite config
                 offset_variants = []
                 expected_size = None
@@ -143,7 +142,7 @@ class SpritePreviewWorker(BaseWorker):
                     expected_size = getattr(self.sprite_config, "estimated_size", None)
                     if expected_size:
                         logger.debug(f"[PREVIEW_WORKER] Using expected size from config: {expected_size} bytes")
-                
+
                 # Use smaller expected size for manual browsing to avoid oversized decompression
                 if not expected_size:
                     if self.sprite_name.startswith("manual_"):
@@ -167,29 +166,27 @@ class SpritePreviewWorker(BaseWorker):
                             rom_data, self.offset, expected_size
                         )
                     )
-                
-                decompression_succeeded = True
+
                 decompression_time = (time.time() - decompression_start) * 1000
                 logger.info(f"[PREVIEW_WORKER] Successfully decompressed {len(tile_data)} bytes from offset 0x{self.offset:06X} in {decompression_time:.1f}ms")
                 logger.debug(f"[PREVIEW_WORKER] Compressed size: {compressed_size} bytes, Compression ratio: {len(tile_data)/compressed_size:.2f}x" if compressed_size > 0 else "[PREVIEW_WORKER] No compression size info")
-                
+
             except Exception as decomp_error:
                 # Decompression failed - fall back to raw tile extraction for manual browsing
                 decompression_time = (time.time() - decompression_start) * 1000
                 logger.warning(f"[PREVIEW_WORKER] HAL decompression failed at 0x{self.offset:06X} after {decompression_time:.1f}ms: {decomp_error.__class__.__name__}: {decomp_error}")
-                
+
                 if self.sprite_name.startswith("manual_"):
                     # Manual offset browsing - extract raw 4bpp tile data as fallback
                     logger.info(f"[PREVIEW_WORKER] Falling back to raw tile extraction for manual offset 0x{self.offset:06X}")
                     expected_size = 4096  # 4KB for fast preview
-                    
+
                     if self.offset + expected_size <= len(rom_data):
                         tile_data = rom_data[self.offset:self.offset + expected_size]
                     else:
                         tile_data = rom_data[self.offset:]
-                    
+
                     compressed_size = 0
-                    decompression_succeeded = False
                     logger.info(f"[PREVIEW_WORKER] Extracted {len(tile_data)} bytes of raw tile data from 0x{self.offset:06X}")
                 else:
                     # For non-manual sprites, decompression failure is an error

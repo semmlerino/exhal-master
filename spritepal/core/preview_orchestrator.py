@@ -434,7 +434,7 @@ class PreviewMemoryCache:
         """Initialize memory cache with size limit"""
         from collections import OrderedDict
 
-        self._cache: dict[str, PreviewData] = OrderedDict()
+        self._cache: OrderedDict[str, PreviewData] = OrderedDict()
         self._max_size_bytes = max_size_mb * 1024 * 1024
         self._current_size_bytes = 0
         self._mutex = QMutex()

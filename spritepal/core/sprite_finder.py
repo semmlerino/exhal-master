@@ -370,18 +370,18 @@ class SpriteFinder:
         except Exception:
             # Decompression or validation failed
             return None
-            
+
     def check_offset_for_sprite(self, rom_path: str, offset: int) -> dict[str, Any] | None:
         """
         Check if a specific ROM file offset contains valid sprite data.
-        
+
         This method provides the missing interface needed for external validation
         of ROM offsets discovered by other tools (like Lua scripts).
-        
+
         Args:
             rom_path: Path to ROM file
             offset: ROM file offset to check
-            
+
         Returns:
             Sprite info dict if valid sprite found, None otherwise
         """

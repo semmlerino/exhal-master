@@ -542,7 +542,7 @@ class SessionAdapter(SessionManager):
         self._is_initialized = True
         self._name = "SessionAdapter"
         self._logger = state_manager._logger
-        
+
         # Set up required attributes that parent methods expect
         self._settings = state_manager._settings
 

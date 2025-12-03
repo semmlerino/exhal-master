@@ -512,13 +512,13 @@ class SimpleBrowseTab(QWidget):
             Path.home() / "Documents" / "Mesen2" / "sprite_clipboard.txt",
             Path.cwd() / "sprite_clipboard.txt",
         ]
-        
+
         for clipboard_file in possible_paths:
             if clipboard_file.exists():
                 try:
-                    with open(clipboard_file, 'r') as f:
+                    with open(clipboard_file) as f:
                         offset_str = f.read().strip()
-                        
+
                     # Parse offset (handles both 0x and $ prefix)
                     if offset_str.startswith("0x"):
                         offset = int(offset_str, 16)
@@ -526,15 +526,15 @@ class SimpleBrowseTab(QWidget):
                         offset = int(offset_str[1:], 16)
                     else:
                         offset = int(offset_str, 16)
-                        
+
                     # Navigate to the offset
                     logger.info(f"Pasting offset from clipboard: 0x{offset:06X}")
                     self.set_offset(offset)
                     return
-                    
-                except (ValueError, IOError) as e:
+
+                except (OSError, ValueError) as e:
                     logger.error(f"Error reading clipboard file: {e}")
-                    
+
         logger.warning("No clipboard file found. Press 0 in Mesen2 to copy sprite offset.")
 
     def _on_find_sprites(self) -> None:

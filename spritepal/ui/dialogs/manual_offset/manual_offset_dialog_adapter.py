@@ -26,11 +26,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
-    from ui.dialogs.manual_offset_unified_integrated import (
-        UnifiedManualOffsetDialog as LegacyDialog,
-    )
 
-    from .core.manual_offset_dialog_core import ManualOffsetDialogCore
 
 try:
     from utils.logging_config import get_logger
@@ -40,7 +36,7 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
 
-def _get_implementation_class() -> type[ManualOffsetDialogCore | LegacyDialog | QDialog]:
+def _get_implementation_class() -> type:
     """
     Get the appropriate implementation class based on feature flag.
 
@@ -83,11 +79,10 @@ class ManualOffsetDialogAdapter:
     ensuring type safety and avoiding dynamic class creation issues.
     """
 
-    # Define expected signals for type checking
-    if TYPE_CHECKING:
-        offset_changed: Signal
-        sprite_found: Signal
-        validation_failed: Signal
+    # Signal definitions are on the actual implementation classes
+    offset_changed: Signal
+    sprite_found: Signal
+    validation_failed: Signal
 
     def __new__(cls, parent: QWidget | None = None, *args: Any, **kwargs: Any) -> Any:
         """

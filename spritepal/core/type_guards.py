@@ -47,7 +47,7 @@ def is_valid_offset(value: object) -> TypeGuard[int]:
         True if value is a valid offset (non-negative integer within ROM range)
     """
     return (
-        isinstance(value, int) 
+        isinstance(value, int)
         and 0 <= value <= 0x800000  # 8MB max ROM size
         and value == int(value)     # Ensure no precision loss
     )
@@ -131,11 +131,11 @@ def is_path_like(obj: object) -> TypeGuard[str | Path]:
 def safe_int_conversion(value: object, base: int = 10) -> int | None:
     """
     Safely convert various types to integer with validation.
-    
+
     Args:
         value: Value to convert
         base: Numeric base (10 for decimal, 16 for hex)
-        
+
     Returns:
         Converted integer or None if conversion fails
     """
@@ -145,7 +145,7 @@ def safe_int_conversion(value: object, base: int = 10) -> int | None:
             if value.startswith(('0x', '0X')):
                 return int(value, 16)
             return int(value, base)
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             # Ensure no precision loss for large numbers
             result = int(value)
             if isinstance(value, float) and result != value:
@@ -159,67 +159,67 @@ def safe_int_conversion(value: object, base: int = 10) -> int | None:
 def cpu_to_rom_offset(cpu_addr: int) -> int | None:
     """
     Convert SNES CPU address to ROM file offset with type safety.
-    
+
     This function replicates the Lua script logic with proper type checking
     and validation to prevent integer overflow/underflow issues.
-    
+
     Args:
         cpu_addr: 24-bit SNES CPU address
-        
+
     Returns:
         ROM file offset or None if address is not mappable
-        
+
     Raises:
         ValueError: If cpu_addr is not a valid 24-bit address
     """
     if not isinstance(cpu_addr, int):
         raise TypeError(f"cpu_addr must be int, got {type(cpu_addr)}")
-        
+
     if not (0 <= cpu_addr <= 0xFFFFFF):  # 24-bit address space
         raise ValueError(f"cpu_addr must be 24-bit (0x000000-0xFFFFFF), got 0x{cpu_addr:X}")
-    
+
     # Extract bank and address components with proper masking
     bank = (cpu_addr >> 16) & 0xFF  # Upper 8 bits
     addr = cpu_addr & 0xFFFF        # Lower 16 bits
-    
+
     # Check for invalid address ranges
     if addr < 0x8000:
         return None  # Low RAM/registers, not ROM
-        
+
     if bank in (0x7E, 0x7F):
         return None  # Extended RAM, not ROM
-    
+
     # Convert LoROM mapping to ROM offset
     if bank >= 0x80:
         # Ensure arithmetic stays within bounds
         rom_bank = bank & 0x7F  # Remove mirror bit
         rom_offset_base = rom_bank * 0x8000
         addr_offset = addr - 0x8000
-        
+
         # Check for potential overflow
         if rom_offset_base > 0x800000 - addr_offset:
             return None  # Would exceed maximum ROM size
-            
+
         rom_offset = rom_offset_base + addr_offset
-        
+
         # Final validation
         if not is_valid_offset(rom_offset):
             return None
-            
+
         return rom_offset
-    
+
     return None
 
 def clamp_to_slider_range(offset: int) -> int:
     """
     Clamp ROM offset to QSlider-compatible range.
-    
+
     QSlider uses 32-bit signed integers, so we must ensure
     offsets don't exceed this limit.
-    
+
     Args:
         offset: ROM offset to clamp
-        
+
     Returns:
         Offset clamped to QSlider range (0 to 2^31-1)
     """
