@@ -1,305 +1,188 @@
-# Dialog Migration Next Steps - Strategic Plan
+# Next Steps Plan: Finding Real Kirby Sprites
 
-## Executive Summary
+## 🔴 Problem Summary
+- **What Failed**: Extracted data from 0x0C0000, 0x349D33, etc. shows no recognizable sprites
+- **Root Cause**: Never used Mesen 2 to trace actual sprites - just guessed offsets
+- **Result**: Likely extracted background tiles or level data, not character sprites
 
-This plan outlines the next steps to complete the dialog migration from DialogBase to composition architecture. We'll address critical issues first, then complete remaining migrations, and finally optimize and clean up.
+## 🎯 Strategic Options (Ranked by Likelihood of Success)
 
-## Phase 1: Fix Critical Issues in Foundation (Week 1)
-**Priority: 🔴 CRITICAL**  
-**Goal: Stabilize the composed implementation before propagating patterns**
+### Option 1: Use Mesen 2 Properly (Most Reliable)
+**Success Rate: 95%** - This is the proven method
 
-### 1.1 Replace Dynamic Class Creation
-**File:** `ui/dialogs/manual_offset/manual_offset_dialog_adapter.py`
-**Agent:** python-implementation-specialist
-**Task:**
-```python
-# Current (UNSAFE):
-ManualOffsetDialogAdapter = type('ManualOffsetDialogAdapter', (_get_base_class(),), {...})
+#### Prerequisites:
+- [ ] Install Mesen 2 emulator
+- [ ] Have Kirby Super Star ROM loaded
+- [ ] Have `trace_sprite_guide.py` ready
 
-# Target (SAFE):
-class ManualOffsetDialogAdapter:
-    def __new__(cls, *args, **kwargs):
-        implementation_class = _get_implementation_class()
-        instance = implementation_class(*args, **kwargs)
-        return instance
-```
+#### Steps:
+1. **Launch Mesen 2 with Kirby Super Star**
+   ```bash
+   # Run the interactive guide
+   python trace_sprite_guide.py
+   ```
 
-### 1.2 Implement Consistent Thread Safety
-**Files:** All component files in `ui/dialogs/manual_offset/components/`
-**Agent:** qt-concurrency-architect
-**Tasks:**
-- Add QMutexLocker to all shared state access
-- Protect component initialization/cleanup
-- Ensure signal disconnection is thread-safe
-- Add thread annotations
+2. **Find Kirby in Game**
+   - Start game, enter Green Greens
+   - Pause when Kirby is clearly visible
+   - Take screenshot for reference
 
-### 1.3 Fix Error Handling
-**Agent:** python-code-reviewer + python-implementation-specialist
-**Tasks:**
-```python
-# Replace all bare except:
-try:
-    signal.disconnect()
-except:  # BAD
-    pass
+3. **Locate in VRAM**
+   - Tools → Tile Viewer
+   - Look for Kirby's round shape in sprite tiles
+   - Note VRAM address (e.g., $2000)
 
-# With specific handling:
-try:
-    signal.disconnect()
-except (RuntimeError, TypeError) as e:  # GOOD
-    logger.debug(f"Signal already disconnected: {e}")
-```
+4. **Set Breakpoint**
+   - Debug → Debugger
+   - Add VRAM write breakpoint at that address
+   - Reset to before level loads
 
-### 1.4 Add Type Annotations
-**Agent:** type-system-expert
-**Priority Components:**
-- ComponentFactory: Full typing for create/wire methods
-- Signal parameters: Proper Signal[int], Signal[str] declarations  
-- Component interfaces: Create formal protocols
-- Return types: Add to all methods
+5. **Trace to ROM**
+   - Continue execution
+   - When breakpoint hits, check DMA registers
+   - Note source address (e.g., $XX:YYYY)
 
-### Parallel Execution Plan - Phase 1:
-```yaml
-parallel_group_1:
-  - agent: python-implementation-specialist
-    task: Replace dynamic class creation
-    duration: 2 hours
-    
-  - agent: type-system-expert  
-    task: Add type annotations
-    duration: 3 hours
-    
-parallel_group_2: # After group 1
-  - agent: qt-concurrency-architect
-    task: Implement thread safety
-    duration: 4 hours
-    
-  - agent: python-code-reviewer
-    task: Fix error handling patterns
-    duration: 2 hours
-```
+6. **Extract Verified Sprite**
+   ```bash
+   python mesen2_sprite_extractor.py $XX:YYYY
+   ```
 
-## Phase 2: Complete Dialog Migration (Week 2)
-**Priority: 🟡 HIGH**
-**Goal: Migrate remaining 4 dialogs using fixed patterns**
+### Option 2: Use Community Resources (Quick Win)
+**Success Rate: 80%** - Leverage existing work
 
-### 2.1 Dialog Analysis (Day 1)
-**Parallel Analysis Tasks:**
-```yaml
-parallel_analysis:
-  - agent: python-code-reviewer
-    task: Analyze advanced_search_dialog.py
-    output: Component breakdown document
-    
-  - agent: python-code-reviewer
-    task: Analyze similarity_results_dialog.py
-    output: Component breakdown document
-    
-  - agent: python-code-reviewer
-    task: Analyze grid_arrangement_dialog.py
-    output: Component breakdown document
-    
-  - agent: python-code-reviewer
-    task: Analyze row_arrangement_dialog.py
-    output: Component breakdown document
-```
+#### Immediate Actions:
+1. **Download Pre-Extracted Sprites**
+   - Visit [The Spriters Resource](https://www.spriters-resource.com/snes/kirbysuperstar/)
+   - Compare their sprites with our attempts
+   - Identify what real sprites should look like
 
-### 2.2 Dialog Implementation (Days 2-3)
-**Expected component structure for each:**
+2. **Search ROM Hacking Forums**
+   ```python
+   # Search for documented offsets
+   searches = [
+       "Kirby Super Star sprite offset",
+       "Kirby graphics location ROM",
+       "ExHAL Kirby character data"
+   ]
+   ```
 
-#### AdvancedSearchDialog → 3 components:
-- SearchEngineComponent (search logic)
-- ResultsViewComponent (display results)
-- FilterManagerComponent (search filters)
+3. **Check GitHub Projects**
+   - Look for Kirby Super Star disassembly projects
+   - Find ROM maps with sprite locations
+   - Clone and examine extraction tools
 
-#### SimilarityResultsDialog → 2 components:
-- SimilarityEngineComponent (comparison logic)
-- ResultsDisplayComponent (show matches)
+### Option 3: Systematic ROM Scanning (Brute Force)
+**Success Rate: 60%** - Time-consuming but thorough
 
-#### GridArrangementDialog → 3 components:
-- GridManagerComponent (grid logic)
-- PreviewComponent (visual preview)
-- ArrangementControlsComponent (UI controls)
+#### Approach:
+1. **Scan for Sprite Patterns**
+   ```python
+   # Scan ROM for HAL compression headers
+   for offset in range(0, rom_size, 0x100):
+       if is_hal_compressed(offset):
+           decompress_and_check(offset)
+   ```
 
-#### RowArrangementDialog → 2 components:
-- RowManagerComponent (row logic)
-- ArrangementUIComponent (controls)
+2. **Pattern Recognition**
+   - Look for 16x16 or 32x32 tile groups
+   - Check for symmetrical patterns (characters)
+   - Identify animation frame sequences
 
-**Parallel Implementation:**
-```yaml
-parallel_implementation:
-  - agent: python-implementation-specialist
-    task: Migrate advanced_search_dialog
-    
-  - agent: python-implementation-specialist
-    task: Migrate similarity_results_dialog
-    
-  - agent: qt-modelview-painter
-    task: Migrate grid_arrangement_dialog (has custom painting)
-    
-  - agent: python-implementation-specialist
-    task: Migrate row_arrangement_dialog
-```
+3. **Visual Validation**
+   - Generate previews for all candidates
+   - Manual inspection for character shapes
 
-### 2.3 Testing (Day 4)
-**Agent:** test-development-master
-**Tasks:**
-- Create test suite for each migrated dialog
-- Test both implementations with feature flag
-- Verify API compatibility
-- Check signal/slot connections
+### Option 4: Reverse Engineer from Save States (Advanced)
+**Success Rate: 70%** - Requires technical knowledge
 
-## Phase 3: Validation & Optimization (Week 3)
-**Priority: 🟢 MEDIUM**
-**Goal: Ensure production readiness**
+#### Method:
+1. **Create Save State**
+   - Save state with Kirby on screen
+   - Extract VRAM contents from state file
+   - Identify sprite tiles directly
 
-### 3.1 Performance Validation
-**Agent:** performance-profiler
-**Tasks:**
-```python
-# Benchmark both implementations
-- Dialog creation time
-- Memory usage
-- Signal propagation latency
-- Component initialization overhead
-- Resource cleanup efficiency
-```
+2. **Cross-Reference with ROM**
+   - Search ROM for matching tile data
+   - Find compressed source
+   - Verify with ExHAL
 
-### 3.2 Memory Leak Testing
-**Agent:** deep-debugger
-**Tasks:**
-- Test dialog creation/destruction cycles
-- Monitor QObject parent-child relationships
-- Check signal disconnection
-- Verify worker thread cleanup
-- Validate cache cleanup
+## 📊 Validation Criteria
 
-### 3.3 Integration Testing
-**Agent:** test-development-master
-**Tasks:**
-- Full application workflow tests
-- Cross-dialog communication
-- State persistence
-- Error recovery scenarios
+### How to Know We Found Real Sprites:
+1. **Visual Check**
+   - [ ] Clear character shapes visible
+   - [ ] Consistent art style
+   - [ ] Animation frames align
 
-### 3.4 Documentation Updates
-**Agent:** api-documentation-specialist
-**Tasks:**
-- Update API documentation
-- Create migration guide
-- Document component patterns
-- Add code examples
+2. **Technical Check**
+   - [ ] Tiles form 16x16 or 32x32 sprites
+   - [ ] <30% empty tiles (not 54%)
+   - [ ] Palette indices make sense
 
-## Phase 4: Cleanup & Polish (Week 4)
-**Priority: 🔵 LOW**
-**Goal: Prepare for deprecation**
+3. **Community Validation**
+   - [ ] Matches known sprite sheets
+   - [ ] Other hackers confirm offsets
 
-### 4.1 Code Cleanup
-- Update all test imports
-- Remove temporary compatibility code
-- Standardize logging
-- Extract magic numbers to constants
+## 🚀 Recommended Action Plan
 
-### 4.2 Final Review
-**Parallel Review:**
-```yaml
-parallel_final_review:
-  - agent: python-code-reviewer
-    task: Final code quality review
-    
-  - agent: type-system-expert
-    task: Type safety validation
-    
-  - agent: qt-concurrency-architect
-    task: Thread safety audit
-    
-  - agent: performance-profiler
-    task: Performance regression check
-```
+### Phase 1: Quick Validation (1 hour)
+1. **Download known good sprites** from Spriters Resource
+2. **Compare structure** with our extracted data
+3. **Identify differences** (tile arrangement, format, etc.)
 
-## Success Metrics
+### Phase 2: Mesen 2 Tracing (2-3 hours)
+1. **Install Mesen 2** if not already available
+2. **Follow trace_sprite_guide.py** step-by-step
+3. **Document found addresses** in known_sprites.json
+4. **Extract and verify** with visual inspection
 
-### Phase 1 Success Criteria:
-- ✅ No dynamic type() usage
-- ✅ All shared state protected by mutexes
-- ✅ Zero bare except clauses
-- ✅ 100% type annotation coverage
+### Phase 3: Community Research (1-2 hours)
+1. **Search ROM hacking forums** for documented offsets
+2. **Check GitHub** for disassembly projects
+3. **Ask in Discord/forums** if stuck
 
-### Phase 2 Success Criteria:
-- ✅ All 4 dialogs migrated
-- ✅ Feature flag works for all dialogs
-- ✅ All tests passing
-- ✅ API compatibility maintained
+### Phase 4: Systematic Scanning (if needed)
+1. **Write scanner script** to find all HAL compressed data
+2. **Extract all candidates** to separate folder
+3. **Batch generate previews**
+4. **Manual inspection** for sprites
 
-### Phase 3 Success Criteria:
-- ✅ Performance within 5% of legacy
-- ✅ Zero memory leaks detected
-- ✅ All integration tests passing
-- ✅ Documentation complete
+## 💡 Key Insights
 
-### Phase 4 Success Criteria:
-- ✅ Code review approval
-- ✅ Type checker reports no errors
-- ✅ Ready for deprecation warnings
-- ✅ Team sign-off
+### Why Our Current Data Isn't Sprites:
+- **No character shapes** → Not character graphics
+- **54% empty** → Wrong data type (sprites are denser)
+- **Random patterns** → Viewing non-graphics as tiles
 
-## Risk Mitigation
+### What We're Looking For:
+- **Kirby**: Round body, feet, facial features
+- **Enemies**: Recognizable shapes (Waddle Dee, etc.)
+- **Items**: Stars, food, power-ups
+- **UI Elements**: Health bars, text, icons
 
-### Risk: Breaking Production
-**Mitigation:** Feature flags allow instant rollback
+## 📝 Success Metrics
 
-### Risk: Performance Regression  
-**Mitigation:** Benchmark before committing changes
+- [ ] Find and extract Kirby's sprite
+- [ ] Find at least 3 enemy sprites
+- [ ] Document verified ROM offsets
+- [ ] Create visual proof (clear sprite sheet)
+- [ ] Update known_sprites.json with findings
 
-### Risk: Incomplete Migration
-**Mitigation:** Each dialog independently toggleable
+## ⚠️ Common Pitfalls to Avoid
 
-### Risk: Type Safety Issues
-**Mitigation:** Run type checker in CI pipeline
+1. **Don't assume** decompression success = sprites
+2. **Don't skip** visual validation
+3. **Don't ignore** community resources
+4. **Don't guess** - trace or use verified offsets
 
-## Timeline Summary
+## 🎮 Tools Ready to Use
 
-```
-Week 1: Fix critical issues (Phase 1)
-Week 2: Migrate remaining dialogs (Phase 2)  
-Week 3: Validation & optimization (Phase 3)
-Week 4: Cleanup & polish (Phase 4)
+- ✅ `trace_sprite_guide.py` - Interactive Mesen 2 guide
+- ✅ `mesen2_sprite_extractor.py` - Extract from SNES addresses
+- ✅ `batch_sprite_extractor.py` - Process multiple sprites
+- ✅ ExHAL - Decompress HAL data
+- ✅ Visualization scripts - Generate sprite sheets
 
-Total Duration: 4 weeks
-Confidence Level: High (85%)
-```
+---
 
-## Immediate Next Actions
-
-1. **Fix dynamic class creation** (2 hours)
-2. **Add type annotations** (3 hours)
-3. **Implement thread safety** (4 hours)
-4. **Fix error handling** (2 hours)
-
-These can run in parallel pairs as outlined above.
-
-## Command Sequences
-
-```bash
-# Start Phase 1 fixes
-SPRITEPAL_USE_COMPOSED_DIALOGS=true python tests/test_unified_dialog_quick_validation.py
-
-# After Phase 1, run type checker
-python -m pyright ui/dialogs/manual_offset/ --strict
-
-# Test thread safety
-python tests/test_thread_safety_validation.py
-
-# After Phase 2, test all dialogs
-pytest tests/test_all_dialog_migration.py -v
-
-# Performance benchmarking
-python scripts/benchmark_dialog_performance.py
-
-# Memory leak detection
-python scripts/test_memory_leaks.py --cycles=1000
-```
-
-## Conclusion
-
-This plan provides a systematic approach to completing the dialog migration with clear phases, parallel execution opportunities, and success metrics. The critical foundation fixes in Phase 1 are essential before propagating the pattern to remaining dialogs. The 4-week timeline is realistic with proper parallelization and agent coordination.
+**Next Immediate Step**: Download sprites from Spriters Resource to understand what we're looking for, then use Mesen 2 to trace actual sprite locations.
