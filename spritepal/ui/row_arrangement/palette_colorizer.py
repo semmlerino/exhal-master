@@ -130,6 +130,15 @@ class PaletteColorizer(QObject):
                     # Get pixel value
                     pixel_value = grayscale_image.getpixel((x, y))
 
+                    # Ensure pixel_value is an integer for indexing operations
+                    if not isinstance(pixel_value, int):
+                        # If it's a tuple or other type, convert to int (take first value)
+                        if isinstance(pixel_value, tuple):
+                            first_val = pixel_value[0]
+                            pixel_value = int(first_val) if first_val is not None else 0
+                        else:
+                            pixel_value = int(pixel_value) if pixel_value is not None else 0
+
                     # For palette mode images, pixel value is already the palette index
                     if grayscale_image.mode == "P":
                         palette_index = pixel_value

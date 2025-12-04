@@ -63,7 +63,7 @@ def _get_real_factory():
         from tests.infrastructure.real_component_factory import RealComponentFactory
         return RealComponentFactory()
     except ImportError as e:
-        raise RuntimeError(f"Cannot import RealComponentFactory in headless environment: {e}")
+        raise RuntimeError(f"Cannot import RealComponentFactory in headless environment: {e}") from e
 
 class _HeadlessFallbackFactory:
     """Lightweight fallback factory for headless environments."""

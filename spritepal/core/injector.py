@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PIL import Image
 from utils.constants import (
@@ -103,7 +103,8 @@ class SpriteInjector:
             # Check color count based on mode
             if img.mode == "P":
                 # Indexed mode - count actual unique colors used
-                unique_colors = len(set(img.getdata()))
+                # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+                unique_colors = len(set(cast(Any, img.getdata())))
                 logger.debug(f"Indexed mode with {unique_colors} unique colors")
                 if unique_colors > 16:
                     logger.error(f"Too many colors: {unique_colors} (max 16)")
@@ -111,7 +112,8 @@ class SpriteInjector:
                 logger.debug(f"Palette validation passed: {unique_colors} colors <= 16")
             elif img.mode == "L":
                 # Grayscale mode - verify values are valid (0-255)
-                pixels = list(img.getdata())
+                # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+                pixels = list(cast(Any, img.getdata()))
                 max_val = max(pixels) if pixels else 0
                 if max_val > 255:
                     logger.error(f"Invalid grayscale value: {max_val}")
@@ -135,21 +137,24 @@ class SpriteInjector:
         if img.mode == "L":
             # Grayscale mode - likely from ROM extraction
             # Convert grayscale values back to palette indices
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
             original_max = max(pixels) if pixels else 0
             # Divide by 17 to get original 4-bit indices (0-15)
             pixels = [min(15, p // 17) for p in pixels]
             logger.debug(f"Converting grayscale to palette indices: max grayscale={original_max}, max index={max(pixels) if pixels else 0}")
         elif img.mode == "P":
             # Already indexed - use as-is
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
             max_index = max(pixels) if pixels else 0
             logger.debug(f"Using indexed palette directly: max index={max_index}")
         else:
             # Convert to indexed mode
             logger.warning(f"Converting {img.mode} to indexed mode - may lose color information")
             img = img.convert("P", palette=Image.Palette.ADAPTIVE, colors=16)  # type: ignore[attr-defined]
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
 
         width, height = img.size
         tiles_x = width // TILE_WIDTH

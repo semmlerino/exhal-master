@@ -240,7 +240,7 @@ class UICoordinatorManager(BaseManager):
         self._menu_actions[action_id] = handler
         action.triggered.connect(lambda: self._handle_menu_action(action_id))
 
-        menu.addAction(action)
+        menu.addAction(action)  # type: ignore[attr-defined]  # Qt menu method not in QObject stub
         return action
 
     def add_menu_separator(self, menu_name: str) -> None:
@@ -250,7 +250,7 @@ class UICoordinatorManager(BaseManager):
 
         for action in self._menu_bar.actions():
             if action.menu() and action.text() == menu_name:
-                action.menu().addSeparator()
+                action.menu().addSeparator()  # type: ignore[attr-defined]  # Qt menu method not in QObject stub
                 break
 
     def _handle_menu_action(self, action_id: str) -> None:
@@ -268,7 +268,7 @@ class UICoordinatorManager(BaseManager):
         for menu_action in self._menu_bar.actions():
             if menu_action.menu() and menu_action.text() == menu_name:
                 menu = menu_action.menu()
-                for action in menu.actions():
+                for action in menu.actions():  # type: ignore[attr-defined]  # Qt menu method not in QObject stub
                     if action.text() == action_name:
                         action.setEnabled(enabled)
                         self._menu_state[f"{menu_name}.{action_name}"] = enabled

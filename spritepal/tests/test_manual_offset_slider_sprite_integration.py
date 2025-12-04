@@ -86,13 +86,12 @@ class TestManualOffsetSliderSpriteIntegration:
 
         def extract_sprite_at_offset(rom_data, offset):
             """Return sprite data based on offset."""
-            if offset == 0x1000:
-                return {'width': 16, 'height': 16, 'data': b'sprite1_data'}
-            elif offset == 0x2000:
-                return {'width': 32, 'height': 32, 'data': b'sprite2_data'}
-            elif offset == 0x8000:
-                return {'width': 64, 'height': 64, 'data': b'sprite3_data'}
-            return None
+            sprite_map = {
+                0x1000: {'width': 16, 'height': 16, 'data': b'sprite1_data'},
+                0x2000: {'width': 32, 'height': 32, 'data': b'sprite2_data'},
+                0x8000: {'width': 64, 'height': 64, 'data': b'sprite3_data'},
+            }
+            return sprite_map.get(offset)
 
         extractor.extract_at_offset = extract_sprite_at_offset
         return extractor

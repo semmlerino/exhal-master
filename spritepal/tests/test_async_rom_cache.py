@@ -681,10 +681,12 @@ class TestAsyncROMCacheBenchmarks:
             async_cache._memory_cache[cache_key] = (test_data, metadata, time.time())
 
         # Benchmark memory cache lookup
+        # Capture async_cache in closure explicitly for ruff
+        cache = async_cache
         def cache_lookup():
-            with QMutexLocker(async_cache._request_mutex):
-                if cache_key in async_cache._memory_cache:
-                    return async_cache._memory_cache[cache_key]
+            with QMutexLocker(cache._request_mutex):
+                if cache_key in cache._memory_cache:
+                    return cache._memory_cache[cache_key]
                 return None
 
         result = benchmark(cache_lookup)

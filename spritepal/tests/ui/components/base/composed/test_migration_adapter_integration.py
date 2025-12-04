@@ -300,8 +300,8 @@ class TestBasicDialogCreation:
             # Component properties
             assert (legacy.button_box is not None) == (composed.button_box is not None)
             assert (legacy.status_bar is not None) == (composed.status_bar is not None)
-            assert type(legacy.main_layout) == type(composed.main_layout)
-            assert type(legacy.content_widget) == type(composed.content_widget)
+            assert type(legacy.main_layout) is type(composed.main_layout)
+            assert type(legacy.content_widget) is type(composed.content_widget)
 
         finally:
             for dialog in dialogs.values():

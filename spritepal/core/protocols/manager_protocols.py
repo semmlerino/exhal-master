@@ -5,7 +5,11 @@ These protocols define the interfaces that managers must implement.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import SignalInstance
+    from PySide6.QtWidgets import QStatusBar
 
 
 class ExtractionManagerProtocol(Protocol):
@@ -78,6 +82,18 @@ class ExtractionManagerProtocol(Protocol):
         """
         ...
 
+    def validate_extraction_params(self, params: dict[str, Any]) -> None:
+        """
+        Validate extraction parameters.
+
+        Args:
+            params: Dictionary of extraction parameters
+
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        ...
+
 class InjectionManagerProtocol(Protocol):
     """Protocol for injection manager."""
 
@@ -126,6 +142,35 @@ class InjectionManagerProtocol(Protocol):
 
         Returns:
             List of (offset, size) tuples for free regions
+        """
+        ...
+
+    def get_smart_vram_suggestion(
+        self,
+        sprite_path: str,
+        metadata_path: str
+    ) -> str:
+        """
+        Get smart VRAM file suggestion for injection.
+
+        Args:
+            sprite_path: Path to sprite file
+            metadata_path: Path to metadata file
+
+        Returns:
+            Suggested VRAM file path
+        """
+        ...
+
+    def start_injection(self, params: dict[str, Any]) -> bool:
+        """
+        Start injection process with given parameters.
+
+        Args:
+            params: Dictionary of injection parameters
+
+        Returns:
+            True if injection started successfully
         """
         ...
 
@@ -215,6 +260,31 @@ class SessionManagerProtocol(Protocol):
 
     def clear_session(self) -> None:
         """Clear current session data."""
+        ...
+
+    def get(self, category: str, key: str, default: Any = None) -> Any:
+        """
+        Get a setting value.
+
+        Args:
+            category: Setting category
+            key: Setting key
+            default: Default value if not found
+
+        Returns:
+            Setting value or default
+        """
+        ...
+
+    def set(self, category: str, key: str, value: Any) -> None:
+        """
+        Set a setting value.
+
+        Args:
+            category: Setting category
+            key: Setting key
+            value: Value to set
+        """
         ...
 
 class ContextManagerProtocol(Protocol):
@@ -344,4 +414,73 @@ class CacheManagerProtocol(Protocol):
         Returns:
             Dictionary with cache stats
         """
+        ...
+
+
+class MainWindowProtocol(Protocol):
+    """Protocol for main window interface required by controllers."""
+
+    # Signals
+    extract_requested: SignalInstance
+    open_in_editor_requested: SignalInstance
+    arrange_rows_requested: SignalInstance
+    arrange_grid_requested: SignalInstance
+    inject_requested: SignalInstance
+
+    # UI Components
+    extraction_panel: Any
+    sprite_preview: Any
+    palette_preview: Any
+    preview_coordinator: Any
+    status_bar: QStatusBar
+    status_bar_manager: Any
+    rom_extraction_panel: Any
+
+    def get_extraction_params(self) -> dict[str, Any]:
+        """
+        Get extraction parameters from UI.
+
+        Returns:
+            Dictionary with extraction parameters
+        """
+        ...
+
+    def get_output_path(self) -> str:
+        """
+        Get output path for extraction.
+
+        Returns:
+            Output path string
+        """
+        ...
+
+    def extraction_complete(self, extracted_files: list[str]) -> None:
+        """
+        Handle extraction completion.
+
+        Args:
+            extracted_files: List of extracted file paths
+        """
+        ...
+
+    def extraction_failed(self, error_message: str) -> None:
+        """
+        Handle extraction failure.
+
+        Args:
+            error_message: Error message to display
+        """
+        ...
+
+    def show_cache_operation_badge(self, badge_text: str) -> None:
+        """
+        Show cache operation badge.
+
+        Args:
+            badge_text: Text to display in badge
+        """
+        ...
+
+    def hide_cache_operation_badge(self) -> None:
+        """Hide cache operation badge."""
         ...

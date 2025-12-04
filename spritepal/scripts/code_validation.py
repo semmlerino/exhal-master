@@ -296,11 +296,11 @@ def validate_test_code(code: str, **kwargs) -> tuple[bool, str, list[str]]:
 
     # Check for proper test function naming
     lines = code.split('\n')
-    for i, line in enumerate(lines, 1):
-        line = line.strip()
-        if line.startswith('def ') and not line.startswith('def test_') and not line.startswith('def _'):
+    for i, log_line in enumerate(lines, 1):
+        log_line = log_line.strip()
+        if log_line.startswith('def ') and not log_line.startswith('def test_') and not log_line.startswith('def _'):
             # Check if it's actually a test function (not a helper)
-            if 'assert' in line or any('assert' in l for l in lines[i:i+10]):
+            if 'assert' in log_line or any('assert' in line for line in lines[i:i+10]):
                 extra_issues.append(f"Line {i}: Test function should start with 'test_'")
 
     # Check for missing docstrings in test functions

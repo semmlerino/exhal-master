@@ -11,10 +11,19 @@ from typing import TYPE_CHECKING, TypeGuard, TypeVar
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import TypedDict
 
     from core.managers.base_manager import BaseManager
-    from core.protocols.manager_protocols import ExtractionParams
+
+    # from core.protocols.manager_protocols import ExtractionParams  # TODO: Define this protocol
     from PySide6.QtCore import QObject
+
+    # Temporary stub until ExtractionParams is properly defined
+    class ExtractionParams(TypedDict):
+        rom_path: str
+        offset: int
+        output_base: str
+        sprite_name: str
 
 # Type variable for manager type guards
 T = TypeVar('T', bound='BaseManager')

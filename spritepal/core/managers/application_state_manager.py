@@ -344,7 +344,7 @@ class ApplicationStateManager(BaseManager):
             # Limit number of snapshots
             if len(self._state_snapshots) >= self._max_snapshots:
                 # Remove oldest snapshot
-                self._state_snapshots.popitem(last=False)
+                self._state_snapshots.popitem(last=False)  # type: ignore[call-arg]  # Python 3.7+ dict is ordered
 
             self._state_snapshots[snapshot.id] = snapshot
             return snapshot.id
@@ -563,7 +563,7 @@ class SessionAdapter(SessionManager):
     def set(self, category: str, key: str, value: Any) -> None:
         self._state_mgr.set_setting(category, key, value)
 
-    def save_session(self) -> bool:
+    def save_session(self) -> bool:  # type: ignore[override]  # Base returns None, override returns bool for success
         return self._state_mgr.save_settings()
 
     def get_session_data(self) -> dict[str, Any]:

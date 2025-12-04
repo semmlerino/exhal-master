@@ -117,7 +117,7 @@ def monitor_operation(operation: str | None = None, track_usage: bool = True,
 
             return result
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]  # ParamSpec decorator typing limitation
     return decorator
 
 
@@ -162,7 +162,7 @@ def track_feature_usage(feature: str, action: str | None = None, workflow: str |
 
             return result
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]  # ParamSpec decorator typing limitation
     return decorator
 
 
@@ -204,7 +204,7 @@ def monitor_cache_performance(cache_name: str):
 
             return result
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]  # ParamSpec decorator typing limitation
     return decorator
 
 

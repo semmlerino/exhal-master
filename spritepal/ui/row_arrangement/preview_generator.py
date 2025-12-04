@@ -62,7 +62,9 @@ class PreviewGenerator:
         # Create grayscale image
         elif original_image.mode == "P":
             arranged = Image.new("P", (new_width, new_height))
-            arranged.putpalette(original_image.getpalette())
+            palette = original_image.getpalette()
+            if palette is not None:
+                arranged.putpalette(palette)
         else:
             arranged = Image.new("L", (new_width, new_height))
 

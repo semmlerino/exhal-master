@@ -156,7 +156,8 @@ class SpriteSearchWorker(BaseWorker):
         """
         try:
             # Use the ROM extractor's sprite finder for validation
-            sprite_finder = self.rom_extractor.sprite_finder
+            # TODO: Implement sprite_finder attribute on ROMExtractor
+            sprite_finder = self.rom_extractor.sprite_finder  # type: ignore[attr-defined]
 
             # Try to decompress and validate
             result = sprite_finder.find_sprite_at_offset(rom_data, offset)

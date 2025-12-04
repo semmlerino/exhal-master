@@ -12,7 +12,7 @@ import mmap
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class MemoryMappedROMReader:
         with self.open_mmap() as rom_data:
             return bytes(rom_data[offset:offset + actual_size])
 
-    def read_header(self) -> dict[str, any]:
+    def read_header(self) -> dict[str, Any]:
         """
         Read SNES ROM header information.
 

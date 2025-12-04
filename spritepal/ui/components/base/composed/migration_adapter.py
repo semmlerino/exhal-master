@@ -141,7 +141,8 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
         if size:
             width, height = size
-            self.resize(width, height)
+            if width is not None and height is not None:
+                self.resize(width, height)
 
         # Note: _setup_ui is called by setup_ui() which is invoked by ComposedDialog
         # After that, we do additional setup

@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
 
         # Add output settings to left panel
         left_layout = self.left_panel.layout()
-        if left_layout is not None:
+        if left_layout is not None and isinstance(left_layout, QVBoxLayout):
             # Add output settings group to left panel
             output_group = self.output_settings_manager.create_output_settings_group()
             left_layout.addWidget(output_group)
@@ -764,7 +764,8 @@ class MainWindow(QMainWindow):
         if self._controller is None:
             # Import here to avoid circular dependency at module level
             from core.controller import ExtractionController
-            self._controller = ExtractionController(self)
+            # MainWindow implements MainWindowProtocol interface
+            self._controller = ExtractionController(self)  # type: ignore[arg-type]
         return self._controller
 
     @controller.setter

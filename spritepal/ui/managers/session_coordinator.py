@@ -98,7 +98,7 @@ class SessionCoordinator(QObject):
         self.session_manager.update_session_data(session_data)
 
         # Save UI settings
-        window_geometry = {
+        window_geometry: dict[str, int | float] = {
             "width": self.main_window.width(),
             "height": self.main_window.height(),
             "x": self.main_window.x(),

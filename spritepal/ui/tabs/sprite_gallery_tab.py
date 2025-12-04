@@ -286,8 +286,6 @@ class SpriteGalleryTab(QWidget):
         start_offset, end_offset = dialog.get_range()
 
         # Show progress dialog
-        range_size = end_offset - start_offset
-        range_size // 0x1000  # Rough estimate
         self.progress_dialog = QProgressDialog(
             f"Scanning ROM range 0x{start_offset:X} - 0x{end_offset:X}...",
             "Cancel",
@@ -774,7 +772,7 @@ class SpriteGalleryTab(QWidget):
     def _generate_mock_thumbnails(self):
         """Generate mock thumbnails for sprites when no real thumbnails are available."""
         try:
-            from generate_mock_thumbnails import generate_mock_sprite_thumbnail
+            from generate_mock_thumbnails import generate_mock_sprite_thumbnail  # type: ignore[import-not-found]
 
             for sprite_info in self.sprites_data:
                 offset = sprite_info.get('offset', 0)

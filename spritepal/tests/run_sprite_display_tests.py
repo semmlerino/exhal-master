@@ -107,7 +107,7 @@ class SpriteDisplayTestRunner:
             # Add parallel execution if requested
             if args.parallel:
                 try:
-                    import xdist
+                    import xdist  # noqa: F401
                     cmd.extend(['-n', 'auto'])
                 except ImportError:
                     print("⚠️  pytest-xdist not installed, running sequentially")
@@ -316,7 +316,7 @@ def main():
 
     # Validate environment
     try:
-        import pytest
+        import pytest  # noqa: F401
     except ImportError:
         print("❌ pytest not found. Please install: pip install pytest pytest-qt")
         sys.exit(1)

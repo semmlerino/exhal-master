@@ -72,7 +72,7 @@ class SimplePreviewWorker(QThread):
                     logger.debug(f"[SIMPLE] Using raw data: {len(tile_data)} bytes")
                 except Exception as e:
                     logger.error(f"[SIMPLE] Failed to extract raw data: {e}")
-                    raise ValueError(f"Failed to extract at 0x{self.offset:X}: {e}")
+                    raise ValueError(f"Failed to extract at 0x{self.offset:X}: {e}") from e
 
             if not tile_data:
                 raise ValueError(f"No data at offset 0x{self.offset:X}")

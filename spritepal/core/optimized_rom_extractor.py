@@ -162,7 +162,7 @@ class OptimizedROMExtractor(ROMExtractor):
 
             # Use HAL decompressor
             # The decompressor will stop at the end of compressed data
-            decompressed = self.hal_compressor.decompress_raw(compressed_chunk)
+            decompressed = self.hal_compressor.decompress_raw(compressed_chunk)  # type: ignore[attr-defined]  # TODO: Add method to HALCompressor
 
             return decompressed
 
@@ -363,7 +363,7 @@ class OptimizedROMExtractor(ROMExtractor):
         # Clear reader caches
         for reader in self._rom_readers.values():
             if hasattr(reader, 'clear_cache'):
-                reader.clear_cache()
+                reader.clear_cache()  # type: ignore[attr-defined]  # TODO: Add method to MemoryMappedROMReader
 
         self._cache_hits = 0
         self._cache_misses = 0

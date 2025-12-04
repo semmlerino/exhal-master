@@ -88,6 +88,8 @@ class RowArrangementDialog(SplitterDialog):
 
     def _load_sprite_data(self):
         """Load sprite image and extract rows"""
+        if self.sprite_path is None:
+            return
         try:
             # Use image processor to load and extract rows
             self.original_image, self.tile_rows = (
@@ -236,6 +238,8 @@ class RowArrangementDialog(SplitterDialog):
 
             # Get the appropriate display image (grayscale or colorized)
             display_image = self._get_display_image_for_row(row_index)
+            if display_image is None:
+                continue
 
             # Create enhanced thumbnail widget
             # (selection state will be updated by selection handler)
@@ -264,6 +268,8 @@ class RowArrangementDialog(SplitterDialog):
 
                 # Get the appropriate display image (grayscale or colorized)
                 display_image = self._get_display_image_for_row(row_index)
+                if display_image is None:
+                    continue
 
                 # Create thumbnail widget
                 # (selection state will be updated by selection handler)
@@ -329,6 +335,8 @@ class RowArrangementDialog(SplitterDialog):
 
     def _add_selected_rows(self):
         """Add selected rows to arrangement"""
+        if self.available_list is None:
+            return
         selected_items = self.available_list.selectedItems()
         row_indices = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
 
@@ -340,6 +348,8 @@ class RowArrangementDialog(SplitterDialog):
 
     def _remove_selected_rows(self):
         """Remove selected rows from arrangement"""
+        if self.arranged_list is None:
+            return
         selected_items = self.arranged_list.selectedItems()
         row_indices = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
 
@@ -360,10 +370,14 @@ class RowArrangementDialog(SplitterDialog):
 
     def _refresh_arrangement(self):
         """Refresh arrangement after internal reordering"""
+        if self.arranged_list is None:
+            return
         # Get current order from the list widget
         new_order = []
         for i in range(self.arranged_list.count()):
             item = self.arranged_list.item(i)
+            if item is None:
+                continue
             row_index = item.data(Qt.ItemDataRole.UserRole)
             new_order.append(row_index)
 
@@ -497,6 +511,8 @@ class RowArrangementDialog(SplitterDialog):
             return None
 
         # Use preview generator to create arranged image
+        if self.tile_height is None:
+            return None
         return self.preview_generator.create_arranged_image(
             self.original_image, self.tile_rows, arranged_indices, self.tile_height
         )
@@ -518,10 +534,11 @@ class RowArrangementDialog(SplitterDialog):
                     self.arrangement_manager.get_arranged_count(),
                 )
 
-            self._update_status(
-                f"Exported {self.arrangement_manager.get_arranged_count()} rows to "
-                f"{Path(self.output_path).name}"
-            )
+            if self.output_path:
+                self._update_status(
+                    f"Exported {self.arrangement_manager.get_arranged_count()} rows to "
+                    f"{Path(self.output_path).name}"
+                )
 
             # Accept dialog
             self.accept()
@@ -533,26 +550,32 @@ class RowArrangementDialog(SplitterDialog):
     def _update_existing_row_images(self):
         """Update the display images of existing row widgets without repopulating lists"""
         # Update available rows list
-        for i in range(self.available_list.count()):
-            item = self.available_list.item(i)
-            widget = self.available_list.itemWidget(item)
-            if widget and isinstance(widget, RowPreviewWidget):
-                row_index = item.data(Qt.ItemDataRole.UserRole)
-                # Get the appropriate display image (grayscale or colorized)
-                display_image = self._get_display_image_for_row(row_index)
-                if display_image:
-                    widget.update_image(display_image)
+        if self.available_list is not None:
+            for i in range(self.available_list.count()):
+                item = self.available_list.item(i)
+                if item is None:
+                    continue
+                widget = self.available_list.itemWidget(item)
+                if widget and isinstance(widget, RowPreviewWidget):
+                    row_index = item.data(Qt.ItemDataRole.UserRole)
+                    # Get the appropriate display image (grayscale or colorized)
+                    display_image = self._get_display_image_for_row(row_index)
+                    if display_image:
+                        widget.update_image(display_image)
 
         # Update arranged rows list
-        for i in range(self.arranged_list.count()):
-            item = self.arranged_list.item(i)
-            widget = self.arranged_list.itemWidget(item)
-            if widget and isinstance(widget, RowPreviewWidget):
-                row_index = item.data(Qt.ItemDataRole.UserRole)
-                # Get the appropriate display image (grayscale or colorized)
-                display_image = self._get_display_image_for_row(row_index)
-                if display_image:
-                    widget.update_image(display_image)
+        if self.arranged_list is not None:
+            for i in range(self.arranged_list.count()):
+                item = self.arranged_list.item(i)
+                if item is None:
+                    continue
+                widget = self.arranged_list.itemWidget(item)
+                if widget and isinstance(widget, RowPreviewWidget):
+                    row_index = item.data(Qt.ItemDataRole.UserRole)
+                    # Get the appropriate display image (grayscale or colorized)
+                    display_image = self._get_display_image_for_row(row_index)
+                    if display_image:
+                        widget.update_image(display_image)
 
     def _update_panel_titles(self):
         """Update panel titles with item counts"""

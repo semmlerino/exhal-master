@@ -520,6 +520,6 @@ def create_optimized_generator(
             logger.error(f"Failed to generate thumbnail: {e}")
             return None
 
-    generator.set_generator(generate_thumbnail)
+    generator.set_generator(generate_thumbnail)  # type: ignore[arg-type]  # Generator can return None on error
 
     return generator

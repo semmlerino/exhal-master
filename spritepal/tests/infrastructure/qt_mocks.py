@@ -12,7 +12,7 @@ from unittest.mock import Mock
 
 try:
     from PySide6.QtCore import QObject, Signal
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication  # noqa: F401
     QT_AVAILABLE = True
 except ImportError:
     # Fallback for environments where Qt is not available

@@ -444,7 +444,7 @@ class ContextValidator:
 
                 # Check if manager has is_initialized method and is initialized
                 if hasattr(manager, 'is_initialized'):
-                    is_initialized_method = manager.is_initialized
+                    is_initialized_method = manager.is_initialized  # type: ignore[attr-defined]  # Runtime duck typing
                     if callable(is_initialized_method) and not is_initialized_method():
                         errors.append(f"{manager_name} manager not properly initialized")
                 else:

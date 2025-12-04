@@ -43,8 +43,8 @@ class SpritePreviewWidget(QWidget):
         # Step 1: Declare instance variables with type hints
         self.title = title
         self.sprite_pixmap: QPixmap | None = None
-        self.palettes: list[list[list[int]]] = []
-        self.current_palette_index = None  # Default to grayscale (None = grayscale)
+        self.palettes: list[list[tuple[int, int, int]]] = []
+        self.current_palette_index: int | None = None  # Default to grayscale (None = grayscale)
         self.sprite_data: bytes | None = None
         self._update_in_progress = False  # Guard against concurrent updates
         self.default_palette_loader = DefaultPaletteLoader()
@@ -385,7 +385,7 @@ class SpritePreviewWidget(QWidget):
                 img_rgba = grayscale_img.convert("RGBA")
             else:
                 # Apply palette
-                if 0 <= self.current_palette_index < len(self.palettes):
+                if self.current_palette_index is not None and 0 <= self.current_palette_index < len(self.palettes):
                     palette_colors = self.palettes[self.current_palette_index]
                 else:
                     # Fallback to first palette if index is out of bounds
@@ -561,9 +561,9 @@ class SpritePreviewWidget(QWidget):
                         self.current_palette_index = 0  # It's now at position 0 in our list
                         logger.debug("[SPRITE_DISPLAY] Loaded Kirby Pink palette (was index 8)")
                     else:
-                        # Fallback to all palettes
-                        palette_list = [p for p in palette_list if p is not None]
-                        self.palettes = palette_list if palette_list else []
+                        # Fallback to all palettes - filter out None entries
+                        filtered_palette_list: list[list[tuple[int, int, int]]] = [p for p in palette_list if p is not None]
+                        self.palettes = filtered_palette_list if filtered_palette_list else []
                         logger.debug(f"[SPRITE_DISPLAY] Loaded {len(self.palettes)} default palettes")
                         # Ensure palette index is valid
                         if self.current_palette_index is not None and self.current_palette_index >= len(self.palettes):

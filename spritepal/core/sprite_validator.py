@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 from PIL import Image
 from utils.constants import BYTES_PER_TILE
@@ -127,7 +128,8 @@ class SpriteValidator:
 
         if img.mode == "P":
             # Get unique colors used
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
             unique_colors = set(pixels)
 
             # Check color count
@@ -155,7 +157,8 @@ class SpriteValidator:
 
         elif img.mode == "L":
             # For grayscale, check if values are multiples of 17
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
             unique_values = set(pixels)
 
             non_standard_values = []
@@ -223,7 +226,8 @@ class SpriteValidator:
             # Estimate compressed size (very rough estimate)
             # HAL compression typically achieves 40-60% compression
             # But it varies greatly based on sprite complexity
-            pixels = list(img.getdata())
+            # Cast needed: PIL's ImagingCore is iterable at runtime but not typed as such
+            pixels = list(cast(Any, img.getdata()))
             unique_colors = len(set(pixels))
 
             # More colors = less compression typically

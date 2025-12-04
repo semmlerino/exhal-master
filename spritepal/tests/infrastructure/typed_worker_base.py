@@ -425,8 +425,8 @@ class TestInjectionWorker(InjectionWorkerBase["InjectionManager", dict[str, Any]
 # Pytest fixtures (if pytest is available)
 try:
     import pytest
-    from core.managers.extraction_manager import ExtractionManager
-    from core.managers.injection_manager import InjectionManager
+    from core.managers.extraction_manager import ExtractionManager  # noqa: F401
+    from core.managers.injection_manager import InjectionManager  # noqa: F401
 
     @pytest.fixture
     def extraction_worker_helper():

@@ -129,9 +129,9 @@ class SpritePreviewWorker(BaseWorker):
             compressed_size = 0
 
             # First attempt: Try HAL decompression
+            decompression_start = time.time()
             try:
                 logger.debug(f"[PREVIEW_WORKER] Attempting HAL decompression at 0x{self.offset:06X}")
-                decompression_start = time.time()
 
                 # Check if we have offset variants and expected size from sprite config
                 offset_variants = []

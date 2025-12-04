@@ -248,7 +248,7 @@ class ExtractionWorkerBase(ManagedWorker):
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
-        self._operation_name  # type: ignore[attr-defined] = "ExtractionWorker"
+        self._operation_name = "ExtractionWorker"  # type: ignore[attr-defined]
 
 class InjectionWorkerBase(ManagedWorker):
     """
@@ -265,7 +265,7 @@ class InjectionWorkerBase(ManagedWorker):
 
     def __init__(self, manager: BaseManager, parent: QObject | None = None) -> None:
         super().__init__(manager=manager, parent=parent)
-        self._operation_name  # type: ignore[attr-defined] = "InjectionWorker"
+        self._operation_name = "InjectionWorker"  # type: ignore[attr-defined]
 
 class ScanWorkerBase(BaseWorker):
     """
@@ -288,7 +288,7 @@ class ScanWorkerBase(BaseWorker):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._operation_name  # type: ignore[attr-defined] = "ScanWorker"
+        self._operation_name = "ScanWorker"  # type: ignore[attr-defined]
 
     def emit_item_found(self, item_info: dict[str, Any]) -> None:
         """
@@ -328,7 +328,7 @@ class PreviewWorkerBase(BaseWorker):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self._operation_name  # type: ignore[attr-defined] = "PreviewWorker"
+        self._operation_name = "PreviewWorker"  # type: ignore[attr-defined]
 
     def emit_preview_ready(self, preview: Any) -> None:
         """

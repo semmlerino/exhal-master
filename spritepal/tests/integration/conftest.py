@@ -203,9 +203,9 @@ def wait_for_condition(qtbot, condition_func, timeout=5000, message="Condition n
         # Use qtbot's waitUntil for proper event loop handling
         qtbot.waitUntil(condition_func, timeout=timeout)
         return True
-    except AssertionError:
+    except AssertionError as e:
         # waitUntil raises AssertionError on timeout
-        raise TimeoutError(f"Timeout waiting for condition: {message}")
+        raise TimeoutError(f"Timeout waiting for condition: {message}") from e
 
 @pytest.fixture
 def wait_for(qtbot):

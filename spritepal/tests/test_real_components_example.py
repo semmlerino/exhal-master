@@ -199,7 +199,7 @@ class TestTypedWorkerBase:
             # Clean up
             helper.cleanup()
 
-class TestDataRepository:
+class TestDataRepositoryUsage:
     """Tests demonstrating TestDataRepository usage."""
 
     def test_get_test_scenarios(self):

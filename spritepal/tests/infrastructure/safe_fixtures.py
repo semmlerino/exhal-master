@@ -677,7 +677,7 @@ def create_safe_qtbot(request: FixtureRequest | None = None, timeout_override: i
     else:
         # Try to use real qtbot in GUI environments or with xvfb
         try:
-            import pytest_qt
+            import pytest_qt  # noqa: F401
             # Get real qtbot from pytest-qt if available
             real_qtbot = None
             if request and hasattr(request, 'getfixturevalue'):

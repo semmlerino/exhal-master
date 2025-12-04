@@ -177,9 +177,8 @@ class ParallelSpriteFinder:
     def _create_chunks(self, start: int, end: int) -> list[SearchChunk]:
         """Divide search range into chunks."""
         chunks = []
-        chunk_id = 0
 
-        for offset in range(start, end, self.chunk_size):
+        for chunk_id, offset in enumerate(range(start, end, self.chunk_size)):
             chunk_end = min(offset + self.chunk_size, end)
             chunk = SearchChunk(
                 start=offset,
@@ -187,7 +186,6 @@ class ParallelSpriteFinder:
                 chunk_id=chunk_id
             )
             chunks.append(chunk)
-            chunk_id += 1
 
         return chunks
 

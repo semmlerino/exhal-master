@@ -9,11 +9,13 @@ from __future__ import annotations
 from .manager_protocols import (
     ExtractionManagerProtocol,
     InjectionManagerProtocol,
+    MainWindowProtocol,
     SessionManagerProtocol,
 )
 
 __all__ = [
     "ExtractionManagerProtocol",
     "InjectionManagerProtocol",
+    "MainWindowProtocol",
     "SessionManagerProtocol",
 ]

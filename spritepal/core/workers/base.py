@@ -75,6 +75,7 @@ def handle_worker_errors(
                 if handle_interruption:
                     logger.info(f"{self._operation_name}: Operation cancelled")
                     self.operation_finished.emit(False, "Operation cancelled")
+                    return None  # type: ignore[return-value]  # Signal emission is the real result
                 else:
                     # Re-raise cancellation to be handled by caller or base class
                     raise
@@ -85,6 +86,7 @@ def handle_worker_errors(
                 # Emit signals for error handling
                 self.emit_error(error_msg, e)
                 self.operation_finished.emit(False, error_msg)
+                return None  # type: ignore[return-value]  # Signal emission is the real result
 
             except (ValueError, TypeError) as e:
                 error_msg = f"Data format error during {operation_context}: {e!s}"
@@ -92,6 +94,7 @@ def handle_worker_errors(
                 # Emit signals for error handling
                 self.emit_error(error_msg, e)
                 self.operation_finished.emit(False, error_msg)
+                return None  # type: ignore[return-value]  # Signal emission is the real result
 
             except RuntimeError as e:
                 if include_runtime_error:
@@ -100,6 +103,7 @@ def handle_worker_errors(
                     # Emit signals for error handling
                     self.emit_error(error_msg, e)
                     self.operation_finished.emit(False, error_msg)
+                    return None  # type: ignore[return-value]  # Signal emission is the real result
                 else:
                     # If not handling RuntimeError, let it propagate
                     raise
@@ -110,6 +114,7 @@ def handle_worker_errors(
                 # General exception catch: log AND emit signals
                 self.emit_error(error_msg, e)
                 self.operation_finished.emit(False, error_msg)
+                return None  # type: ignore[return-value]  # Signal emission is the real result
 
         return wrapper
     return decorator
@@ -139,7 +144,7 @@ class WorkerMeta(type(QThread)):
                 if method in namespace and not getattr(namespace[method], '__isabstractmethod__', False):
                     abstracts.discard(method)
 
-            cls.__abstractmethods__ = frozenset(abstracts)
+            cls.__abstractmethods__ = frozenset(abstracts)  # type: ignore[attr-defined]  # Metaclass magic for ABCs
 
         return cls
 

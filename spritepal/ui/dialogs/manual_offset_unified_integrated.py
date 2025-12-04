@@ -706,7 +706,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
             # Add cache performance tooltip if available
             if hasattr(self.status_panel, "status_label"):
                 tooltip = self._build_cache_tooltip()
-                self.status_panel.status_label.setToolTip(tooltip)
+                self.status_panel.status_label.setToolTip(tooltip)  # type: ignore[attr-defined]
 
     def _has_rom_data(self) -> bool:
         """Check if ROM data is available."""
@@ -1242,7 +1242,8 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
                 current_title = self.status_collapsible.title()
                 if "[Cache:" not in current_title:
                     new_title = f"{current_title} {cache_status}"
-                    self.status_collapsible.setTitle(new_title)
+                    # setTitle is available on CollapsibleGroupBox
+                    self.status_collapsible.setTitle(new_title)  # type: ignore[attr-defined]
 
         except Exception as e:
             logger.debug(f"Error updating cache status display: {e}")

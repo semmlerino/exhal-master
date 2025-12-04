@@ -80,11 +80,10 @@ class ManualOffsetDialogAdapter:
     """
 
     # Signal definitions are on the actual implementation classes
-    offset_changed: Signal
-    sprite_found: Signal
-    validation_failed: Signal
+    # Note: Signals are defined on the actual implementation classes.
+    # Type checkers can find them through the __new__ return type.
 
-    def __new__(cls, parent: QWidget | None = None, *args: Any, **kwargs: Any) -> Any:
+    def __new__(cls, parent: QWidget | None = None, *args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
         """
         Create and return the appropriate dialog implementation.
 

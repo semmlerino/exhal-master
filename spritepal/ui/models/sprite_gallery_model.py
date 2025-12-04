@@ -54,15 +54,19 @@ class SpriteGalleryModel(QAbstractListModel):
         self._filter_compressed_only = False
         self._use_filtering = False
 
-    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex | None = None) -> int:
         """Return number of sprites (for virtual view)."""
+        if parent is None:
+            parent = QModelIndex()
         if parent.isValid():
             return 0
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
         return len(sprites)
 
-    def columnCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: QModelIndex | QPersistentModelIndex | None = None) -> int:
         """Return number of columns for grid layout."""
+        if parent is None:
+            parent = QModelIndex()
         if parent.isValid():
             return 0
         return self._columns
@@ -256,7 +260,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         self.endResetModel()
 
-    def get_sprite_at_row(self, row: int) -> dict[str, Any | None]:
+    def get_sprite_at_row(self, row: int) -> dict[str, Any | None] | None:
         """Get sprite data at the given row."""
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
         if 0 <= row < len(sprites):
