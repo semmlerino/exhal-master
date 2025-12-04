@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.common import WorkerManager
 from ui.components.navigation import SpriteNavigator
 from ui.dialogs import ResumeScanDialog, UnifiedManualOffsetDialog, UserErrorDialog
@@ -92,6 +93,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
     _lock = threading.Lock()
 
     @classmethod
+    @override
     def _create_instance(cls, creator_panel: ROMExtractionPanel | None = None) -> UnifiedManualOffsetDialog:
         """Create a new dialog instance (thread-safe, main thread only)."""
         # Ensure we're on the main thread for Qt object creation
@@ -111,15 +113,15 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             logger.debug(f"New dialog created with ID: {getattr(instance, '_debug_id', 'Unknown')}")
 
             # Test if the dialog object is still valid
-            logger.warning(f"DEBUGGING: Dialog object type: {type(instance)}")
-            logger.warning(f"DEBUGGING: Dialog isVisible(): {instance.isVisible()}")
-            logger.warning(f"DEBUGGING: Dialog windowTitle(): {instance.windowTitle()}")
+            logger.debug(f"DEBUGGING: Dialog object type: {type(instance)}")
+            logger.debug(f"DEBUGGING: Dialog isVisible(): {instance.isVisible()}")
+            logger.debug(f"DEBUGGING: Dialog windowTitle(): {instance.windowTitle()}")
 
             # Try to access the finished signal to see if it exists
-            logger.warning("DEBUGGING: About to test signal access...")
+            logger.debug("DEBUGGING: About to test signal access...")
             try:
                 signal_obj = instance.finished
-                logger.warning(f"DEBUGGING: Successfully accessed finished signal: {signal_obj}")
+                logger.debug(f"DEBUGGING: Successfully accessed finished signal: {signal_obj}")
             except Exception as e:
                 logger.error(f"DEBUGGING: Cannot access finished signal: {e}")
 
@@ -177,7 +179,7 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
             cls._ensure_main_thread()
             # Test if the dialog is still valid by accessing windowTitle (this will throw RuntimeError if deleted)
             _ = instance.windowTitle()
-            logger.warning("[DEBUG] Existing dialog not visible, but still valid")
+            logger.debug("[DEBUG] Existing dialog not visible, but still valid")
         except RuntimeError:
             # Dialog has been destroyed by Qt but our reference is stale
             logger.debug("Stale dialog reference detected, cleaning up")
@@ -210,12 +212,14 @@ class ManualOffsetDialogSingleton(QtThreadSafeSingleton["UnifiedManualOffsetDial
         cls.reset()
 
     @classmethod
+    @override
     def reset(cls):
         """Reset the singleton instance and all associated state."""
         cls._destroyed = False
         super().reset()
 
     @classmethod
+    @override
     def _cleanup_instance(cls, instance: UnifiedManualOffsetDialog) -> None:
         """Clean up the singleton instance (thread-safe)."""
         logger.debug("Cleaning up ManualOffsetDialog singleton instance")
@@ -255,7 +259,7 @@ class ROMExtractionPanel(QWidget):
     )  # rom_path, offset, output_base, sprite_name
     output_name_changed = Signal(str)  # Emit when output name changes in ROM panel
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.rom_path = ""
         self.sprite_locations = {}
@@ -609,7 +613,7 @@ class ROMExtractionPanel(QWidget):
 
     def _open_manual_offset_dialog(self):
         """Open the manual offset control dialog using singleton pattern"""
-        logger.warning("[DEBUG] _open_manual_offset_dialog called")
+        logger.debug("[DEBUG] _open_manual_offset_dialog called")
 
         if not self.rom_path:
             UserErrorDialog.show_error(
@@ -620,9 +624,9 @@ class ROMExtractionPanel(QWidget):
             return
 
         # Get or create singleton dialog instance
-        logger.warning("[DEBUG] Getting dialog from singleton...")
+        logger.debug("[DEBUG] Getting dialog from singleton...")
         dialog = ManualOffsetDialogSingleton.get_dialog(self)
-        logger.warning(f"[DEBUG] Got dialog: {dialog} (ID: {getattr(dialog, '_debug_id', 'Unknown')})")
+        logger.debug(f"[DEBUG] Got dialog: {dialog} (ID: {getattr(dialog, '_debug_id', 'Unknown')})")
 
         # Defer custom signal connections to avoid Qt timing issues
         if not hasattr(dialog, "_custom_signals_connected"):
@@ -659,7 +663,7 @@ class ROMExtractionPanel(QWidget):
 
         # Show the dialog (or bring to front if already visible)
         if not dialog.isVisible():
-            logger.warning("[DEBUG] Dialog not visible, showing and raising")
+            logger.debug("[DEBUG] Dialog not visible, showing and raising")
             dialog.show()
             dialog.raise_()  # Also raise to ensure it's on top
             dialog.activateWindow()  # And activate to ensure focus
@@ -668,17 +672,17 @@ class ROMExtractionPanel(QWidget):
 
             # Connect deferred signals now that dialog is fully shown
             if hasattr(dialog, '_deferred_signal_connection'):
-                logger.warning("[DEBUG] Calling deferred signal connection...")
+                logger.debug("[DEBUG] Calling deferred signal connection...")
                 dialog._deferred_signal_connection()
                 delattr(dialog, '_deferred_signal_connection')  # Clean up
 
-            logger.warning("[DEBUG] Showed and raised ManualOffsetDialog singleton")
+            logger.debug("[DEBUG] Showed and raised ManualOffsetDialog singleton")
         else:
             # Bring to front if already visible
-            logger.warning("[DEBUG] Dialog already visible, raising to front")
+            logger.debug("[DEBUG] Dialog already visible, raising to front")
             dialog.raise_()
             dialog.activateWindow()
-            logger.warning("[DEBUG] Brought ManualOffsetDialog singleton to front")
+            logger.debug("[DEBUG] Brought ManualOffsetDialog singleton to front")
 
         # Update legacy reference for compatibility
         self._manual_offset_dialog = dialog
@@ -1260,7 +1264,7 @@ class ROMExtractionPanel(QWidget):
         dialog.progress_bar.setValue(int((current / total) * 100))
         dialog.progress_bar.setFormat(f"Scanning... {current}/{total}")
 
-    def _on_sprite_found(self, dialog: ScanDialog, context: ScanContext, sprite_info: dict) -> None:
+    def _on_sprite_found(self, dialog: ScanDialog, context: ScanContext, sprite_info: dict[str, Any]) -> None:
         """Handle sprite found during scan."""
         context.found_offsets.append(sprite_info)
 
@@ -1279,7 +1283,7 @@ class ROMExtractionPanel(QWidget):
         if len(context.found_offsets) == 1 and dialog.apply_btn:
             dialog.apply_btn.setEnabled(True)
 
-    def _format_sprite_info(self, sprite_info: dict) -> str:
+    def _format_sprite_info(self, sprite_info: dict[str, Any]) -> str:
         """Format sprite info for display."""
         text = f"Found sprite at {sprite_info['offset_hex']}:\n"
         text += f"  - Tiles: {sprite_info['tile_count']}\n"
@@ -1314,7 +1318,7 @@ class ROMExtractionPanel(QWidget):
         elif dialog.apply_btn:
             dialog.apply_btn.setEnabled(False)
 
-    def _format_scan_summary(self, found_offsets: list) -> str:
+    def _format_scan_summary(self, found_offsets: list[Any]) -> str:
         """Format scan completion summary."""
         text = f"\nScan complete! Found {len(found_offsets)} valid sprite locations.\n"
 
@@ -1334,7 +1338,7 @@ class ROMExtractionPanel(QWidget):
 
         return text
 
-    def _save_scan_results_to_cache(self, dialog: ScanDialog, found_offsets: list) -> None:
+    def _save_scan_results_to_cache(self, dialog: ScanDialog, found_offsets: list[Any]) -> None:
         """Save scan results to cache."""
         self._update_cache_status(dialog, "saving", "💾 Saving results to cache...")
         QApplication.processEvents()
@@ -1629,6 +1633,7 @@ class ROMExtractionPanel(QWidget):
                         logger.warning(f"Error cleaning up preview worker: {e}")
                 self.sprite_navigator.preview_workers.clear()
 
+    @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle panel close event"""
         # Clean up workers before closing
@@ -1656,5 +1661,5 @@ class ScanContext:
     """Context object for sharing data between scan event handlers."""
 
     def __init__(self):
-        self.found_offsets: list[dict] = []
+        self.found_offsets: list[dict[str, Any]] = []
         self.selected_offset: int | None = None

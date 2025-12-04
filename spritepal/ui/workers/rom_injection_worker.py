@@ -4,13 +4,13 @@ This module contains the Qt-specific worker thread for ROM injection.
 """
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 from core.rom_injector import ROMInjector
 from core.rom_validator import ROMValidator
 from core.sprite_validator import SpriteValidator
 from PySide6.QtCore import QThread, Signal
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -42,12 +42,26 @@ class ROMInjectionWorker(QThread):
         self.metadata_path: str | None = metadata_path
         self.injector: ROMInjector = ROMInjector()
 
+    @override
     def run(self) -> None:
         """Run the ROM injection process with detailed progress reporting"""
         logger.info(f"Starting ROM injection worker: sprite={self.sprite_path}, rom={self.rom_input}")
         logger.debug(f"Injection parameters: offset=0x{self.sprite_offset:X}, fast_compression={self.fast_compression}")
         try:
-            total_steps = 10
+            # Validate output path early to prevent silent fallback to input path
+            if not self.rom_output or not self.rom_output.strip():
+                self.injection_finished.emit(False, "Output ROM path is required. Please specify an output file.")
+                return
+
+            output_path = Path(self.rom_output)
+            if not output_path.parent.exists():
+                self.injection_finished.emit(
+                    False,
+                    f"Output directory does not exist: {output_path.parent}"
+                )
+                return
+
+            total_steps = 6
             current_step = 0
 
             # Step 1: Load metadata if available
@@ -115,68 +129,30 @@ class ROMInjectionWorker(QThread):
             self.progress.emit(f"ROM: {header.title}")
             current_step += 1
 
-            # Step 6: Compress sprite
-            self.progress.emit("Compressing sprite data...")
-            self.progress_percent.emit(int((current_step / total_steps) * 100))
-            logger.info(f"Compressing sprite with fast_compression={self.fast_compression}")
-            start_time = time.time()
-            # TODO: Implement compress_sprite method on ROMInjector class
-            compressed_data = self.injector.compress_sprite(self.sprite_path, self.fast_compression)  # type: ignore[attr-defined]
-            compression_time = time.time() - start_time
-            logger.info(f"Compression completed in {compression_time:.2f} seconds")
-
-            # Emit compression statistics
-            original_size = Path(self.sprite_path).stat().st_size
-            compressed_size = len(compressed_data)
-            compression_ratio = original_size / compressed_size if compressed_size > 0 else 0
-            compression_stats = {
-                "original_size": original_size,
-                "compressed_size": compressed_size,
-                "compression_ratio": compression_ratio,
-                "compression_time": compression_time,
-                "fast_mode": self.fast_compression,
-            }
-            logger.debug(f"Compression stats: {compression_stats}")
-            self.compression_info.emit(compression_stats)
-            current_step += 1
-
-            # Step 7: Backup ROM
-            self.progress.emit("Creating ROM backup...")
-            self.progress_percent.emit(int((current_step / total_steps) * 100))
-            # TODO: Implement backup_rom method on ROMInjector class
-            backup_path = self.injector.backup_rom(self.rom_input)  # type: ignore[attr-defined]
-            self.progress.emit(f"Backup created: {backup_path}")
-            current_step += 1
-
-            # Step 8: Inject sprite
+            # Step 6: Inject sprite (handles compression, backup, checksum internally)
             self.progress.emit("Injecting sprite into ROM...")
             self.progress_percent.emit(int((current_step / total_steps) * 100))
+
             actual_offset = self.sprite_offset
             if header_offset > 0:
                 actual_offset += header_offset
                 logger.debug(f"Adjusted offset for header: 0x{actual_offset:X}")
-            # Fix parameter order: inject_sprite_to_rom(sprite_path, rom_path, output_path, sprite_offset)
-            self.injector.inject_sprite_to_rom(
-                sprite_path=compressed_data,  # This should be the sprite data path
+
+            # inject_sprite_to_rom handles: compression, backup, PNG-to-4bpp, checksum
+            # Note: rom_output is validated at start of run() - no fallback needed
+            success, message = self.injector.inject_sprite_to_rom(
+                sprite_path=self.sprite_path,
                 rom_path=self.rom_input,
-                output_path=self.rom_output or self.rom_input,
-                sprite_offset=actual_offset
+                output_path=self.rom_output,
+                sprite_offset=actual_offset,
+                fast_compression=self.fast_compression,
+                create_backup=True,
             )
-            current_step += 1
 
-            # Step 9: Update ROM checksum
-            self.progress.emit("Updating ROM checksum...")
-            self.progress_percent.emit(int((current_step / total_steps) * 100))
-            # TODO: Implement update_checksum method on ROMInjector class (may be update_rom_checksum)
-            self.injector.update_checksum(self.rom_output or self.rom_input)  # type: ignore[attr-defined]
-            current_step += 1
+            if not success:
+                self.injection_finished.emit(False, message)
+                return
 
-            # Step 10: Save metadata
-            self.progress.emit("Saving metadata...")
-            self.progress_percent.emit(int((current_step / total_steps) * 100))
-            if self.metadata_path:
-                # TODO: Implement save_metadata method on ROMInjector class
-                self.injector.save_metadata(self.metadata_path)  # type: ignore[attr-defined]
             logger.info("ROM injection completed successfully")
             self.injection_finished.emit(True, "Sprite injected successfully!")
             self.progress_percent.emit(100)

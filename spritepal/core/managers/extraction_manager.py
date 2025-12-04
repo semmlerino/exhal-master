@@ -8,7 +8,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from utils.type_aliases import override
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from core.extractor import SpriteExtractor
@@ -320,7 +320,8 @@ class ExtractionManager(BaseManager):
             self._handle_error(e, operation)
             raise
 
-        if not self._start_operation(operation):
+        started = self._start_operation(operation)
+        if not started:
             # Allow multiple preview operations
             self._logger.debug("Preview operation already running, allowing concurrent preview")
 
@@ -373,7 +374,8 @@ class ExtractionManager(BaseManager):
         else:
             return tile_data, width, height
         finally:
-            self._finish_operation(operation)
+            if started:
+                self._finish_operation(operation)
 
     def validate_extraction_params(self, params: dict[str, Any]) -> bool:
         """
