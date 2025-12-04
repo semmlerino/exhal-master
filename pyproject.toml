@@ -52,7 +52,7 @@ where = ["."]
 include = ["spritepal*"]
 
 # ============================================================================
-# Ruff Configuration
+# Ruff Configuration (Strict)
 # ============================================================================
 [tool.ruff]
 line-length = 120
@@ -67,6 +67,7 @@ exclude = [
     "*.egg-info",
     "venv",
     "migration_report.txt",
+    "archive*",
 ]
 
 [tool.ruff.lint]
@@ -80,59 +81,195 @@ select = [
     "UP",     # pyupgrade
     "SIM",    # flake8-simplify
     "RUF",    # Ruff-specific rules
+    "N",      # pep8-naming
+    "S",      # flake8-bandit (security)
+    "A",      # flake8-builtins
+    "T20",    # flake8-print (no print statements)
+    "PT",     # flake8-pytest-style
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "PIE",    # flake8-pie
+    "PL",     # pylint
+    "TRY",    # tryceratops (exception handling)
+    "PERF",   # perflint (performance)
+    "FURB",   # refurb (modern Python)
+    "LOG",    # flake8-logging
+    "EM",     # flake8-errmsg
+    "G",      # flake8-logging-format
+    "INP",    # flake8-no-pep420 (require __init__.py)
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "ERA",    # eradicate (commented-out code)
+    "FBT",    # flake8-boolean-trap
+    "ICN",    # flake8-import-conventions
+    "PYI",    # flake8-pyi (type stub rules)
 ]
 
 ignore = [
-    # Formatting (handled by formatter or not critical)
-    "E501",     # line length
+    # Quotes - too noisy for no bug-catching value
+    "Q",        # flake8-quotes (style only)
+    # Formatting (handled by formatter)
+    "E501",     # line length (120 is fine, don't be pedantic)
     "W291",     # trailing-whitespace
     "W293",     # blank-line-with-whitespace
 
-    # Import ordering (Qt apps need delayed imports)
+    # Import ordering (Qt apps need delayed imports for circular deps)
     "E402",     # module level import not at top
     "PLC0415",  # import-outside-top-level
 
-    # Complexity (complex Qt widgets are normal)
-    "PLR0912",  # too-many-branches
-    "PLR0915",  # too-many-statements
+    # Complexity (Qt widgets can be complex, but track it)
+    "PLR0912",  # too-many-branches (>12)
+    "PLR0915",  # too-many-statements (>50)
     "PLR0911",  # too-many-return-statements
+    "PLR0913",  # too-many-arguments (Qt signals have many)
+    "PLR2004",  # magic-value-comparison (common in pixel math)
+    "PLR0904",  # too-many-public-methods (Qt classes)
 
-    # Style preferences (not bugs)
-    "SIM102",   # collapsible-if
-    "SIM105",   # suppressible-exception
-    "SIM108",   # if-else-block-instead-of-if-exp
+    # Style preferences that don't catch bugs
+    "SIM102",   # collapsible-if (readability preference)
+    "SIM108",   # if-else-block-instead-of-if-exp (ternary)
     "SIM117",   # multiple-with-statements
-    "SIM103",   # needless-bool
     "SIM115",   # open-file-with-context-handler
-    "E712",     # true-false-comparison
 
-    # Qt-specific patterns
-    "RUF012",   # mutable class default
-    "RUF059",   # unused-unpacked-variable (common in signal handlers)
-    "B007",     # unused-loop-control-variable
+    # Qt-specific patterns (legitimate usage)
+    "RUF012",   # mutable class default (Qt signals)
+    "RUF059",   # unused-unpacked-variable (signal handlers)
+    "ARG002",   # unused-method-argument (Qt overrides)
+    "ARG001",   # unused-function-argument (Qt callbacks)
+    "ARG003",   # unused-class-method-argument (Qt overrides)
+    "ARG004",   # unused-static-method-argument
+    "ARG005",   # unused-lambda-argument (Qt callbacks)
+    "B007",     # unused-loop-control-variable (Qt iteration)
+    "B023",     # function-uses-loop-variable (Qt callbacks)
 
-    # Not critical for this app
-    "DTZ005",   # datetime-now-without-tzinfo
-    "PTH123",   # builtin-open
-    "PTH110",   # os-path-exists
-    "PTH109",   # os-getcwd
-    "PTH113",   # os-path-isfile
-    "RUF001",   # ambiguous-unicode-character-string
-    "B023",     # function-uses-loop-variable (common in Qt callbacks)
-    "RUF034",   # useless-if-else
-    "RUF005",   # collection-literal-concatenation
+    # Security (not a web app, user controls input)
+    "S101",     # assert-used (fine for desktop apps)
+    "S108",     # hardcoded temp file (we use proper temp handling)
+    "S110",     # try-except-pass (often legitimate in Qt)
+    "S112",     # try-except-continue (often legitimate)
+    "S301",     # suspicious-pickle-usage (legitimate for serialization)
+    "S311",     # pseudo-random-generator (not cryptographic)
+    "S324",     # insecure-hash-function (md5 for checksums, not crypto)
+    "S603",     # subprocess-without-shell-equals-true
+    "S607",     # start-process-with-partial-path
+
+    # Exceptions (Qt has its own patterns)
+    "TRY002",   # raise-vanilla-class (raise Exception is fine)
+    "TRY003",   # raise-vanilla-args (Qt exceptions)
+    "TRY300",   # consider-else-block (style preference)
+    "TRY301",   # raise-within-except (can be legitimate)
+    "TRY400",   # logging-error-instead-of-exception
+    "TRY401",   # verbose-log-message (f-strings in logging fine)
+    "EM101",    # raw-string-in-exception
+    "EM102",    # f-string-in-exception
+
+    # Boolean trap (Qt APIs use bool params extensively)
+    "FBT001",   # boolean-positional-arg-in-function-definition
+    "FBT002",   # boolean-default-value-positional-argument
+    "FBT003",   # boolean-positional-value-in-function-call
+
+    # Print statements (CLI tools need them)
+    "T201",     # print-found
+
+    # Type checking imports (handled by TYPE_CHECKING blocks)
+    "TC001",    # typing-only-first-party-import (renamed from TCH001)
+    "TC002",    # typing-only-third-party-import (renamed from TCH002)
+    "TC003",    # typing-only-standard-library-import (renamed from TCH003)
+    "TC006",    # type-checking annotation in TYPE_CHECKING block
+
+    # Naming (Qt uses camelCase for overrides)
+    "N802",     # invalid-function-name (Qt overrides like paintEvent)
+    "N803",     # invalid-argument-name (Qt params like QWidget)
+    "N806",     # non-lowercase-variable-in-function
+    "N813",     # camelcase-imported-as-lowercase
+    "N815",     # mixed-case-variable-in-class-scope
+    "N812",     # lowercase-imported-as-non-lowercase
+    "N818",     # error-suffix-on-exception-name
+
+    # Other pragmatic ignores
+    "INP001",   # implicit-namespace-package (scripts don't need __init__)
+    "RET504",   # unnecessary-assign (readability)
+    "RET505",   # superfluous-else-return (style preference)
+    "RET506",   # superfluous-else-raise (style preference)
+    "PIE790",   # unnecessary-pass (explicit pass is fine)
+    "PERF203",  # try-except-in-loop (Qt event loops)
+    "PERF401",  # manual-list-comprehension (readability)
+    "PLW1510",  # subprocess-run-without-check (intentional)
+    "PLW2901",  # redefined-loop-name (common pattern)
+    "G004",     # logging-f-string (f-strings are fine)
+    "PYI034",   # non-self-return-type (PEP 673 __new__)
+    "PYI036",   # bad-exit-annotation (not using stubs)
+    "PYI041",   # redundant-numeric-union (int | float -> float)
+    "PYI024",   # collections-named-tuple (not using stubs)
+    "E712",     # true-false-comparison (sometimes intentional)
+    "SIM105",   # suppressible-exception (suppress vs try/except style)
+    "SIM103",   # needless-bool (return bool comparison)
+    "ERA001",   # commented-out-code (too many false positives)
+    "ICN001",   # unconventional-import-alias (numpy as np is fine)
+    "PLW0603",  # global-statement (sometimes needed for singletons)
+    "RUF034",   # useless-if-else (style preference)
+    "G003",     # logging-plus-concat (string concat in logging)
+    "G201",     # logging-exc-info (error with exc_info is fine)
+    "PIE810",   # call-single-arg-startswith-endswith
+    "LOG015",   # root-logger-call (fine for desktop app)
+    "PT013",    # incorrect-pytest-import (import pytest.raises)
+    "PYI056",   # unsupported-method-call-on-typevar
+    "PLR1704",  # redefining-argument-with-local-name
+    "A002",     # shadowing-builtin (many Qt methods use id, type, etc.)
+    "A001",     # shadowing-builtin-variable
+    "TRY004",   # type-check-without-type-error
+    "PERF402",  # manual-list-copy
+    "PLW1641",  # eq-without-hash
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # unused imports in __init__ files
-"tests/**/*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043"]  # test-specific patterns
-"**/test_*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043", "F401"]  # test files
-"spritepal/test_*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043", "F401"]  # root test files
-"spritepal/mesen2_integration/*.py" = ["E722", "B904"]  # experimental integration scripts
-"spritepal/scripts/*.py" = ["E722", "B904", "F401"]  # utility scripts
+"__init__.py" = ["F401", "E402"]  # unused imports, import order
+"tests/**/*.py" = [
+    "S",        # security (test code is not production)
+    "PLR2004",  # magic values
+    "B017",     # assert raises
+    "B018",     # useless expression
+    "RUF",      # ruff rules (ambiguous unicode, etc.)
+    "ARG",      # unused arguments in test fixtures
+    "PT",       # pytest style (flexible in tests)
+    "ERA001",   # commented code (test examples)
+    "N",        # naming (test functions can be descriptive)
+]
+"**/test_*.py" = [
+    "S", "PLR2004", "B017", "B018", "RUF", "F401",
+    "ARG", "PT", "ERA001", "N",
+]
+"spritepal/test_*.py" = [
+    "S", "PLR2004", "B017", "B018", "RUF", "F401",
+    "ARG", "PT", "ERA001", "N",
+]
+"spritepal/mesen2_integration/*.py" = ["E722", "B904", "T201", "S"]  # experimental scripts
+"spritepal/scripts/*.py" = ["E722", "B904", "F401", "T201", "INP001", "RUF"]  # utility scripts
+"spritepal/tests/scripts/*.py" = ["RUF", "S", "ARG", "N"]  # test scripts
+"conftest.py" = ["ARG", "PT"]  # pytest fixtures
+
+[tool.ruff.lint.isort]
+known-first-party = ["spritepal"]
+force-single-line = false
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+"numpy" = "np"
+"PIL.Image" = "PILImage"
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 15
+max-returns = 8
+max-statements = 60
 
 # ============================================================================
-# Basedpyright Configuration
+# Basedpyright Configuration (Strict)
 # ============================================================================
 [tool.basedpyright]
 include = ["spritepal/core", "spritepal/ui", "spritepal/utils"]
@@ -142,11 +279,67 @@ exclude = [
     "build",
     "dist",
     "spritepal/tests",
+    "spritepal/mesen2_integration",
+    "spritepal/scripts",
 ]
 pythonVersion = "3.11"
+pythonPlatform = "All"
+
+# Use standard mode as base, enable additional checks selectively
 typeCheckingMode = "standard"
+
+# ---- Enable additional checks beyond standard ----
 reportMissingImports = true
-reportMissingTypeStubs = false
+reportInvalidTypeForm = true
+reportDuplicateImport = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportUnnecessaryIsInstance = true
+reportUnnecessaryCast = true
+reportUnnecessaryComparison = true
+reportAssertAlwaysTrue = true
+reportSelfClsParameterName = true
+reportInvalidStubStatement = true
+reportIncompleteStub = true
+reportUndefinedVariable = true
+reportUnboundVariable = true
+reportInvalidStringEscapeSequence = true
+reportMatchNotExhaustive = true
+reportShadowedImports = true
+
+# ---- Keep at warning level (catch issues but don't block) ----
+reportUnusedImport = "warning"
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+reportMissingTypeArgument = "warning"
+reportUnreachable = "warning"
+
+# ---- Relax for Qt/GUI pragmatism ----
+reportMissingTypeStubs = false              # Many Qt types lack stubs
+reportUnknownParameterType = false          # Qt callbacks often untyped
+reportUnknownArgumentType = false           # Qt signal/slot args
+reportUnknownLambdaType = false             # Lambda in Qt connections
+reportUnknownVariableType = false           # Qt dynamic attributes
+reportUnknownMemberType = false             # Qt dynamic members
+reportUnnecessaryTypeIgnoreComment = false  # Allow defensive ignores
+reportUnusedCallResult = false              # Qt methods return values we ignore
+reportImplicitOverride = false              # Qt overrides don't need @override
+reportAny = false                           # Qt uses Any extensively
+reportExplicitAny = false                   # Allow explicit Any for Qt
+reportPrivateUsage = false                  # Qt internals often accessed
+reportConstantRedefinition = false          # Conditional platform constants
+reportMissingParameterType = false          # Many Qt callbacks untyped
+reportMissingReturnType = false             # Decorators often obscure return types
+reportUntypedFunctionDecorator = false      # Many decorators untyped
+reportUntypedClassDecorator = false         # Same issue
+reportUntypedBaseClass = false              # Some Qt mixins untyped
+reportCallInDefaultInitializer = false      # Qt patterns use this
+reportImplicitStringConcatenation = false   # Common in long strings
+reportPrivateImportUsage = false            # Internal imports common
+reportTypeCommentUsage = false              # Legacy code
+reportUntypedNamedTuple = false             # Some legacy tuples
 
 # ============================================================================
 # Pytest Configuration

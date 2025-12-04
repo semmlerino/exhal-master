@@ -157,7 +157,7 @@ class TestROMInjector(unittest.TestCase):
         assert "High_Quality_Sprite_2" in locations
 
         # Check structure
-        for _name, pointer in locations.items():
+        for pointer in locations.values():
             assert pointer.offset is not None
             assert pointer.bank is not None
             assert pointer.address is not None

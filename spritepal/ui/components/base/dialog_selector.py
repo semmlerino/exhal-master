@@ -83,8 +83,6 @@ try:
         try:
             from .composed.migration_adapter import (
                 DialogBaseMigrationAdapter,
-            )
-            from .composed.migration_adapter import (
                 InitializationOrderError as ComposedInitializationOrderError,
             )
             DialogBase = DialogBaseMigrationAdapter  # type: ignore[assignment]
@@ -93,8 +91,8 @@ try:
         except ImportError as e:
             logger.error(f"Failed to import composed dialog implementation: {e}")
             logger.warning("Falling back to legacy dialog implementation")
-            from .dialog_base import DialogBase as LegacyDialogBase
             from .dialog_base import (
+                DialogBase as LegacyDialogBase,
                 InitializationOrderError as LegacyInitializationOrderError,
             )
             DialogBase = LegacyDialogBase  # type: ignore[assignment]
@@ -102,8 +100,8 @@ try:
             _implementation_source = "dialog_base (fallback)"
     else:
         logger.info("Using legacy dialog implementation (DialogBase)")
-        from .dialog_base import DialogBase as LegacyDialogBase
         from .dialog_base import (
+            DialogBase as LegacyDialogBase,
             InitializationOrderError as LegacyInitializationOrderError,
         )
         DialogBase = LegacyDialogBase  # type: ignore[assignment]

@@ -100,7 +100,7 @@ class TestExceptions:
     def test_exception_with_no_message(self):
         """Test exceptions with no message"""
         with pytest.raises(SpritePalError) as exc_info:
-            raise SpritePalError()
+            raise SpritePalError
 
         # Should have empty string or default message
         assert str(exc_info.value) == ""

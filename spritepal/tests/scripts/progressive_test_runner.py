@@ -188,7 +188,7 @@ class ProgressiveTestRunner:
         print("=" * 60)
         print(f"Start time: {self.total_start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"Project root: {self.project_root}")
-        print("")
+        print()
 
         # Filter stages based on start/max stage
         stages_to_run = self._filter_stages(start_stage, max_stage)
@@ -424,7 +424,7 @@ class ProgressiveTestRunner:
         print("=" * 60)
         print(f"Total duration: {total_duration:.1f}s")
         print(f"Stages completed: {len(self.results)}")
-        print("")
+        print()
 
         # Stage-by-stage summary
         print("Stage Results:")
@@ -445,7 +445,7 @@ class ProgressiveTestRunner:
 
         print("-" * 40)
         print(f"{'Overall':20} {total_passed_all:>4}/{total_tests_all:<4} ({overall_pass_rate:>5.1%}) {total_duration:>6.1f}s")
-        print("")
+        print()
 
         # Health assessment
         if overall_pass_rate >= 0.95:
@@ -491,7 +491,7 @@ class ProgressiveTestRunner:
             print("  2. Run detailed analysis on failing tests")
             print("  3. Focus on most affected test files")
 
-        print("")
+        print()
 
     def save_results(self, filepath: Path | None = None) -> Path:
         """Save results to JSON file."""

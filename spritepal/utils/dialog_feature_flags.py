@@ -22,11 +22,7 @@ from __future__ import annotations
 
 from ui.components.base.dialog_selector import (
     get_dialog_implementation as _get_dialog_implementation,
-)
-from ui.components.base.dialog_selector import (
     is_composed_dialogs_enabled as _is_composed_dialogs_enabled,
-)
-from ui.components.base.dialog_selector import (
     set_dialog_implementation as _set_dialog_implementation,
 )
 

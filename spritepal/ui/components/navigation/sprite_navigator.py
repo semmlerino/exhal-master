@@ -772,7 +772,7 @@ class SpriteNavigator(QWidget):
             cached_locations = self.rom_cache.get_sprite_locations(self.rom_path)
             if cached_locations:
                 sprites = []
-                for _name, info in cached_locations.items():
+                for info in cached_locations.values():
                     if isinstance(info, dict) and "offset" in info:
                         offset = info["offset"]
                         quality = info.get("quality", 1.0)

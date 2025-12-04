@@ -11,6 +11,7 @@ import bisect
 import json
 import threading
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from utils.logging_config import get_logger
@@ -19,7 +20,6 @@ from .data_structures import RegionType, SpriteLocation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
 logger = get_logger(__name__)
 

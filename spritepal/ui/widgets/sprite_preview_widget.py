@@ -270,7 +270,7 @@ class SpritePreviewWidget(QWidget):
                 if self.palette_combo:
                     self.palette_combo.addItem("Grayscale", None)
                 # Add color palettes
-                for idx, _colors in default_palettes.items():
+                for idx in default_palettes:
                     if self.palette_combo:
                         self.palette_combo.addItem(f"Palette {idx}", idx)
 

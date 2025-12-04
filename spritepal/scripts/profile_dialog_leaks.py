@@ -342,8 +342,7 @@ def main():
 
                 if results["leaked_objects"]:
                     f.write("Leaked objects:\n")
-                    for obj_type, count in results["leaked_objects"].items():
-                        f.write(f"  {obj_type}: +{count}\n")
+                    f.writelines(f"  {obj_type}: +{count}\n" for obj_type, count in results["leaked_objects"].items())
 
             print(f"\nResults saved to: {args.output}")
 

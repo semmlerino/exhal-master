@@ -38,8 +38,6 @@ from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
 from core.managers.registry import (
     cleanup_managers as cleanup_managers_registry,
-)
-from core.managers.registry import (
     initialize_managers as initialize_managers_registry,
 )
 from core.workers import VRAMExtractionWorker

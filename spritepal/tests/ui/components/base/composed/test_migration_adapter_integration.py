@@ -68,8 +68,10 @@ from ui.components.base.composed.migration_adapter import (
 )
 
 # Import both implementations for comparison
-from ui.components.base.dialog_base import DialogBase as LegacyDialogBase
-from ui.components.base.dialog_base import InitializationOrderError as LegacyInitializationOrderError
+from ui.components.base.dialog_base import (
+    DialogBase as LegacyDialogBase,
+    InitializationOrderError as LegacyInitializationOrderError,
+)
 from utils.dialog_feature_flags import (
     get_dialog_implementation,
     is_composed_dialogs_enabled,
@@ -221,7 +223,7 @@ class TestBasicDialogCreation:
 
     def test_dialog_creation_default_params(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test dialog creation with default parameters."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Basic properties should be set
@@ -254,7 +256,7 @@ class TestBasicDialogCreation:
             "with_button_box": False,
         }
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(**test_params)
 
             # Verify custom parameters were applied
@@ -313,7 +315,7 @@ class TestTabManagement:
 
     def test_add_tabs_dynamically(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test adding tabs dynamically to dialogs."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Initially no tab widget
@@ -345,7 +347,7 @@ class TestTabManagement:
 
     def test_tab_switching(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test switching between tabs."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Add tabs
@@ -366,7 +368,7 @@ class TestTabManagement:
         """Test setting default tab during initialization."""
         default_tab = 1
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(default_tab=default_tab)
 
             # Add tabs
@@ -385,7 +387,7 @@ class TestButtonBoxFunctionality:
 
     def test_default_button_box_creation(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test default button box creation and configuration."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_button_box=True)
 
             assert dialog.button_box is not None
@@ -401,7 +403,7 @@ class TestButtonBoxFunctionality:
 
     def test_button_box_signal_connections(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test button box signal connections."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_button_box=True)
 
             # Set up signal spies
@@ -428,7 +430,7 @@ class TestButtonBoxFunctionality:
             nonlocal callback_called
             callback_called = True
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             callback_called = False
             dialog = dialog_class(with_button_box=True)
 
@@ -453,7 +455,7 @@ class TestStatusBarOperations:
 
     def test_status_bar_creation(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test status bar creation and basic functionality."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_status_bar=True)
 
             assert dialog.status_bar is not None
@@ -464,7 +466,7 @@ class TestStatusBarOperations:
 
     def test_status_message_updates(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test updating status bar messages."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_status_bar=True)
 
             # Update status message
@@ -486,7 +488,7 @@ class TestStatusBarOperations:
 
     def test_status_bar_without_creation(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test status operations when status bar is not created."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_status_bar=False)
 
             assert dialog.status_bar is None
@@ -505,7 +507,7 @@ class TestMessageDialogs:
         title = "Error Title"
         message = "Error message content"
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             dialog.show_error(title, message)
@@ -523,7 +525,7 @@ class TestMessageDialogs:
         title = "Info Title"
         message = "Info message content"
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             dialog.show_info(title, message)
@@ -541,7 +543,7 @@ class TestMessageDialogs:
         title = "Warning Title"
         message = "Warning message content"
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             dialog.show_warning(title, message)
@@ -559,7 +561,7 @@ class TestMessageDialogs:
         title = "Confirm Title"
         message = "Confirm message content"
 
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Test positive confirmation
@@ -585,7 +587,7 @@ class TestSignalSlotConnections:
 
     def test_button_box_connections(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test button box signal connections work correctly."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(with_button_box=True)
 
             # Set up signal spies
@@ -616,7 +618,7 @@ class TestSignalSlotConnections:
 
     def test_tab_change_signals(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test tab change signals are emitted correctly."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Add tabs
@@ -640,7 +642,7 @@ class TestSignalSlotConnections:
 
     def test_dialog_lifetime_signals(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test dialog lifetime signals (show, close, etc.)."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Set up signal spies
@@ -713,7 +715,7 @@ class TestSplitterFunctionality:
 
     def test_horizontal_splitter_creation(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test creating horizontal splitters."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(orientation=Qt.Orientation.Horizontal)
 
             assert dialog.main_splitter is not None
@@ -725,7 +727,7 @@ class TestSplitterFunctionality:
 
     def test_add_horizontal_splitter_method(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test add_horizontal_splitter method."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class()
 
             # Add horizontal splitter
@@ -741,7 +743,7 @@ class TestSplitterFunctionality:
 
     def test_panel_addition_to_splitter(self, qt_app: QApplication, dialog_implementations: dict[str, type]) -> None:
         """Test adding panels to splitter dialogs."""
-        for impl_name, dialog_class in dialog_implementations.items():
+        for dialog_class in dialog_implementations.values():
             dialog = dialog_class(orientation=Qt.Orientation.Horizontal)
 
             # Add panels

@@ -38,9 +38,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-if TYPE_CHECKING:
-    from PySide6.QtTest import QSignalSpy
-
 # Test markers for proper test execution
 pytestmark = [
     pytest.mark.gui,  # Requires display/xvfb

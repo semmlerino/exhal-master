@@ -81,7 +81,7 @@ def create_signal_holder(**signals):
     if not QT_AVAILABLE:
         # Fallback for non-Qt environments
         holder = Mock()
-        for name, _signal_type in signals.items():
+        for name in signals:
             setattr(holder, name, MockSignal())
         return holder
 

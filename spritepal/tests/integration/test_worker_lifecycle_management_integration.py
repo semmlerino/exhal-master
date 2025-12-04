@@ -581,9 +581,8 @@ class TestWorkerLifecycleHeadlessIntegration:
             def disconnect(self, slot=None):
                 if slot is None:
                     self.connected_slots.clear()
-                else:
-                    if slot in self.connected_slots:
-                        self.connected_slots.remove(slot)
+                elif slot in self.connected_slots:
+                    self.connected_slots.remove(slot)
                 self.is_connected = False
 
         class MockSignalManager:

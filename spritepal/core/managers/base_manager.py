@@ -157,7 +157,7 @@ class BaseManager(QObject):
         if operation:
             error_msg = f"{operation}: {error_msg}"
 
-        self._logger.error(error_msg, exc_info=True)
+        self._logger.error(error_msg)
         self.error_occurred.emit(error_msg)
 
         # Finish the operation if it was active

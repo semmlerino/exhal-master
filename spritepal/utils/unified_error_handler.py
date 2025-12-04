@@ -34,10 +34,8 @@ from core.managers.exceptions import (
 
 # Import Qt modules with fallbacks for headless environments
 try:
-    from PySide6.QtCore import QObject as QtQObject
-    from PySide6.QtCore import Signal as QtPyqtSignal
-    from PySide6.QtWidgets import QMessageBox as QtQMessageBox
-    from PySide6.QtWidgets import QWidget as QtQWidget
+    from PySide6.QtCore import QObject as QtQObject, Signal as QtPyqtSignal
+    from PySide6.QtWidgets import QMessageBox as QtQMessageBox, QWidget as QtQWidget
     QT_AVAILABLE = True
 
     # Use Qt classes directly

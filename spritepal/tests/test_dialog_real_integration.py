@@ -72,10 +72,8 @@ from tests.infrastructure import (
 from ui.dialogs import (
     ResumeScanDialog,
     SettingsDialog,
-    UserErrorDialog,
-)
-from ui.dialogs import (
     UnifiedManualOffsetDialog as ManualOffsetDialog,
+    UserErrorDialog,
 )
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog

@@ -155,7 +155,7 @@ class FormatAdapterPlugin(NavigationPlugin):
         """Register format adapters."""
         try:
             # Register with format registry (would be implemented)
-            for format_name, _adapter in self.format_adapters.items():
+            for format_name in self.format_adapters:
                 logger.info(f"Registered format adapter: {format_name}")
 
             return True
@@ -185,7 +185,7 @@ class ScoringAlgorithmPlugin(NavigationPlugin):
     def initialize(self) -> bool:
         """Register scoring algorithms."""
         try:
-            for algorithm_name, _function in self.scoring_functions.items():
+            for algorithm_name in self.scoring_functions:
                 logger.info(f"Registered scoring algorithm: {algorithm_name}")
 
             return True

@@ -149,7 +149,7 @@ class TestAsyncROMCachePerformance:
         requests_per_thread = 25
 
         # Pre-populate some cache entries
-        for i in range(0, 10):
+        for i in range(10):
             sprite = self.test_sprites[i]
             self.async_cache.save_cached_async(
                 rom_path, sprite["offset"], sprite["data"],

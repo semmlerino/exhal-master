@@ -635,8 +635,7 @@ class InjectionManager(BaseManager):
         base = Path(input_vram_path).stem
 
         # Check if base already ends with "_injected" to avoid duplication
-        if base.endswith("_injected"):
-            base = base[:-9]  # Remove "_injected"
+        base = base.removesuffix("_injected")  # Remove "_injected"
 
         # Try _injected first
         suggested_path = f"{base}_injected.dmp"
@@ -669,8 +668,7 @@ class InjectionManager(BaseManager):
         ext = Path(input_rom_path).suffix
 
         # Check if base already ends with "_modified" to avoid duplication
-        if base.endswith("_modified"):
-            base = base[:-9]  # Remove "_modified"
+        base = base.removesuffix("_modified")  # Remove "_modified"
 
         # Try _modified first
         suggested_path = f"{base}_modified{ext}"

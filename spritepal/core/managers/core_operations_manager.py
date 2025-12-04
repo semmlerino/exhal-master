@@ -8,7 +8,7 @@ adapter patterns.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
@@ -32,8 +32,6 @@ from .exceptions import (
 from .extraction_manager import ExtractionManager
 from .injection_manager import InjectionManager
 
-if TYPE_CHECKING:
-    pass
 
 class CoreOperationsManager(BaseManager):
     """

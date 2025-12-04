@@ -59,7 +59,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         parent: QWidget | None = None,
         title: str | None = None,
         modal: bool = True,
-        min_size: tuple[int | None, int | None | None] | None = None,
+        min_size: tuple[int | None, int | None] | None = None,
         size: tuple[int, int | None] | None = None,
         with_status_bar: bool = False,
         with_button_box: bool = True,

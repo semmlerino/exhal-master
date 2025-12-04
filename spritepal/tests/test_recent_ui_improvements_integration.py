@@ -18,9 +18,6 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
-if TYPE_CHECKING:
-    pass
-
 import pytest
 
 # Import SpritePal components

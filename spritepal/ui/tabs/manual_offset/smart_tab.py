@@ -7,8 +7,6 @@ sprite exploration.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
@@ -30,8 +28,6 @@ from ui.common.spacing_constants import (
 )
 from utils.sprite_regions import SpriteRegion
 
-if TYPE_CHECKING:
-    pass
 
 class SimpleSmartTab(QWidget):
     """

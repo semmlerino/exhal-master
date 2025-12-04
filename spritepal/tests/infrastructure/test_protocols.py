@@ -26,9 +26,6 @@ from unittest.mock import Mock
 
 import pytest
 
-if TYPE_CHECKING:
-    pass
-
 from .qt_mocks import MockSignal
 
 # Systematic pytest markers applied based on test content analysis

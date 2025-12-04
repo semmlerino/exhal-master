@@ -129,7 +129,7 @@ def search_for_graphics(vram_path):
                 right_bits = tile_data[byte_idx + 1]
 
                 # Check for some symmetry
-                if bin(left_bits).count("1") == bin(right_bits).count("1"):
+                if (left_bits).bit_count() == (right_bits).bit_count():
                     symmetry_score += 1
 
         if symmetry_score >= 4:

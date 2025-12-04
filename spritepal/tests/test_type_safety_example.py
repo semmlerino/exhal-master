@@ -148,7 +148,7 @@ class TestTypeSafetyPatterns:
     def test_parametrized_with_types(
         self,
         input_value: str | int | None,
-        expected_type: type[str] | type[int] | type[None],
+        expected_type: type[str | int | None],
         expected_result: bool
     ) -> None:
         """Demonstrate type-safe parametrized testing."""

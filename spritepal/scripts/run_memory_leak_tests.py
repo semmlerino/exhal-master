@@ -59,18 +59,15 @@ def run_baseline_measurements(profiler: MemoryLeakProfiler, output_dir: Path):
         f.write(f"Qt Objects: {sum(baseline.qt_objects.values())}\n")
         f.write("\nTop Python Objects:\n")
 
-        for obj_type, count in sorted(baseline.python_objects.items(),
-                                    key=lambda x: x[1], reverse=True)[:20]:
-            f.write(f"  {obj_type}: {count}\n")
+        f.writelines(f"  {obj_type}: {count}\n" for obj_type, count in sorted(baseline.python_objects.items(),
+                                    key=lambda x: x[1], reverse=True)[:20])
 
         f.write("\nQt Objects:\n")
-        for obj_type, count in sorted(baseline.qt_objects.items(),
-                                    key=lambda x: x[1], reverse=True):
-            f.write(f"  {obj_type}: {count}\n")
+        f.writelines(f"  {obj_type}: {count}\n" for obj_type, count in sorted(baseline.qt_objects.items(),
+                                    key=lambda x: x[1], reverse=True))
 
         f.write("\nGC Stats:\n")
-        for gen, count in baseline.gc_stats.items():
-            f.write(f"  {gen}: {count}\n")
+        f.writelines(f"  {gen}: {count}\n" for gen, count in baseline.gc_stats.items())
 
     print(f"Baseline metrics saved to: {baseline_file}")
     return baseline
@@ -122,8 +119,7 @@ def run_dialog_leak_tests(profiler: MemoryLeakProfiler, cycles: int, output_dir:
 
                 if result.leak_details:
                     f.write("\nLeak Details:\n")
-                    for key, value in result.leak_details.items():
-                        f.write(f"  {key}: {value}\n")
+                    f.writelines(f"  {key}: {value}\n" for key, value in result.leak_details.items())
 
             print(f"  Result: {result.leak_severity} ({result.memory_leaked_mb:.3f} MB)")
 
@@ -245,8 +241,7 @@ def generate_summary_report(profiler: MemoryLeakProfiler, output_dir: Path):
                 critical_issues.append(f"HIGH: {test_name} leaks {per_cycle_kb:.1f}KB per cycle")
 
         if critical_issues:
-            for issue in critical_issues:
-                f.write(f"⚠️  {issue}\n")
+            f.writelines(f"⚠️  {issue}\n" for issue in critical_issues)
         else:
             f.write("✅ No critical memory leaks detected\n")
 

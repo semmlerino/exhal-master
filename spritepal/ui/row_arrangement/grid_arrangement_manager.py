@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
@@ -28,7 +27,7 @@ class TilePosition:
     def __hash__(self) -> int:
         return hash((self.row, self.col))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, TilePosition)
             and self.row == other.row

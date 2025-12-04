@@ -31,9 +31,6 @@ from unittest.mock import Mock
 
 import pytest
 
-if TYPE_CHECKING:
-    pass
-
 # Test markers
 pytestmark = [
     pytest.mark.fixture_test,

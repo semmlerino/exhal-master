@@ -9,12 +9,8 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 # Only import Qt for type checking and the worker class
-if TYPE_CHECKING:
-    pass
-
 from core.hal_compression import HALCompressionError, HALCompressor
 from core.injector import SpriteInjector
 from core.rom_validator import ROMValidator

@@ -16,9 +16,9 @@ from ui.dialogs import (
     # Systematic pytest markers applied based on test content analysis
     ResumeScanDialog,
     SettingsDialog,
+    UnifiedManualOffsetDialog as ManualOffsetDialog,
     UserErrorDialog,
 )
-from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog

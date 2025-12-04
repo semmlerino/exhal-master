@@ -7,12 +7,8 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
-
-if TYPE_CHECKING:
-    pass
 
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

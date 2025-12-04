@@ -8,18 +8,18 @@ from __future__ import annotations
 
 import pytest
 from PySide6.QtWidgets import QApplication
-from tests.infrastructure.mock_dialogs import MockGridArrangementDialog as GridArrangementDialog
-from tests.infrastructure.mock_dialogs import MockResumeScanDialog as ResumeScanDialog
-from tests.infrastructure.mock_dialogs import MockRowArrangementDialog as RowArrangementDialog
-from tests.infrastructure.mock_dialogs import MockSettingsDialog as SettingsDialog
 
 # Import mock dialog infrastructure
 from tests.infrastructure.mock_dialogs import (
+    MockGridArrangementDialog as GridArrangementDialog,
+    MockResumeScanDialog as ResumeScanDialog,
+    MockRowArrangementDialog as RowArrangementDialog,
+    MockSettingsDialog as SettingsDialog,
     # Serial execution required: QApplication management
     MockUnifiedManualOffsetDialog as ManualOffsetDialog,
+    MockUserErrorDialog as UserErrorDialog,
+    patch_dialog_imports,
 )
-from tests.infrastructure.mock_dialogs import MockUserErrorDialog as UserErrorDialog
-from tests.infrastructure.mock_dialogs import patch_dialog_imports
 
 # Apply dialog patching
 patch_dialog_imports()

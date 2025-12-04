@@ -265,16 +265,13 @@ def main():
             f.write("=" * 70 + "\n\n")
 
             f.write("Mock-Based Approach:\n")
-            for key, value in results["mock"].items():
-                f.write(f"  {key}: {value}\n")
+            f.writelines(f"  {key}: {value}\n" for key, value in results["mock"].items())
 
             f.write("\nReal Qt Component Approach:\n")
-            for key, value in results["real"].items():
-                f.write(f"  {key}: {value}\n")
+            f.writelines(f"  {key}: {value}\n" for key, value in results["real"].items())
 
             f.write("\nImprovements:\n")
-            for key, value in results["improvements"].items():
-                f.write(f"  {key}: {value:.1f}%\n")
+            f.writelines(f"  {key}: {value:.1f}%\n" for key, value in results["improvements"].items())
 
         print(f"\n📄 Results saved to: {output_file}")
 

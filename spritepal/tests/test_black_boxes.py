@@ -81,7 +81,7 @@ def test_preview_widget():
 
     else:
         print("ERROR: Test ROM not found!")
-        return
+        return None
 
     return window
 

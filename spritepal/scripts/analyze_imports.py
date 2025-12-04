@@ -39,8 +39,7 @@ class ImportAnalyzer(ast.NodeVisitor):
 
         # Remove .py extension and join with dots
         module_parts = list(parts)
-        if module_parts[-1].endswith(".py"):
-            module_parts[-1] = module_parts[-1][:-3]
+        module_parts[-1] = module_parts[-1].removesuffix(".py")
 
         return ".".join(module_parts)
 
