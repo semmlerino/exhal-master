@@ -21,6 +21,7 @@ from utils.constants import (
     ROM_HEADER_OFFSET_LOROM,
     SMC_HEADER_SIZE,
 )
+from utils.file_validator import atomic_write
 from utils.logging_config import get_logger
 from utils.rom_backup import ROMBackupManager
 
@@ -438,15 +439,19 @@ class ROMInjector(SpriteInjector):
                 rom_path, sprite_offset
             )
 
-            # Create backup if requested
+            # Create backup if requested - ABORT if backup fails
             backup_path = None
             if create_backup:
                 try:
                     backup_path = ROMBackupManager.create_backup(rom_path)
                     logger.info(f"Created backup: {backup_path}")
                 except Exception as e:
-                    logger.warning(f"Failed to create backup: {e}")
-                    # Continue without backup but warn user
+                    logger.error(f"Backup creation failed: {e}")
+                    return False, (
+                        f"Cannot proceed: backup creation failed ({e}). "
+                        "Refusing to modify ROM without a backup. "
+                        "Free up disk space or fix permissions and retry."
+                    )
 
             # Read ROM header (using improved method)
             self.header = self.read_rom_header(rom_path)
@@ -480,6 +485,9 @@ class ROMInjector(SpriteInjector):
 
             # Calculate compression statistics
             uncompressed_size = len(tile_data)
+            if uncompressed_size == 0:
+                Path(compressed_path).unlink(missing_ok=True)
+                return False, "Cannot compress empty sprite data"
             compression_ratio = (
                 (uncompressed_size - compressed_size) / uncompressed_size * 100
             )
@@ -529,10 +537,9 @@ class ROMInjector(SpriteInjector):
             # Update checksum
             self.update_rom_checksum(self.rom_data)
 
-            # Write output ROM
+            # Write output ROM atomically (prevents corruption on crash/power loss)
             logger.info(f"Writing modified ROM to: {output_path}")
-            with Path(output_path).open("wb") as f:
-                f.write(self.rom_data)
+            atomic_write(output_path, bytes(self.rom_data))
             logger.debug(f"Successfully wrote {len(self.rom_data)} bytes to output ROM")
 
             total_time = time.time() - start_time

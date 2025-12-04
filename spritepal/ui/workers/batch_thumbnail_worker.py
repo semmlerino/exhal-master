@@ -427,24 +427,50 @@ class BatchThumbnailWorker(QObject):
 
     def _load_rom_data(self):
         """Load ROM data using memory mapping for efficiency with proper resource management."""
-        try:
-            # Use context manager for safe resource handling
-            with self._rom_context() as mmap_obj:
-                # Store reference for use in other methods
-                # Note: This is safe because we're copying the wrapper, not the actual file handle
-                if hasattr(mmap_obj, '_data'):
-                    # It's our BytesMMAPWrapper - safe to store
-                    self._rom_mmap = mmap_obj
-                    self._rom_file = None  # No file handle to store
-                else:
-                    # It's a real mmap - need to keep file handle open
-                    # Re-open file and mmap for persistent use
-                    self._rom_file = Path(self.rom_path).open('rb')
-                    self._rom_mmap = mmap.mmap(self._rom_file.fileno(), 0, access=mmap.ACCESS_READ)
+        # Clear any existing handles first to prevent leaks
+        self._clear_rom_data()
 
-                if self._rom_mmap:
-                    logger.info(f"ROM data mapped: {len(self._rom_mmap)} bytes")
+        rom_file = None
+        rom_mmap = None
+        try:
+            rom_file = Path(self.rom_path).open('rb')
+            try:
+                # Try memory mapping first
+                rom_mmap = mmap.mmap(rom_file.fileno(), 0, access=mmap.ACCESS_READ)
+                # Store handles for persistent use (cleanup via _clear_rom_data)
+                self._rom_file = rom_file
+                self._rom_mmap = rom_mmap
+                logger.info(f"ROM data mapped: {len(self._rom_mmap)} bytes")
+            except Exception as mmap_error:
+                # Memory mapping failed - close file and use fallback
+                logger.warning(f"Failed to memory-map ROM, using fallback: {mmap_error}")
+                rom_data = rom_file.read()
+                rom_file.close()
+                rom_file = None
+
+                # Create a mmap-compatible wrapper (no file handle needed)
+                class BytesMMAPWrapper:
+                    def __init__(self, data: bytes):
+                        self._data = data
+                    def __getitem__(self, key: int | slice) -> bytes | int:
+                        return self._data[key]
+                    def __len__(self) -> int:
+                        return len(self._data)
+                    def close(self) -> None:
+                        pass  # No-op for bytes wrapper
+
+                self._rom_mmap = BytesMMAPWrapper(rom_data)
+                self._rom_file = None
+                logger.info(f"ROM data loaded (fallback): {len(self._rom_mmap)} bytes")
+
         except Exception as e:
+            # Clean up any partially opened handles on failure
+            with suppress(Exception):
+                if rom_mmap is not None:
+                    rom_mmap.close()
+            with suppress(Exception):
+                if rom_file is not None:
+                    rom_file.close()
             logger.error(f"Failed to load ROM: {e}")
             self._rom_mmap = None
             self._rom_file = None

@@ -38,6 +38,7 @@ from utils.constants import (
     HAL_POOL_TIMEOUT_SECONDS,
 )
 from utils.logging_config import get_logger
+from utils.rom_backup import ROMBackupManager
 from utils.safe_logging import (
     safe_debug,
     safe_info,
@@ -71,7 +72,7 @@ class HALResult(NamedTuple):
     error_message: str | None = None
     request_id: str | None = None
 
-def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queue, result_queue: mp.Queue) -> None:
+def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queue[HALRequest | None], result_queue: mp.Queue[HALResult]) -> None:
     """Worker process function for HAL operations.
 
     Runs in a separate process and handles HAL compression/decompression requests.
@@ -101,7 +102,7 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
     worker_logger.debug(f"HAL worker process {os.getpid()} started")
 
     while True:
-        request: HALRequest | None = None  # Initialize request to avoid unbound variable
+        request: HALRequest | None = None  # Initialize for error handling
         try:
             # Get request from queue (blocking) with error handling for closed pipes
             try:
@@ -1057,10 +1058,21 @@ class HALCompressor:
                 f"Input data too large: {len(input_data)} bytes (max {DATA_SIZE})"
             )
 
-        # If no output path, modify in place
+        # If no output path, modify in place - but create backup first
         if output_rom_path is None:
+            # Create backup before in-place modification (safety critical)
+            try:
+                backup_path = ROMBackupManager.create_backup(rom_path)
+                logger.info(f"In-place mode: created safety backup at {backup_path}")
+            except Exception as e:
+                logger.error(f"Failed to create backup for in-place modification: {e}")
+                return (
+                    False,
+                    f"Cannot modify ROM in-place: backup failed ({e}). "
+                    "Specify an output path or free up disk space."
+                )
             output_rom_path = rom_path
-            logger.debug("Modifying ROM in place")
+            logger.debug("Modifying ROM in place (backup created)")
         else:
             # Copy ROM to output path first
             logger.debug(f"Copying ROM to output path: {output_rom_path}")

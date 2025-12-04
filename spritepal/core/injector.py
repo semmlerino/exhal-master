@@ -16,6 +16,7 @@ from utils.constants import (
     TILE_WIDTH,
     VRAM_SPRITE_OFFSET,
 )
+from utils.file_validator import atomic_write
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -239,9 +240,8 @@ class SpriteInjector:
             bytes_changed = sum(1 for i in range(len(tile_data)) if original_data[i] != tile_data[i])
             logger.debug(f"Modified {bytes_changed}/{len(tile_data)} bytes in VRAM")
 
-            # Write modified VRAM
-            with Path(output_path).open("wb") as f:
-                f.write(self.vram_data)
+            # Write modified VRAM atomically (prevents corruption on crash/power loss)
+            atomic_write(output_path, bytes(self.vram_data))
             logger.info(f"Successfully wrote modified VRAM to {output_path}")
 
             return (

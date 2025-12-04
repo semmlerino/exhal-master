@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -108,7 +109,8 @@ class PreviewMetrics:
     errors: int = 0
     cancellations: int = 0
     total_time: float = 0.0
-    generation_times: list[float] = field(default_factory=list)
+    # Bounded deque to prevent unbounded memory growth (last 1000 samples)
+    generation_times: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
 
     @property
     def cache_hit_rate(self) -> float:
@@ -364,7 +366,7 @@ class PreviewOrchestrator(QObject):
         # Clean up
         self._active_requests.pop(request_id, None)
 
-    def _on_cache_ready(self, request_id: str, data: bytes, metadata: dict) -> None:
+    def _on_cache_ready(self, request_id: str, data: bytes, metadata: dict[str, Any]) -> None:
         """Handle cache hit from async cache"""
         if request := self._active_requests.get(request_id):
             if not request.cancelled:

@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtGui import QPixmap
 from utils.logging_config import get_logger
@@ -31,9 +32,8 @@ class ThumbnailCache:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Memory cache (LRU-style)
-        self.memory_cache: dict[str, QPixmap] = {}
-        self.memory_cache_order: list = []
+        # Memory cache (O(1) LRU using OrderedDict)
+        self.memory_cache: OrderedDict[str, QPixmap] = OrderedDict()
         self.memory_cache_limit = 200  # Max items in memory
 
         # Cache metadata
@@ -105,9 +105,8 @@ class ThumbnailCache:
 
         # Check memory cache first
         if cache_key in self.memory_cache:
-            # Move to end (most recently used)
-            self.memory_cache_order.remove(cache_key)
-            self.memory_cache_order.append(cache_key)
+            # Move to end (most recently used) - O(1) operation
+            self.memory_cache.move_to_end(cache_key)
             logger.debug(f"Thumbnail cache hit (memory): {cache_key}")
             return self.memory_cache[cache_key]
 
@@ -156,7 +155,8 @@ class ThumbnailCache:
             pixmap.save(str(cache_file), "PNG")
 
             # Update metadata
-            self.metadata["entries"][cache_key] = {
+            entries = cast(dict[str, Any], self.metadata["entries"])
+            entries[cache_key] = {
                 "rom_hash": rom_hash,
                 "offset": offset,
                 "size": size,
@@ -175,20 +175,17 @@ class ThumbnailCache:
 
     def _add_to_memory_cache(self, key: str, pixmap: QPixmap):
         """Add an item to the memory cache with LRU eviction."""
-        # Remove oldest if at limit
+        # Remove oldest if at limit - O(1) operation with OrderedDict
         if len(self.memory_cache) >= self.memory_cache_limit:
-            oldest_key = self.memory_cache_order.pop(0)
-            del self.memory_cache[oldest_key]
+            self.memory_cache.popitem(last=False)
 
-        # Add new item
+        # Add new item (automatically at end of OrderedDict)
         self.memory_cache[key] = pixmap
-        self.memory_cache_order.append(key)
 
     def clear_cache(self):
         """Clear all cached thumbnails."""
         # Clear memory cache
         self.memory_cache.clear()
-        self.memory_cache_order.clear()
 
         # Clear disk cache
         for cache_file in self.cache_dir.glob("*.png"):
@@ -237,8 +234,9 @@ class ThumbnailCache:
 
                     # Remove from metadata
                     cache_key = cache_file.stem
-                    if cache_key in self.metadata.get("entries", {}):
-                        del self.metadata["entries"][cache_key]
+                    entries = cast(dict[str, Any], self.metadata.get("entries", {}))
+                    if cache_key in entries:
+                        del entries[cache_key]
 
             except Exception as e:
                 logger.error(f"Failed to prune cache file {cache_file}: {e}")

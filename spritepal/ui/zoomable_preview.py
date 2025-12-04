@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from PySide6.QtGui import (
@@ -89,13 +90,15 @@ class ZoomablePreviewWidget(QWidget):
         """
         )
 
+    @override
     def paintEvent(self, a0: Any) -> None:
         """Paint the preview with zoom and pan"""
         painter = QPainter(self)
         # Use a dark background for better contrast with sprites in dark theme
         painter.fillRect(self.rect(), QColor(30, 30, 30))
 
-        if self._pixmap is not None:
+        # Guard against null/zero-dimension pixmaps
+        if self._pixmap is not None and self._pixmap.width() > 0 and self._pixmap.height() > 0:
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
             # Apply transformations
@@ -203,6 +206,7 @@ class ZoomablePreviewWidget(QWidget):
             p2 = transform.map(QPointF(right, y))
             painter.drawLine(p1, p2)
 
+    @override
     def wheelEvent(self, a0: QWheelEvent | None) -> None:
         """Handle mouse wheel for zooming"""
         if self._pixmap is None or not a0:
@@ -263,6 +267,7 @@ class ZoomablePreviewWidget(QWidget):
 
             self.update()
 
+    @override
     def mousePressEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse press for panning"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
@@ -273,12 +278,14 @@ class ZoomablePreviewWidget(QWidget):
             # Right click to reset view
             self.reset_view()
 
+    @override
     def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse release"""
         if a0 and a0.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             self._is_panning = False
             self.setCursor(Qt.CursorShape.CrossCursor)
 
+    @override
     def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
         """Handle mouse move for panning"""
         if a0 and self._is_panning and self._last_mouse_pos is not None:
@@ -287,6 +294,7 @@ class ZoomablePreviewWidget(QWidget):
             self._last_mouse_pos = a0.position()
             self.update()
 
+    @override
     def keyPressEvent(self, a0: Any) -> None:
         """Handle keyboard input"""
         if a0.key() == Qt.Key.Key_G:
@@ -350,7 +358,8 @@ class ZoomablePreviewWidget(QWidget):
 
     def zoom_to_fit(self) -> None:
         """Zoom to fit the image in the widget"""
-        if self._pixmap is None:
+        # Guard against null/zero-dimension pixmaps
+        if self._pixmap is None or self._pixmap.width() == 0 or self._pixmap.height() == 0:
             return
 
         # Calculate scale to fit
@@ -603,6 +612,7 @@ class PreviewPanel(QWidget):
         """Convert PIL image to QPixmap using enhanced utility function"""
         return pil_to_qpixmap(pil_image)
 
+    @override
     def keyPressEvent(self, a0: Any) -> None:
         """Handle keyboard input"""
         if a0.key() == Qt.Key.Key_C:
@@ -628,6 +638,7 @@ class PreviewPanel(QWidget):
                 self.palette_selector.setCurrentIndex(i)
                 break
 
+    @override
     def mousePressEvent(self, a0: Any) -> None:
         """Handle mouse press to ensure focus"""
         self.setFocus()

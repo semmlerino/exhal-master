@@ -8,9 +8,15 @@ file type support.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar
+
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 from utils.constants import (
     CGRAM_PATTERNS,
@@ -713,3 +719,54 @@ class FileValidator:
     def _format_file_size(cls, size_bytes: int) -> str:
         """Backward compatibility wrapper for file size formatting."""
         return BasicFileValidator.format_file_size(size_bytes)
+
+
+def atomic_write(path: Path | str, data: bytes) -> None:
+    """
+    Write data atomically using temp file + rename pattern.
+
+    This ensures that if the write is interrupted (power failure, crash,
+    disk full), the original file is not corrupted. The rename operation
+    is atomic on POSIX systems.
+
+    Args:
+        path: Destination file path
+        data: Binary data to write
+
+    Raises:
+        OSError: If the write fails
+        IOError: If the data cannot be written completely
+    """
+    path = Path(path)
+    parent_dir = path.parent
+
+    # Ensure parent directory exists
+    parent_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create temp file in same directory (required for atomic rename)
+    temp_fd, temp_path_str = tempfile.mkstemp(
+        dir=parent_dir,
+        prefix=f".{path.name}.",
+        suffix=".tmp"
+    )
+    temp_path = Path(temp_path_str)
+
+    try:
+        # Write data with explicit flush and sync
+        with os.fdopen(temp_fd, 'wb') as f:
+            bytes_written = f.write(data)
+            if bytes_written != len(data):
+                raise OSError(
+                    f"Incomplete write: {bytes_written}/{len(data)} bytes"
+                )
+            f.flush()
+            os.fsync(f.fileno())
+
+        # Atomic rename (on POSIX; on Windows this may not be truly atomic)
+        temp_path.replace(path)
+        logger.debug(f"Atomically wrote {len(data)} bytes to {path}")
+
+    except BaseException:
+        # Clean up temp file on any failure
+        temp_path.unlink(missing_ok=True)
+        raise

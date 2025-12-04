@@ -56,7 +56,13 @@ class RowImageProcessor:
 
         Returns:
             Tuple of (tile_width, tile_height)
+
+        Raises:
+            ValueError: If tiles_per_row is not positive
         """
+        if tiles_per_row <= 0:
+            raise ValueError(f"tiles_per_row must be positive, got {tiles_per_row}")
+
         # Calculate tile width based on tiles_per_row
         tile_width = image.width // tiles_per_row
         # Assume square tiles (most common case)

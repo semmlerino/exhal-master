@@ -210,6 +210,10 @@ class GridPreviewGenerator(PreviewGenerator):
         if not tiles:
             return Image.new("L", (1, 1))
 
+        # Guard against invalid tiles_per_row
+        if tiles_per_row <= 0:
+            return Image.new("L", (1, 1))
+
         num_tiles = len(tiles)
         num_rows = (num_tiles + tiles_per_row - 1) // tiles_per_row
 

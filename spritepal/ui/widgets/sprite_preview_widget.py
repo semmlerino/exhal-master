@@ -4,6 +4,8 @@ Shows visual preview of sprites with optional palette support
 """
 from __future__ import annotations
 
+from typing import Any
+
 from core.default_palette_loader import DefaultPaletteLoader
 from core.managers import get_extraction_manager
 from core.visual_similarity_search import VisualSimilarityEngine
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.common.spacing_constants import (
     COLOR_MUTED,
@@ -158,6 +161,10 @@ class SpritePreviewWidget(QWidget):
         """Scale pixmap to make best use of available preview space"""
         original_width = pixmap.width()
         original_height = pixmap.height()
+
+        # Guard against zero-dimension pixmaps (corrupted or empty images)
+        if original_width <= 0 or original_height <= 0:
+            return pixmap
 
         # Get available space in the preview label
         max_width = self.preview_label.maximumWidth() if self.preview_label else 400
@@ -848,6 +855,7 @@ class SpritePreviewWidget(QWidget):
         """Check if controls are currently collapsed"""
         return self.controls_group.is_collapsed() if self.controls_group is not None else True
 
+    @override
     def sizeHint(self) -> QSize:
         """Provide optimal size hint for layout negotiations - space-efficient"""
 
@@ -875,6 +883,7 @@ class SpritePreviewWidget(QWidget):
         # No sprite loaded - compact default for empty state
         return QSize(150, 148)  # Match minimumSizeHint for consistency
 
+    @override
     def minimumSizeHint(self) -> QSize:
         """Provide minimum size hint to prevent overly small widgets"""
 
@@ -882,10 +891,12 @@ class SpritePreviewWidget(QWidget):
         # Match preview_label minimum (100x100) plus controls
         return QSize(150, 150)  # Consistent minimum size
 
+    @override
     def hasHeightForWidth(self) -> bool:
         """Indicate that widget can adapt height based on width"""
         return True
 
+    @override
     def heightForWidth(self, width: int) -> int:
         """Calculate optimal height for given width"""
         if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
@@ -906,7 +917,7 @@ class SpritePreviewWidget(QWidget):
         """Set the current sprite offset for similarity search."""
         self.current_offset = offset
 
-    def _show_context_menu(self, position) -> None:
+    def _show_context_menu(self, position: Any) -> None:
         """Show context menu with similarity search option."""
         # Only show context menu if we have a sprite loaded
         if self.sprite_pixmap is None or self.sprite_pixmap.isNull():
@@ -1043,7 +1054,7 @@ class SpritePreviewWidget(QWidget):
                 f"Similarity search failed: {e!s}"
             )
 
-    def _show_similarity_results(self, matches) -> None:
+    def _show_similarity_results(self, matches: Any) -> None:
         """Show similarity search results."""
 
         if not matches:
