@@ -376,8 +376,6 @@ class RowArrangementDialog(SplitterDialog):
         new_order = []
         for i in range(self.arranged_list.count()):
             item = self.arranged_list.item(i)
-            if item is None:
-                continue
             row_index = item.data(Qt.ItemDataRole.UserRole)
             new_order.append(row_index)
 
@@ -553,8 +551,6 @@ class RowArrangementDialog(SplitterDialog):
         if self.available_list is not None:
             for i in range(self.available_list.count()):
                 item = self.available_list.item(i)
-                if item is None:
-                    continue
                 widget = self.available_list.itemWidget(item)
                 if widget and isinstance(widget, RowPreviewWidget):
                     row_index = item.data(Qt.ItemDataRole.UserRole)
@@ -567,8 +563,6 @@ class RowArrangementDialog(SplitterDialog):
         if self.arranged_list is not None:
             for i in range(self.arranged_list.count()):
                 item = self.arranged_list.item(i)
-                if item is None:
-                    continue
                 widget = self.arranged_list.itemWidget(item)
                 if widget and isinstance(widget, RowPreviewWidget):
                     row_index = item.data(Qt.ItemDataRole.UserRole)

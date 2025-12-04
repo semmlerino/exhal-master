@@ -145,7 +145,7 @@ class MemoryMappedROMReader:
 
                 # Parse header fields
                 title = header_data[0:21].decode('ascii', errors='ignore').strip()
-                if title and not all(c == '\xff' for c in header_data[0:21]):
+                if title and not all(c == 0xff for c in header_data[0:21]):
                     return {
                         "title": title,
                         "rom_type": rom_type,

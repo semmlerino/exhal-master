@@ -327,16 +327,14 @@ class ThreadLocalContextManager:
         """Clean up references for a thread that has ended"""
         with self._lock:
             self._thread_refs.pop(thread_id, None)
-        if logger is not None:
-            safe_debug(logger, f"Cleaned up context references for thread {thread_id}")
+        safe_debug(logger, f"Cleaned up context references for thread {thread_id}")
 
     @suppress_logging_errors
     def _cleanup_all_threads(self) -> None:
         """Cleanup all thread references at exit"""
         with self._lock:
             self._thread_refs.clear()
-        if logger is not None:
-            safe_debug(logger, "Cleaned up all thread context references")
+        safe_debug(logger, "Cleaned up all thread context references")
 
 # Global instance for thread-local context management
 _context_manager = ThreadLocalContextManager()
@@ -346,12 +344,11 @@ _context_manager = ThreadLocalContextManager()
 def _cleanup_context_manager():
     """Cleanup context manager at module exit"""
     global _context_manager
-    if _context_manager is not None:
-        try:
-            _context_manager._cleanup_all_threads()
-        except Exception:
-            pass  # Ignore errors during cleanup
-        _context_manager = None
+    try:
+        _context_manager._cleanup_all_threads()
+    except Exception:
+        pass  # Ignore errors during cleanup
+    _context_manager = None
 
 atexit.register(_cleanup_context_manager)
 

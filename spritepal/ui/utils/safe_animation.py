@@ -136,7 +136,8 @@ class SafeAnimation:
             self._animation.start()
         elif self._target and self._property_name and self._end_value is not None:
             # Instant property change in headless mode
-            property_name = self._property_name.decode() if isinstance(self._property_name, bytes) else self._property_name
+            # _property_name is always bytes when not None
+            property_name = self._property_name.decode()
 
             # Apply the end value directly
             if hasattr(self._target, property_name):

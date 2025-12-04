@@ -231,7 +231,7 @@ class ImportExportPanel(QWidget):
 
         def _validate_import_format(import_data: dict[str, Any]) -> list[Any]:
             """Validate import data format and return sprites data"""
-            if not isinstance(import_data, dict) or "sprites" not in import_data:
+            if "sprites" not in import_data:
                 raise ValueError("Invalid file format: missing 'sprites' key")
             sprites_data = import_data["sprites"]
             if not isinstance(sprites_data, list):

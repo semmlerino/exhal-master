@@ -464,11 +464,10 @@ _registry = ManagerRegistry()
 def _cleanup_global_registry():
     """Cleanup function for module-level registry"""
     global _registry
-    if _registry is not None:
-        try:
-            _registry.cleanup_managers()
-        except Exception:
-            pass  # Ignore errors during cleanup
+    try:
+        _registry.cleanup_managers()
+    except Exception:
+        pass  # Ignore errors during cleanup
         _registry = None
 
 import atexit

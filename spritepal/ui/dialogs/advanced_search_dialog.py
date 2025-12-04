@@ -792,8 +792,13 @@ class SearchWorker(QThread):
             if self._user_response_condition.wait(self._user_response_mutex, 30000):  # 30 second timeout
                 if self._cancelled:
                     return ("", False)
-                response = self._user_response
-                return response if isinstance(response, tuple) else ("", False)
+                # _user_response is set by another thread via _set_user_response()
+                # Type guard: ensure it's the expected tuple type
+                # type: ignore is needed because basedpyright doesn't track cross-thread mutations
+                if isinstance(self._user_response, tuple):  # type: ignore[reportUnnecessaryIsInstance]
+                    return self._user_response
+                # Fallback for unexpected response type
+                return ("", False)
             logger.warning("User input request timed out")
             return ("", False)
         finally:
@@ -813,8 +818,13 @@ class SearchWorker(QThread):
             if self._user_response_condition.wait(self._user_response_mutex, 30000):  # 30 second timeout
                 if self._cancelled:
                     return False
-                response = self._user_response
-                return response if isinstance(response, bool) else False
+                # _user_response is set by another thread via _set_user_response()
+                # Type guard: ensure it's the expected bool type
+                # type: ignore is needed because basedpyright doesn't track cross-thread mutations
+                if isinstance(self._user_response, bool):  # type: ignore[reportUnnecessaryIsInstance]
+                    return self._user_response
+                # Fallback for unexpected response type
+                return False
             logger.warning("User question request timed out")
             return False
         finally:

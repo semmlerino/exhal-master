@@ -170,10 +170,6 @@ class InjectionManager(BaseManager):
         Raises:
             ValidationError: If parameters are invalid
         """
-        # Validate input type
-        if not isinstance(params, dict):
-            raise ValidationError("params must be a dictionary")
-
         # Check required common parameters
         required = ["mode", "sprite_path", "offset"]
         self._validate_required(params, required)

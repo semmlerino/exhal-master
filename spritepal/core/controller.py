@@ -180,8 +180,8 @@ class ExtractionController(QObject):
         # PARAMETER VALIDATION: Check requirements first for better UX
         # Users should get helpful parameter guidance before file system errors
         try:
-            # Cast TypedDict to dict for manager compatibility
-            self.extraction_manager.validate_extraction_params(cast(dict[str, Any], params))
+            # TypedDict is compatible with dict[str, Any] for validation
+            self.extraction_manager.validate_extraction_params(params)
         except Exception as e:
             self.main_window.extraction_failed(str(e))
             return

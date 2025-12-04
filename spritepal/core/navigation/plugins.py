@@ -105,11 +105,6 @@ class StrategyPlugin(NavigationPlugin):
             registry = get_strategy_registry()
 
             for strategy_class in self.strategy_classes:
-                # Validate strategy class
-                if not issubclass(strategy_class, AbstractNavigationStrategy):
-                    logger.error(f"Invalid strategy class: {strategy_class}")
-                    continue
-
                 # Create and register strategy instance
                 strategy = strategy_class(strategy_class.__name__)
                 registry.register_strategy(strategy)

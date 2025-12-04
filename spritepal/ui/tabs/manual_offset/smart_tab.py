@@ -118,7 +118,7 @@ class SimpleSmartTab(QWidget):
             region = self._sprite_regions[self._current_region_index]
             if hasattr(region, "offset"):
                 self.offset_requested.emit(region.offset)  # type: ignore[attr-defined]
-            elif isinstance(region, tuple) and len(region) >= 2:
+            elif len(region) >= 2:
                 self.offset_requested.emit(region[0])  # Assume (offset, quality) tuple
 
     def set_sprite_regions(self, sprites: list[tuple[int, float]]) -> None:

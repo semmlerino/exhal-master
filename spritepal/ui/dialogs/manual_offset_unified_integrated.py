@@ -459,7 +459,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         self.browse_tab.find_sprites_requested.connect(self._scan_for_sprites)
 
         # Connect smart preview coordinator to browse tab
-        if self._smart_preview_coordinator and self.browse_tab is not None:
+        if self._smart_preview_coordinator:
             self.browse_tab.connect_smart_preview_coordinator(self._smart_preview_coordinator)
 
         # Smart tab signals
@@ -507,11 +507,6 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
 
             # Check if the underlying Qt object is still valid
             try:
-                from PySide6.QtCore import QObject
-                if not isinstance(self, QObject):
-                    logger.warning("[OFFSET_CHANGED] Dialog is not a valid QObject, skipping emit")
-                    return
-
                 # Additional check for Qt object validity
                 if hasattr(self, 'isWidgetType') and not self.isWidgetType():
                     logger.warning("[OFFSET_CHANGED] Dialog widget type invalid, skipping emit")
@@ -529,7 +524,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         except RuntimeError as e:
             if "Signal source has been deleted" in str(e) or "deleted" in str(e).lower():
                 logger.error(f"[OFFSET_CHANGED] CRITICAL: Signal source deleted during emit: {e}")
-                logger.error(f"[OFFSET_CHANGED] Dialog state - exists: {self is not None}, type: {type(self)}")
+                logger.error(f"[OFFSET_CHANGED] Dialog state - type: {type(self)}")
                 logger.warning("[OFFSET_CHANGED] Skipping signal emit to prevent crash")
             else:
                 logger.error(f"[OFFSET_CHANGED] Unexpected RuntimeError during signal emit: {e}")
@@ -997,8 +992,9 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
             try:
                 if hasattr(self.preview_widget, 'preview_label') and self.preview_widget.preview_label:
                     pixmap = self.preview_widget.preview_label.pixmap()
-                    logger.info(f"[PREVIEW_READY] Final pixmap state: exists={pixmap is not None}, null={pixmap.isNull() if pixmap else 'N/A'}")
-                    if pixmap and not pixmap.isNull():
+                    # QLabel.pixmap() always returns a QPixmap, check if it's null/empty instead
+                    logger.info(f"[PREVIEW_READY] Final pixmap state: null={pixmap.isNull()}")
+                    if not pixmap.isNull():
                         logger.debug(f"[PREVIEW_READY] Pixmap size: {pixmap.width()}x{pixmap.height()}")
             except Exception as e:
                 logger.error(f"[PREVIEW_READY] Error checking pixmap state: {e}")

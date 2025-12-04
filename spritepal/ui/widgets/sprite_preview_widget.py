@@ -259,8 +259,7 @@ class SpritePreviewWidget(QWidget):
                 # Convert dict values to list maintaining type compatibility
                 palette_list = []
                 for palette in default_palettes.values():
-                    if isinstance(palette, list):
-                        palette_list.append(palette)
+                    palette_list.append(palette)
                 self.palettes = palette_list
 
                 # Update combo box
@@ -360,12 +359,12 @@ class SpritePreviewWidget(QWidget):
                 # Grayscale explicitly selected
                 logger.debug("[DEBUG_SPRITE] Grayscale selected, showing without palette")
                 show_grayscale = True
-            elif self.palettes and isinstance(self.current_palette_index, int) and self.current_palette_index >= len(self.palettes):
+            elif self.palettes and self.current_palette_index >= len(self.palettes):
                 # Invalid palette index - reset to grayscale
                 self.current_palette_index = None
                 logger.debug("[DEBUG_SPRITE] Invalid palette index, reverting to grayscale")
                 show_grayscale = True
-            elif not self.palettes or (isinstance(self.current_palette_index, int) and self.current_palette_index >= len(self.palettes)):
+            elif not self.palettes or self.current_palette_index >= len(self.palettes):
                 # No palettes available or invalid index - show grayscale
                 logger.debug("[DEBUG_SPRITE] No palette available, showing grayscale")
                 show_grayscale = True
@@ -550,12 +549,12 @@ class SpritePreviewWidget(QWidget):
 
                     # Place each palette at its correct index
                     for idx, palette in default_palettes.items():
-                        if isinstance(palette, list) and isinstance(idx, int) and 0 <= idx < len(palette_list):
+                        if 0 <= idx < len(palette_list):
                             palette_list[idx] = palette
 
                     # Remove None entries and use a simple list if indices are sparse
                     # But keep track of the actual palette we want (index 8)
-                    if 8 in default_palettes and isinstance(default_palettes[8], list):
+                    if 8 in default_palettes:
                         # Use the Kirby Pink palette directly
                         self.palettes = [default_palettes[8]]  # Just use the main palette
                         self.current_palette_index = 0  # It's now at position 0 in our list
@@ -711,7 +710,8 @@ class SpritePreviewWidget(QWidget):
         logger.debug("[DEBUG] SpritePreviewWidget.clear() called")
         # Only clear if there's actually content to clear
         # This prevents unnecessary flashing during rapid updates
-        if self.sprite_pixmap is not None or (self.preview_label and self.preview_label.pixmap() is not None):
+        preview_pixmap = self.preview_label.pixmap() if self.preview_label else None
+        if self.sprite_pixmap is not None or preview_pixmap is not None:
             if self.preview_label:
                 self.preview_label.clear()
             if self.preview_label:
@@ -765,7 +765,7 @@ class SpritePreviewWidget(QWidget):
             }
         """)
 
-    def set_sprite(self, pixmap: QPixmap) -> None:
+    def set_sprite(self, pixmap: QPixmap | None) -> None:
         """Set the sprite preview from a QPixmap.
 
         This method is called by the manual offset dialog to update the preview.
@@ -773,7 +773,7 @@ class SpritePreviewWidget(QWidget):
         Args:
             pixmap: The QPixmap to display, or None to clear
         """
-        logger.debug(f"[SPRITE_DISPLAY] set_sprite called with pixmap: {pixmap is not None and not pixmap.isNull() if pixmap else False}")
+        logger.debug(f"[SPRITE_DISPLAY] set_sprite called with pixmap: {pixmap is not None}")
         try:
             # Handle None or invalid pixmap by clearing
             if pixmap is None or pixmap.isNull():
@@ -781,6 +781,7 @@ class SpritePreviewWidget(QWidget):
                 # Don't clear - keep previous preview visible
                 return
 
+            # At this point, pixmap is guaranteed to be not None and not null
             logger.debug(f"[SPRITE_DISPLAY] Setting pixmap: {pixmap.width()}x{pixmap.height()}")
             # Store the original pixmap
             self.sprite_pixmap = pixmap
@@ -853,8 +854,9 @@ class SpritePreviewWidget(QWidget):
         # If we have a sprite loaded, base size on the preview content
         if self.sprite_pixmap is not None and not self.sprite_pixmap.isNull():
             # Use the scaled pixmap size as the hint, with minimal space for controls
-            if self.preview_label is not None and self.preview_label.pixmap() is not None:
-                preview_size = self.preview_label.pixmap().size()
+            preview_pixmap = self.preview_label.pixmap() if self.preview_label is not None else None
+            if preview_pixmap is not None:
+                preview_size = preview_pixmap.size()
             else:
                 preview_size = QSize(100, 100)  # Fallback
 
@@ -1089,10 +1091,9 @@ class SpritePreviewWidget(QWidget):
             logger.info(f"  preview_label visible: {self.preview_label.isVisible()}")
             logger.info(f"  preview_label size: {self.preview_label.size()}")
             pixmap = self.preview_label.pixmap()
-            logger.info(f"  pixmap exists: {pixmap is not None}")
-            if pixmap is not None:
-                logger.info(f"  pixmap size: {pixmap.width()}x{pixmap.height()}")
-                logger.info(f"  pixmap null: {pixmap.isNull()}")
+            # QLabel.pixmap() always returns QPixmap, check if it's null
+            logger.info(f"  pixmap size: {pixmap.width()}x{pixmap.height()}")
+            logger.info(f"  pixmap null: {pixmap.isNull()}")
             logger.info(f"  label text: '{self.preview_label.text()}'")
         logger.info(f"  sprite_pixmap exists: {self.sprite_pixmap is not None}")
         logger.info(f"  sprite_data exists: {self.sprite_data is not None}")
@@ -1267,7 +1268,8 @@ class SpritePreviewWidget(QWidget):
             return
 
         pixmap = self.preview_label.pixmap()
-        if pixmap is None:
+        # QLabel.pixmap() always returns QPixmap, check if it's null
+        if pixmap.isNull():
             logger.warning("[TRACE] Cannot guarantee display - no pixmap set")
             return
 
@@ -1312,13 +1314,10 @@ class SpritePreviewWidget(QWidget):
             return
 
         pixmap = self.preview_label.pixmap()
-        if pixmap is None:
+        # QLabel.pixmap() always returns a QPixmap, check if it's null instead
+        if pixmap.isNull():
             logger.error("[DEBUG_SPRITE] No pixmap set on preview_label!")
             logger.error(f"[DEBUG_SPRITE] Label has text instead: '{self.preview_label.text()}'")
-            return
-
-        if pixmap.isNull():
-            logger.error("[DEBUG_SPRITE] Pixmap is null!")
             return
 
         logger.debug(f"[DEBUG_SPRITE] Pixmap validation passed: {pixmap.width()}x{pixmap.height()}, visible={self.preview_label.isVisible()}")
@@ -1369,7 +1368,8 @@ class SpritePreviewWidget(QWidget):
             return
 
         pixmap = self.preview_label.pixmap()
-        if pixmap is None or pixmap.isNull():
+        # QLabel.pixmap() always returns a QPixmap, check if it's null
+        if pixmap.isNull():
             logger.error("[SPRITE_DISPLAY] VERIFICATION FAILED: No valid pixmap")
             return
 
@@ -1411,11 +1411,9 @@ class SpritePreviewWidget(QWidget):
             report.append(f"  - stylesheet: '{self.preview_label.styleSheet()[:100]}...'" if self.preview_label.styleSheet() else "  - stylesheet: None")
 
             pixmap = self.preview_label.pixmap()
-            if pixmap is None:
-                report.append("  - pixmap: None (THIS IS THE PROBLEM!)")
-                logger.error("[DEBUG_SPRITE] No pixmap on label!")
-            elif pixmap.isNull():
-                report.append("  - pixmap: Null pixmap")
+            # QLabel.pixmap() always returns a QPixmap, check if it's null
+            if pixmap.isNull():
+                report.append("  - pixmap: Null/empty (THIS IS THE PROBLEM!)")
                 logger.error("[DEBUG_SPRITE] Null pixmap!")
             else:
                 report.append(f"  - pixmap: {pixmap.width()}x{pixmap.height()}")

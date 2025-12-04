@@ -320,13 +320,14 @@ class CollapsibleGroupBox(QFrame):
                         if widget_hint.height() > 0:
                             total_height += widget_hint.height()
                             child_count += 1
-                elif item and item.layout() is not None:
+                elif item:
+                    # item.layout() returns the layout if this item is a layout
                     layout = item.layout()
-                    if layout is not None:
-                        layout_hint = layout.sizeHint()
-                        if layout_hint.height() > 0:
-                            total_height += layout_hint.height()
-                            child_count += 1
+                    # Type stubs may indicate layout is never None, but it can be for widget items
+                    layout_hint = layout.sizeHint()
+                    if layout_hint.height() > 0:
+                        total_height += layout_hint.height()
+                        child_count += 1
 
             # Add spacing between items
             if child_count > 1:

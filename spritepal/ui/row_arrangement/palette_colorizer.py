@@ -135,8 +135,9 @@ class PaletteColorizer(QObject):
                         # If it's a tuple or other type, convert to int (take first value)
                         if isinstance(pixel_value, tuple):
                             first_val = pixel_value[0]
-                            pixel_value = int(first_val) if first_val is not None else 0
+                            pixel_value = int(first_val)
                         else:
+                            # For non-tuple, non-int values, convert directly
                             pixel_value = int(pixel_value) if pixel_value is not None else 0
 
                     # For palette mode images, pixel value is already the palette index

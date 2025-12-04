@@ -310,8 +310,6 @@ class ViewStateManager(QObject):
 
         try:
             parent = self.dialog_widget.parent()
-            if parent is None:
-                return False
             # QObject.window() returns QWidget for QWidget instances
             parent_window = parent.window()  # type: ignore[attr-defined]
             if not parent_window or not parent_window.isVisible():

@@ -95,8 +95,7 @@ class StatusBarManager:
                 # Update icon (✓ for enabled, ✗ for disabled)
                 if self.cache_icon_label is not None:
                     self.cache_icon_label.setText("✓ Cache:")
-                    if self.cache_icon_label:
-                        self.cache_icon_label.setStyleSheet("color: green;")
+                    self.cache_icon_label.setStyleSheet("color: green;")
 
                 # Update info
                 total_files = stats.get("total_files", 0)
@@ -118,8 +117,8 @@ class StatusBarManager:
                 tooltip += f"- Scan progress: {scan_caches}\n"
                 tooltip += f"Total size: {size_mb:.1f} MB"
 
-                if self.cache_status_widget is not None:
-                    self.cache_status_widget.setToolTip(tooltip)
+                # cache_status_widget is guaranteed non-None by early return check
+                self.cache_status_widget.setToolTip(tooltip)
 
             except (OSError, PermissionError) as e:
                 logger.warning(f"File I/O error getting cache stats: {e}")
@@ -129,22 +128,20 @@ class StatusBarManager:
                 logger.warning(f"Error getting cache stats: {e}")
                 if self.cache_icon_label is not None:
                     self.cache_icon_label.setText("⚠ Cache:")
-                    if self.cache_icon_label:
-                        self.cache_icon_label.setStyleSheet("color: orange;")
+                    self.cache_icon_label.setStyleSheet("color: orange;")
                 if self.cache_info_label is not None:
                     self.cache_info_label.setText("Error")
-                if self.cache_status_widget is not None:
-                    self.cache_status_widget.setToolTip("Error reading cache statistics")
+                # cache_status_widget is guaranteed non-None by early return check
+                self.cache_status_widget.setToolTip("Error reading cache statistics")
         else:
             # Cache disabled
             if self.cache_icon_label is not None:
                 self.cache_icon_label.setText("✗ Cache:")
-                if self.cache_icon_label:
-                    self.cache_icon_label.setStyleSheet("color: gray;")
+                self.cache_icon_label.setStyleSheet("color: gray;")
             if self.cache_info_label is not None:
                 self.cache_info_label.setText("Disabled")
-            if self.cache_status_widget is not None:
-                self.cache_status_widget.setToolTip("ROM caching is disabled")
+            # cache_status_widget is guaranteed non-None by early return check
+            self.cache_status_widget.setToolTip("ROM caching is disabled")
 
     def show_cache_operation_badge(self, operation: str) -> None:
         """Show cache operation badge in status bar

@@ -388,10 +388,6 @@ class ExtractionManager(BaseManager):
         Raises:
             ValidationError: If validation fails
         """
-        # Validate input type
-        if not isinstance(params, dict):
-            raise ValidationError("params must be a dictionary")
-
         # Determine extraction type
         if "vram_path" in params:
             # VRAM extraction - check for missing VRAM file specifically

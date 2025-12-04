@@ -11,7 +11,7 @@ import hashlib
 import pickle
 import threading
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from core.managers import ExtractionManager, get_extraction_manager
 from core.visual_similarity_search import VisualSimilarityEngine
@@ -220,8 +220,7 @@ class SimilarityIndexingWorker(BaseWorker):
     def run(self) -> None:
         """Background indexing of pending sprites."""
         try:
-            # Type cast for better type safety
-            extraction_manager = cast(ExtractionManager, get_extraction_manager())
+            extraction_manager = get_extraction_manager()
             indexed_count = 0
 
             # Process pending sprites

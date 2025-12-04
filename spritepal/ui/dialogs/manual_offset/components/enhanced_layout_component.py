@@ -143,10 +143,6 @@ class EnhancedLayoutComponent:
 
     def enhance_panel_layout(self, panel: QWidget, panel_type: str = "generic") -> None:
         """Apply enhanced layout to a panel."""
-        if panel is None:
-            logger.warning(f"Cannot enhance layout for None panel (type: {panel_type})")
-            return
-
         layout = panel.layout()
         if not layout:
             logger.debug(f"No layout found for panel type: {panel_type}")

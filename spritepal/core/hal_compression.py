@@ -190,7 +190,7 @@ def _process_decompress(exhal_path: str, request: HALRequest) -> HALResult:
         try:
             # Run exhal: exhal romfile offset outfile
             # Ensure offset is properly formatted as hex with type validation
-            if not isinstance(request.offset, int) or request.offset < 0:
+            if request.offset < 0:
                 return HALResult(
                     success=False,
                     error_message=f"Invalid offset: {request.offset} (must be non-negative integer)",
@@ -874,9 +874,8 @@ class HALCompressor:
         logger.debug(f"Searching {len(search_paths)} locations for {tool_name}")
         for i, path in enumerate(search_paths, 1):
             try:
-                # Convert to Path object if it's a string
-                path_obj = Path(path) if not isinstance(path, Path) else path
-                full_path = path_obj.resolve()
+                # All paths in search_paths are already Path objects
+                full_path = path.resolve()
 
                 if full_path.is_file():
                     logger.info(f"Found {tool_name} at location {i}/{len(search_paths)}: {full_path}")

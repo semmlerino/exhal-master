@@ -306,7 +306,6 @@ reportUndefinedVariable = true
 reportUnboundVariable = true
 reportInvalidStringEscapeSequence = true
 reportMatchNotExhaustive = true
-reportShadowedImports = true
 
 # ---- Keep at warning level (catch issues but don't block) ----
 reportUnusedImport = "warning"
@@ -331,7 +330,6 @@ reportExplicitAny = false                   # Allow explicit Any for Qt
 reportPrivateUsage = false                  # Qt internals often accessed
 reportConstantRedefinition = false          # Conditional platform constants
 reportMissingParameterType = false          # Many Qt callbacks untyped
-reportMissingReturnType = false             # Decorators often obscure return types
 reportUntypedFunctionDecorator = false      # Many decorators untyped
 reportUntypedClassDecorator = false         # Same issue
 reportUntypedBaseClass = false              # Some Qt mixins untyped

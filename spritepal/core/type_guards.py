@@ -109,8 +109,7 @@ def is_complete_extraction_params(params: dict) -> TypeGuard[ExtractionParams]:
     """
     required_keys = {'rom_path', 'offset', 'output_base', 'sprite_name'}
     return (
-        isinstance(params, dict)
-        and all(key in params for key in required_keys)
+        all(key in params for key in required_keys)
         and is_valid_rom_path(params.get('rom_path'))
         and is_valid_offset(params.get('offset'))
         and isinstance(params.get('output_base'), str)
@@ -156,7 +155,7 @@ def safe_int_conversion(value: object, base: int = 10) -> int | None:
         if isinstance(value, (int, float)):
             # Ensure no precision loss for large numbers
             result = int(value)
-            if isinstance(value, float) and result != value:
+            if result != value:
                 # Float has fractional part
                 return None
             return result
@@ -180,9 +179,6 @@ def cpu_to_rom_offset(cpu_addr: int) -> int | None:
     Raises:
         ValueError: If cpu_addr is not a valid 24-bit address
     """
-    if not isinstance(cpu_addr, int):
-        raise TypeError(f"cpu_addr must be int, got {type(cpu_addr)}")
-
     if not (0 <= cpu_addr <= 0xFFFFFF):  # 24-bit address space
         raise ValueError(f"cpu_addr must be 24-bit (0x000000-0xFFFFFF), got 0x{cpu_addr:X}")
 

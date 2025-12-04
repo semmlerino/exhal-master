@@ -88,6 +88,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         self._default_tab = default_tab
         self._orientation = orientation
         self._splitter_handle_width = splitter_handle_width
+        self._tab_widget: QTabWidget | None = None
 
         # Initialize tracking (simplified but kept for compatibility)
         self._initialization_phase = "during_init"
@@ -141,7 +142,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
         if size:
             width, height = size
-            if width is not None and height is not None:
+            if height is not None:
                 self.resize(width, height)
 
         # Note: _setup_ui is called by setup_ui() which is invoked by ComposedDialog
@@ -313,8 +314,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
 
         # Set default tab if specified
         if hasattr(self, "_default_tab") and self._default_tab is not None:
-            if self._tab_widget:
-                self._tab_widget.setCurrentIndex(self._default_tab)
+            self._tab_widget.setCurrentIndex(self._default_tab)
 
     def set_current_tab(self, index: int) -> None:
         """
