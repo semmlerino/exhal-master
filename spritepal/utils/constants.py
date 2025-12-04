@@ -149,6 +149,7 @@ ROM_SCAN_STEP_FINE = 0x10          # Fine scan step (16 bytes)
 ROM_SEARCH_RANGE_DEFAULT = 0x1000  # Default search range around sprite (4KB)
 ROM_ALIGNMENT_GAP_THRESHOLD = 0x10000  # Gap threshold for region detection (64KB)
 ROM_MIN_REGION_SIZE = 0x1000       # Minimum region size (4KB)
+MAX_ROM_SIZE = 0x800000            # Maximum ROM file size (8MB) - largest reasonable SNES ROM
 
 # Common ROM sprite areas
 ROM_SPRITE_AREA_1_START = 0x80000   # Common sprite area 1 start

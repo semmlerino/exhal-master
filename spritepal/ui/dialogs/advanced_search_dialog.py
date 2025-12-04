@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from core.parallel_sprite_finder import ParallelSpriteFinder, SearchResult
 from core.visual_similarity_search import SimilarityMatch, VisualSimilarityEngine
@@ -40,6 +41,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
+from ui.common.worker_manager import WorkerManager
 from ui.dialogs.similarity_results_dialog import show_similarity_results
 from utils.constants import MAX_SPRITE_SIZE, MIN_SPRITE_SIZE
 from utils.preview_generator import PreviewGenerator, PreviewRequest
@@ -86,7 +89,7 @@ class SearchWorker(QThread):
     question_requested = Signal(str, str)  # title, question
     info_requested = Signal(str, str)  # title, message
 
-    def __init__(self, search_type: str, params: dict):
+    def __init__(self, search_type: str, params: dict[str, Any]):
         super().__init__()
         self.search_type = search_type
         self.params = params
@@ -104,6 +107,7 @@ class SearchWorker(QThread):
         self._cleanup_finder()
 
     @handle_worker_errors("search operation")
+    @override
     def run(self):
         """Execute search based on type."""
         try:
@@ -150,7 +154,7 @@ class SearchWorker(QThread):
             start,
             end,
             progress_callback=self._emit_progress,
-            cancellation_token=self
+            cancellation_token=self  # type: ignore[arg-type]  # Worker has is_cancelled() method
         )
 
         # Apply filters
@@ -834,7 +838,7 @@ class SearchWorker(QThread):
         """Thread-safe method to show info message to user from main thread."""
         self.info_requested.emit(title, message)
 
-    def _set_user_response(self, response):
+    def _set_user_response(self, response: Any) -> None:
         """Called from main thread to provide user response."""
         self._user_response_mutex.lock()
         try:
@@ -869,7 +873,7 @@ class AdvancedSearchDialog(QDialog):
     search_started = Signal()
     search_completed = Signal(int)  # Number of results
 
-    def __init__(self, rom_path: str, parent=None):
+    def __init__(self, rom_path: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.rom_path = rom_path
         self.search_history = []
@@ -880,7 +884,7 @@ class AdvancedSearchDialog(QDialog):
         self._setup_shortcuts()
         self._load_history()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Setup the user interface."""
         self.setWindowTitle("Advanced Sprite Search")
         self.setMinimumSize(800, 600)
@@ -1622,7 +1626,7 @@ class AdvancedSearchDialog(QDialog):
         if self.results_label:
             self.results_label.setText(f"Found {len(self.current_results)} {result_type}")
 
-    def _search_complete(self, results: list):
+    def _search_complete(self, results: list[Any]):
         """Handle search completion."""
         if self.search_button:
             self.search_button.setEnabled(True)
@@ -1831,7 +1835,7 @@ class AdvancedSearchDialog(QDialog):
             if self.ref_preview_label:
                 self.ref_preview_label.setPixmap(QPixmap())
 
-    def _show_visual_search_results(self, results: list):
+    def _show_visual_search_results(self, results: list[Any]):
         """Show visual search results in similarity dialog."""
         try:
             # Convert SearchResult objects back to SimilarityMatch for the dialog
@@ -2000,17 +2004,14 @@ class AdvancedSearchDialog(QDialog):
         except Exception as e:
             logger.exception(f"Failed to load search history: {e}")
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, event: Any):
         """Handle dialog close event with proper thread cleanup."""
-        # Stop any running search worker
+        # Stop any running search worker using safe cleanup (never terminate)
         if self.search_worker and self.search_worker.isRunning():
             logger.debug("Stopping search worker on dialog close")
-            self.search_worker.cancel()
-            # Wait for worker to finish, but don't hang forever
-            if not self.search_worker.wait(1000):  # 1 second timeout
-                logger.warning("Search worker did not finish within timeout, terminating")
-                self.search_worker.terminate()
-                self.search_worker.wait()  # Wait for termination to complete
+            # Use WorkerManager for safe cleanup - never uses terminate()
+            WorkerManager.cleanup_worker(self.search_worker, timeout=3000)
             self.search_worker = None
             logger.debug("Search worker cleanup completed")
 

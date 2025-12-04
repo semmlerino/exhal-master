@@ -11,6 +11,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from queue import PriorityQueue
+from typing import Any
 
 from core.rom_extractor import ROMExtractor
 from core.tile_renderer import TileRenderer
@@ -25,6 +26,7 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import QImage, QPixmap
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -36,8 +38,10 @@ class ThumbnailRequest:
     size: int
     priority: int = 0
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """For priority queue sorting (lower priority value = higher priority)."""
+        if not isinstance(other, ThumbnailRequest):
+            return NotImplemented
         return self.priority < other.priority
 
 class LRUCache:
@@ -107,7 +111,7 @@ class LRUCache:
         with QMutexLocker(self._mutex):
             return len(self._cache)
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         with QMutexLocker(self._mutex):
             total = self._hits + self._misses
@@ -161,7 +165,7 @@ class BatchThumbnailWorker(QObject):
         self._cache_mutex = QMutex()  # Separate mutex for cache
 
         # Request queue
-        self._request_queue: PriorityQueue = PriorityQueue()
+        self._request_queue: PriorityQueue[Any] = PriorityQueue()
         self._pending_count = 0
         self._completed_count = 0
 
@@ -228,22 +232,36 @@ class BatchThumbnailWorker(QObject):
 
     @Slot()
     def stop(self):
-        """Request the worker to stop."""
-        self._stop_requested = True
+        """Request the worker to stop (thread-safe)."""
+        with QMutexLocker(self._mutex):
+            self._stop_requested = True
         # Also clear the queue to stop processing immediately
         self.clear_queue()
 
     @Slot()
     def pause(self):
-        """Pause thumbnail generation."""
-        self._pause_requested = True
+        """Pause thumbnail generation (thread-safe)."""
+        with QMutexLocker(self._mutex):
+            self._pause_requested = True
 
     @Slot()
     def resume(self):
-        """Resume thumbnail generation."""
-        self._pause_requested = False
+        """Resume thumbnail generation (thread-safe)."""
+        with QMutexLocker(self._mutex):
+            self._pause_requested = False
+
+    def _is_stop_requested(self) -> bool:
+        """Check if stop was requested (thread-safe)."""
+        with QMutexLocker(self._mutex):
+            return self._stop_requested
+
+    def _is_pause_requested(self) -> bool:
+        """Check if pause was requested (thread-safe)."""
+        with QMutexLocker(self._mutex):
+            return self._pause_requested
 
     @Slot()
+    @override
     def run(self):
         """Main worker execution - runs in worker thread."""
         logger.info("BatchThumbnailWorker started")
@@ -264,9 +282,9 @@ class BatchThumbnailWorker(QObject):
                 self._thread_pool = ThreadPoolExecutor(max_workers=self._max_workers)
                 logger.info(f"Initialized thread pool with {self._max_workers} workers")
 
-            while not self._stop_requested:
-                # Check for pause
-                if self._pause_requested:
+            while not self._is_stop_requested():
+                # Check for pause (thread-safe)
+                if self._is_pause_requested():
                     QThread.currentThread().msleep(100)
                     continue
 
@@ -354,6 +372,15 @@ class BatchThumbnailWorker(QObject):
             self.error.emit(str(e))
         finally:
             logger.info("BatchThumbnailWorker stopped")
+            # Shutdown thread pool first to prevent resource leak
+            if self._thread_pool:
+                try:
+                    self._thread_pool.shutdown(wait=False, cancel_futures=True)
+                    logger.debug("Thread pool shutdown complete in finally block")
+                except Exception as pool_error:
+                    logger.warning(f"Error shutting down thread pool: {pool_error}")
+                finally:
+                    self._thread_pool = None
             # Clear ROM data to free memory
             self._clear_rom_data()
             # Clear cache as well
@@ -379,13 +406,13 @@ class BatchThumbnailWorker(QObject):
 
                 # Create a mmap-compatible wrapper
                 class BytesMMAPWrapper:
-                    def __init__(self, data):
+                    def __init__(self, data: bytes):
                         self._data = data
-                    def __getitem__(self, key):
+                    def __getitem__(self, key: int | slice) -> bytes | int:
                         return self._data[key]
-                    def __len__(self):
+                    def __len__(self) -> int:
                         return len(self._data)
-                    def close(self):
+                    def close(self) -> None:
                         pass  # No-op for bytes wrapper
 
                 yield BytesMMAPWrapper(rom_data)
@@ -434,7 +461,9 @@ class BatchThumbnailWorker(QObject):
                 return None
 
             end_offset = min(offset + size, len(self._rom_mmap))
-            return self._rom_mmap[offset:end_offset]
+            chunk = self._rom_mmap[offset:end_offset]
+            # Slicing always returns bytes, not int
+            return chunk if isinstance(chunk, bytes) else bytes(chunk) if hasattr(chunk, '__iter__') else None
         except Exception as e:
             logger.error(f"Failed to read ROM chunk at 0x{offset:06X}: {e}")
             return None

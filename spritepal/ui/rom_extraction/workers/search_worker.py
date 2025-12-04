@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import handle_worker_errors
 from PySide6.QtCore import QThread, Signal
+from utils.constants import MAX_ROM_SIZE
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -24,7 +25,7 @@ class SpriteSearchWorker(QThread):
     progress = Signal(int, int)  # current, total
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 direction: int, extractor: ROMExtractor, parent=None):
+                 direction: int, extractor: ROMExtractor, parent: QThread | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.start_offset = start_offset
@@ -50,6 +51,15 @@ class SpriteSearchWorker(QThread):
         try:
             if self._cancellation_token:
                 self._cancellation_token.clear()
+
+            # Validate ROM size before loading to prevent OOM
+            rom_size = Path(self.rom_path).stat().st_size
+            if rom_size > MAX_ROM_SIZE:
+                self.error.emit(
+                    f"ROM file too large: {rom_size:,} bytes (max: {MAX_ROM_SIZE:,})",
+                    ValueError(f"ROM exceeds max size of {MAX_ROM_SIZE}")
+                )
+                return
 
             with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()
@@ -82,7 +92,7 @@ class SpriteSearchWorker(QThread):
             logger.debug(f"Searching range 0x{search_start:X} to 0x{search_end:X} (direction: {self.direction})")
 
             # Progress callback
-            def progress_callback(current_progress, total_progress):
+            def progress_callback(current_progress: int, total_progress: int):
                 # Simple progress mapping
                 search_range = search_end - search_start
                 current_step = int((current_progress / 100) * (search_range // self.step))

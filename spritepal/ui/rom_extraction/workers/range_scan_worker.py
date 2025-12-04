@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from core.rom_extractor import ROMExtractor
     from PySide6.QtCore import QObject
 
 from core.workers.base import BaseWorker, handle_worker_errors
 from PySide6.QtCore import Signal
+from utils.constants import MAX_ROM_SIZE
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 
@@ -28,7 +30,7 @@ class RangeScanWorker(BaseWorker):
     cache_progress_saved = Signal(int, int, int)  # current_offset, total_sprites_found, progress_percentage
 
     def __init__(self, rom_path: str, start_offset: int, end_offset: int,
-                 step_size: int, extractor, parent: QObject | None = None):
+                 step_size: int, extractor: ROMExtractor, parent: QObject | None = None):
         """
         Initialize range scan worker
 
@@ -65,6 +67,12 @@ class RangeScanWorker(BaseWorker):
     def run(self):
         """Scan the entire specified range for valid sprites"""
         try:
+            # Validate ROM size before loading to prevent OOM
+            rom_size = Path(self.rom_path).stat().st_size
+            if rom_size > MAX_ROM_SIZE:
+                self.emit_error(f"ROM file too large: {rom_size:,} bytes (max: {MAX_ROM_SIZE:,})")
+                return
+
             # Load ROM data once
             with Path(self.rom_path).open("rb") as f:
                 rom_data = f.read()

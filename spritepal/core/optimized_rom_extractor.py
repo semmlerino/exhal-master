@@ -19,6 +19,7 @@ from typing import Any
 from core.mmap_rom_reader import MemoryMappedROMReader, optimize_rom_operations
 from core.rom_extractor import ROMExtractor
 from PIL import Image
+from typing_extensions import override
 from utils.constants import (
     BYTES_PER_TILE,
     DEFAULT_TILES_PER_ROW,
@@ -84,6 +85,7 @@ class OptimizedROMExtractor(ROMExtractor):
             logger.debug(f"Created ROM reader for {rom_path}")
         return self._rom_readers[rom_path]
 
+    @override
     def extract_sprite_data(
         self,
         rom_path: str,
@@ -150,27 +152,22 @@ class OptimizedROMExtractor(ROMExtractor):
         """
         Decompress data using memory-mapped ROM access.
 
-        More efficient than reading entire file.
+        NOT YET IMPLEMENTED - requires HALCompressor.decompress_raw() which doesn't exist.
+        Use extract_sprite() instead for now.
+
+        Raises:
+            NotImplementedError: Always, as the required method is not implemented.
         """
-        # Estimate compressed size (HAL format specific)
-        # For now, read a reasonable chunk
-        max_compressed_size = min(0x10000, reader.file_size - offset)
-
-        with reader.open_mmap() as rom_data:
-            # Read compressed data directly from mmap
-            compressed_chunk = bytes(rom_data[offset:offset + max_compressed_size])
-
-            # Use HAL decompressor
-            # The decompressor will stop at the end of compressed data
-            decompressed = self.hal_compressor.decompress_raw(compressed_chunk)  # type: ignore[attr-defined]  # TODO: Add method to HALCompressor
-
-            return decompressed
+        raise NotImplementedError(
+            "_decompress_with_mmap requires HALCompressor.decompress_raw() which is not implemented. "
+            "Use extract_sprite() instead, which uses decompress_from_rom()."
+        )
 
     def extract_multiple_sprites(
         self,
         rom_path: str,
         offsets: list[int],
-        sprite_configs: dict[int, dict | None] | None = None
+        sprite_configs: dict[int, dict[str, Any] | None] | None = None
     ) -> dict[int, ExtractionResult]:
         """
         Extract multiple sprites in parallel for better performance.
@@ -232,7 +229,7 @@ class OptimizedROMExtractor(ROMExtractor):
         self,
         rom_path: str,
         offset: int,
-        config: dict | None = None
+        config: dict[str, Any] | None = None
     ) -> ExtractionResult:
         """Extract a single sprite and measure performance."""
         start_time = time.perf_counter()
@@ -360,10 +357,9 @@ class OptimizedROMExtractor(ROMExtractor):
         """Clear all caches to free memory."""
         self._decompression_cache.clear()
 
-        # Clear reader caches
-        for reader in self._rom_readers.values():
-            if hasattr(reader, 'clear_cache'):
-                reader.clear_cache()  # type: ignore[attr-defined]  # TODO: Add method to MemoryMappedROMReader
+        # Clear ROM readers dict directly
+        # MemoryMappedROMReader uses context manager for mmap access, so no explicit close needed
+        self._rom_readers.clear()
 
         self._cache_hits = 0
         self._cache_misses = 0

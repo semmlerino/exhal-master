@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import json
 import pickle
 import threading
 from pathlib import Path
@@ -53,7 +54,9 @@ class SimilarityIndexingWorker(BaseWorker):
 
         # Cache directory for similarity indices
         self.cache_dir = self._get_cache_directory()
-        self.index_file = self.cache_dir / f"{self.rom_hash}.idx"
+        self.index_file = self.cache_dir / f"{self.rom_hash}.json"
+        # Legacy pickle file path for auto-conversion
+        self._legacy_pickle_file = self.cache_dir / f"{self.rom_hash}.idx"
 
         # Indexing state
         self._indexed_count = 0
@@ -98,72 +101,97 @@ class SimilarityIndexingWorker(BaseWorker):
         return cache_dir
 
     def _load_existing_index(self) -> None:
-        """Load existing similarity index if available."""
-        if not self.index_file.exists():
+        """Load existing similarity index if available.
+
+        Tries JSON format first (new), then falls back to pickle (legacy)
+        with automatic conversion to JSON.
+        """
+        # Use Any since json.load/pickle.load return Any - isinstance narrows it
+        index_data: Any = None
+
+        # Try JSON first (new format)
+        if self.index_file.exists():
+            try:
+                with self.index_file.open("r", encoding="utf-8") as f:
+                    index_data = json.load(f)
+                logger.debug("Loaded index from JSON format")
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(f"Could not load JSON index: {e}")
+                index_data = None
+
+        # Fall back to pickle (legacy format) and auto-convert
+        if index_data is None and self._legacy_pickle_file.exists():
+            try:
+                with self._legacy_pickle_file.open("rb") as f:
+                    index_data = pickle.load(f)
+
+                if index_data is not None:
+                    logger.info("Migrating legacy pickle index to JSON format")
+                    # Save as JSON immediately
+                    self._save_index_json(index_data)
+                    # Delete old pickle file
+                    with contextlib.suppress(OSError):
+                        self._legacy_pickle_file.unlink()
+                    logger.info(f"Successfully migrated index to JSON: {self.index_file}")
+
+            except Exception as e:
+                logger.warning(f"Could not load legacy pickle index: {e}")
+                # Remove corrupt pickle file
+                with contextlib.suppress(OSError):
+                    self._legacy_pickle_file.unlink()
+                index_data = None
+
+        if index_data is None:
             logger.debug("No existing similarity index found")
             return
 
-        try:
-            with Path(self.index_file).open("rb") as f:
-                index_data = pickle.load(f)
+        # Validate index format
+        if not isinstance(index_data, dict) or "version" not in index_data:
+            logger.warning("Invalid index file format, will rebuild")
+            return
 
-            # Validate index format
-            if not isinstance(index_data, dict) or "version" not in index_data:
-                logger.warning("Invalid index file format, will rebuild")
-                return
+        # Check version compatibility
+        if index_data.get("version") != "1.0":
+            logger.info(f"Index version mismatch (found {index_data.get('version')}, expected 1.0), will rebuild")
+            return
 
-            # Check version compatibility
-            if index_data.get("version") != "1.0":
-                logger.info(f"Index version mismatch (found {index_data.get('version')}, expected 1.0), will rebuild")
-                return
+        # Load sprite database
+        sprite_hashes = index_data.get("sprite_hashes", {})
+        for offset_str, hash_data in sprite_hashes.items():
+            try:
+                offset = int(offset_str)
+                # Reconstruct SpriteHash objects in the engine
+                self.similarity_engine.sprite_database[offset] = hash_data
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Skipping invalid hash data for offset {offset_str}: {e}")
 
-            # Load sprite database
-            sprite_hashes = index_data.get("sprite_hashes", {})
-            for offset_str, hash_data in sprite_hashes.items():
-                try:
-                    offset = int(offset_str)
-                    # Reconstruct SpriteHash objects in the engine
-                    self.similarity_engine.sprite_database[offset] = hash_data
-                except (ValueError, KeyError) as e:
-                    logger.warning(f"Skipping invalid hash data for offset {offset_str}: {e}")
-
-            loaded_count = len(self.similarity_engine.sprite_database)
-            logger.info(f"Loaded {loaded_count} sprites from existing similarity index")
-            self.index_loaded.emit(loaded_count)
-
-        except Exception as e:
-            logger.warning(f"Could not load existing similarity index: {e}")
-            # Clear any partially loaded data
-            self.similarity_engine.sprite_database.clear()
+        loaded_count = len(self.similarity_engine.sprite_database)
+        logger.info(f"Loaded {loaded_count} sprites from existing similarity index")
+        self.index_loaded.emit(loaded_count)
 
     def _save_index(self) -> None:
-        """Save current similarity index to disk."""
+        """Save current similarity index to disk as JSON."""
         if not self.similarity_engine.sprite_database:
             logger.debug("No sprites to save in similarity index")
             return
 
         try:
             # Prepare index data
-            index_data = {
+            sprite_hashes: dict[str, Any] = {}
+            # Convert sprite database to serializable format
+            for offset, sprite_hash in self.similarity_engine.sprite_database.items():
+                sprite_hashes[str(offset)] = sprite_hash
+
+            index_data: dict[str, Any] = {
                 "version": "1.0",
                 "rom_hash": self.rom_hash,
                 "rom_path": str(self.rom_path),
                 "created_at": str(Path(self.rom_path).stat().st_mtime),
                 "sprite_count": len(self.similarity_engine.sprite_database),
-                "sprite_hashes": {}
+                "sprite_hashes": sprite_hashes
             }
 
-            # Convert sprite database to serializable format
-            for offset, sprite_hash in self.similarity_engine.sprite_database.items():
-                index_data["sprite_hashes"][str(offset)] = sprite_hash
-
-            # Write to temporary file first for atomic operation
-            temp_file = self.index_file.with_suffix(".tmp")
-            with Path(temp_file).open("wb") as f:
-                pickle.dump(index_data, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-            # Atomic rename
-            temp_file.replace(self.index_file)
+            self._save_index_json(index_data)
 
             logger.info(f"Saved similarity index with {len(self.similarity_engine.sprite_database)} sprites to {self.index_file}")
             self.index_saved.emit(str(self.index_file))
@@ -175,6 +203,20 @@ class SimilarityIndexingWorker(BaseWorker):
             if temp_file.exists():
                 with contextlib.suppress(Exception):
                     temp_file.unlink()
+
+    def _save_index_json(self, index_data: dict[str, Any]) -> None:
+        """Save index data as JSON with atomic write.
+
+        Args:
+            index_data: Dictionary containing the index data to save
+        """
+        # Write to temporary file first for atomic operation
+        temp_file = self.index_file.with_suffix(".tmp")
+        with temp_file.open("w", encoding="utf-8") as f:
+            json.dump(index_data, f, indent=2)
+
+        # Atomic rename
+        temp_file.replace(self.index_file)
 
     @Slot(dict)
     def on_sprite_found(self, sprite_info: dict[str, Any]) -> None:

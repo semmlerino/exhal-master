@@ -12,7 +12,13 @@ import mmap
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO, Protocol
+
+from typing_extensions import override
+
+if TYPE_CHECKING:
+    class Decompressor(Protocol):
+        def decompress(self, data: bytes) -> bytes: ...
 
 logger = logging.getLogger(__name__)
 
@@ -96,19 +102,22 @@ class MemoryMappedROMReader:
                 except Exception as e:
                     logger.warning(f"Error closing file: {e}")
 
-    def read_bytes(self, offset: int, size: int) -> bytes:
+    def read_bytes(self, offset: int, size: int, *, strict: bool = False) -> bytes:
         """
         Read bytes from ROM at specified offset.
 
         Args:
             offset: Starting offset in ROM
             size: Number of bytes to read
+            strict: If True, raise ValueError when requested size cannot be fully read.
+                    If False (default), silently return fewer bytes if at end of file.
 
         Returns:
             Bytes read from ROM
 
         Raises:
-            ValueError: If offset or size is invalid
+            ValueError: If offset or size is invalid, or if strict=True and
+                        the full requested size cannot be read.
         """
         if offset < 0 or offset >= self.file_size:
             raise ValueError(f"Invalid offset {offset} for ROM size {self.file_size}")
@@ -118,6 +127,12 @@ class MemoryMappedROMReader:
 
         # Clamp size to file bounds
         actual_size = min(size, self.file_size - offset)
+
+        if strict and actual_size < size:
+            raise ValueError(
+                f"Requested {size} bytes at offset 0x{offset:X}, "
+                f"but only {actual_size} bytes available (ROM size: 0x{self.file_size:X})"
+            )
 
         with self.open_mmap() as rom_data:
             return bytes(rom_data[offset:offset + actual_size])
@@ -217,7 +232,7 @@ class MemoryMappedROMReader:
 
         return checksum
 
-    def extract_compressed_data(self, offset: int, decompressor) -> bytes:
+    def extract_compressed_data(self, offset: int, decompressor: Decompressor) -> bytes:
         """
         Extract compressed data starting at offset.
 
@@ -272,7 +287,7 @@ class MemoryMappedROMReader:
                 def find(self, pattern: bytes, start: int = 0) -> int:
                     return rom_data.find(pattern, start)
 
-                def __getitem__(self, key):
+                def __getitem__(self, key: int | slice) -> int | bytes:
                     return rom_data[key]
 
             yield BatchReader()
@@ -297,15 +312,21 @@ class CachedROMReader(MemoryMappedROMReader):
         self._cache_order: list[tuple[int, int]] = []
         self._cache_size = cache_size
 
-    def read_bytes(self, offset: int, size: int) -> bytes:
+    @override
+    def read_bytes(self, offset: int, size: int, *, strict: bool = False) -> bytes:
         """
         Read bytes with caching.
 
         Caches frequently accessed regions for better performance.
+
+        Args:
+            offset: File offset to read from
+            size: Number of bytes to read
+            strict: If True, raise ValueError when fewer bytes are available than requested
         """
         cache_key = (offset, size)
 
-        # Check cache
+        # Check cache (only for non-strict reads or when we know we have full data)
         if cache_key in self._cache:
             # Move to end (most recently used)
             self._cache_order.remove(cache_key)
@@ -314,7 +335,7 @@ class CachedROMReader(MemoryMappedROMReader):
             return self._cache[cache_key]
 
         # Read from ROM
-        data = super().read_bytes(offset, size)
+        data = super().read_bytes(offset, size, strict=strict)
 
         # Add to cache
         self._cache[cache_key] = data

@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from queue import PriorityQueue
+from typing import Any
 
 from core.rom_extractor import ROMExtractor
 from core.tile_renderer import TileRenderer
@@ -20,7 +21,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QImage
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -32,8 +33,10 @@ class ThumbnailRequest:
     size: int
     priority: int = 0
 
-    def __lt__(self, other):
+    def __lt__(self, other: object):
         """For priority queue sorting (lower priority value = higher priority)."""
+        if not isinstance(other, ThumbnailRequest):
+            return NotImplemented
         return self.priority < other.priority
 
 class BatchThumbnailWorker(QObject):
@@ -42,8 +45,9 @@ class BatchThumbnailWorker(QObject):
     Uses moveToThread instead of subclassing QThread.
     """
 
-    # Signals
-    thumbnail_ready = Signal(int, QPixmap)  # offset, pixmap
+    # Signals - Use QImage instead of QPixmap for thread safety
+    # QPixmap must only be used in GUI thread; QImage is thread-safe
+    thumbnail_ready = Signal(int, QImage)  # offset, qimage (thread-safe)
     progress = Signal(int, int)  # current, total
     error = Signal(str)
     started = Signal()
@@ -76,13 +80,13 @@ class BatchThumbnailWorker(QObject):
 
         # Request queue with proper mutex
         self._queue_mutex = QMutex()
-        self._request_queue: PriorityQueue = PriorityQueue()
+        self._request_queue: PriorityQueue[Any] = PriorityQueue()
         self._pending_count = 0
         self._completed_count = 0
 
-        # Cache with proper thread-safe access
+        # Cache with proper thread-safe access (use QImage, not QPixmap, for thread safety)
         self._cache_mutex = QMutex()
-        self._cache: dict[tuple[int, int], QPixmap] = {}
+        self._cache: dict[tuple[int, int], QImage] = {}
         self._cache_size_limit = 100
 
         # ROM data
@@ -242,13 +246,13 @@ class BatchThumbnailWorker(QObject):
                     pass
         return None
 
-    def _get_from_cache(self, key: tuple[int, int]) -> QPixmap | None:
-        """Get pixmap from cache (thread-safe)."""
+    def _get_from_cache(self, key: tuple[int, int]) -> QImage | None:
+        """Get QImage from cache (thread-safe)."""
         with QMutexLocker(self._cache_mutex):
             return self._cache.get(key)
 
-    def _add_to_cache(self, key: tuple[int, int], pixmap: QPixmap):
-        """Add pixmap to cache (thread-safe)."""
+    def _add_to_cache(self, key: tuple[int, int], qimage: QImage):
+        """Add QImage to cache (thread-safe)."""
         with QMutexLocker(self._cache_mutex):
             # Limit cache size
             if len(self._cache) >= self._cache_size_limit:
@@ -256,7 +260,7 @@ class BatchThumbnailWorker(QObject):
                 first_key = next(iter(self._cache))
                 del self._cache[first_key]
 
-            self._cache[key] = pixmap
+            self._cache[key] = qimage
 
     def _update_progress(self):
         """Update and emit progress (thread-safe)."""
@@ -276,27 +280,25 @@ class BatchThumbnailWorker(QObject):
             logger.error(f"Failed to load ROM: {e}")
             self.error.emit(f"Failed to load ROM: {e}")
 
-    def _generate_thumbnail(self, request: ThumbnailRequest) -> QPixmap | None:
+    def _generate_thumbnail(self, request: ThumbnailRequest) -> QImage | None:
         """
-        Generate a thumbnail for a sprite.
+        Generate a thumbnail for a sprite (thread-safe).
 
         Args:
             request: Thumbnail request
 
         Returns:
-            Generated pixmap or None
+            Generated QImage (thread-safe) or None
         """
         if not self._rom_data:
             return None
 
         try:
-            # [Thumbnail generation code remains the same]
-            # ... (omitted for brevity, use existing logic)
-
-            # For demonstration, create a simple pixmap
-            pixmap = QPixmap(request.size, request.size)
-            pixmap.fill(Qt.GlobalColor.gray)
-            return pixmap
+            # Use QImage instead of QPixmap for thread safety
+            # QPixmap must only be used in GUI thread; QImage is thread-safe
+            qimage = QImage(request.size, request.size, QImage.Format.Format_ARGB32)
+            qimage.fill(Qt.GlobalColor.gray)
+            return qimage
 
         except Exception as e:
             logger.debug(f"Failed to generate thumbnail: {e}")

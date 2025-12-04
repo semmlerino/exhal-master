@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.components import (
     FileSelector,
     FormRow,
@@ -44,7 +45,7 @@ class InjectionDialog(TabbedDialog):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         sprite_path: str = "",
         metadata_path: str = "",
         input_vram: str = "",
@@ -94,6 +95,7 @@ class InjectionDialog(TabbedDialog):
         self._load_metadata()
         self._set_initial_paths()
 
+    @override
     def _setup_ui(self) -> None:
         """Initialize the user interface"""
         # Call parent setup first to initialize tab widget
@@ -681,6 +683,8 @@ class InjectionDialog(TabbedDialog):
         sprite_locations = rom_info.get("sprite_locations", {})
         if sprite_locations:
             if self.sprite_location_combo:
+                # Clear any existing items first to prevent duplicates
+                self.sprite_location_combo.clear()
                 self.sprite_location_combo.addItem("Select sprite location...", None)
 
             for display_name, offset in sprite_locations.items():
@@ -947,7 +951,12 @@ class InjectionDialog(TabbedDialog):
 
         if restore_info["sprite_location_index"] is not None:
             if self.sprite_location_combo:
-                self.sprite_location_combo.setCurrentIndex(restore_info["sprite_location_index"])
+                idx = restore_info["sprite_location_index"]
+                # Bounds check before setting index
+                if 0 <= idx < self.sprite_location_combo.count():
+                    self.sprite_location_combo.setCurrentIndex(idx)
+                else:
+                    logger.warning(f"Saved sprite location index {idx} out of bounds (count: {self.sprite_location_combo.count()})")
         elif restore_info["custom_offset"] and self.rom_offset_input:
             self.rom_offset_input.set_text(restore_info["custom_offset"])
 

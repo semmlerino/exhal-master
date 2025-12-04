@@ -18,7 +18,7 @@ import contextlib
 import time
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 with contextlib.suppress(ImportError):
     pass
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
 from PySide6.QtCore import (
+    QEventLoop,
     QMutex,
     QMutexLocker,
     Qt,
@@ -188,20 +189,20 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         class MinimalLayoutManager:
             MAX_MINI_MAP_HEIGHT = 60
             MIN_MINI_MAP_HEIGHT = 40
-            def configure_splitter(self, *args): pass
-            def fix_empty_space_issue(self): pass
-            def apply_standard_layout(self, layout, spacing_type='normal'):
+            def configure_splitter(self, *args: Any) -> None: pass
+            def fix_empty_space_issue(self) -> None: pass
+            def apply_standard_layout(self, layout: Any, spacing_type: str = 'normal') -> None:
                 layout.setSpacing(8)
                 layout.setContentsMargins(8, 8, 8, 8)
-            def remove_all_stretches(self, layout): pass
-            def create_section_title(self, title, subtitle=""):
+            def remove_all_stretches(self, layout: Any) -> None: pass
+            def create_section_title(self, title: str, subtitle: str = "") -> Any:
                 from PySide6.QtWidgets import QLabel
                 label = QLabel(title)
                 label.setStyleSheet("font-weight: bold; font-size: 12px; color: #333;")
                 return label
-            def on_dialog_show(self): pass
-            def update_for_tab(self, index, width): pass
-            def handle_resize(self, event): pass  # Add missing method
+            def on_dialog_show(self) -> None: pass
+            def update_for_tab(self, index: int, width: int) -> None: pass
+            def handle_resize(self, event: Any) -> None: pass  # Add missing method
 
         self.layout_manager = MinimalLayoutManager()
         logger.debug("Using minimal layout manager for debugging")
@@ -243,7 +244,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         with contextlib.suppress(BaseException):
             logger.debug(f"Dialog {self._debug_id} being destroyed")
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Set up the dialog UI."""
         try:
             logger.debug("Starting _setup_ui")
@@ -863,7 +864,8 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
                 # Update progress
                 progress_value = int((offset / rom_size) * 100)
                 progress.setValue(progress_value)
-                QApplication.processEvents()
+                # Use ExcludeUserInputEvents to prevent reentrancy issues
+                QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
                 # Try to find sprite at this offset
                 sprite_info = finder.find_sprite_at_offset(rom_data, offset)
@@ -885,7 +887,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
             logger.error(f"Error scanning for sprites: {e}")
             QMessageBox.critical(self, "Scan Error", f"Error scanning ROM: {e!s}")
 
-    def _show_sprite_scan_results(self, sprites):
+    def _show_sprite_scan_results(self, sprites: list[dict[str, Any]]) -> None:
         """Show sprite scan results in a dialog."""
         # Create results dialog
         dialog = QDialog(self)
@@ -930,13 +932,12 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
 
         dialog.exec()
 
-    def _jump_to_sprite(self, offset):
+    def _jump_to_sprite(self, offset: int) -> None:
         """Jump to a specific sprite offset."""
-        if offset is not None:
-            logger.info(f"Jumping to sprite at 0x{offset:06X}")
-            self.set_offset(offset)
+        logger.info(f"Jumping to sprite at 0x{offset:06X}")
+        self.set_offset(offset)
 
-    def _jump_to_selected_sprite(self, list_widget):
+    def _jump_to_selected_sprite(self, list_widget: QListWidget) -> None:
         """Jump to the selected sprite in the list."""
         item = list_widget.currentItem()
         if item:
@@ -1178,11 +1179,11 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         except Exception as e:
             logger.debug(f"Error preloading offset 0x{offset:06X}: {e}")
 
-    def _on_cache_hit(self, *args) -> None:
+    def _on_cache_hit(self, *args: Any) -> None:
         """Handle cache hit event."""
         self._cache_stats["hits"] += 1
 
-    def _on_cache_miss(self, *args) -> None:
+    def _on_cache_miss(self, *args: Any) -> None:
         """Handle cache miss event."""
         self._cache_stats["misses"] += 1
 
@@ -1257,7 +1258,7 @@ class UnifiedManualOffsetDialog(DialogBase):  # type: ignore[misc]
         except Exception as e:
             logger.debug(f"Error setting up cache context menu: {e}")
 
-    def _show_cache_context_menu(self, position) -> None:
+    def _show_cache_context_menu(self, position: Any) -> None:
         """Show cache management context menu."""
         if not self.rom_cache.cache_enabled:
             return
@@ -1352,7 +1353,7 @@ Cache Misses: {session_stats['misses']}"""
 
     # Event handlers
 
-    def keyPressEvent(self, event: QKeyEvent | None):
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
         """Handle keyboard shortcuts."""
         if event:
             if event.key() == Qt.Key.Key_Escape:
@@ -1383,14 +1384,14 @@ Cache Misses: {session_stats['misses']}"""
 
         super().keyPressEvent(event)
 
-    def closeEvent(self, event: QCloseEvent | None):
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         """Handle close event."""
         logger.debug(f"Dialog {self._debug_id} closing")
         self.cleanup()
         if event:
             super().closeEvent(event)
 
-    def hideEvent(self, event: QHideEvent | None):
+    def hideEvent(self, event: QHideEvent | None) -> None:
         """Handle hide event."""
         logger.debug(f"Dialog {self._debug_id} hiding")
         # Only cleanup workers on hide, not full cleanup (dialog may be shown again)
@@ -1399,7 +1400,7 @@ Cache Misses: {session_stats['misses']}"""
         if event:
             super().hideEvent(event)
 
-    def showEvent(self, event):
+    def showEvent(self, event: Any) -> None:
         """Handle show event - set up initial splitter sizes here."""
         logger.debug(f"Dialog {self._debug_id} showing")
         super().showEvent(event)
@@ -1411,11 +1412,11 @@ Cache Misses: {session_stats['misses']}"""
         # Set initial splitter sizes based on current tab
         self._update_splitter_for_tab()
 
-    def _on_tab_changed(self, index: int):
+    def _on_tab_changed(self, index: int) -> None:
         """Handle tab change - adjust splitter ratio based on tab."""
         self.layout_manager.update_for_tab(index, self.width())
 
-    def _update_splitter_for_tab(self, index: int | None = None):
+    def _update_splitter_for_tab(self, index: int | None = None) -> None:
         """Update splitter sizes based on active tab - delegated to layout manager."""
         if index is None and self.tab_widget:
             index = self.tab_widget.currentIndex()
@@ -1426,7 +1427,7 @@ Cache Misses: {session_stats['misses']}"""
         """Create a styled section title label - delegated to layout manager."""
         return self.layout_manager.create_section_title(text)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: Any) -> None:
         """Handle resize event - adjust splitter proportionally."""
         super().resizeEvent(event)
 
@@ -1434,7 +1435,7 @@ Cache Misses: {session_stats['misses']}"""
         if self.isVisible():
             self.layout_manager.handle_resize(event.size().width())
 
-    def moveEvent(self, event):
+    def moveEvent(self, event: Any) -> None:
         """Handle dialog move event - constrain to screen bounds"""
         super().moveEvent(event)
 
