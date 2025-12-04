@@ -5,7 +5,6 @@ from __future__ import annotations
 Find real character sprites in Kirby Super Star ROMs
 """
 
-import os
 import sys
 from pathlib import Path
 

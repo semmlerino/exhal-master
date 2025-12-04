@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
 
-from PySide6.QtCore import Signal
-
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import BaseWorker, handle_worker_errors
+from PySide6.QtCore import Signal
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

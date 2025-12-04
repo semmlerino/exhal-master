@@ -15,6 +15,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+
 class ImportAnalyzer(ast.NodeVisitor):
     """AST visitor to analyze import patterns."""
 

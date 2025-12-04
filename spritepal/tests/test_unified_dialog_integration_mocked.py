@@ -7,6 +7,7 @@ using MockFactory to create lightweight, fast, and reliable test implementations
 from __future__ import annotations
 
 import os
+
 # Force Qt to use offscreen platform to avoid display issues
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -35,20 +36,20 @@ class TestUnifiedDialogIntegrationMocked:
         """Create all mock services for testing."""
         # Create mock services without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         # Preview generator
         preview_generator = Mock()
         preview_generator.create_preview_request = Mock()
         preview_generator.generate_preview = Mock()
         preview_generator.preview_ready = Mock()
         preview_generator.preview_error = Mock()
-        
+
         # Error handler
         error_handler = Mock()
         error_handler.handle_error = Mock()
         error_handler.handle_exception = Mock()
         error_handler.report_warning = Mock()
-        
+
         # Offset navigator
         offset_navigator = Mock()
         offset_navigator.offset_changed = Mock()
@@ -62,7 +63,7 @@ class TestUnifiedDialogIntegrationMocked:
         offset_navigator.move_backward = Mock(return_value=True)
         offset_navigator.validate_offset = Mock(return_value=(True, ""))
         offset_navigator.get_valid_range = Mock(return_value=(0, 0x400000))
-        
+
         # Preview coordinator
         preview_coordinator = Mock()
         preview_coordinator.preview_requested = Mock()
@@ -75,7 +76,7 @@ class TestUnifiedDialogIntegrationMocked:
         preview_coordinator.cancel_pending_previews = Mock()
         preview_coordinator.set_preview_widget = Mock()
         preview_coordinator.cleanup_workers = Mock()
-        
+
         # Sprites registry
         sprites_registry = Mock()
         sprites_registry.sprite_added = Mock()
@@ -92,7 +93,7 @@ class TestUnifiedDialogIntegrationMocked:
         sprites_registry.export_sprites = Mock(return_value=[])
         sprites_registry.has_sprite_at = Mock(return_value=False)
         sprites_registry.get_sprites_in_range = Mock(return_value=[])
-        
+
         # Worker manager
         worker_manager = Mock()
         worker_manager.worker_started = Mock()
@@ -102,7 +103,7 @@ class TestUnifiedDialogIntegrationMocked:
         worker_manager.cleanup_worker = Mock(return_value=True)
         worker_manager.cleanup_all_workers = Mock(return_value=0)
         worker_manager.get_active_workers = Mock(return_value=[])
-        
+
         return {
             "preview_generator": preview_generator,
             "error_handler": error_handler,
@@ -116,7 +117,7 @@ class TestUnifiedDialogIntegrationMocked:
     def mock_tabs(self):
         """Create mock tabs for testing."""
         # Create pure mock tabs without Qt dependencies
-        
+
         # Helper class for mock signals
         class MockSignalImpl:
             def __init__(self):
@@ -124,23 +125,23 @@ class TestUnifiedDialogIntegrationMocked:
                 self.emit = Mock(side_effect=self._emit)
                 self.connect = Mock(side_effect=self._connect)
                 self.disconnect = Mock(side_effect=self._disconnect)
-            
+
             def _connect(self, callback):
                 self._callbacks.append(callback)
-            
+
             def _disconnect(self, callback=None):
                 if callback is None:
                     self._callbacks.clear()
                 elif callback in self._callbacks:
                     self._callbacks.remove(callback)
-            
+
             def _emit(self, *args):
                 for callback in self._callbacks:
                     try:
                         callback(*args)
                     except Exception:
                         pass
-        
+
         # Browse tab
         browse_tab = Mock()
         browse_tab.offset_changed = MockSignalImpl()
@@ -153,7 +154,7 @@ class TestUnifiedDialogIntegrationMocked:
         browse_tab.slider.setValue = Mock()
         browse_tab.slider.value = Mock(return_value=0x200000)
         browse_tab.slider.maximum = Mock(return_value=0x400000)
-        
+
         # Smart tab
         smart_tab = Mock()
         smart_tab.smart_mode_changed = MockSignalImpl()
@@ -164,7 +165,7 @@ class TestUnifiedDialogIntegrationMocked:
         smart_tab.locations_combo = Mock()
         smart_tab.locations_combo.setCurrentIndex = Mock()
         smart_tab.locations_combo.currentIndex = Mock(return_value=0)
-        
+
         # History tab
         history_tab = Mock()
         history_tab.sprite_selected = MockSignalImpl()
@@ -179,7 +180,7 @@ class TestUnifiedDialogIntegrationMocked:
         history_tab.clear_button = Mock()
         history_tab.clear_button.isEnabled = Mock(return_value=False)
         history_tab.clear_button.click = Mock()
-        
+
         return {
             "browse_tab": browse_tab,
             "smart_tab": smart_tab,
@@ -191,16 +192,16 @@ class TestUnifiedDialogIntegrationMocked:
         """Create mock signal coordinator."""
         # Create coordinator without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         coordinator = Mock()
-        
+
         # External compatibility signals
         coordinator.offset_changed = Mock()
         coordinator.sprite_found = Mock()
         coordinator.preview_requested = Mock()
         coordinator.search_started = Mock()
         coordinator.search_completed = Mock()
-        
+
         # Internal coordination signals
         coordinator.tab_switch_requested = Mock()
         coordinator.update_title_requested = Mock()
@@ -210,7 +211,7 @@ class TestUnifiedDialogIntegrationMocked:
         coordinator.preview_update_queued = Mock()
         coordinator.preview_generation_started = Mock()
         coordinator.preview_generation_completed = Mock()
-        
+
         # Methods
         coordinator.queue_offset_update = Mock()
         coordinator.queue_preview_update = Mock()
@@ -221,7 +222,7 @@ class TestUnifiedDialogIntegrationMocked:
         coordinator.is_searching = Mock(return_value=False)
         coordinator.get_current_offset = Mock(return_value=0x200000)
         coordinator.cleanup = Mock()
-        
+
         return coordinator
 
     @pytest.fixture
@@ -266,8 +267,7 @@ class TestUnifiedDialogIntegrationMocked:
 
         # Signals - use pure mock signals for mock testing
         # Import the fallback MockSignal class directly
-        from tests.infrastructure.qt_mocks import MockSignal as FallbackMockSignal
-        
+
         # Create mock signals that work without Qt
         class MockSignalImpl:
             def __init__(self):
@@ -275,23 +275,23 @@ class TestUnifiedDialogIntegrationMocked:
                 self.emit = Mock(side_effect=self._emit)
                 self.connect = Mock(side_effect=self._connect)
                 self.disconnect = Mock(side_effect=self._disconnect)
-            
+
             def _connect(self, callback):
                 self._callbacks.append(callback)
-            
+
             def _disconnect(self, callback=None):
                 if callback is None:
                     self._callbacks.clear()
                 elif callback in self._callbacks:
                     self._callbacks.remove(callback)
-            
+
             def _emit(self, *args):
                 for callback in self._callbacks:
                     try:
                         callback(*args)
                     except Exception:
                         pass
-        
+
         dialog.offset_changed = MockSignalImpl()
         dialog.sprite_found = MockSignalImpl()
 
@@ -480,34 +480,34 @@ class TestSignalCoordinatorIntegrationMocked:
         """Create mock services."""
         # Reuse the same mock service creation logic
         from unittest.mock import Mock
-        
+
         # Preview generator
         preview_generator = Mock()
         preview_generator.create_preview_request = Mock()
         preview_generator.generate_preview = Mock()
         preview_generator.preview_ready = Mock()
         preview_generator.preview_error = Mock()
-        
-        # Error handler 
+
+        # Error handler
         error_handler = real_factory.create_error_handler()  # Use real error handler from factory
-        
+
         # Other services as mocks
         offset_navigator = Mock()
         offset_navigator.get_current_state = Mock()
         offset_navigator.set_offset = Mock(return_value=True)
         offset_navigator.validate_offset = Mock(return_value=(True, ""))
         offset_navigator.get_valid_range = Mock(return_value=(0, 0x400000))
-        
+
         preview_coordinator = Mock()
         preview_coordinator.request_preview = Mock()
         preview_coordinator.cleanup_workers = Mock()
-        
+
         sprites_registry = Mock()
         sprites_registry.add_sprite = Mock(return_value=True)
         sprites_registry.get_all_sprites = Mock(return_value=[])
-        
+
         worker_manager = real_factory.create_worker_manager()  # Use real worker manager
-        
+
         return {
             "preview_generator": preview_generator,
             "error_handler": error_handler,
@@ -522,16 +522,16 @@ class TestSignalCoordinatorIntegrationMocked:
         """Create mock signal coordinator."""
         # Create coordinator without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         coordinator = Mock()
-        
+
         # External compatibility signals
         coordinator.offset_changed = Mock()
         coordinator.sprite_found = Mock()
         coordinator.preview_requested = Mock()
         coordinator.search_started = Mock()
         coordinator.search_completed = Mock()
-        
+
         # Internal coordination signals
         coordinator.tab_switch_requested = Mock()
         coordinator.update_title_requested = Mock()
@@ -541,7 +541,7 @@ class TestSignalCoordinatorIntegrationMocked:
         coordinator.preview_update_queued = Mock()
         coordinator.preview_generation_started = Mock()
         coordinator.preview_generation_completed = Mock()
-        
+
         # Methods
         coordinator.queue_offset_update = Mock()
         coordinator.queue_preview_update = Mock()
@@ -552,7 +552,7 @@ class TestSignalCoordinatorIntegrationMocked:
         coordinator.is_searching = Mock(return_value=False)
         coordinator.get_current_offset = Mock(return_value=0x200000)
         coordinator.cleanup = Mock()
-        
+
         return coordinator
 
     def test_queue_based_offset_updates(self, coordinator):
@@ -621,7 +621,7 @@ class TestThreadSafetyIntegrationMocked:
         """Create thread-safe mock services."""
         # Create services without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         services = {
             "preview_generator": Mock(),
             "error_handler": real_factory.create_error_handler(),
@@ -645,7 +645,7 @@ class TestThreadSafetyIntegrationMocked:
         """Create coordinator for thread testing."""
         # Create coordinator without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         coordinator = Mock()
 
         # Make coordinator methods track call count for thread testing
@@ -754,7 +754,7 @@ class TestPerformanceIntegrationMocked:
         """Create performance-optimized mock services."""
         # Create services without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         return {
             "preview_generator": Mock(),
             "error_handler": real_factory.create_error_handler(),
@@ -769,7 +769,7 @@ class TestPerformanceIntegrationMocked:
         """Create performance coordinator."""
         # Create coordinator without using deprecated MockFactory
         from unittest.mock import Mock
-        
+
         coordinator = Mock()
 
         # Add performance tracking
@@ -862,31 +862,31 @@ class TestCompatibilityIntegrationMocked:
     def mock_dialog_for_compatibility(self):
         """Create dialog mock for compatibility testing."""
         dialog = Mock()
-        
-        # Create mock signals that work without Qt 
+
+        # Create mock signals that work without Qt
         class MockSignalImpl:
             def __init__(self):
                 self._callbacks = []
                 self.emit = Mock(side_effect=self._emit)
                 self.connect = Mock(side_effect=self._connect)
                 self.disconnect = Mock(side_effect=self._disconnect)
-            
+
             def _connect(self, callback):
                 self._callbacks.append(callback)
-            
+
             def _disconnect(self, callback=None):
                 if callback is None:
                     self._callbacks.clear()
                 elif callback in self._callbacks:
                     self._callbacks.remove(callback)
-            
+
             def _emit(self, *args):
                 for callback in self._callbacks:
                     try:
                         callback(*args)
                     except Exception:
                         pass
-        
+
         dialog.offset_changed = MockSignalImpl()
         dialog.sprite_found = MockSignalImpl()
         dialog.result = Mock(return_value=Mock())

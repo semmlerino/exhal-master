@@ -45,14 +45,13 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from PySide6.QtCore import QObject, QThread
-from PySide6.QtWidgets import QApplication, QWidget
-
 from core.managers.base_manager import BaseManager
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.registry import ManagerRegistry
 from core.managers.session_manager import SessionManager
+from PySide6.QtCore import QObject, QThread
+from PySide6.QtWidgets import QApplication, QWidget
 from ui.common.error_handler import ErrorHandler
 from ui.common.worker_manager import WorkerManager
 from ui.main_window import MainWindow

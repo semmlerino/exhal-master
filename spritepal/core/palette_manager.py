@@ -4,7 +4,7 @@ Palette management for SpritePal
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -172,7 +172,7 @@ class PaletteManager:
                     "rom_title": extraction_params.get("rom_title", ""),
                     "rom_checksum": extraction_params.get("rom_checksum", ""),
                     "extraction_date": extraction_params.get(
-                        "extraction_date", datetime.now(timezone.utc).isoformat()
+                        "extraction_date", datetime.now(UTC).isoformat()
                     ),
                 }
             else:
@@ -184,7 +184,7 @@ class PaletteManager:
                     "tile_count": extraction_params.get("tile_count", 0),
                     "extraction_size": extraction_params.get("extraction_size", 0),
                     "extraction_date": extraction_params.get(
-                        "extraction_date", datetime.now(timezone.utc).isoformat()
+                        "extraction_date", datetime.now(UTC).isoformat()
                     ),
                 }
 

@@ -46,7 +46,6 @@ try:
     from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
     from PySide6.QtWidgets import QApplication, QMessageBox
-
     from ui.windows.detached_gallery_window import DetachedGalleryWindow
     QT_AVAILABLE = True
 except ImportError:

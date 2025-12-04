@@ -12,13 +12,13 @@ from typing import Any
 import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
-from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from PySide6.QtWidgets import QApplication
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 
 # Ensure headless Qt environment
 # Serial execution required: QApplication management
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.ci_safe,

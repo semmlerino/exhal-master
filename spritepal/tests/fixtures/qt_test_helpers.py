@@ -7,7 +7,8 @@ which can hide real bugs and don't provide proper Qt functionality.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 from PySide6.QtCore import Qt

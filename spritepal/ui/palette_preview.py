@@ -7,7 +7,6 @@ from __future__ import annotations
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QWidget
-
 from ui.common.spacing_constants import BORDER_THIN, PALETTE_PREVIEW_SIZE
 
 

@@ -16,10 +16,11 @@ import logging
 import pickle
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
-from typing import Any, Callable
+from typing import Any
 
 from PIL import Image
 

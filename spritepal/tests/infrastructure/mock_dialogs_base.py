@@ -7,7 +7,8 @@ while maintaining realistic Qt signal behavior.
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class TestDialogBase:

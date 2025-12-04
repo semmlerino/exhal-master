@@ -16,11 +16,10 @@ import struct
 from pathlib import Path
 from typing import Any
 
-from core.hal_compression import HALCompressor
 
 class TestROMGenerator:
     """Generate test ROM files with known sprite data."""
-    
+
     @staticmethod
     def create_4bpp_tile_data(tile_count: int, pattern: str = "gradient") -> bytes:
         """
@@ -34,7 +33,7 @@ class TestROMGenerator:
             Bytes of 4bpp tile data (32 bytes per tile)
         """
         tile_data = bytearray()
-        
+
         for tile_idx in range(tile_count):
             if pattern == "gradient":
                 # Create gradient pattern
@@ -43,7 +42,7 @@ class TestROMGenerator:
                         # Each plane contributes to the color index
                         byte_val = (tile_idx + row * 8 + plane * 2) % 256
                         tile_data.append(byte_val)
-            
+
             elif pattern == "checkerboard":
                 # Create checkerboard pattern
                 for row in range(8):
@@ -55,7 +54,7 @@ class TestROMGenerator:
                             # High planes: inverse pattern
                             byte_val = 0x55 if (row % 2) == 0 else 0xAA
                         tile_data.append(byte_val)
-            
+
             elif pattern == "solid":
                 # Solid color tiles
                 color_index = (tile_idx % 16)
@@ -65,14 +64,14 @@ class TestROMGenerator:
                         bit_set = (color_index >> plane) & 1
                         byte_val = 0xFF if bit_set else 0x00
                         tile_data.append(byte_val)
-            
+
             else:  # random
                 # Random pattern
                 for _ in range(32):
                     tile_data.append((tile_idx * 37 + _) % 256)
-        
+
         return bytes(tile_data)
-    
+
     @staticmethod
     def create_test_rom(size: int = 1024 * 1024) -> bytes:
         """
@@ -85,21 +84,21 @@ class TestROMGenerator:
             ROM data bytes
         """
         rom_data = bytearray(size)
-        
+
         # Fill with recognizable pattern
         for i in range(size):
             rom_data[i] = (i // 256) % 256
-        
+
         # Add header-like data at beginning
         rom_data[0:4] = b'TEST'
-        
+
         # Add version number
         rom_data[4:8] = struct.pack('<I', 0x01000000)  # Version 1.0.0.0
-        
+
         return bytes(rom_data)
-    
+
     @staticmethod
-    def insert_sprite_at_offset(rom_data: bytearray, offset: int, sprite_data: bytes, 
+    def insert_sprite_at_offset(rom_data: bytearray, offset: int, sprite_data: bytes,
                               compress: bool = False) -> dict[str, Any]:
         """
         Insert sprite data at a specific offset in ROM.
@@ -119,7 +118,7 @@ class TestROMGenerator:
             'tile_count': len(sprite_data) // 32,
             'compressed': compress
         }
-        
+
         if compress:
             # Note: HAL compression requires file I/O, so we'll skip actual compression in test data
             # For real testing, use actual ROM files with known compressed sprites
@@ -130,17 +129,17 @@ class TestROMGenerator:
             # Insert raw data
             data_to_insert = sprite_data
             sprite_info['compressed_size'] = len(sprite_data)
-        
+
         # Check bounds
         if offset + len(data_to_insert) <= len(rom_data):
             rom_data[offset:offset + len(data_to_insert)] = data_to_insert
         else:
             raise ValueError(f"Sprite data at offset {offset} exceeds ROM size")
-        
+
         return sprite_info
-    
+
     @staticmethod
-    def create_rom_with_sprites(sprites: list[dict[str, Any]], rom_size: int = 4 * 1024 * 1024) -> tuple[bytes, list[Dict]]:
+    def create_rom_with_sprites(sprites: list[dict[str, Any]], rom_size: int = 4 * 1024 * 1024) -> tuple[bytes, list[dict[str, Any]]]:
         """
         Create a ROM with multiple sprites at specified locations.
         
@@ -154,26 +153,26 @@ class TestROMGenerator:
         # Create base ROM
         rom_data = bytearray(TestROMGenerator.create_test_rom(rom_size))
         sprite_infos = []
-        
+
         for sprite_def in sprites:
             offset = sprite_def['offset']
             tile_count = sprite_def.get('tile_count', 64)
             pattern = sprite_def.get('pattern', 'gradient')
             compress = sprite_def.get('compress', True)
-            
+
             # Generate sprite data
             sprite_data = TestROMGenerator.create_4bpp_tile_data(tile_count, pattern)
-            
+
             # Insert into ROM
             sprite_info = TestROMGenerator.insert_sprite_at_offset(
                 rom_data, offset, sprite_data, compress
             )
             sprite_infos.append(sprite_info)
-        
+
         return bytes(rom_data), sprite_infos
-    
+
     @staticmethod
-    def create_kirby_like_rom() -> tuple[bytes, list[Dict]]:
+    def create_kirby_like_rom() -> tuple[bytes, list[dict[str, Any]]]:
         """
         Create a ROM with Kirby-like sprite layout.
         
@@ -185,19 +184,19 @@ class TestROMGenerator:
             {'offset': 0x200000, 'tile_count': 256, 'pattern': 'gradient', 'compress': True},
             {'offset': 0x206000, 'tile_count': 64, 'pattern': 'checkerboard', 'compress': True},
             {'offset': 0x208000, 'tile_count': 128, 'pattern': 'solid', 'compress': True},
-            
+
             # Enemy sprites
             {'offset': 0x210000, 'tile_count': 96, 'pattern': 'random', 'compress': True},
             {'offset': 0x212000, 'tile_count': 48, 'pattern': 'gradient', 'compress': True},
-            
+
             # Raw tile data (uncompressed)
             {'offset': 0x100000, 'tile_count': 32, 'pattern': 'checkerboard', 'compress': False},
         ]
-        
+
         return TestROMGenerator.create_rom_with_sprites(sprites)
-    
+
     @staticmethod
-    def save_test_rom(path: Path, rom_data: bytes, sprite_infos: list[Dict] = None):
+    def save_test_rom(path: Path, rom_data: bytes, sprite_infos: list[dict[str, Any]] | None = None):
         """
         Save test ROM to file with optional metadata.
         
@@ -208,7 +207,7 @@ class TestROMGenerator:
         """
         # Save ROM
         path.write_bytes(rom_data)
-        
+
         # Save metadata if provided
         if sprite_infos:
             import json

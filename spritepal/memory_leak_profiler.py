@@ -14,6 +14,7 @@ from typing import Any
 
 import psutil
 
+
 class MemoryMonitor:
     """Monitor memory usage for leak detection."""
 

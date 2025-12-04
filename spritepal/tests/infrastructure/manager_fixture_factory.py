@@ -104,7 +104,7 @@ class RealManagerFixtureFactory:
             manager = self.manager_factory.create_injection_manager(parent=self.qt_parent)
         else:
             # Use singleton manager
-            from core.managers import (  # noqa: PLC0415
+            from core.managers import (
                 get_injection_manager,
                 initialize_managers,
             )
@@ -136,11 +136,11 @@ class RealManagerFixtureFactory:
 
         if isolated:
             # Create isolated session manager
-            from core.managers.session_manager import SessionManager  # noqa: PLC0415
+            from core.managers.session_manager import SessionManager
             manager = SessionManager(settings_path=settings_path)
         else:
             # Use singleton manager
-            from core.managers import (  # noqa: PLC0415
+            from core.managers import (
                 get_session_manager,
                 initialize_managers,
             )
@@ -197,7 +197,7 @@ class RealManagerFixtureFactory:
     def _managers_initialized(self) -> bool:
         """Check if singleton managers are initialized."""
         try:
-            from core.managers import are_managers_initialized  # noqa: PLC0415
+            from core.managers import are_managers_initialized
             return are_managers_initialized()
         except ImportError:
             return False

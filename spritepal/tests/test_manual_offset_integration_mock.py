@@ -9,7 +9,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
 
 # Mark this entire module for fast, mock-based testing

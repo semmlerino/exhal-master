@@ -5,11 +5,10 @@ import os
 import tempfile
 
 import pytest
-from PIL import Image
-
 from core.extractor import SpriteExtractor
 from core.injector import InjectionWorker, SpriteInjector
 from core.palette_manager import PaletteManager
+from PIL import Image
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -253,7 +252,7 @@ class TestInjectionWorkflowIntegration:
         injector = SpriteInjector()
         offsets = [0xC000, 0xC400, 0xC800]
 
-        for sprite, offset in zip(sprites, offsets):
+        for sprite, offset in zip(sprites, offsets, strict=False):
             result, msg = injector.inject_sprite(sprite, test_vram, test_vram, offset)
             assert result is True, f"Injection failed: {msg}"
 

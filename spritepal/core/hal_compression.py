@@ -76,9 +76,9 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
 
     Runs in a separate process and handles HAL compression/decompression requests.
     """
-    import os  # noqa: PLC0415
-    import queue  # noqa: PLC0415
-    import signal  # noqa: PLC0415
+    import os
+    import queue
+    import signal
 
     # Ignore interrupt signals in worker processes
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -86,11 +86,11 @@ def _hal_worker_process(exhal_path: str, inhal_path: str, request_queue: mp.Queu
     # Setup basic logging for worker process to prevent FileNotFoundError issues
     worker_logger = None
     try:
-        from utils.logging_config import get_logger  # noqa: PLC0415
+        from utils.logging_config import get_logger
         worker_logger = get_logger(f"hal_worker_{os.getpid()}")
     except Exception:
         # If logging fails, create basic logger to avoid failures
-        import logging  # noqa: PLC0415
+        import logging
         worker_logger = logging.getLogger(f"hal_worker_{os.getpid()}")
         worker_logger.setLevel(logging.DEBUG)
         if not worker_logger.handlers:

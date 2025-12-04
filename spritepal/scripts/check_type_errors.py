@@ -10,13 +10,13 @@ Parses basedpyright JSON output and enforces error thresholds.
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
 
 class CITypeCheckAnalyzer:
     """CI-focused type checking analyzer with threshold enforcement."""
@@ -24,7 +24,7 @@ class CITypeCheckAnalyzer:
     # Critical error types that should be fixed first and count heavily
     CRITICAL_ERRORS = [
         "reportGeneralTypeIssues",
-        "reportMissingTypeArgument", 
+        "reportMissingTypeArgument",
         "reportUnknownMemberType",
         "reportUnknownParameterType",
         "reportArgumentType",
@@ -58,10 +58,10 @@ class CITypeCheckAnalyzer:
         self.project_path = Path(project_path)
         self.errors: list[dict[str, Any]] = []
         self.warnings: list[dict[str, Any]] = []
-        self.error_groups: dict[str, list[Dict[str, Any]]] = defaultdict(list)
-        self.file_errors: dict[str, list[Dict[str, Any]]] = defaultdict(list)
+        self.error_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        self.file_errors: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
-    def run_basedpyright_json(self, files: list[str | None] = None) -> dict[str, Any]:
+    def run_basedpyright_json(self, files: list[str | None] | None = None) -> dict[str, Any]:
         """Run basedpyright with JSON output."""
         cmd = ["basedpyright", "--outputjson"]
 
@@ -70,7 +70,7 @@ class CITypeCheckAnalyzer:
         else:
             cmd.append(".")
 
-        print(f"🔍 Running basedpyright with JSON output...")
+        print("🔍 Running basedpyright with JSON output...")
         print(f"   Command: {' '.join(cmd)}")
 
         try:
@@ -81,7 +81,7 @@ class CITypeCheckAnalyzer:
                 text=True,
                 cwd=self.project_path
             )
-            
+
             # Try to parse JSON output
             if result.stdout.strip():
                 try:
@@ -89,16 +89,16 @@ class CITypeCheckAnalyzer:
                 except json.JSONDecodeError:
                     print("⚠️ Could not parse JSON output, falling back to text parsing")
                     return {"summary": {"errorCount": 0, "warningCount": 0}, "generalDiagnostics": []}
-            
+
             return {"summary": {"errorCount": 0, "warningCount": 0}, "generalDiagnostics": []}
-            
+
         except Exception as e:
             print(f"❌ Error running basedpyright: {e}")
             return {"summary": {"errorCount": 0, "warningCount": 0}, "generalDiagnostics": []}
 
     def parse_json_output(self, json_data: dict[str, Any]) -> None:
         """Parse basedpyright JSON output into structured data."""
-        summary = json_data.get("summary", {})
+        json_data.get("summary", {})
         diagnostics = json_data.get("generalDiagnostics", [])
 
         for diagnostic in diagnostics:
@@ -149,12 +149,12 @@ class CITypeCheckAnalyzer:
 
         return categories
 
-    def generate_ci_report(self, 
+    def generate_ci_report(self,
                           threshold_critical: int = 20,
                           threshold_total: int = 150) -> dict[str, Any]:
         """Generate a comprehensive report for CI/CD usage."""
         categories = self.categorize_errors()
-        
+
         # Calculate file-based metrics
         files_with_errors = len(self.file_errors)
         worst_files = sorted(
@@ -172,7 +172,7 @@ class CITypeCheckAnalyzer:
         )[:10]
 
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "summary": {
                 "total_errors": len(self.errors),
                 "total_warnings": len(self.warnings),
@@ -183,7 +183,7 @@ class CITypeCheckAnalyzer:
                 "total_threshold": threshold_total,
                 "critical_passed": categories["critical"] <= threshold_critical,
                 "total_passed": len(self.errors) <= threshold_total,
-                "overall_passed": (categories["critical"] <= threshold_critical and 
+                "overall_passed": (categories["critical"] <= threshold_critical and
                                  len(self.errors) <= threshold_total)
             },
             "categories": categories,
@@ -202,7 +202,7 @@ class CITypeCheckAnalyzer:
         """Get examples of critical errors for the report."""
         examples = []
         shown = 0
-        
+
         for error_type in self.CRITICAL_ERRORS:
             if error_type in self.error_groups and shown < max_examples:
                 for error in self.error_groups[error_type][:2]:  # Max 2 per type
@@ -215,7 +215,7 @@ class CITypeCheckAnalyzer:
                     shown += 1
                     if shown >= max_examples:
                         break
-                        
+
         return examples
 
     def print_ci_summary(self, report: dict[str, Any], github_actions: bool = False) -> None:
@@ -229,37 +229,37 @@ class CITypeCheckAnalyzer:
             print(f"::notice::Total errors: {summary['total_errors']}")
             print(f"::notice::Critical errors: {categories['critical']}")
             print(f"::notice::Files with errors: {summary['files_with_errors']}")
-            
+
             if not thresholds["critical_passed"]:
                 print(f"::error::Critical errors ({categories['critical']}) exceed threshold ({thresholds['critical_threshold']})")
-                
+
             if not thresholds["total_passed"]:
                 print(f"::error::Total errors ({summary['total_errors']}) exceed threshold ({thresholds['total_threshold']})")
-                
+
             # Show critical examples
             for example in report["critical_examples"]:
                 print(f"::error file={example['file']},line={example['line']}::{example['type']}: {example['message']}")
-                
+
         else:
             # Standard output
             print("\n" + "=" * 60)
             print("🔍 CI TYPE CHECKING SUMMARY")
             print("=" * 60)
-            
-            print(f"\n📊 Results:")
+
+            print("\n📊 Results:")
             print(f"   Total errors: {summary['total_errors']}")
             print(f"   Critical errors: {categories['critical']}")
             print(f"   Important errors: {categories['important']}")
             print(f"   Files affected: {summary['files_with_errors']}")
-            
-            print(f"\n🎯 Thresholds:")
+
+            print("\n🎯 Thresholds:")
             status_critical = "✅" if thresholds["critical_passed"] else "❌"
             status_total = "✅" if thresholds["total_passed"] else "❌"
             print(f"   {status_critical} Critical: {categories['critical']}/{thresholds['critical_threshold']}")
             print(f"   {status_total} Total: {summary['total_errors']}/{thresholds['total_threshold']}")
-            
+
             if report["critical_examples"]:
-                print(f"\n🚨 Critical Error Examples:")
+                print("\n🚨 Critical Error Examples:")
                 for example in report["critical_examples"]:
                     print(f"   {example['file']}:{example['line']} - {example['type']}")
                     print(f"      {example['message']}")
@@ -283,7 +283,7 @@ def main():
         help="Maximum allowed critical errors (default: 20)"
     )
     parser.add_argument(
-        "--threshold-total", 
+        "--threshold-total",
         type=int,
         default=150,
         help="Maximum allowed total errors (default: 150)"

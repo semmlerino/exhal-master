@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from core.sprite_finder import SpriteFinder
 from utils.logging_config import get_logger
@@ -28,7 +28,7 @@ logger = get_logger(__name__)
 
 class LuaSpritePalValidator:
     """Validates ROM offsets found by Lua scripts against SpritePal sprite detection."""
-    
+
     def __init__(self, rom_path: str):
         """
         Initialize validator.
@@ -46,8 +46,8 @@ class LuaSpritePalValidator:
             "discrepancies": [],
             "summary": {}
         }
-        
-    def load_lua_results(self, lua_json_path: str) -> List[int]:
+
+    def load_lua_results(self, lua_json_path: str) -> list[int]:
         """
         Load ROM offsets from Lua script JSON output.
         
@@ -58,14 +58,14 @@ class LuaSpritePalValidator:
             List of ROM offsets found by Lua script
         """
         logger.info(f"Loading Lua results from: {lua_json_path}")
-        
+
         try:
-            with open(lua_json_path, 'r') as f:
+            with open(lua_json_path) as f:
                 data = json.load(f)
-                
+
             # Handle different JSON formats from the two Lua scripts
             offsets = []
-            
+
             if 'rom_offsets' in data:
                 # Standard format with rom_offsets array
                 for entry in data['rom_offsets']:
@@ -74,7 +74,7 @@ class LuaSpritePalValidator:
                     else:
                         offset = entry
                     offsets.append(offset)
-                    
+
             elif 'unique_rom_offsets' in data:
                 # Alternative format from precise script
                 for offset_key, info in data['unique_rom_offsets'].items():
@@ -90,29 +90,29 @@ class LuaSpritePalValidator:
                         else:
                             logger.warning(f"Unknown offset format: {offset_key} (type: {type(offset_key)})")
                             continue
-                        
+
                         # Validate offset is within reasonable ROM range
                         if not (0 <= offset <= 0x800000):  # 8MB max ROM size
                             logger.warning(f"Offset out of range: 0x{offset:X}")
                             continue
-                            
+
                         offsets.append(offset)
                     except (ValueError, TypeError) as e:
                         logger.warning(f"Failed to parse offset '{offset_key}': {e}")
                         continue
-                    
+
             # Sort offsets for consistent processing
             offsets.sort()
             self.results["lua_offsets"] = offsets
-            
+
             logger.info(f"Loaded {len(offsets)} ROM offsets from Lua results")
             return offsets
-            
+
         except Exception as e:
             logger.error(f"Failed to load Lua results: {e}")
             return []
-            
-    def validate_offsets_with_spritepal(self, offsets: List[int]) -> List[Dict[str, Any]]:
+
+    def validate_offsets_with_spritepal(self, offsets: list[int]) -> list[dict[str, Any]]:
         """
         Validate each ROM offset using SpritePal's sprite detection.
         
@@ -123,18 +123,18 @@ class LuaSpritePalValidator:
             List of validation results for each offset
         """
         logger.info(f"Validating {len(offsets)} ROM offsets with SpritePal")
-        
+
         validation_results = []
-        
+
         for i, offset in enumerate(offsets):
             logger.debug(f"Validating offset {i+1}/{len(offsets)}: 0x{offset:06X}")
-            
+
             try:
                 # Use SpriteFinder to check if this offset contains valid sprite data
                 sprite_info = self.sprite_finder.check_offset_for_sprite(
                     self.rom_path, offset
                 )
-                
+
                 result = {
                     "offset": offset,
                     "offset_hex": f"0x{offset:06X}",
@@ -144,16 +144,16 @@ class LuaSpritePalValidator:
                     "tile_count": sprite_info.get("tile_count", 0) if sprite_info else 0,
                     "decompressed_size": sprite_info.get("decompressed_size", 0) if sprite_info else 0
                 }
-                
+
                 if sprite_info:
                     logger.info(f"✓ Valid sprite at 0x{offset:06X}: "
                               f"confidence={result['confidence']:.3f}, "
                               f"tiles={result['tile_count']}")
                 else:
                     logger.debug(f"✗ No valid sprite at 0x{offset:06X}")
-                    
+
                 validation_results.append(result)
-                
+
             except Exception as e:
                 logger.warning(f"Error validating offset 0x{offset:06X}: {e}")
                 result = {
@@ -163,12 +163,12 @@ class LuaSpritePalValidator:
                     "error": str(e)
                 }
                 validation_results.append(result)
-                
+
         self.results["spritepal_validation"] = validation_results
         return validation_results
-        
-    def analyze_results(self, lua_offsets: List[int], 
-                       validation_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+
+    def analyze_results(self, lua_offsets: list[int],
+                       validation_results: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Analyze validation results and identify matches/discrepancies.
         
@@ -180,22 +180,22 @@ class LuaSpritePalValidator:
             Analysis summary
         """
         logger.info("Analyzing validation results")
-        
+
         # Categorize results
         valid_sprites = [r for r in validation_results if r["valid_sprite"]]
         invalid_offsets = [r for r in validation_results if not r["valid_sprite"]]
-        
+
         # Calculate statistics
         total_offsets = len(lua_offsets)
         valid_count = len(valid_sprites)
         invalid_count = len(invalid_offsets)
         accuracy_rate = valid_count / total_offsets if total_offsets > 0 else 0.0
-        
+
         # Find high-confidence sprites
         high_confidence = [r for r in valid_sprites if r["confidence"] >= 0.7]
         medium_confidence = [r for r in valid_sprites if 0.4 <= r["confidence"] < 0.7]
         low_confidence = [r for r in valid_sprites if r["confidence"] < 0.4]
-        
+
         summary = {
             "total_lua_offsets": total_offsets,
             "valid_sprites_found": valid_count,
@@ -210,14 +210,14 @@ class LuaSpritePalValidator:
                 "low": [r["offset_hex"] for r in low_confidence]
             }
         }
-        
+
         self.results["summary"] = summary
         self.results["matches"] = valid_sprites
         self.results["discrepancies"] = invalid_offsets
-        
+
         return summary
-        
-    def generate_report(self, output_path: Optional[str] = None) -> str:
+
+    def generate_report(self, output_path: str | None = None) -> str:
         """
         Generate a detailed validation report.
         
@@ -228,7 +228,7 @@ class LuaSpritePalValidator:
             Report text
         """
         summary = self.results["summary"]
-        
+
         report = f"""
 === Lua Script vs SpritePal Validation Report ===
 
@@ -248,28 +248,28 @@ CONFIDENCE BREAKDOWN:
 
 HIGH CONFIDENCE SPRITES:
 """
-        
+
         for offset_hex in summary["confidence_breakdown"]["high"]:
             match = next(r for r in self.results["matches"] if r["offset_hex"] == offset_hex)
             report += f"  {offset_hex}: confidence={match['confidence']:.3f}, tiles={match['tile_count']}\n"
-            
-        report += f"\nMEDIUM CONFIDENCE SPRITES:\n"
+
+        report += "\nMEDIUM CONFIDENCE SPRITES:\n"
         for offset_hex in summary["confidence_breakdown"]["medium"]:
             match = next(r for r in self.results["matches"] if r["offset_hex"] == offset_hex)
             report += f"  {offset_hex}: confidence={match['confidence']:.3f}, tiles={match['tile_count']}\n"
-            
-        report += f"\nINVALID OFFSETS (No valid sprite data found):\n"
+
+        report += "\nINVALID OFFSETS (No valid sprite data found):\n"
         for discrepancy in self.results["discrepancies"][:20]:  # Show first 20
             report += f"  {discrepancy['offset_hex']}\n"
-            
+
         if len(self.results["discrepancies"]) > 20:
             report += f"  ... and {len(self.results['discrepancies']) - 20} more\n"
-            
+
         report += f"""
 ANALYSIS:
 The Lua script accuracy of {summary["accuracy_rate"]:.1%} indicates:
 """
-        
+
         if summary["accuracy_rate"] >= 0.8:
             report += "- EXCELLENT: Lua script very accurately identifies sprite locations\n"
         elif summary["accuracy_rate"] >= 0.6:
@@ -278,16 +278,16 @@ The Lua script accuracy of {summary["accuracy_rate"]:.1%} indicates:
             report += "- FAIR: Lua script has moderate accuracy, some false positives\n"
         else:
             report += "- POOR: Lua script has many false positives or detection issues\n"
-            
+
         report += f"- High confidence matches: {summary['high_confidence_sprites']}/{summary['total_lua_offsets']} ({summary['high_confidence_sprites']/summary['total_lua_offsets']:.1%})\n"
-        
+
         if output_path:
             with open(output_path, 'w') as f:
                 f.write(report)
             logger.info(f"Report saved to: {output_path}")
-            
+
         return report
-        
+
     def save_detailed_results(self, output_path: str) -> None:
         """
         Save detailed JSON results for further analysis.
@@ -309,54 +309,54 @@ def main():
     parser.add_argument("--lua-json", required=True, help="Path to Lua script JSON output")
     parser.add_argument("--output-dir", default="validation_results", help="Output directory")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose logging")
-    
+
     args = parser.parse_args()
-    
+
     if args.verbose:
         import logging
         logging.getLogger().setLevel(logging.DEBUG)
-        
+
     # Validate inputs
     rom_path = Path(args.rom)
     if not rom_path.exists():
         logger.error(f"ROM file not found: {rom_path}")
         sys.exit(1)
-        
+
     lua_json_path = Path(args.lua_json)
     if not lua_json_path.exists():
         logger.error(f"Lua JSON file not found: {lua_json_path}")
         sys.exit(1)
-        
+
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
-    
+
     logger.info("=== ROM Offset Validation: Lua Script vs SpritePal ===")
     logger.info(f"ROM: {rom_path}")
     logger.info(f"Lua JSON: {lua_json_path}")
-    
+
     # Initialize validator
     validator = LuaSpritePalValidator(str(rom_path))
-    
+
     # Load Lua results
     lua_offsets = validator.load_lua_results(str(lua_json_path))
     if not lua_offsets:
         logger.error("No valid offsets loaded from Lua results")
         sys.exit(1)
-        
+
     # Validate with SpritePal
     validation_results = validator.validate_offsets_with_spritepal(lua_offsets)
-    
+
     # Analyze results
     summary = validator.analyze_results(lua_offsets, validation_results)
-    
+
     # Generate outputs
     report_path = output_dir / f"validation_report_{lua_json_path.stem}.txt"
     results_path = output_dir / f"detailed_results_{lua_json_path.stem}.json"
-    
-    report = validator.generate_report(str(report_path))
+
+    validator.generate_report(str(report_path))
     validator.save_detailed_results(str(results_path))
-    
+
     # Print summary to console
     print("\n" + "="*60)
     print("VALIDATION COMPLETE")

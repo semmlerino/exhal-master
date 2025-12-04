@@ -12,6 +12,7 @@ import time
 import weakref
 from unittest.mock import Mock
 
+
 def test_batch_thumbnail_worker_infinite_loop_prevention():
     """
     Test that BatchThumbnailWorker doesn't get stuck in infinite loop.

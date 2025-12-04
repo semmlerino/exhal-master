@@ -6,10 +6,8 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from utils.sprite_regions import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     RegionUpdateManager,
     SpriteRegion,
     SpriteRegionClassifier,

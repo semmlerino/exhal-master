@@ -45,28 +45,25 @@ Bugs caught by real testing that mocks miss:
 """
 from __future__ import annotations
 
-import pytest
+from collections.abc import Generator
 from pathlib import Path
+
+import pytest
+from core.managers import ExtractionError, ExtractionManager, ValidationError
 from PIL import Image
-from typing import Generator
+from tests.infrastructure.manager_test_context import (
+    # Serial execution required: Thread safety concerns, Real Qt components
+    manager_context,
+)
 
 # Phase 2 Real Component Testing Infrastructure
 from tests.infrastructure.real_component_factory import RealComponentFactory
-from tests.infrastructure.manager_test_context import (
-# Serial execution required: Thread safety concerns, Real Qt components
-
-    ManagerTestContext,
-    manager_context,
-    isolated_manager_test,
-)
 from tests.infrastructure.test_data_repository import (
     TestDataRepository,
     get_test_data_repository,
 )
-from tests.fixtures.test_managers import create_extraction_manager_fixture
-
-from core.managers import ExtractionError, ExtractionManager, ValidationError
 from utils.constants import BYTES_PER_TILE
+
 
 @pytest.mark.no_manager_setup
 class TestExtractionManager:
@@ -132,16 +129,16 @@ class TestExtractionManager:
         REFACTOR: No mocking - test actual component integration
         """
         manager = real_factory.create_extraction_manager(with_test_data=True)
-        
+
         # Verify manager is properly initialized
         assert manager.is_initialized()
         assert manager.get_name() == "ExtractionManager"
-        
+
         # Verify real dependencies exist (not mocks)
         assert manager._sprite_extractor is not None
         assert manager._rom_extractor is not None
         assert manager._palette_manager is not None
-        
+
         # Verify real methods are callable
         assert callable(manager.validate_extraction_params)
         assert callable(manager.extract_from_vram)
@@ -152,12 +149,12 @@ class TestExtractionManager:
         """TDD: Manager context should provide properly configured manager."""
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Verify context provides real, initialized manager
             assert isinstance(manager, ExtractionManager)
             assert manager.is_initialized()
             assert manager.get_name() == "ExtractionManager"
-            
+
             # Context should handle lifecycle automatically
             assert manager._sprite_extractor is not None
 
@@ -170,10 +167,10 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Get real VRAM extraction test data
             vram_data = test_data_repo.get_vram_extraction_data("medium")
-            
+
             # Valid params with real files
             params = {
                 "vram_path": vram_data["vram_path"],
@@ -181,25 +178,25 @@ class TestExtractionManager:
                 "cgram_path": vram_data["cgram_path"],
                 "oam_path": vram_data["oam_path"]
             }
-            
+
             try:
                 # Test real parameter validation
                 manager.validate_extraction_params(params)
-                
+
                 # Verify all required files exist
                 assert Path(params["vram_path"]).exists()
-                assert Path(params["cgram_path"]).exists() 
+                assert Path(params["cgram_path"]).exists()
                 assert Path(params["oam_path"]).exists()
-                
+
                 # Verify file sizes are reasonable
                 vram_size = Path(params["vram_path"]).stat().st_size
                 cgram_size = Path(params["cgram_path"]).stat().st_size
                 oam_size = Path(params["oam_path"]).stat().st_size
-                
+
                 assert vram_size >= 0x8000  # At least 32KB VRAM
-                assert cgram_size >= 512    # At least 512 bytes CGRAM 
+                assert cgram_size >= 512    # At least 512 bytes CGRAM
                 assert oam_size >= 544      # At least 544 bytes OAM
-                
+
             except ValidationError as e:
                 # Real validation may be stricter - this is valuable test feedback
                 # Log the error for debugging but don't skip
@@ -245,10 +242,10 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Get real VRAM extraction test data
             vram_data = test_data_repo.get_vram_extraction_data("medium")
-            
+
             try:
                 # Test real VRAM extraction workflow
                 files = manager.extract_from_vram(
@@ -262,17 +259,17 @@ class TestExtractionManager:
                 output_png = f"{vram_data['output_base']}.png"
                 assert output_png in files
                 assert Path(output_png).exists()
-                
+
                 # Verify the extracted image is real with reasonable properties
                 img = Image.open(output_png)
                 assert img.mode in ["L", "P", "RGBA"]  # Valid image modes
                 assert img.size[0] > 0 and img.size[1] > 0
                 assert img.size[0] * img.size[1] >= 64  # Reasonable minimum size
-                
+
                 # Verify file has real image data (not just empty)
                 img_bytes = img.tobytes()
                 assert len(img_bytes) > 0
-                
+
             except ExtractionError as e:
                 # Real extraction may find issues with test data - this is valuable
                 print(f"Note: Real extraction found issue: {e}")
@@ -319,10 +316,10 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Get real ROM test data
             rom_data = test_data_repo.get_rom_extraction_data("medium")
-            
+
             # Test ROM extraction parameter validation
             test_params = {
                 "rom_path": rom_data["rom_path"],
@@ -338,14 +335,14 @@ class TestExtractionManager:
                 assert Path(test_params["rom_path"]).exists()
                 assert test_params["offset"] >= 0
                 assert isinstance(test_params["output_base"], str)
-                
+
                 # Verify ROM file has reasonable size
                 rom_size = Path(test_params["rom_path"]).stat().st_size
                 assert rom_size >= 0x80000  # At least 512KB
-                
+
                 # Test that offset is within ROM bounds
                 assert test_params["offset"] < rom_size
-                
+
             except ValidationError as e:
                 # Real ROM validation may be stricter - this is valuable feedback
                 print(f"Note: Real ROM validation found issue: {e}")
@@ -372,10 +369,10 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Get real ROM test data
             rom_data = test_data_repo.get_rom_extraction_data("medium")
-            
+
             try:
                 # Test real sprite preview generation
                 tile_data, width, height = manager.get_sprite_preview(
@@ -388,14 +385,14 @@ class TestExtractionManager:
                 assert isinstance(tile_data, bytes)
                 assert width > 0 and height > 0
                 assert width <= 512 and height <= 512  # Reasonable bounds
-                
+
                 # Verify tile data size makes sense
                 expected_min_size = (width * height // 64) * BYTES_PER_TILE
                 assert len(tile_data) >= expected_min_size
-                
+
                 # Verify tile data contains actual data (not all zeros)
                 assert not all(b == 0 for b in tile_data[:min(64, len(tile_data))])
-                
+
             except ValidationError as e:
                 # Real ROM validation may find issues - this is valuable
                 print(f"Note: Real ROM validation found issue: {e}")
@@ -425,20 +422,20 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Test real concurrent operation tracking
             assert manager._start_operation("vram_extraction")
-            assert manager._start_operation("rom_extraction") 
+            assert manager._start_operation("rom_extraction")
             assert manager._start_operation("sprite_preview")
 
             # Verify real state tracking
             assert manager.is_operation_active("vram_extraction")
             assert manager.is_operation_active("rom_extraction")
             assert manager.is_operation_active("sprite_preview")
-            
+
             # Test operation conflict detection
             assert not manager._start_operation("vram_extraction")  # Should conflict
-            
+
             # Verify state remains consistent
             assert manager.is_operation_active("vram_extraction")
 
@@ -446,7 +443,7 @@ class TestExtractionManager:
             manager._finish_operation("vram_extraction")
             manager._finish_operation("rom_extraction")
             manager._finish_operation("sprite_preview")
-            
+
             # Verify clean state
             assert not manager.is_operation_active("vram_extraction")
             assert not manager.is_operation_active("rom_extraction")
@@ -461,24 +458,24 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Get real test data
             vram_data = test_data_repo.get_vram_extraction_data("small")
-            
+
             # Track real Qt signal emissions
             progress_messages = []
             files_created_events = []
-            
+
             def on_progress(msg):
                 progress_messages.append(msg)
-                
+
             def on_files_created(files):
                 files_created_events.append(files)
 
             # Connect to real Qt signals
             manager.extraction_progress.connect(on_progress)
             manager.files_created.connect(on_files_created)
-            
+
             try:
                 # Run real extraction with Qt signal monitoring
                 with qtbot.waitSignal(manager.files_created, timeout=worker_timeout):
@@ -490,19 +487,19 @@ class TestExtractionManager:
 
                 # Wait for all Qt events to process
                 qtbot.waitUntil(lambda: len(progress_messages) > 0, timeout=signal_timeout)
-                
+
                 # Verify real signal emissions occurred
                 assert len(progress_messages) > 0, "Should emit progress signals"
                 assert len(files_created_events) > 0, "Should emit files created signal"
-                
+
                 # Verify signal content is meaningful
                 assert any("extract" in msg.lower() for msg in progress_messages)
-                
+
                 # Verify files_created signal contains real file paths
                 created_files = files_created_events[0]
                 assert len(created_files) > 0
                 assert all(Path(f).exists() for f in created_files)
-                
+
             except Exception as e:
                 # Real signal testing may reveal timing or connection issues
                 print(f"Note: Real signal testing found issue: {e}")
@@ -518,21 +515,21 @@ class TestExtractionManager:
         """
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
-            
+
             # Set up some real state
             manager._start_operation("test_operation")
             assert manager.is_operation_active("test_operation")
-            
+
             # Test real cleanup
             manager.cleanup()
-            
+
             # Verify cleanup doesn't break manager state
             assert not manager.is_operation_active("test_operation")
-            
+
             # Verify manager is still functional after cleanup
             assert manager.is_initialized()
             assert callable(manager.validate_extraction_params)
-            
+
             # Test cleanup is idempotent
             manager.cleanup()  # Should not raise
             manager.cleanup()  # Should not raise
@@ -554,24 +551,24 @@ def test_complete_extraction_workflow_tdd_integration(test_data_repo, qtbot, wor
     """
     with manager_context("extraction") as ctx:
         manager = ctx.get_extraction_manager()
-        
+
         # RED: Specify complete workflow behavior
         vram_data = test_data_repo.get_vram_extraction_data("small")
-        
+
         # Track real signal emissions
         progress_events = []
         completion_events = []
-        
+
         def on_progress(msg):
             progress_events.append(msg)
-            
+
         def on_files_created(files):
             completion_events.append(files)
-        
+
         # Connect to real Qt signals
         manager.extraction_progress.connect(on_progress)
         manager.files_created.connect(on_files_created)
-        
+
         try:
             # GREEN: Execute complete workflow with real components
             with qtbot.waitSignal(manager.files_created, timeout=worker_timeout):
@@ -580,34 +577,34 @@ def test_complete_extraction_workflow_tdd_integration(test_data_repo, qtbot, wor
                     vram_data["output_base"],
                     grayscale_mode=True
                 )
-            
+
             # Wait for all Qt events
             qtbot.waitUntil(lambda: len(progress_events) > 0, timeout=signal_timeout)
             qtbot.waitUntil(lambda: len(completion_events) > 0, timeout=signal_timeout)
-            
+
             # REFACTOR: Verify complete workflow results
             assert len(files) > 0, "Should create output files"
             assert len(progress_events) > 0, "Should emit progress signals"
             assert len(completion_events) > 0, "Should emit completion signal"
-            
+
             # Verify real files were created
             for file_path in files:
                 assert Path(file_path).exists(), f"Output file should exist: {file_path}"
                 assert Path(file_path).stat().st_size > 0, f"File should have content: {file_path}"
-            
+
             # Verify signal content is meaningful
             progress_text = " ".join(progress_events).lower()
             assert any(word in progress_text for word in ["extract", "process", "creat"])
-            
+
             # Verify completion signal contains actual files
             completed_files = completion_events[0]
             assert len(completed_files) > 0
             assert all(Path(f).exists() for f in completed_files)
-            
+
             # Test manager state after workflow
             assert not manager.is_operation_active("vram_extraction")
             assert manager.is_initialized()
-            
+
         except Exception as e:
             # Real workflow testing catches actual integration issues
             print(f"Note: Real workflow integration found issue: {e}")
@@ -626,7 +623,7 @@ def test_performance_baseline_real_extraction_benchmark(test_data_repo, benchmar
         with manager_context("extraction") as ctx:
             manager = ctx.get_extraction_manager()
             vram_data = test_data_repo.get_vram_extraction_data("small")
-            
+
             try:
                 files = manager.extract_from_vram(
                     vram_data["vram_path"],
@@ -636,10 +633,10 @@ def test_performance_baseline_real_extraction_benchmark(test_data_repo, benchmar
                 return files
             except Exception:
                 return []  # Performance test should not fail on data issues
-    
+
     # Benchmark real extraction performance
     result = benchmark(run_real_extraction)
-    
+
     # Verify benchmark ran successfully
     if result:
         assert len(result) >= 0  # Should return file list

@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
 
+
 @pytest.fixture(autouse=True)
 def setup_managers():
     """Setup managers for all tests"""

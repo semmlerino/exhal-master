@@ -337,7 +337,7 @@ class StateManager:
         """Enforce memory limit using LRU eviction."""
         while self._total_size_bytes > self._max_size_bytes and self._states:
             # Remove least recently used (first item)
-            key, entry = self._states.popitem(last=False)
+            _key, entry = self._states.popitem(last=False)
             self._total_size_bytes -= entry.size_bytes
 
     def get_memory_usage(self) -> tuple[float, float]:

@@ -19,8 +19,8 @@ Usage:
     pytest test_simple_dialogs_import_only.py -v
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -66,14 +66,14 @@ class ImportTestResult:
         print(f"Errors:      {len(self.errors)}")
         
         if failed > 0:
-            print(f"\nFailed tests:")
+            print("\nFailed tests:")
             for result in self.results:
                 if not result["success"]:
                     detail = f" - {result['detail']}" if result["detail"] else ""
                     print(f"  - {result['name']}{detail}")
         
         if self.errors:
-            print(f"\nGeneral errors:")
+            print("\nGeneral errors:")
             for error in self.errors:
                 print(f"  - {error}")
         
@@ -89,13 +89,13 @@ def test_basic_module_imports(results: ImportTestResult) -> None:
     # Test Python standard library imports that dialogs use
     try:
         import os
-        import sys  
+        import sys
         from pathlib import Path
-from typing import Any, ClassVar
+        from typing import Any, ClassVar
         results.record_test("Standard library imports", True, "os, sys, pathlib, typing")
     except ImportError as e:
         results.record_test("Standard library imports", False, str(e))
-    
+
     # Test project utility imports
     try:
         from utils.logging_config import get_logger
@@ -109,8 +109,8 @@ def test_feature_flag_system_imports(results: ImportTestResult) -> None:
     try:
         from utils.dialog_feature_flags import (
             get_dialog_implementation,
+            is_composed_dialogs_enabled,
             set_dialog_implementation,
-            is_composed_dialogs_enabled
         )
         results.record_test("Feature flag utilities import", True, "All utilities available")
         
@@ -155,7 +155,7 @@ def test_dialog_selector_import(results: ImportTestResult) -> None:
         from ui.components.base.dialog_selector import (
             DialogBase,
             get_dialog_implementation,
-            is_composed_dialogs_enabled
+            is_composed_dialogs_enabled,
         )
         results.record_test("Dialog selector import", True, "DialogBase and utilities available")
         

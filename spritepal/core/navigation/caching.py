@@ -556,7 +556,7 @@ class NavigationCache:
 
     def _dict_to_hint(self, hint_dict: dict[str, Any]) -> NavigationHint:
         """Convert dictionary back to NavigationHint object."""
-        from .data_structures import NavigationStrategy, RegionType  # noqa: PLC0415
+        from .data_structures import NavigationStrategy, RegionType
 
         return NavigationHint(
             target_offset=hint_dict["target_offset_int"],
@@ -588,7 +588,7 @@ class NavigationCache:
                 # Process precomputation queue
                 with self._queue_lock:
                     if self._precompute_queue:
-                        cache_key, computation_data = self._precompute_queue.pop(0)
+                        cache_key, _computation_data = self._precompute_queue.pop(0)
                         # Process precomputation (implementation depends on specific needs)
                         logger.debug(f"Processing background computation for {cache_key}")
 

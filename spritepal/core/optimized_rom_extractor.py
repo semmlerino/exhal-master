@@ -16,10 +16,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
-from PIL import Image
-
 from core.mmap_rom_reader import MemoryMappedROMReader, optimize_rom_operations
 from core.rom_extractor import ROMExtractor
+from PIL import Image
 from utils.constants import (
     BYTES_PER_TILE,
     DEFAULT_TILES_PER_ROW,

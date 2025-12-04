@@ -12,21 +12,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def run_tests():
     """Run the signal/slot integration tests."""
-    
+
     # Get the test file path
     test_file = Path(__file__).parent / "tests" / "integration" / "test_qt_signal_slot_integration.py"
-    
+
     if not test_file.exists():
         print(f"Error: Test file not found: {test_file}")
         return 1
-    
+
     print("=" * 80)
     print("Running Qt Signal/Slot Integration Tests")
     print("=" * 80)
     print()
-    
+
     # Run with verbose output and capture
     cmd = [
         sys.executable,
@@ -38,13 +39,13 @@ def run_tests():
         "-m", "gui",  # Run GUI tests
         "--color=yes",
     ]
-    
+
     print(f"Command: {' '.join(cmd)}")
     print()
-    
+
     # Run the tests
     result = subprocess.run(cmd, capture_output=False, text=True)
-    
+
     if result.returncode == 0:
         print()
         print("=" * 80)
@@ -55,7 +56,7 @@ def run_tests():
         print("=" * 80)
         print("✗ Some tests failed. See output above for details.")
         print("=" * 80)
-        
+
     return result.returncode
 
 if __name__ == "__main__":

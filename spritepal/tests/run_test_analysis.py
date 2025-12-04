@@ -6,11 +6,11 @@ Script to analyze test suite pass rate by running tests in batches.
 This avoids timeout issues and provides detailed statistics.
 """
 
-import subprocess
-import sys
 import json
-from pathlib import Path
+import subprocess
 import time
+from pathlib import Path
+
 
 def run_test_batch(test_files):
     """Run a batch of test files and return results."""
@@ -23,7 +23,7 @@ def run_test_batch(test_files):
         "--json-report-file=/tmp/test_report.json",
         "--timeout=30",  # 30 second timeout per test
     ]
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -32,7 +32,7 @@ def run_test_batch(test_files):
             timeout=120,  # 2 minute timeout for batch
             cwd="/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal"
         )
-        
+
         # Parse JSON report if it exists
         report_file = Path("/tmp/test_report.json")
         if report_file.exists():
@@ -45,13 +45,13 @@ def run_test_batch(test_files):
                     "error": report["summary"].get("error", 0),
                     "total": report["summary"].get("total", 0),
                 }
-        
+
         # Fallback: parse output
         output = result.stdout + result.stderr
         passed = output.count(" passed")
         failed = output.count(" failed")
         skipped = output.count(" skipped")
-        
+
         return {
             "passed": passed,
             "failed": failed,
@@ -59,7 +59,7 @@ def run_test_batch(test_files):
             "error": 0,
             "total": passed + failed + skipped,
         }
-        
+
     except subprocess.TimeoutExpired:
         return {
             "passed": 0,
@@ -81,14 +81,14 @@ def run_test_batch(test_files):
 
 def main():
     """Run test analysis."""
-    
+
     # Find all test files
     test_dir = Path("/mnt/c/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/tests")
     test_files = list(test_dir.glob("test_*.py"))
-    
+
     # Sort for consistent ordering
     test_files.sort()
-    
+
     # Filter out known problematic files
     problematic = [
         "test_smart_preview",
@@ -96,21 +96,21 @@ def main():
         "test_concurrent",
         "test_worker_manager",
     ]
-    
+
     safe_files = []
     unsafe_files = []
-    
+
     for f in test_files:
         if any(p in f.stem for p in problematic):
             unsafe_files.append(f)
         else:
             safe_files.append(f)
-    
+
     print(f"Found {len(test_files)} test files")
     print(f"  Safe: {len(safe_files)}")
     print(f"  Potentially unsafe: {len(unsafe_files)}")
     print()
-    
+
     # Run tests in batches
     batch_size = 5
     total_stats = {
@@ -120,33 +120,33 @@ def main():
         "error": 0,
         "total": 0,
     }
-    
+
     print("Running safe test files...")
     for i in range(0, len(safe_files), batch_size):
         batch = safe_files[i:i+batch_size]
         batch_names = [f.name for f in batch]
-        
+
         print(f"  Batch {i//batch_size + 1}: {', '.join(batch_names[:3])}...")
-        
+
         stats = run_test_batch([str(f) for f in batch])
-        
+
         # Update totals
         for key in ["passed", "failed", "skipped", "error"]:
             total_stats[key] += stats.get(key, 0)
-        
+
         # Print batch results
         if stats.get("timeout"):
-            print(f"    TIMEOUT")
+            print("    TIMEOUT")
         else:
             print(f"    Passed: {stats['passed']}, Failed: {stats['failed']}, "
                   f"Skipped: {stats['skipped']}, Errors: {stats['error']}")
-        
+
         # Small delay between batches
         time.sleep(0.5)
-    
+
     # Calculate totals
     total_stats["total"] = total_stats["passed"] + total_stats["failed"] + total_stats["skipped"] + total_stats["error"]
-    
+
     # Print summary
     print("\n" + "="*60)
     print("TEST SUITE ANALYSIS SUMMARY")
@@ -157,19 +157,19 @@ def main():
     print(f"  Skipped: {total_stats['skipped']:4d} ({total_stats['skipped']*100/max(1, total_stats['total']):5.1f}%)")
     print(f"  Errors:  {total_stats['error']:4d} ({total_stats['error']*100/max(1, total_stats['total']):5.1f}%)")
     print()
-    
+
     # Calculate effective pass rate (passed / (passed + failed))
     effective_total = total_stats["passed"] + total_stats["failed"]
     if effective_total > 0:
         pass_rate = total_stats["passed"] * 100 / effective_total
         print(f"Effective pass rate: {pass_rate:.1f}%")
-        print(f"Target: 80%")
-        
+        print("Target: 80%")
+
         if pass_rate >= 80:
             print("✅ TARGET ACHIEVED!")
         else:
             print(f"❌ Gap to target: {80 - pass_rate:.1f}%")
-    
+
     print("\nNote: Skipped tests marked as segfault-prone for safety")
     print(f"Unsafe files not tested: {len(unsafe_files)}")
 

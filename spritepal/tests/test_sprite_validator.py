@@ -8,9 +8,8 @@ import os
 import tempfile
 
 import pytest
-from PIL import Image
-
 from core.sprite_validator import SpriteValidator
+from PIL import Image
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [

@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from ui.zoomable_preview import PreviewPanel, ZoomablePreviewWidget
 
+
 @pytest.mark.gui
 class TestZoomablePreviewWidget:
     """Test ZoomablePreviewWidget functionality"""

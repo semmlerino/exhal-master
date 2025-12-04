@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-
 from utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -91,7 +90,7 @@ class SpriteVisualValidator:
         _, binary = cv2.threshold(img_array, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
         # Find connected components
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary, connectivity=8)
+        num_labels, _labels, stats, _centroids = cv2.connectedComponentsWithStats(binary, connectivity=8)
 
         # Filter out very small components (noise)
         min_area = 16  # At least 4x4 pixels
@@ -191,7 +190,7 @@ class SpriteVisualValidator:
         """
         Calculate symmetry - many character sprites have vertical symmetry.
         """
-        height, width = img_array.shape
+        _height, width = img_array.shape
 
         # Check vertical symmetry
         left_half = img_array[:, :width//2]

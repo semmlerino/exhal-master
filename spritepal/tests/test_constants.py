@@ -36,6 +36,7 @@ from utils.constants import (
     VRAM_SPRITE_SIZE,
 )
 
+
 @pytest.mark.no_manager_setup
 class TestConstants:
     """Test constants are properly defined"""

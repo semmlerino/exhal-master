@@ -15,15 +15,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-import re
-from collections import defaultdict, Counter
-import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -72,13 +72,13 @@ class TestSuiteMetrics:
     failed_tests: int
     skipped_tests: int
     error_tests: int
-    
+
     # Performance metrics
     total_duration: float
     average_duration: float
     median_duration: float
     slowest_tests: list[tuple[str, float]] = field(default_factory=list)
-    
+
     # Failure analysis
     failures_by_category: dict[FailureCategory, int] = field(default_factory=dict)
     failures_by_file: dict[str, int] = field(default_factory=dict)
@@ -87,7 +87,7 @@ class TestSuiteMetrics:
     type_failures: int = 0
     mock_failures: int = 0
     qt_failures: int = 0
-    
+
     # Health indicators
     pass_rate: float = 0.0
     improvement_trend: float = 0.0
@@ -96,7 +96,7 @@ class TestSuiteMetrics:
 
 class FailureCategorizer:
     """Categorizes test failures based on error patterns."""
-    
+
     CATEGORY_PATTERNS = {
         'type_annotation': [
             r'TypeError.*type object',
@@ -180,38 +180,38 @@ class FailureCategorizer:
             r'AttributeError.*object.*no attribute',
         ],
     }
-    
+
     def categorize_failure(self, failure_info: dict[str, str]) -> FailureCategory:
         """Categorize a failure based on error message and traceback."""
         combined_text = f"{failure_info.get('message', '')} {failure_info.get('traceback', '')}"
         combined_text = combined_text.lower()
-        
+
         # Check patterns in order of specificity
         for category, patterns in self.CATEGORY_PATTERNS.items():
             for pattern in patterns:
                 if re.search(pattern, combined_text, re.IGNORECASE):
                     return category
-        
+
         return 'uncategorized'
-    
+
     def analyze_failure_trends(self, failures: list[TestFailure]) -> dict[str, any]:
         """Analyze failure trends and patterns."""
         category_counts = Counter(f.category for f in failures)
         file_counts = Counter(f.test_file for f in failures)
-        
+
         # Identify quick wins (categories with many simple fixes)
         quick_win_categories = {
             'type_annotation': 0.8,  # 80% can be fixed quickly
             'import_error': 0.9,     # 90% can be fixed quickly
             'mock_related': 0.6,     # 60% can be fixed quickly
         }
-        
+
         quick_wins = sum(
             int(category_counts[cat] * percentage)
             for cat, percentage in quick_win_categories.items()
             if cat in category_counts
         )
-        
+
         return {
             'category_distribution': dict(category_counts),
             'file_distribution': dict(file_counts.most_common(10)),
@@ -222,11 +222,11 @@ class FailureCategorizer:
 
 class TestRunner:
     """Handles test execution with different strategies."""
-    
+
     def __init__(self, test_dir: Path):
         self.test_dir = test_dir
         self.project_root = test_dir.parent
-    
+
     def run_progressive_tests(self) -> dict[str, TestSuiteMetrics]:
         """Run tests in progressive stages to quickly identify issues."""
         stages = [
@@ -243,26 +243,26 @@ class TestRunner:
             ]),
             ("full_suite", ["tests/"]),
         ]
-        
+
         results = {}
-        
+
         for stage_name, test_args in stages:
             print(f"Running {stage_name} tests...")
             metrics = self._run_test_stage(stage_name, test_args)
             results[stage_name] = metrics
-            
+
             # Stop if failure rate is too high (>10% for early stages)
             if metrics.total_tests > 0 and metrics.pass_rate < 0.9 and stage_name != "full_suite":
                 print(f"High failure rate in {stage_name}: {metrics.pass_rate:.1%}")
                 print("Stopping progressive run for analysis.")
                 break
-        
+
         return results
-    
+
     def _run_test_stage(self, stage_name: str, test_args: list[str]) -> TestSuiteMetrics:
         """Run a single stage of tests and collect metrics."""
         start_time = time.time()
-        
+
         # Prepare pytest command
         cmd = [
             sys.executable, "-m", "pytest",
@@ -272,7 +272,7 @@ class TestRunner:
             "--durations=10",
             "--timeout=120",  # 2 minute timeout per test
         ] + test_args
-        
+
         try:
             # Run tests
             result = subprocess.run(
@@ -282,12 +282,12 @@ class TestRunner:
                 text=True,
                 timeout=600  # 10 minute timeout for entire stage
             )
-            
+
             total_duration = time.time() - start_time
-            
+
             # Parse results
             return self._parse_test_results(stage_name, result, total_duration)  # type: ignore[attr-defined]
-            
+
         except subprocess.TimeoutExpired:
             return TestSuiteMetrics(
                 timestamp=datetime.now(),
@@ -301,7 +301,7 @@ class TestRunner:
                 median_duration=600,
                 timeout_failures=1
             )
-    
+
     def _parse_test_results(self, stage_name: str, result: subprocess.CompletedProcess, duration: float) -> TestSuiteMetrics:  # type: ignore[attr-defined]
         """Parse test results from pytest output and XML."""
         metrics = TestSuiteMetrics(
@@ -315,10 +315,10 @@ class TestRunner:
             average_duration=0,
             median_duration=0,
         )
-        
+
         # Parse stdout for basic counts
         output = result.stdout + result.stderr
-        
+
         # Look for pytest summary line
         summary_patterns = [
             r'(\d+) passed',
@@ -326,7 +326,7 @@ class TestRunner:
             r'(\d+) error',
             r'(\d+) skipped',
         ]
-        
+
         for pattern in summary_patterns:
             match = re.search(pattern, output)
             if match:
@@ -339,56 +339,56 @@ class TestRunner:
                     metrics.error_tests = count
                 elif 'skipped' in pattern:
                     metrics.skipped_tests = count
-        
+
         metrics.total_tests = (
             metrics.passed_tests + metrics.failed_tests +
             metrics.error_tests + metrics.skipped_tests
         )
-        
+
         if metrics.total_tests > 0:
             metrics.pass_rate = metrics.passed_tests / metrics.total_tests
             metrics.average_duration = duration / metrics.total_tests
             metrics.median_duration = metrics.average_duration  # Approximation
-        
+
         # Try to parse XML for detailed information
         xml_path = self.project_root / "test_results.xml"  # type: ignore[attr-defined]
         if xml_path.exists():
             self._parse_junit_xml(xml_path, metrics)
-        
+
         return metrics
-    
+
     def _parse_junit_xml(self, xml_path: Path, metrics: TestSuiteMetrics) -> None:
         """Parse JUnit XML for detailed test information."""
         try:
             tree = ET.parse(xml_path)
             root = tree.getroot()
-            
+
             categorizer = FailureCategorizer()
             failures = []
             durations = []
-            
+
             for testcase in root.findall('.//testcase'):
                 name = testcase.get('name', '')
                 file = testcase.get('file', '')
                 duration = float(testcase.get('time', 0))
                 durations.append(duration)
-                
+
                 # Check for failures or errors
                 failure = testcase.find('failure')
                 error = testcase.find('error')
-                
+
                 if failure is not None or error is not None:
                     element = failure if failure is not None else error
                     message = element.get('message', '')
                     text = element.text or ''
-                    
+
                     failure_info = {
                         'message': message,
                         'traceback': text
                     }
-                    
+
                     category = categorizer.categorize_failure(failure_info)
-                    
+
                     test_failure = TestFailure(
                         test_name=name,
                         test_file=file,
@@ -403,23 +403,23 @@ class TestRunner:
                         is_mock_related=category == 'mock_related',
                         is_qt_related=category == 'qt_related',
                     )
-                    
+
                     failures.append(test_failure)
-            
+
             # Update metrics with detailed analysis
             if failures:
                 analysis = categorizer.analyze_failure_trends(failures)
                 metrics.failures_by_category = analysis['category_distribution']
                 metrics.failures_by_file = analysis['file_distribution']
                 metrics.quick_wins_available = analysis['quick_wins_estimate']
-                
+
                 # Count specific failure types
                 metrics.timeout_failures = sum(1 for f in failures if f.is_timeout)
                 metrics.import_failures = sum(1 for f in failures if f.is_import_error)
                 metrics.type_failures = sum(1 for f in failures if f.is_type_error)
                 metrics.mock_failures = sum(1 for f in failures if f.is_mock_related)
                 metrics.qt_failures = sum(1 for f in failures if f.is_qt_related)
-            
+
             # Calculate duration statistics
             if durations:
                 durations.sort()
@@ -430,46 +430,46 @@ class TestRunner:
                 ]
                 metrics.slowest_tests.sort(key=lambda x: x[1], reverse=True)
                 metrics.slowest_tests = metrics.slowest_tests[:10]
-            
+
         except Exception as e:
             print(f"Warning: Could not parse XML results: {e}")
 
 class TestHealthMonitor:
     """Main class for monitoring test suite health."""
-    
+
     def __init__(self, test_dir: str | Path):
         self.test_dir = Path(test_dir)
         self.project_root = self.test_dir.parent
         self.history_dir = self.test_dir / "scripts" / "history"
         self.history_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.runner = TestRunner(self.test_dir)
         self.categorizer = FailureCategorizer()
-    
+
     def run_health_check(self, mode: str = "full") -> TestSuiteMetrics:
         """Run comprehensive health check."""
         print(f"Running test health check in '{mode}' mode...")
-        
+
         if mode == "quick":
             # Run only smoke tests
             stages = self.runner.run_progressive_tests()
-            return list(stages.values())[0] if stages else None
-        
+            return next(iter(stages.values())) if stages else None
+
         elif mode == "progressive":
             # Run progressive stages
             stages = self.runner.run_progressive_tests()
             return list(stages.values())[-1] if stages else None
-        
+
         else:  # full mode
             # Run complete test suite
             return self.runner._run_test_stage("full_suite", ["tests/"])
-    
+
     def save_metrics(self, metrics: TestSuiteMetrics) -> Path:
         """Save metrics to historical record."""
         timestamp = metrics.timestamp.strftime("%Y%m%d_%H%M%S")
         filename = f"test_health_{timestamp}.json"
         filepath = self.history_dir / filename
-        
+
         # Convert to JSON-serializable format
         data = {
             "timestamp": metrics.timestamp.isoformat(),
@@ -494,22 +494,22 @@ class TestHealthMonitor:
             "critical_failures": metrics.critical_failures,
             "quick_wins_available": metrics.quick_wins_available,
         }
-        
+
         with open(filepath, 'w') as f:
             json.dump(data, f, indent=2)
-        
+
         return filepath
-    
+
     def load_historical_metrics(self, days_back: int = 7) -> list[TestSuiteMetrics]:
         """Load historical metrics from the last N days."""
         cutoff_date = datetime.now() - timedelta(days=days_back)
         metrics_list = []
-        
+
         for filepath in self.history_dir.glob("test_health_*.json"):
             try:
-                with open(filepath, 'r') as f:
+                with open(filepath) as f:
                     data = json.load(f)
-                
+
                 timestamp = datetime.fromisoformat(data["timestamp"])
                 if timestamp >= cutoff_date:
                     # Reconstruct metrics object
@@ -537,13 +537,13 @@ class TestHealthMonitor:
                         quick_wins_available=data.get("quick_wins_available", 0),
                     )
                     metrics_list.append(metrics)
-            
+
             except Exception as e:
                 print(f"Warning: Could not load {filepath}: {e}")
-        
+
         return sorted(metrics_list, key=lambda m: m.timestamp)
-    
-    def generate_health_report(self, metrics: TestSuiteMetrics, historical: list[TestSuiteMetrics] = None) -> str:
+
+    def generate_health_report(self, metrics: TestSuiteMetrics, historical: list[TestSuiteMetrics] | None = None) -> str:
         """Generate comprehensive health report."""
         report = []
         report.append("=" * 80)
@@ -551,7 +551,7 @@ class TestHealthMonitor:
         report.append("=" * 80)
         report.append(f"Report generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
-        
+
         # Overall metrics
         report.append("📊 OVERALL METRICS")
         report.append("-" * 40)
@@ -566,7 +566,7 @@ class TestHealthMonitor:
         report.append(f"Average per test: {metrics.average_duration:>6.1f}s")
         report.append(f"Median Duration:  {metrics.median_duration:>6.1f}s")
         report.append("")
-        
+
         # Health indicators
         if metrics.pass_rate >= 0.95:
             status = "🟢 EXCELLENT"
@@ -576,24 +576,24 @@ class TestHealthMonitor:
             status = "🟠 NEEDS IMPROVEMENT"
         else:
             status = "🔴 CRITICAL"
-        
+
         report.append(f"Health Status: {status}")
         report.append("")
-        
+
         # Failure analysis
         if metrics.failures_by_category:
             report.append("🔍 FAILURE ANALYSIS")
             report.append("-" * 40)
-            
+
             total_failures = sum(metrics.failures_by_category.values())
             for category, count in sorted(metrics.failures_by_category.items(), key=lambda x: x[1], reverse=True):
                 percentage = count / total_failures * 100
                 report.append(f"{category:20} {count:>6} ({percentage:5.1f}%)")
-            
+
             report.append("")
             report.append(f"Quick Wins Available: {metrics.quick_wins_available}")
             report.append("")
-            
+
             # Specific failure types
             if metrics.type_failures:
                 report.append(f"Type Annotation Issues: {metrics.type_failures}")
@@ -606,7 +606,7 @@ class TestHealthMonitor:
             if metrics.qt_failures:
                 report.append(f"Qt-related Issues: {metrics.qt_failures}")
             report.append("")
-        
+
         # Most affected files
         if metrics.failures_by_file:
             report.append("📁 MOST AFFECTED FILES")
@@ -614,7 +614,7 @@ class TestHealthMonitor:
             for filename, count in list(metrics.failures_by_file.items())[:10]:
                 report.append(f"{filename:40} {count:>6} failures")
             report.append("")
-        
+
         # Slowest tests
         if metrics.slowest_tests:
             report.append("⏱️  SLOWEST TESTS")
@@ -622,54 +622,54 @@ class TestHealthMonitor:
             for test_name, duration in metrics.slowest_tests[:10]:
                 report.append(f"{test_name:40} {duration:>8.1f}s")
             report.append("")
-        
+
         # Historical comparison
         if historical and len(historical) > 1:
             report.append("📈 TREND ANALYSIS")
             report.append("-" * 40)
-            
+
             prev_metrics = historical[-2]
             current_metrics = historical[-1]
-            
+
             pass_rate_change = current_metrics.pass_rate - prev_metrics.pass_rate
             duration_change = current_metrics.total_duration - prev_metrics.total_duration
-            
+
             if pass_rate_change > 0:
                 trend_indicator = "📈 IMPROVING"
             elif pass_rate_change < 0:
                 trend_indicator = "📉 DECLINING"
             else:
                 trend_indicator = "➡️  STABLE"
-            
+
             report.append(f"Pass Rate Change:     {pass_rate_change:+.1%} {trend_indicator}")
             report.append(f"Duration Change:      {duration_change:+.1f}s")
             report.append(f"Tests Added/Removed:  {current_metrics.total_tests - prev_metrics.total_tests:+d}")
             report.append("")
-        
+
         # Recommendations
         report.append("💡 RECOMMENDATIONS")
         report.append("-" * 40)
-        
+
         if metrics.type_failures > 10:
             report.append("• High priority: Fix type annotation issues for quick wins")
-        
+
         if metrics.timeout_failures > 5:
             report.append("• Optimize slow tests or increase timeout limits")
-        
+
         if metrics.import_failures > 0:
             report.append("• Critical: Fix import errors (may indicate broken dependencies)")
-        
+
         if metrics.mock_failures > metrics.total_tests * 0.1:
             report.append("• Consider reducing mock complexity or migrating to real components")
-        
+
         if metrics.average_duration > 2.0:
             report.append("• Performance: Test suite is running slow, consider optimization")
-        
+
         if metrics.pass_rate < 0.80:
             report.append("• Focus on most affected files for maximum impact")
-        
+
         return "\n".join(report)
-    
+
     def generate_prioritized_fix_list(self, metrics: TestSuiteMetrics) -> dict[str, list[str]]:
         """Generate prioritized list of fixes based on failure analysis."""
         fixes = {
@@ -678,45 +678,45 @@ class TestHealthMonitor:
             "quick_wins": [],
             "optimization": [],
         }
-        
+
         # Critical fixes (test suite functionality)
         if metrics.import_failures > 0:
             fixes["critical"].append(f"Fix {metrics.import_failures} import errors preventing test execution")
-        
+
         if metrics.pass_rate < 0.5:
             fixes["critical"].append("Test suite below 50% pass rate - requires immediate attention")
-        
+
         # High impact fixes (many tests affected)
         if metrics.type_failures > 20:
             fixes["high_impact"].append(f"Fix {metrics.type_failures} type annotation issues across test suite")
-        
+
         if metrics.timeout_failures > 10:
             fixes["high_impact"].append(f"Address {metrics.timeout_failures} timeout failures")
-        
+
         # Quick wins (easy fixes with good impact)
         if metrics.type_failures > 0:
             fixes["quick_wins"].append(f"Add missing type annotations ({metrics.type_failures} tests)")
-        
+
         if "mock_related" in metrics.failures_by_category and metrics.failures_by_category["mock_related"] > 5:
             mock_count = metrics.failures_by_category["mock_related"]
             fixes["quick_wins"].append(f"Simplify mock usage in {mock_count} tests")
-        
+
         # Most affected files
         if metrics.failures_by_file:
             top_files = list(metrics.failures_by_file.items())[:3]
             for filename, count in top_files:
                 if count > 5:
                     fixes["high_impact"].append(f"Focus on {filename} ({count} failures)")
-        
+
         # Performance optimizations
         if metrics.average_duration > 3.0:
             fixes["optimization"].append("Optimize slow tests (average >3s per test)")
-        
+
         if metrics.slowest_tests:
             slowest = metrics.slowest_tests[0]
             if slowest[1] > 30:
                 fixes["optimization"].append(f"Optimize slowest test: {slowest[0]} ({slowest[1]:.1f}s)")
-        
+
         return fixes
 
 def main():
@@ -731,31 +731,31 @@ def main():
     parser.add_argument("--mode", choices=["quick", "progressive", "full"], default="full",
                        help="Test execution mode")
     parser.add_argument("--save", action="store_true", help="Save results to history")
-    
+
     args = parser.parse_args()
-    
+
     # Default to analyzing if no action specified
     if not any([args.run_tests, args.analyze, args.report, args.quick_check]):
         args.run_tests = True
         args.report = True
         args.save = True
-    
+
     # Initialize monitor
     script_dir = Path(__file__).parent
     test_dir = script_dir.parent
     monitor = TestHealthMonitor(test_dir)
-    
+
     metrics = None
-    
+
     # Run tests if requested
     if args.run_tests or args.quick_check:
         mode = "quick" if args.quick_check else args.mode
         metrics = monitor.run_health_check(mode)
-        
+
         if metrics and args.save:
             saved_path = monitor.save_metrics(metrics)
             print(f"Results saved to: {saved_path}")
-    
+
     # Generate report if requested
     if args.report or args.analyze:
         if not metrics:
@@ -766,7 +766,7 @@ def main():
             else:
                 print("No test results available. Run with --run-tests first.")
                 return
-        
+
         # Load historical data if requested
         historical_data = None
         if args.historical or args.compare:
@@ -775,20 +775,20 @@ def main():
                 days_back = 7
             elif args.compare == "last-month":
                 days_back = 30
-            
+
             historical_data = monitor.load_historical_metrics(days_back)
-        
+
         # Generate and display report
         report = monitor.generate_health_report(metrics, historical_data)
         print(report)
-        
+
         # Generate prioritized fix list
         fixes = monitor.generate_prioritized_fix_list(metrics)
-        
+
         print("\n" + "=" * 80)
         print("🔧 PRIORITIZED FIX LIST")
         print("=" * 80)
-        
+
         for priority, fix_list in fixes.items():
             if fix_list:
                 print(f"\n{priority.upper().replace('_', ' ')}:")

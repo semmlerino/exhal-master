@@ -15,12 +15,11 @@ if TYPE_CHECKING:
     from core.palette_manager import PaletteManager
     from core.rom_extractor import ROMExtractor
 
-from PIL import Image
-from PySide6.QtCore import QObject, Signal
-
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
 from core.rom_extractor import ROMExtractor
+from PIL import Image
+from PySide6.QtCore import QObject, Signal
 from utils.constants import (
     BYTES_PER_TILE,
     DEFAULT_PREVIEW_HEIGHT,

@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
-from PySide6.QtCore import QThread, Signal
-
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import handle_worker_errors
+from PySide6.QtCore import QThread, Signal
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

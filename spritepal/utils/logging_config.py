@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -133,7 +133,7 @@ def setup_logging(
 
     # Log startup banner
     logger.info("=" * 80)
-    logger.info(f"SpritePal Session Started - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    logger.info(f"SpritePal Session Started - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     logger.info(f"Log Level: {log_level}")
     logger.info(f"Log File: {log_file}")
     logger.info(f"Working Directory: {Path.cwd()}")

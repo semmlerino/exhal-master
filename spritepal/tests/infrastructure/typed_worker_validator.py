@@ -33,7 +33,7 @@ from PySide6.QtCore import QThread
 try:
     from typing import TypeGuard
 except ImportError:
-    from typing_extensions import TypeGuard
+    from typing import TypeGuard
 
 # Import worker types for TypeGuard usage (ruff TC004)
 from core.workers import (

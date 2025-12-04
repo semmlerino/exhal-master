@@ -15,21 +15,18 @@ This implementation uses:
 """
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from core.controller import ExtractionController
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtTest import QSignalSpy
-
-from core.controller import ExtractionController
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 # Serial execution required: Real Qt components
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.cache,
     pytest.mark.dialog,
@@ -50,35 +47,35 @@ class MockMainWindow(QObject):
     This provides actual Qt signal functionality for testing signal connections
     and behavior without the full UI overhead.
     """
-    
+
     # Define all required signals - these are real Qt signals
     extract_requested = Signal()
     open_in_editor_requested = Signal(str)  # sprite_file
-    arrange_rows_requested = Signal(str)    # sprite_file  
+    arrange_rows_requested = Signal(str)    # sprite_file
     arrange_grid_requested = Signal(str)    # sprite_file
     inject_requested = Signal()
     offset_changed = Signal(int)  # For extraction panel offset changes
-    
+
     def __init__(self):
         super().__init__()
-        
+
         # Create mock extraction panel with the same signal
         class MockExtractionPanel(QObject):
             offset_changed = Signal(int)
-            
+
             def __init__(self, parent_signal):
                 super().__init__()
                 # Connect this signal to the parent's signal
                 self.offset_changed.connect(parent_signal.emit)
-        
+
         self.extraction_panel = MockExtractionPanel(self.offset_changed)
-        
+
         # Mock UI components needed by controller
         self.status_bar = Mock()
         self.sprite_preview = Mock()
-        self.palette_preview = Mock() 
+        self.palette_preview = Mock()
         self.preview_coordinator = Mock()
-        
+
         # Store params and outputs for testing
         self._extraction_params = {}
         self._output_path = ""
@@ -86,36 +83,36 @@ class MockMainWindow(QObject):
         self._last_status_message = ""
         self._extraction_failed_called = False
         self._extraction_failed_message = ""
-        
+
     def get_extraction_params(self) -> dict[str, Any]:
         """Return test extraction parameters."""
         return self._extraction_params.copy()
-        
+
     def set_extraction_params(self, params: dict[str, Any]) -> None:
         """Set extraction parameters for testing."""
         self._extraction_params = params.copy()
-        
+
     def get_output_path(self) -> str:
         """Return test output path."""
         return self._output_path
-        
+
     def set_output_path(self, path: str) -> None:
         """Set output path for testing."""
         self._output_path = path
-        
+
     def extraction_complete(self, extracted_files: list[str]) -> None:
         """Handle extraction completion."""
         self._extracted_files = extracted_files.copy()
-        
+
     def extraction_failed(self, message: str) -> None:
         """Handle extraction failure."""
         self._extraction_failed_called = True
         self._extraction_failed_message = message
-        
+
     def get_last_extraction_failure(self) -> tuple[bool, str]:
         """Get last extraction failure status for testing."""
         return self._extraction_failed_called, self._extraction_failed_message
-        
+
     def reset_extraction_status(self) -> None:
         """Reset extraction status for testing."""
         self._extraction_failed_called = False
@@ -125,7 +122,7 @@ class MockMainWindow(QObject):
     def show_cache_operation_badge(self, text: str) -> None:
         """Mock cache badge display."""
         pass
-        
+
     def hide_cache_operation_badge(self) -> None:
         """Mock hide cache badge."""
         pass
@@ -141,21 +138,21 @@ class TestExtractionControllerReal:
         vram_file = tmp_path / "test.vram"
         vram_data = b"\x00" * 0x10000  # 64KB VRAM
         vram_file.write_bytes(vram_data)
-        
-        # Create valid CGRAM file  
+
+        # Create valid CGRAM file
         cgram_file = tmp_path / "test.cgram"
         cgram_data = b"\x00" * 512  # 512 bytes for palette data
         cgram_file.write_bytes(cgram_data)
-        
+
         # Create OAM file
         oam_file = tmp_path / "test.oam"
         oam_data = b"\x00" * 512  # 512 bytes for OAM data
         oam_file.write_bytes(oam_data)
-        
+
         # Create output directory
         output_dir = tmp_path / "output"
         output_dir.mkdir(exist_ok=True)
-        
+
         return {
             "vram_path": str(vram_file),
             "cgram_path": str(cgram_file),
@@ -168,7 +165,7 @@ class TestExtractionControllerReal:
         """Create MockMainWindow with real Qt signals."""
         return MockMainWindow()
 
-    @pytest.fixture  
+    @pytest.fixture
     def real_managers(self):
         """Create real managers for the session."""
         with RealComponentFactory() as factory:
@@ -176,7 +173,7 @@ class TestExtractionControllerReal:
             extraction_manager = factory.create_extraction_manager()
             injection_manager = factory.create_injection_manager()
             session_manager = factory.create_session_manager("TestControllerApp")
-            
+
             yield {
                 "extraction_manager": extraction_manager,
                 "injection_manager": injection_manager,
@@ -192,7 +189,7 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Verify initialization
         assert controller.main_window == mock_main_window
         assert controller.extraction_manager == real_managers["extraction_manager"]
@@ -205,28 +202,28 @@ class TestExtractionControllerReal:
         """Test that controller properly connects to UI signals."""
         # Set up signal spies to verify connections
         extract_spy = QSignalSpy(mock_main_window.extract_requested)
-        editor_spy = QSignalSpy(mock_main_window.open_in_editor_requested) 
+        editor_spy = QSignalSpy(mock_main_window.open_in_editor_requested)
         rows_spy = QSignalSpy(mock_main_window.arrange_rows_requested)
         grid_spy = QSignalSpy(mock_main_window.arrange_grid_requested)
         inject_spy = QSignalSpy(mock_main_window.inject_requested)
         offset_spy = QSignalSpy(mock_main_window.offset_changed)
-        
+
         # Create controller - this should connect the signals
-        controller = ExtractionController(
+        ExtractionController(
             main_window=mock_main_window,
             extraction_manager=real_managers["extraction_manager"],
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Test signal emissions trigger controller methods
         mock_main_window.extract_requested.emit()
         mock_main_window.open_in_editor_requested.emit("test_file.png")
         mock_main_window.arrange_rows_requested.emit("test_file.png")
-        mock_main_window.arrange_grid_requested.emit("test_file.png")  
+        mock_main_window.arrange_grid_requested.emit("test_file.png")
         mock_main_window.inject_requested.emit()
         mock_main_window.offset_changed.emit(0x1000)
-        
+
         # Verify signals were emitted (proves connections work)
         assert extract_spy.count() == 1
         assert editor_spy.count() == 1
@@ -247,17 +244,17 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Test missing VRAM validation
         mock_main_window.set_extraction_params({
             "vram_path": "",  # Missing VRAM
             "cgram_path": test_files["cgram_path"],
             "output_base": test_files["output_base"]
         })
-        
+
         mock_main_window.reset_extraction_status()
         controller.start_extraction()
-        
+
         # Verify real validation error handling
         failed, message = mock_main_window.get_last_extraction_failure()
         assert failed
@@ -271,7 +268,7 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Test missing CGRAM in color mode
         mock_main_window.set_extraction_params({
             "vram_path": test_files["vram_path"],
@@ -279,10 +276,10 @@ class TestExtractionControllerReal:
             "output_base": test_files["output_base"],
             "grayscale_mode": False  # Color mode requires CGRAM
         })
-        
+
         mock_main_window.reset_extraction_status()
         controller.start_extraction()
-        
+
         # Verify real validation error
         failed, message = mock_main_window.get_last_extraction_failure()
         assert failed
@@ -296,7 +293,7 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Test nonexistent VRAM file
         mock_main_window.set_extraction_params({
             "vram_path": str(tmp_path / "nonexistent.vram"),
@@ -304,10 +301,10 @@ class TestExtractionControllerReal:
             "output_base": str(tmp_path / "output"),
             "grayscale_mode": True  # Set to grayscale mode to avoid CGRAM requirement
         })
-        
+
         mock_main_window.reset_extraction_status()
         controller.start_extraction()
-        
+
         # Verify validation error occurred
         failed, message = mock_main_window.get_last_extraction_failure()
         assert failed
@@ -323,7 +320,7 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Set up valid parameters
         mock_main_window.set_extraction_params({
             "vram_path": test_files["vram_path"],
@@ -334,10 +331,10 @@ class TestExtractionControllerReal:
             "create_metadata": True,
             "grayscale_mode": False,
         })
-        
+
         mock_main_window.reset_extraction_status()
         controller.start_extraction()
-        
+
         # Check if extraction failed first
         failed, message = mock_main_window.get_last_extraction_failure()
         if failed:
@@ -351,7 +348,7 @@ class TestExtractionControllerReal:
             assert hasattr(controller.worker, 'preview_ready')
             assert hasattr(controller.worker, 'extraction_finished')
             assert hasattr(controller.worker, 'error')
-            
+
             # Verify worker is running or has finished
             # Note: Worker might finish very quickly with test data
             assert controller.worker.isRunning() or controller.worker.isFinished()
@@ -364,17 +361,17 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Set up valid parameters
         mock_main_window.set_extraction_params({
             "vram_path": test_files["vram_path"],
             "cgram_path": test_files["cgram_path"],
             "output_base": test_files["output_base"],
         })
-        
+
         try:
             controller.start_extraction()
-            
+
             # Check if extraction failed first
             failed, message = mock_main_window.get_last_extraction_failure()
             if failed:
@@ -387,7 +384,7 @@ class TestExtractionControllerReal:
                 # If extraction succeeded, verify worker signals exist
                 assert controller.worker is not None
                 worker = controller.worker
-                
+
                 # Test that worker has the expected signal attributes
                 assert hasattr(worker, 'progress')
                 assert hasattr(worker, 'preview_ready')
@@ -396,10 +393,10 @@ class TestExtractionControllerReal:
                 assert hasattr(worker, 'active_palettes_ready')
                 assert hasattr(worker, 'extraction_finished')
                 assert hasattr(worker, 'error')
-                
+
                 # Don't wait for completion or check emissions - just verify structure
                 # This tests the controller's ability to create and connect to worker signals
-                
+
         except Exception as e:
             # If worker creation fails due to manager initialization or other issues,
             # this is also valid real behavior to document and test
@@ -413,7 +410,7 @@ class TestExtractionControllerReal:
         """Test that controller connects to real manager signals."""
         extraction_mgr = real_managers["extraction_manager"]
         injection_mgr = real_managers["injection_manager"]
-        
+
         # Create controller - this should connect to manager signals
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -421,33 +418,33 @@ class TestExtractionControllerReal:
             injection_manager=injection_mgr,
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Test that the controller has the manager references
         assert controller.extraction_manager == extraction_mgr
         assert controller.injection_manager == injection_mgr
         assert controller.session_manager == real_managers["session_manager"]
-        
+
         # Test that manager signals exist and have the expected signatures
         # This verifies the controller can connect to real manager signals
         assert hasattr(extraction_mgr, 'cache_operation_started')
         assert hasattr(extraction_mgr, 'cache_hit')
-        assert hasattr(extraction_mgr, 'cache_miss') 
+        assert hasattr(extraction_mgr, 'cache_miss')
         assert hasattr(extraction_mgr, 'cache_saved')
-        
+
         assert hasattr(injection_mgr, 'injection_progress')
         assert hasattr(injection_mgr, 'injection_finished')
         assert hasattr(injection_mgr, 'cache_saved')
-        
+
         # Test basic signal emission without complex signal handler execution
         # This verifies the signals are real Qt signals that can be emitted
         try:
             # Use simple cache_miss which has minimal side effects
             extraction_mgr.cache_miss.emit("test_data")
             injection_mgr.injection_progress.emit("Test progress")
-            
+
             # If we reach here, the basic signal mechanism works
             assert True
-            
+
         except Exception as e:
             # Document any real behavior issues encountered
             assert "signal" in str(e).lower() or "emit" in str(e).lower()
@@ -461,25 +458,25 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Create invalid file with wrong size
         invalid_vram = tmp_path / "invalid.vram"
         invalid_vram.write_bytes(b"\x00" * 100)  # Too small for VRAM
-        
+
         mock_main_window.set_extraction_params({
             "vram_path": str(invalid_vram),
             "cgram_path": "",
             "output_base": str(tmp_path / "output")
         })
-        
+
         mock_main_window.reset_extraction_status()
         controller.start_extraction()
-        
+
         # Verify error handling
         failed, message = mock_main_window.get_last_extraction_failure()
         assert failed
         assert len(message) > 0
-        
+
         # No worker should be created on validation failure
         assert controller.worker is None
 
@@ -491,12 +488,12 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Create minimal ROM file
         rom_file = tmp_path / "test.sfc"
         rom_data = b"\x00" * 0x100000  # 1MB ROM
         rom_file.write_bytes(rom_data)
-        
+
         # Test ROM extraction parameters
         rom_params = {
             "rom_path": str(rom_file),
@@ -505,9 +502,9 @@ class TestExtractionControllerReal:
             "output_base": str(tmp_path / "rom_output"),
             "cgram_path": None,
         }
-        
+
         controller.start_rom_extraction(rom_params)
-        
+
         # Verify ROM worker was created
         assert controller.rom_worker is not None
         assert hasattr(controller.rom_worker, 'progress')
@@ -522,21 +519,21 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Create worker
         mock_main_window.set_extraction_params({
             "vram_path": test_files["vram_path"],
             "cgram_path": test_files["cgram_path"],
             "output_base": test_files["output_base"],
         })
-        
+
         controller.start_extraction()
         assert controller.worker is not None
-        
+
         # Test cleanup
         worker = controller.worker
         controller._cleanup_worker()
-        
+
         # Verify cleanup
         assert controller.worker is None
         # Worker should be stopped (finished or terminated)
@@ -550,19 +547,19 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Create test sprite file for injection
         sprite_file = tmp_path / "test_sprite.png"
         sprite_file.write_bytes(b"fake_png_data")  # Minimal fake PNG
-        
+
         # Set up output path
         output_base = str(tmp_path / "test_sprite")
         mock_main_window.set_output_path(output_base)
-        
+
         # Test injection start - this should trigger dialog creation
         # (Dialog won't actually show in test, but validation should occur)
         controller.start_injection()
-        
+
         # Verify that injection manager's methods would be called
         # (The actual injection dialog behavior is tested separately)
         assert real_managers["injection_manager"] is not None
@@ -575,17 +572,17 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Mock extraction panel methods for preview update
         mock_main_window.extraction_panel.has_vram = Mock(return_value=True)
         mock_main_window.extraction_panel.get_vram_path = Mock(return_value=test_files["vram_path"])
-        
+
         # Mock sprite preview for size info
         mock_main_window.sprite_preview.width = Mock(return_value=256)
         mock_main_window.sprite_preview.height = Mock(return_value=256)
         mock_main_window.sprite_preview.update_preview = Mock()
         mock_main_window.sprite_preview.set_grayscale_image = Mock()
-        
+
         # Test preview update
         try:
             controller.update_preview_with_offset(0x1000)
@@ -604,16 +601,16 @@ class TestExtractionControllerReal:
             injection_manager=real_managers["injection_manager"],
             session_manager=real_managers["session_manager"]
         )
-        
+
         # Verify error handler is initialized
         assert controller.error_handler is not None
-        
+
         # Test error handler methods exist and are callable
         assert hasattr(controller.error_handler, 'handle_exception')
         assert hasattr(controller.error_handler, 'handle_critical_error')
         assert hasattr(controller.error_handler, 'handle_warning')
         assert hasattr(controller.error_handler, 'handle_info')
-        
+
         # For mock error handler, verify methods are callable
         if hasattr(controller.error_handler, '_log_call'):
             # This is MockErrorHandler

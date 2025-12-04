@@ -10,10 +10,9 @@ import os
 import tempfile
 
 import pytest
+from core.managers import cleanup_managers, initialize_managers
 from PIL import Image
 from PySide6.QtWidgets import QApplication
-
-from core.managers import cleanup_managers, initialize_managers
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 
 # Skip in headless environments - this tests real Qt widget functionality

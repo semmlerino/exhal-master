@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from queue import PriorityQueue
 
+from core.rom_extractor import ROMExtractor
+from core.tile_renderer import TileRenderer
 from PIL import Image
 from PySide6.QtCore import (
     QMutex,
@@ -23,9 +25,6 @@ from PySide6.QtCore import (
     Slot,
 )
 from PySide6.QtGui import QImage, QPixmap
-
-from core.rom_extractor import ROMExtractor
-from core.tile_renderer import TileRenderer
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

@@ -6,10 +6,9 @@ full Qt setup or complex integration scenarios.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
 
 # Test characteristics: Singleton management
@@ -44,7 +43,7 @@ class TestManualOffsetDialogSingleton:
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog') as mock_class:
             # Create factory function to generate new instances
             instance_counter = {'count': 0}
-            
+
             def create_mock_instance(*args, **kwargs):
                 instance_counter['count'] += 1
                 mock_instance = MagicMock()
@@ -55,17 +54,17 @@ class TestManualOffsetDialogSingleton:
                 mock_instance.rejected = MagicMock()
                 mock_instance.destroyed = MagicMock()
                 return mock_instance
-            
+
             mock_class.side_effect = create_mock_instance
             yield mock_class
 
     def test_singleton_creates_instance_on_first_call(self, mock_dialog_class):
         """Test that singleton creates an instance on first call."""
         mock_panel = MagicMock()
-        
+
         # First call should create instance
         dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-        
+
         assert dialog1 is not None
         assert mock_dialog_class.called
         assert ManualOffsetDialogSingleton._instance is not None
@@ -73,11 +72,11 @@ class TestManualOffsetDialogSingleton:
     def test_singleton_reuses_same_instance(self, mock_dialog_class):
         """Test that singleton reuses the same instance on subsequent calls."""
         mock_panel = MagicMock()
-        
+
         # Get instance twice
         dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
         dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-        
+
         # Should be same instance
         assert dialog1 is dialog2
         assert mock_dialog_class.call_count == 1  # Only created once
@@ -85,29 +84,29 @@ class TestManualOffsetDialogSingleton:
     def test_singleton_cleanup_on_close(self, mock_dialog_class):
         """Test that singleton properly cleans up when dialog is closed."""
         mock_panel = MagicMock()
-        
+
         # Create dialog
         dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
         assert ManualOffsetDialogSingleton._instance is not None
-        
+
         # Simulate dialog close by calling the connected slot
         close_callback = dialog.finished.connect.call_args[0][0]
         close_callback()
-        
+
         # Instance should be cleared
         assert ManualOffsetDialogSingleton._instance is None
 
     def test_singleton_recreates_after_cleanup(self, mock_dialog_class):
         """Test that singleton can create new instance after cleanup."""
         mock_panel = MagicMock()
-        
+
         # Create, close, and recreate
         dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
         close_callback = dialog1.finished.connect.call_args[0][0]
         close_callback()
-        
+
         dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-        
+
         # Should be different instances
         assert dialog1 is not dialog2
         assert mock_dialog_class.call_count == 2
@@ -119,20 +118,20 @@ class TestManualOffsetDialogSingleton:
     def test_get_current_dialog_returns_instance_when_exists(self, mock_dialog_class):
         """Test get_current_dialog returns existing instance."""
         mock_panel = MagicMock()
-        
+
         dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
         current = ManualOffsetDialogSingleton.get_current_dialog()
-        
+
         assert current is dialog
 
     def test_reset_clears_instance(self, mock_dialog_class):
         """Test reset() properly clears the singleton instance."""
         mock_panel = MagicMock()
-        
+
         # Create instance
         ManualOffsetDialogSingleton.get_dialog(mock_panel)
         assert ManualOffsetDialogSingleton._instance is not None
-        
+
         # Reset should clear it
         ManualOffsetDialogSingleton.reset()
         assert ManualOffsetDialogSingleton._instance is None
@@ -157,12 +156,12 @@ class TestUnifiedManualOffsetDialogMethods:
         """Test real _format_position method from SimpleBrowseTab."""
         # Don't import the real class due to Qt dependencies
         # Instead test the actual logic directly
-        
+
         # Create minimal BrowseTab instance for testing
         class TestBrowseTab:
             def __init__(self):
                 self._rom_size = 4 * 1024 * 1024  # 4MB ROM
-            
+
             def _format_position(self, offset: int) -> str:
                 """Format position as human-readable text."""
                 if self._rom_size > 0:
@@ -170,9 +169,9 @@ class TestUnifiedManualOffsetDialogMethods:
                     percentage = (offset / self._rom_size) * 100
                     return f"{mb_position:.1f}MB through ROM ({percentage:.0f}%)"
                 return "Unknown position"
-        
+
         tab = TestBrowseTab()
-        
+
         # Test various offsets
         assert tab._format_position(0) == "0.0MB through ROM (0%)"
         assert tab._format_position(1024 * 1024) == "1.0MB through ROM (25%)"
@@ -187,7 +186,7 @@ class TestUnifiedManualOffsetDialogMethods:
             if rom_size <= 0:
                 return 0
             return max(0, min(offset, rom_size - 1))
-        
+
         # Test with 1KB ROM
         rom_size = 1024
         assert clamp_offset(-100, rom_size) == 0
@@ -195,10 +194,10 @@ class TestUnifiedManualOffsetDialogMethods:
         assert clamp_offset(500, rom_size) == 500
         assert clamp_offset(1023, rom_size) == 1023
         assert clamp_offset(2000, rom_size) == 1023
-        
+
         # Test edge case: empty ROM
         assert clamp_offset(100, 0) == 0
-        
+
         # Test with larger ROM (4MB)
         large_rom = 4 * 1024 * 1024
         assert clamp_offset(-1, large_rom) == 0
@@ -209,13 +208,13 @@ class TestUnifiedManualOffsetDialogMethods:
         """Test ROM data validation logic."""
         # Test empty data
         assert not is_valid_rom_data(b'')
-        
+
         # Test too small
         assert not is_valid_rom_data(b'\x00' * 100)
-        
+
         # Test valid size
         assert is_valid_rom_data(b'\x00' * 0x8000)  # 32KB minimum
-        
+
         # Test None
         assert not is_valid_rom_data(None)
 
@@ -246,11 +245,11 @@ class TestDialogStateManagement:
         """Test dialog visibility state changes."""
         # Start hidden
         assert not mock_dialog.visible
-        
+
         # Show dialog
         mock_dialog.visible = True
         assert mock_dialog.visible
-        
+
         # Hide dialog
         mock_dialog.visible = False
         assert not mock_dialog.visible
@@ -260,11 +259,11 @@ class TestDialogStateManagement:
         # Set to tab 1
         mock_dialog.current_tab = 1
         assert mock_dialog.current_tab == 1
-        
+
         # Hide and show (simulated)
         mock_dialog.visible = False
         mock_dialog.visible = True
-        
+
         # Tab should still be 1
         assert mock_dialog.current_tab == 1
 
@@ -273,7 +272,7 @@ class TestDialogStateManagement:
         # Add items to history
         mock_dialog.history.append({'offset': 100, 'sprite': 'test1'})
         mock_dialog.history.append({'offset': 200, 'sprite': 'test2'})
-        
+
         assert len(mock_dialog.history) == 2
         assert mock_dialog.history[0]['offset'] == 100
         assert mock_dialog.history[1]['offset'] == 200
@@ -281,7 +280,7 @@ class TestDialogStateManagement:
     def test_modal_state(self, mock_dialog):
         """Test modal state of dialog."""
         assert mock_dialog.modal is True
-        
+
         # Dialog should always be modal
         mock_dialog.modal = False
         mock_dialog.modal = True  # Reset to expected state

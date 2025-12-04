@@ -9,13 +9,15 @@ Tests the refactored BatchThumbnailWorker with proper moveToThread pattern.
 import sys
 import tempfile
 from pathlib import Path
-from PySide6.QtCore import QThread, QCoreApplication, QTimer, QEventLoop
+
+from PySide6.QtCore import QEventLoop, QThread, QTimer
 from PySide6.QtWidgets import QApplication
 
 # Add spritepal to path
 sys.path.insert(0, '.')
 
-from ui.workers.batch_thumbnail_worker import ThumbnailWorkerController, BatchThumbnailWorker
+from ui.workers.batch_thumbnail_worker import BatchThumbnailWorker, ThumbnailWorkerController
+
 
 def test_worker_thread_safety():
     """Test that worker properly uses moveToThread pattern."""
@@ -128,9 +130,10 @@ def test_type_safety():
     # Test 1: MainWindowProtocol metaclass issue (known limitation)
     print("\n1. Testing MainWindowProtocol...")
     try:
+        from typing import Protocol
+
         from core.protocols.manager_protocols import MainWindowProtocol
-from typing import Protocol
-        
+
         # Check if it's a Protocol (expected due to metaclass conflict)
         # This is a known limitation - MainWindowProtocol cannot inherit from QWidget
         # due to metaclass conflicts. The controller has fallback handling for this.
@@ -145,10 +148,10 @@ from typing import Protocol
     # Test 2: TypedDict with NotRequired
     print("\n2. Testing TypedDict definitions...")
     try:
+        from typing import get_type_hints
+
         from core.controller import ROMExtractionParams
-from typing import get_type_hints
-        from typing_extensions import NotRequired
-        
+
         hints = get_type_hints(ROMExtractionParams, include_extras=True)
         print(f"   ROMExtractionParams fields: {list(hints.keys())}")
         print("   ✓ TypedDict imports and definitions work")

@@ -7,7 +7,8 @@ Ensures proper synchronization and Qt thread affinity checking.
 from __future__ import annotations
 
 import threading
-from typing import Callable, Generic, TypeVar
+from collections.abc import Callable
+from typing import Generic, TypeVar
 
 from PySide6.QtCore import QObject, QThread
 from PySide6.QtWidgets import QApplication

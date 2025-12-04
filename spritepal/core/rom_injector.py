@@ -438,7 +438,7 @@ class ROMInjector(SpriteInjector):
             )
 
             # Validate ROM before modification
-            header_info, header_offset = ROMValidator.validate_rom_for_injection(
+            _header_info, _header_offset = ROMValidator.validate_rom_for_injection(
                 rom_path, sprite_offset
             )
 

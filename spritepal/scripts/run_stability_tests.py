@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def run_stability_tests():
     """Run the Phase 1 stability test suite with reporting."""
 

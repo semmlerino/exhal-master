@@ -54,14 +54,6 @@ sys.path.insert(0, str(parent_dir))
 sys.path.insert(0, str(current_dir))
 
 # Import real testing infrastructure
-from tests.infrastructure import (
-    QtTestingFramework,
-    RealManagerFixtureFactory,
-    TestApplicationFactory,
-    TestDataRepository,
-    validate_qt_object_lifecycle,
-)
-
 # Import real dialogs and managers (not mocked!)
 from core.managers import (
     cleanup_managers,
@@ -69,6 +61,13 @@ from core.managers import (
     get_injection_manager,
     get_session_manager,
     initialize_managers,
+)
+from tests.infrastructure import (
+    QtTestingFramework,
+    RealManagerFixtureFactory,
+    TestApplicationFactory,
+    TestDataRepository,
+    validate_qt_object_lifecycle,
 )
 from ui.dialogs import (
     ResumeScanDialog,
@@ -81,6 +80,7 @@ from ui.dialogs import (
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
+
 
 class TestRealDialogIntegration:
     """

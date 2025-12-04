@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from utils.logging_config import get_logger, setup_logging
 
 # Systematic pytest markers applied based on test content analysis
@@ -85,7 +84,7 @@ class TestSetupLogging:
                 logging.CRITICAL,
             ]
 
-            for level_str, expected_level in zip(test_levels, expected_levels):
+            for level_str, expected_level in zip(test_levels, expected_levels, strict=False):
                 logger = setup_logging(log_dir=log_dir, log_level=level_str)
                 assert logger.level == expected_level
 
@@ -123,7 +122,7 @@ class TestSetupLogging:
             # Check handler types using isinstance for better robustness
             has_stream_handler = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
             has_rotating_file_handler = any(isinstance(h, logging.handlers.RotatingFileHandler) for h in logger.handlers)
-            
+
             assert has_stream_handler, "Should have a StreamHandler"
             assert has_rotating_file_handler, "Should have a RotatingFileHandler (or subclass)"
 

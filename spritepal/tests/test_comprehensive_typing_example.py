@@ -8,18 +8,18 @@ including fixtures, parametrized tests, mock objects, and Qt components.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeAlias
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Iterator
     from pathlib import Path
-    from pytest import FixtureRequest
-    from PySide6.QtWidgets import QApplication, QWidget
+
+    from PySide6.QtWidgets import QApplication
     from tests.infrastructure.test_protocols import (
-        MockMainWindowProtocol,
         MockExtractionManagerProtocol,
+        MockMainWindowProtocol,
         MockQtBotProtocol,
     )
 
@@ -155,10 +155,10 @@ class TestComprehensiveTypingExample:
 
         # Widget creation with proper typing
         from PySide6.QtWidgets import QPushButton
-        
+
         button = QPushButton("Test")
         bot.addWidget(button)
-        
+
         # Type-safe property access
         button.setText("Updated Text")
         assert button.text() == "Updated Text"
@@ -172,7 +172,7 @@ class TestComprehensiveTypingExample:
         # Create test file
         test_content = b"test sprite data"
         test_file = test_file_factory(test_content, "test.dmp")
-        
+
         # Verify file exists and has correct content
         assert test_file.exists()
         assert test_file.read_bytes() == test_content
@@ -225,7 +225,7 @@ class TestComprehensiveTypingExample:
         assert len(formats) == 2
         assert "png" in formats
 
-        # Tuple operations  
+        # Tuple operations
         dimensions: tuple[int, int] = sample_test_data["tile_dimensions"]
         width, height = dimensions
         assert width == 8
@@ -307,8 +307,8 @@ def test_protocol_usage_with_types() -> None:
     """Test protocol usage with proper typing."""
     validator = TestSpriteValidator()
     test_data = create_test_sprite_data(32)
-    
+
     def simple_validator(data: bytes | bytearray) -> bool:
         return len(data) > 0
-    
+
     assert validator.validate_sprite_data(test_data, simple_validator)

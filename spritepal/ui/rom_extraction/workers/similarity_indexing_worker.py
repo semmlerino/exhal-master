@@ -13,12 +13,11 @@ import threading
 from pathlib import Path
 from typing import Any, cast
 
-from PIL import Image
-from PySide6.QtCore import QObject, Signal, Slot
-
 from core.managers import ExtractionManager, get_extraction_manager
 from core.visual_similarity_search import VisualSimilarityEngine
 from core.workers.base import BaseWorker, handle_worker_errors
+from PIL import Image
+from PySide6.QtCore import QObject, Signal, Slot
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 

@@ -25,15 +25,15 @@ from __future__ import annotations
 
 import time
 import weakref
+from collections.abc import Callable
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 from PySide6.QtWidgets import QSlider
-
 from ui.common.preview_cache import PreviewCache
 from ui.common.preview_worker_pool import PreviewWorkerPool
 from ui.common.timing_constants import REFRESH_RATE_60FPS
@@ -511,7 +511,7 @@ class SmartPreviewCoordinator(QObject):
             return False
 
         try:
-            tile_data, width, height, sprite_name = preview_data
+            tile_data, width, height, _sprite_name = preview_data
 
             logger.debug(f"Saving preview to ROM cache for 0x{offset:06X} ({len(tile_data)} bytes, {width}x{height})")
 

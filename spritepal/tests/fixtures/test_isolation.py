@@ -9,15 +9,14 @@ from __future__ import annotations
 import gc
 import threading
 import time
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
-from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication
 
 # Serial execution required: QApplication management, Manager registry manipulation, HAL process pool, Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.singleton,
@@ -41,10 +40,10 @@ def ensure_complete_test_isolation() -> Generator[None, None, None]:
     """
     # Capture initial state
     initial_threads = set(threading.enumerate())
-    
+
     # Run test
     yield
-    
+
     # Clean up after test
     _cleanup_managers()
     _cleanup_hal_pool()
@@ -56,13 +55,13 @@ def _cleanup_managers() -> None:
     """Force cleanup all manager singletons."""
     try:
         from spritepal.core.managers.registry import ManagerRegistry
-        
+
         # Force reset singleton
         if hasattr(ManagerRegistry, '_instance'):
             ManagerRegistry._instance = None
         if hasattr(ManagerRegistry, '_cleanup_registered'):
             ManagerRegistry._cleanup_registered = False
-        
+
         # Clear any module-level registry
         import spritepal.core.managers.registry as registry_module
         if hasattr(registry_module, '_registry'):
@@ -74,7 +73,7 @@ def _cleanup_hal_pool() -> None:
     """Force reset HAL process pool singleton."""
     try:
         from spritepal.core.hal_compression import HALProcessPool
-        
+
         # Force reset singleton
         if hasattr(HALProcessPool, '_instance'):
             if HALProcessPool._instance is not None:
@@ -90,7 +89,7 @@ def _cleanup_threads(initial_threads: set) -> None:
     """Wait for test threads to finish."""
     timeout = time.time() + 5  # 5 second timeout
     current_threads = set(threading.enumerate()) - initial_threads
-    
+
     for thread in current_threads:
         if thread.is_alive() and time.time() < timeout:
             try:
@@ -105,7 +104,7 @@ def _cleanup_qt_application() -> None:
         try:
             # Process any pending events
             app.processEvents()
-            
+
             # Don't actually quit the app as it might be needed for other tests
             # Just process events to clean up
         except Exception:

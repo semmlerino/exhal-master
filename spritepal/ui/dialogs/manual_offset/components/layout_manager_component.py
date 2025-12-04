@@ -9,7 +9,6 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtWidgets import QSplitter, QWidget
-
 from ui.dialogs.manual_offset_layout_manager import (
     LayoutManager as OriginalLayoutManager,
 )

@@ -7,7 +7,7 @@ styling and behavior throughout the SpritePal application.
 from __future__ import annotations
 
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.common.file_dialogs import FileDialogHelper
 from ui.styles import get_muted_text_style
 

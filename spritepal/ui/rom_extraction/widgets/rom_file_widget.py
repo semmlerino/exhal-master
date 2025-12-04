@@ -5,7 +5,6 @@ from typing import Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
-
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 

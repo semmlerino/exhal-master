@@ -11,8 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from core.managers.exceptions import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     ExtractionError,
     ValidationError,
 )
@@ -106,9 +105,8 @@ class TestUnifiedErrorHandler:
 
     def test_context_manager_with_exception(self, error_handler):
         """Test context manager handles exceptions"""
-        with pytest.raises(ValueError):
-            with error_handler.error_context("failing operation"):
-                raise ValueError("test error")
+        with pytest.raises(ValueError), error_handler.error_context("failing operation"):
+            raise ValueError("test error")
 
         # Context should be cleaned up even after exception
         assert len(error_handler._context_stack) == 0

@@ -4,7 +4,6 @@ Tests for SessionManager
 from __future__ import annotations
 
 import pytest
-
 from core.managers import SessionError, SessionManager, ValidationError
 
 # Test characteristics: Real GUI components requiring display

@@ -11,7 +11,6 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-
 from core.managers.exceptions import ManagerError, ValidationError
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager

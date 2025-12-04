@@ -4,10 +4,11 @@ This test validates the fix for the off-by-one error in scan range iteration.
 """
 from __future__ import annotations
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from core.rom_extractor import ROMExtractor
 from core.parallel_sprite_finder import ParallelSpriteFinder
+from core.rom_extractor import ROMExtractor
 
 pytestmark = [
     pytest.mark.unit,
@@ -17,17 +18,17 @@ pytestmark = [
 
 class TestScanRangeBoundary:
     """Test that scan ranges are inclusive of the end offset."""
-    
+
     def test_rom_extractor_includes_end_offset(self):
         """Test that ROMExtractor.scan_for_sprites includes the end offset."""
         extractor = ROMExtractor()
-        
+
         # Create mock ROM data with sprites at specific offsets
         rom_size = 0xF0100  # Just past 0xF0000
         mock_rom_data = b'\x00' * rom_size
-        
+
         found_offsets = []
-        
+
         def mock_try_extract(rom_data, offset):
             """Track which offsets are checked."""
             found_offsets.append(offset)
@@ -40,7 +41,7 @@ class TestScanRangeBoundary:
                     'alignment': 'perfect'
                 }
             return None
-        
+
         # Need to patch the full scan method flow
         with patch('builtins.open', mock_open(read_data=mock_rom_data)):
             with patch.object(extractor, '_validate_rom_data', return_value=mock_rom_data):
@@ -56,27 +57,27 @@ class TestScanRangeBoundary:
                                     end_offset=0xF0000,
                                     step=0x100
                                 )
-        
+
         # Verify that 0xF0000 was actually checked
         assert 0xF0000 in found_offsets, f"End offset 0xF0000 was not scanned! Offsets checked: {[hex(o) for o in found_offsets]}"
         assert 0xEFF00 in found_offsets, "Second-to-last offset should be checked"
-        
+
         # Verify we found sprites at both positions
         assert len(results) == 2, f"Should find 2 sprites but found {len(results)}"
         result_offsets = [r['offset'] for r in results]
         assert 0xEFF00 in result_offsets
         assert 0xF0000 in result_offsets
-    
+
     def test_parallel_finder_includes_chunk_boundaries(self):
         """Test that ParallelSpriteFinder includes chunk end boundaries."""
         finder = ParallelSpriteFinder(num_workers=1, chunk_size=0x1000, step_size=0x100)
-        
+
         # Create mock ROM data
         rom_size = 0x2000
         mock_rom_data = b'\x00' * rom_size
-        
+
         checked_offsets = []
-        
+
         def mock_find_sprite(rom_data, offset):
             """Track which offsets are checked."""
             checked_offsets.append(offset)
@@ -88,7 +89,7 @@ class TestScanRangeBoundary:
                     'compressed_size': 256
                 }
             return None
-        
+
         with patch('builtins.open', mock_open(read_data=mock_rom_data)):
             with patch.object(finder.sprite_finders[0], 'find_sprite_at_offset', side_effect=mock_find_sprite):
                 # Mock quick check to always pass
@@ -99,51 +100,51 @@ class TestScanRangeBoundary:
                         start_offset=0,
                         end_offset=0x2000
                     )
-        
+
         # Verify chunk boundaries are checked
         # With chunk_size=0x1000, chunks are [0, 0x1000) and [0x1000, 0x2000)
         # The boundary at 0x1000 should be checked by the second chunk
         assert any(offset >= 0x1000 for offset in checked_offsets), \
             f"No offsets >= 0x1000 were checked! Checked: {[hex(o) for o in checked_offsets]}"
-        
+
         # Should find sprites at the boundaries
         assert len(results) >= 2, f"Should find at least 2 sprites but found {len(results)}"
-    
+
     def test_scan_worker_cache_resume_uses_correct_step(self):
         """Test that scan worker uses correct step size when resuming from cache."""
         from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
-        
+
         # Create worker with custom step size
         worker = SpriteScanWorker(
             rom_path='test.rom',
             extractor=Mock(),
             use_cache=True
         )
-        
+
         # The parallel finder should have step_size attribute
         assert hasattr(worker._parallel_finder, 'step_size')
-        
+
         # Mock cache with partial results
         last_scanned_offset = 0xD0000
         mock_partial_cache = {
             'found_sprites': [],
             'current_offset': last_scanned_offset
         }
-        
+
         with patch('ui.rom_extraction.workers.scan_worker.get_rom_cache') as mock_get_cache:
             mock_cache = Mock()
             mock_cache.get_partial_scan_results.return_value = mock_partial_cache
             mock_get_cache.return_value = mock_cache
-            
+
             with patch.object(worker._parallel_finder, 'search_parallel', return_value=[]) as mock_search:
                 worker.run()
-                
+
                 # Verify that search was called with correct start offset
                 # It should resume from last_offset + step_size (not hardcoded 0x100)
                 call_args = mock_search.call_args
                 actual_start = call_args[1]['start_offset']
                 expected_start = last_scanned_offset + worker._parallel_finder.step_size
-                
+
                 assert actual_start == expected_start, \
                     f"Resume offset should be {hex(expected_start)} but was {hex(actual_start)}"
 

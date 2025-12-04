@@ -6,9 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QObject
-
 from core.managers import get_session_manager
+from PySide6.QtCore import QObject
 from utils.settings_manager import get_settings_manager
 
 if TYPE_CHECKING:

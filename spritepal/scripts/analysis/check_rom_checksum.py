@@ -6,6 +6,7 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
+
 def calculate_snes_checksum(rom_data: bytes) -> int:
     """Calculate SNES ROM checksum."""
     # SNES checksum is at 0x7FDC-0x7FDD (or 0xFFDC-0xFFDD for HiROM)

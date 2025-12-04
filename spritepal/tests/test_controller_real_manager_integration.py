@@ -52,15 +52,6 @@ sys.path.insert(0, str(parent_dir))
 sys.path.insert(0, str(current_dir))
 
 # Import real testing infrastructure
-from tests.infrastructure import (
-    QtTestingFramework,
-    RealManagerFixtureFactory,
-    TestApplicationFactory,
-    TestDataRepository,
-    qt_widget_test,
-    validate_qt_object_lifecycle,
-)
-
 # Import real controller and managers (not mocked!)
 from core.controller import ExtractionController
 from core.managers import (
@@ -69,7 +60,16 @@ from core.managers import (
     get_session_manager,
     initialize_managers,
 )
+from tests.infrastructure import (
+    QtTestingFramework,
+    RealManagerFixtureFactory,
+    TestApplicationFactory,
+    TestDataRepository,
+    qt_widget_test,
+    validate_qt_object_lifecycle,
+)
 from ui.main_window import MainWindow
+
 
 class TestRealControllerManagerIntegration:
     """

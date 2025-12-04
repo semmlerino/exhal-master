@@ -17,19 +17,17 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-from PySide6.QtCore import QSettings
-
 import core.managers.registry
+import pytest
 import utils.rom_cache
 import utils.settings_manager
 from core.managers import (
-# Serial execution required: Manager registry manipulation
-
+    # Serial execution required: Manager registry manipulation
     cleanup_managers,
     get_session_manager,
     initialize_managers,
 )
+from PySide6.QtCore import QSettings
 from ui.dialogs.settings_dialog import SettingsDialog
 from ui.main_window import MainWindow
 from utils.rom_cache import get_rom_cache
@@ -38,7 +36,7 @@ from utils.settings_manager import get_settings_manager
 # Override the autouse fixture from conftest to prevent automatic initialization
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.singleton,
     pytest.mark.cache,
@@ -112,7 +110,7 @@ class TestSettingsPersistenceAcrossRestarts:
         # Get current values first
         initial_enabled = dialog.cache_enabled_check.isChecked()
         initial_size = dialog.cache_size_spin
-        
+
         # Ensure the values we'll set are different from current values
         new_enabled = not initial_enabled  # Toggle the current state
         new_size = 250 if initial_size != 250 else 300  # Use different value

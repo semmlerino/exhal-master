@@ -7,7 +7,8 @@ to make type annotations more readable and consistent.
 
 from __future__ import annotations
 
-from typing import Any, Callable, TypeAlias
+from collections.abc import Callable
+from typing import Any, TypeAlias
 
 # Python compatibility imports for typing
 # These are re-exported for use in other modules
@@ -18,11 +19,11 @@ try:
 except ImportError:
     # Fallback for older Python versions
     try:
+        from typing import NotRequired, TypeGuard
+
         from typing_extensions import (
-            NotRequired,
             Protocol,
             TypedDict,
-            TypeGuard,
         )
         __all__ = [
             "ImageMode",

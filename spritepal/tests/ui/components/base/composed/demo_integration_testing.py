@@ -10,7 +10,6 @@ testing approach.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add project root to path
@@ -20,52 +19,52 @@ def demo_feature_flag_system():
     """Demonstrate the feature flag system."""
     print("Feature Flag System Demonstration")
     print("=" * 40)
-    
+
     # Import feature flag utilities
     try:
         from utils.dialog_feature_flags import (
-            get_dialog_implementation,
-            set_dialog_implementation,
-            is_composed_dialogs_enabled,
             enable_composed_dialogs,
-            enable_legacy_dialogs
+            enable_legacy_dialogs,
+            get_dialog_implementation,
+            is_composed_dialogs_enabled,
+            set_dialog_implementation,
         )
-        
+
         print("✓ Feature flag imports successful")
-        
+
         # Show initial state
         initial_impl = get_dialog_implementation()
         print(f"Initial implementation: {initial_impl}")
-        
+
         # Demonstrate switching
         print("\nTesting implementation switching:")
-        
+
         enable_legacy_dialogs()
         print(f"After enable_legacy_dialogs(): {get_dialog_implementation()}")
         print(f"is_composed_dialogs_enabled(): {is_composed_dialogs_enabled()}")
-        
+
         enable_composed_dialogs()
         print(f"After enable_composed_dialogs(): {get_dialog_implementation()}")
         print(f"is_composed_dialogs_enabled(): {is_composed_dialogs_enabled()}")
-        
+
         # Reset to initial state
         set_dialog_implementation(initial_impl == "composed")
         print(f"Reset to initial: {get_dialog_implementation()}")
-        
+
     except ImportError as e:
         print(f"❌ Could not import feature flag system: {e}")
-    
+
     print()
 
 def demo_test_structure():
     """Demonstrate the test structure and patterns."""
     print("Integration Test Structure Demonstration")
     print("=" * 45)
-    
+
     test_scenarios = [
         ("Basic Dialog Creation", [
             "test_dialog_creation_default_params",
-            "test_dialog_creation_custom_params", 
+            "test_dialog_creation_custom_params",
             "test_dialog_properties_consistency"
         ]),
         ("Tab Management", [
@@ -104,7 +103,7 @@ def demo_test_structure():
             "test_memory_usage_comparison"
         ])
     ]
-    
+
     total_tests = 0
     for category, tests in test_scenarios:
         print(f"📋 {category}:")
@@ -113,7 +112,7 @@ def demo_test_structure():
         print(f"   Total: {len(tests)} tests")
         print()
         total_tests += len(tests)
-    
+
     print(f"🎯 Total Integration Tests: {total_tests}")
     print()
 
@@ -121,7 +120,7 @@ def demo_testing_approach():
     """Demonstrate the testing approach and patterns."""
     print("Testing Approach Demonstration")
     print("=" * 35)
-    
+
     approaches = {
         "Real Qt Widgets": "Uses actual QApplication, QDialog, QWidget instances",
         "Side-by-Side Comparison": "Tests both legacy and composed implementations",
@@ -132,7 +131,7 @@ def demo_testing_approach():
         "Initialization Order": "Validates proper widget creation patterns",
         "Lifecycle Management": "Tests creation, usage, and cleanup patterns"
     }
-    
+
     for approach, description in approaches.items():
         print(f"🔬 {approach}:")
         print(f"   {description}")
@@ -142,7 +141,7 @@ def demo_test_fixtures():
     """Demonstrate the test fixtures and their purposes."""
     print("Test Fixtures Demonstration")
     print("=" * 30)
-    
+
     fixtures = {
         "qt_app": {
             "scope": "session",
@@ -150,7 +149,7 @@ def demo_test_fixtures():
             "benefit": "Reuses single app instance across test session"
         },
         "dialog_implementations": {
-            "scope": "function", 
+            "scope": "function",
             "purpose": "Provides both legacy and composed dialog classes",
             "benefit": "Enables side-by-side comparison testing"
         },
@@ -170,7 +169,7 @@ def demo_test_fixtures():
             "benefit": "Enables performance regression detection"
         }
     }
-    
+
     for fixture, details in fixtures.items():
         print(f"🧪 {fixture}:")
         print(f"   Scope: {details['scope']}")
@@ -182,14 +181,14 @@ def demo_test_execution_flow():
     """Demonstrate how tests would execute."""
     print("Test Execution Flow Demonstration")
     print("=" * 38)
-    
+
     flow_steps = [
         "1. Session Setup",
         "   • Create QApplication (qt_app fixture)",
         "   • Configure headless mode if needed",
         "   • Set up performance monitoring",
         "",
-        "2. Test Class Setup", 
+        "2. Test Class Setup",
         "   • Initialize dialog implementations fixture",
         "   • Set up mock message boxes",
         "   • Prepare feature flag switcher",
@@ -212,7 +211,7 @@ def demo_test_execution_flow():
         "   • Final memory cleanup",
         "   • Generate performance reports"
     ]
-    
+
     for step in flow_steps:
         if step.startswith(("1.", "2.", "3.", "4.", "5.")):
             print(f"🔄 {step}")
@@ -227,11 +226,11 @@ def demo_expected_benefits():
     """Demonstrate the expected benefits of the integration tests."""
     print("Expected Benefits Demonstration")
     print("=" * 35)
-    
+
     benefits = [
         ("🛡️ Regression Prevention", [
             "Catches breaking changes during refactoring",
-            "Validates API compatibility between implementations", 
+            "Validates API compatibility between implementations",
             "Ensures signal/slot connections remain functional"
         ]),
         ("📊 Performance Monitoring", [
@@ -255,7 +254,7 @@ def demo_expected_benefits():
             "Generates performance benchmark reports"
         ])
     ]
-    
+
     for category, items in benefits:
         print(category)
         for item in items:
@@ -267,16 +266,16 @@ def main():
     print("DialogBaseMigrationAdapter Integration Testing Demo")
     print("=" * 55)
     print()
-    
+
     demo_sections = [
         demo_feature_flag_system,
-        demo_test_structure, 
+        demo_test_structure,
         demo_testing_approach,
         demo_test_fixtures,
         demo_test_execution_flow,
         demo_expected_benefits
     ]
-    
+
     for i, demo_func in enumerate(demo_sections, 1):
         try:
             demo_func()

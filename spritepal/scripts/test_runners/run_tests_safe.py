@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 
+
 class TestEnvironment:
     """Detect and configure test environment"""
 

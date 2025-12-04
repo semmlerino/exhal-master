@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from unittest.mock import Mock
 
 import pytest

@@ -12,31 +12,27 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, cast
-from unittest.mock import MagicMock, Mock, patch
+from typing import cast
+from unittest.mock import Mock
 
 import pytest
-from PySide6.QtCore import QObject, QThread, Signal
-from PySide6.QtWidgets import QApplication
-
 from core.controller import ExtractionController
 from core.managers import (
-# Serial execution required: QApplication management, Thread safety concerns, Real Qt components
-
+    # Serial execution required: QApplication management, Thread safety concerns, Real Qt components
     ExtractionManager,
     InjectionManager,
-    get_session_manager,
     initialize_managers,
 )
 from core.protocols.manager_protocols import (
     ExtractionManagerProtocol,
     InjectionManagerProtocol,
-    SessionManagerProtocol,
 )
+from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtWidgets import QApplication
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.thread_safety,
@@ -51,13 +47,13 @@ pytestmark = [
 ]
 class SignalCapture(QObject):
     """Helper class to capture Qt signals for testing"""
-    
+
     def __init__(self):
         super().__init__()
         self.captured_signals = []
         self.signal_threads = []
         self.lock = threading.Lock()
-    
+
     def capture(self, *args):
         """Capture signal emission with thread info"""
         with self.lock:
@@ -68,13 +64,13 @@ class SignalCapture(QObject):
                 'thread_name': current_thread.name,
                 'is_main': current_thread == threading.main_thread()
             })
-    
+
     def reset(self):
         """Reset captured data"""
         with self.lock:
             self.captured_signals.clear()
             self.signal_threads.clear()
-    
+
     def wait_for_signal(self, timeout=1.0):
         """Wait for at least one signal with timeout"""
         start_time = time.time()
@@ -87,7 +83,7 @@ class SignalCapture(QObject):
 
 class TestQtSignalArchitecture:
     """Test Qt signal architecture after controller fixes"""
-    
+
     @pytest.fixture
     def app(self):
         """Ensure QApplication exists for Qt testing"""
@@ -95,7 +91,7 @@ class TestQtSignalArchitecture:
         if app is None:
             app = QApplication([])
         yield app
-    
+
     @pytest.fixture(autouse=True)
     def cleanup_managers(self):
         """Ensure managers are cleaned up after each test"""
@@ -107,70 +103,70 @@ class TestQtSignalArchitecture:
                 _registry.cleanup_managers()
         except Exception:
             pass
-    
+
     @pytest.fixture
     def signal_capture(self):
         """Create signal capture helper"""
         return SignalCapture()
-    
+
     @pytest.fixture
     def mock_factory(self):
         """Get mock factory instance"""
         return RealComponentFactory()
-    
+
     def test_signal_connection_with_casting(self, app, mock_factory, signal_capture):
         """Test that signal connections work correctly with protocol casting"""
         # Initialize managers first
         initialize_managers()
-        
+
         # Create real managers
         injection_mgr = InjectionManager()
         extraction_mgr = ExtractionManager()
-        
+
         # Create mock main window
         main_window = mock_factory.create_main_window()
-        
+
         # Create controller with managers as protocols
         controller = ExtractionController(
             main_window=main_window,
             injection_manager=injection_mgr,
             extraction_manager=extraction_mgr
         )
-        
+
         # Connect signal capture to manager signals
         injection_mgr.injection_progress.connect(signal_capture.capture)
         injection_mgr.injection_finished.connect(signal_capture.capture)
         extraction_mgr.cache_saved.connect(signal_capture.capture)
-        
+
         # Test 1: Verify signals are properly connected
         assert controller.injection_manager is injection_mgr
         assert controller.extraction_manager is extraction_mgr
-        
+
         # Test 2: Emit signals and verify they're received
         injection_mgr.injection_progress.emit("Test progress")
         assert signal_capture.wait_for_signal()
         assert signal_capture.captured_signals[0] == ("Test progress",)
-        
+
         signal_capture.reset()
         injection_mgr.injection_finished.emit(True, "Success")
         assert signal_capture.wait_for_signal()
         assert signal_capture.captured_signals[0] == (True, "Success")
-        
+
         signal_capture.reset()
         extraction_mgr.cache_saved.emit("sprite_cache", 10)
         assert signal_capture.wait_for_signal()
         assert signal_capture.captured_signals[0] == ("sprite_cache", 10)
-    
+
     def test_protocol_compliance(self):
         """Test that concrete managers comply with protocols"""
         # Test InjectionManager compliance
         injection_mgr = InjectionManager()
         assert isinstance(injection_mgr, InjectionManagerProtocol)
-        
+
         # Test ExtractionManager compliance
         extraction_mgr = ExtractionManager()
         assert isinstance(extraction_mgr, ExtractionManagerProtocol)
-        
+
         # Verify all protocol signals exist
         protocol_signals = [
             'injection_progress', 'injection_finished', 'compression_info',
@@ -180,34 +176,34 @@ class TestQtSignalArchitecture:
             assert hasattr(injection_mgr, signal_name)
             signal = getattr(injection_mgr, signal_name)
             assert isinstance(signal, Signal)
-    
+
     def test_thread_safety_signal_emission(self, app, signal_capture):
         """Test that signals work correctly across thread boundaries"""
         manager = InjectionManager()
         manager.injection_progress.connect(signal_capture.capture)
-        
+
         # Define worker thread function
         def worker_thread():
             # Emit signal from worker thread
             manager.injection_progress.emit("Progress from worker thread")
-        
+
         # Start worker thread
         thread = threading.Thread(target=worker_thread)
         thread.start()
         thread.join()
-        
+
         # Verify signal was received
         assert signal_capture.wait_for_signal()
         assert signal_capture.captured_signals[0] == ("Progress from worker thread",)
-        
+
         # Verify signal was handled in main thread (Qt queued connection)
         thread_info = signal_capture.signal_threads[0]
         assert thread_info['is_main']  # Signal should be delivered to main thread
-    
+
     def test_signal_parameter_types(self, app, signal_capture):
         """Test that signal parameters are passed correctly with proper types"""
         manager = ExtractionManager()
-        
+
         # Test different signal parameter types
         test_cases = [
             (manager.extraction_progress, ("Test message",)),
@@ -216,214 +212,214 @@ class TestQtSignalArchitecture:
             (manager.active_palettes_found, ([1, 2, 3],)),
             (manager.cache_hit, ("sprite_cache", 1.5)),
         ]
-        
+
         for signal, params in test_cases:
             signal_capture.reset()
             signal.connect(signal_capture.capture)
             signal.emit(*params)
-            
+
             assert signal_capture.wait_for_signal()
             assert signal_capture.captured_signals[0] == params
-            
+
             signal.disconnect(signal_capture.capture)
-    
+
     def test_signal_cleanup_on_deletion(self, app):
         """Test that signals are properly cleaned up when objects are deleted"""
         manager = InjectionManager()
-        
+
         # Create a receiver object
         receiver = SignalCapture()
         manager.injection_progress.connect(receiver.capture)
-        
+
         # Verify connection works
         manager.injection_progress.emit("Test")
         assert receiver.wait_for_signal()
-        
+
         # Delete manager and verify no crashes
         del manager
-        
+
         # Receiver should still exist and be functional
         assert receiver is not None
         assert len(receiver.captured_signals) == 1
-    
+
     def test_casting_preserves_functionality(self, app, mock_factory):
         """Test that casting to protocol and back preserves all functionality"""
         # Create concrete manager
         concrete_mgr = InjectionManager()
-        
+
         # Cast to protocol
         protocol_mgr: InjectionManagerProtocol = concrete_mgr
-        
+
         # Cast back to concrete type (as done in controller)
         casted_mgr = cast(InjectionManager, protocol_mgr)
-        
+
         # Verify all signals still work
         capture = SignalCapture()
         casted_mgr.injection_progress.connect(capture.capture)
         casted_mgr.injection_progress.emit("Test after casting")
-        
+
         assert capture.wait_for_signal()
         assert capture.captured_signals[0] == ("Test after casting",)
-        
+
         # Verify object identity is preserved
         assert casted_mgr is concrete_mgr
         assert protocol_mgr is concrete_mgr
-    
+
     def test_error_handling_with_signals(self, app, signal_capture):
         """Test signal behavior during error conditions"""
         manager = InjectionManager()
         manager.error_occurred.connect(signal_capture.capture)
-        
+
         # Simulate error during operation
         try:
             manager._emit_error("Test error", Exception("Simulated error"))
         except Exception:
             pass  # Error emission shouldn't crash
-        
+
         # Verify error signal was emitted
         assert signal_capture.wait_for_signal()
         assert "Test error" in str(signal_capture.captured_signals[0])
-    
+
     def test_concurrent_signal_emissions(self, app, signal_capture):
         """Test concurrent signal emissions from multiple threads"""
         manager = ExtractionManager()
         manager.extraction_progress.connect(signal_capture.capture)
-        
+
         num_threads = 5
         emissions_per_thread = 10
-        
+
         def worker(thread_id):
             for i in range(emissions_per_thread):
                 manager.extraction_progress.emit(f"Thread {thread_id} - Message {i}")
                 time.sleep(0.001)  # Small delay to encourage interleaving
-        
+
         # Start multiple threads
         threads = []
         for i in range(num_threads):
             thread = threading.Thread(target=worker, args=(i,))
             threads.append(thread)
             thread.start()
-        
+
         # Wait for all threads
         for thread in threads:
             thread.join()
-        
+
         # Verify all signals were received
         expected_count = num_threads * emissions_per_thread
         timeout = 5.0
         start_time = time.time()
-        
+
         while len(signal_capture.captured_signals) < expected_count and time.time() - start_time < timeout:
             time.sleep(0.01)
-        
+
         assert len(signal_capture.captured_signals) == expected_count
-        
+
         # Verify all were delivered to main thread
         for thread_info in signal_capture.signal_threads:
             assert thread_info['is_main']
-    
+
     def test_signal_disconnection(self, app, signal_capture):
         """Test proper signal disconnection"""
         manager = InjectionManager()
-        
+
         # Connect signal
         manager.injection_progress.connect(signal_capture.capture)
-        
+
         # Emit and verify reception
         manager.injection_progress.emit("Connected")
         assert signal_capture.wait_for_signal()
         assert len(signal_capture.captured_signals) == 1
-        
+
         # Disconnect
         manager.injection_progress.disconnect(signal_capture.capture)
-        
+
         # Emit again and verify no reception
         signal_capture.reset()
         manager.injection_progress.emit("Disconnected")
         time.sleep(0.1)  # Give time for potential delivery
         assert len(signal_capture.captured_signals) == 0
-    
+
     def test_controller_signal_forwarding(self, app, mock_factory, signal_capture):
         """Test that controller properly forwards signals from managers"""
         # Create managers and controller
         injection_mgr = InjectionManager()
         extraction_mgr = ExtractionManager()
         main_window = mock_factory.create_main_window()
-        
+
         controller = ExtractionController(
             main_window=main_window,
             injection_manager=injection_mgr,
             extraction_manager=extraction_mgr
         )
-        
+
         # Capture controller's handling of manager signals
         called_methods = []
-        
+
         def capture_method_call(method_name):
             def wrapper(*args, **kwargs):
                 called_methods.append((method_name, args, kwargs))
             return wrapper
-        
+
         # Mock controller handler methods
         controller._on_injection_progress = capture_method_call('_on_injection_progress')
         controller._on_injection_finished = capture_method_call('_on_injection_finished')
         controller._on_cache_saved = capture_method_call('_on_cache_saved')
-        
+
         # Emit signals from managers
         injection_mgr.injection_progress.emit("Test progress")
         injection_mgr.injection_finished.emit(True, "Success")
         extraction_mgr.cache_saved.emit("sprite_cache", 5)
-        
+
         # Process events to ensure signal delivery
         app.processEvents()
         time.sleep(0.1)
-        
+
         # Verify controller methods were called
         assert len(called_methods) == 3
         assert called_methods[0] == ('_on_injection_progress', ("Test progress",), {})
         assert called_methods[1] == ('_on_injection_finished', (True, "Success"), {})
         assert called_methods[2] == ('_on_cache_saved', ("sprite_cache", 5), {})
-    
+
     def test_worker_thread_signal_pattern(self, app, signal_capture):
         """Test the worker thread pattern with proper signal handling"""
-        
+
         class TestWorker(QThread):
             progress = Signal(str)
             finished = Signal(bool)
-            
+
             def run(self):
                 # Simulate work with progress updates
                 for i in range(5):
                     self.progress.emit(f"Step {i + 1}/5")
                     time.sleep(0.01)
                 self.finished.emit(True)
-        
+
         # Create and connect worker
         worker = TestWorker()
         worker.progress.connect(signal_capture.capture)
         worker.finished.connect(signal_capture.capture)
-        
+
         # Start worker
         worker.start()
         worker.wait(1000)  # Wait up to 1 second
-        
+
         # Verify signals were received in order
         assert len(signal_capture.captured_signals) >= 6  # 5 progress + 1 finished
-        
+
         # Check progress signals
         for i in range(5):
             assert signal_capture.captured_signals[i] == (f"Step {i + 1}/5",)
-        
+
         # Check finished signal
         assert signal_capture.captured_signals[-1] == (True,)
-        
+
         # Verify all signals were delivered to main thread
         for thread_info in signal_capture.signal_threads:
             assert thread_info['is_main']
 
 class TestMemoryManagement:
     """Test memory management and leak prevention in signal architecture"""
-    
+
     @pytest.fixture
     def app(self):
         """Ensure QApplication exists for Qt testing"""
@@ -431,139 +427,139 @@ class TestMemoryManagement:
         if app is None:
             app = QApplication([])
         yield app
-    
+
     def test_circular_reference_prevention(self, app):
         """Test that signal connections don't create circular references"""
         import weakref
-        
+
         # Create manager
         manager = InjectionManager()
         manager_ref = weakref.ref(manager)
-        
+
         # Create receiver that holds reference to manager
         class Receiver(QObject):
             def __init__(self, mgr):
                 super().__init__()
                 self.manager = mgr  # Potential circular reference
-            
+
             def on_signal(self, msg):
                 pass
-        
+
         receiver = Receiver(manager)
         receiver_ref = weakref.ref(receiver)
-        
+
         # Connect signal
         manager.injection_progress.connect(receiver.on_signal)
-        
+
         # Delete strong references
         del manager
         del receiver
-        
+
         # Process events and garbage collect
         app.processEvents()
         import gc
         gc.collect()
-        
+
         # Both should be garbage collected (no circular reference)
         assert manager_ref() is None
         assert receiver_ref() is None
-    
+
     def test_signal_cleanup_on_thread_deletion(self, app):
         """Test that worker thread signals are properly cleaned up"""
         import weakref
-        
+
         class Worker(QThread):
             signal = Signal(str)
-            
+
             def run(self):
                 self.signal.emit("Working")
-        
+
         # Create worker and capture
         worker = Worker()
         worker_ref = weakref.ref(worker)
-        
+
         capture = SignalCapture()
         worker.signal.connect(capture.capture)
-        
+
         # Run worker
         worker.start()
         worker.wait(100)
-        
+
         # Delete worker
         del worker
-        
+
         # Force garbage collection
         import gc
         gc.collect()
-        
+
         # Worker should be collected
         assert worker_ref() is None
-        
+
         # Capture should still be valid
         assert capture is not None
         assert len(capture.captured_signals) == 1
 
 class TestPerformanceImpact:
     """Test performance impact of casting approach"""
-    
+
     def test_casting_performance(self):
         """Measure performance impact of protocol casting"""
         import timeit
-        
+
         # Create manager
         manager = InjectionManager()
-        
+
         # Test direct access
         def direct_access():
             manager.injection_progress.emit("Test")
-        
+
         # Test with casting
         def casted_access():
             casted = cast(InjectionManager, manager)
             casted.injection_progress.emit("Test")
-        
+
         # Measure times (without actual signal delivery)
         direct_time = timeit.timeit(direct_access, number=10000)
         casted_time = timeit.timeit(casted_access, number=10000)
-        
+
         # Casting should have minimal overhead (< 10%)
         overhead = (casted_time - direct_time) / direct_time
         assert overhead < 0.1, f"Casting overhead too high: {overhead:.2%}"
-    
+
     def test_signal_delivery_performance(self, app):
         """Test signal delivery performance across threads"""
         import statistics
-        
+
         manager = ExtractionManager()
-        
+
         # Measure signal delivery times
         delivery_times = []
-        
+
         class TimingCapture(QObject):
             def __init__(self):
                 super().__init__()
                 self.emit_time = None
-            
+
             def on_signal(self, msg):
                 if self.emit_time:
                     delivery_time = time.time() - self.emit_time
                     delivery_times.append(delivery_time)
-        
+
         capture = TimingCapture()
         manager.extraction_progress.connect(capture.on_signal)
-        
+
         # Emit signals and measure delivery time
         for _ in range(100):
             capture.emit_time = time.time()
             manager.extraction_progress.emit("Test")
             app.processEvents()
             time.sleep(0.001)
-        
+
         # Analyze delivery times
         if delivery_times:
             avg_time = statistics.mean(delivery_times)
             max_time = max(delivery_times)
-            
+
             # Signal delivery should be fast
             assert avg_time < 0.001, f"Average delivery time too high: {avg_time:.6f}s"
             assert max_time < 0.01, f"Max delivery time too high: {max_time:.6f}s"

@@ -18,9 +18,10 @@ Environment Requirements:
 
 import argparse
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
+
 
 def setup_environment():
     """Set up environment for UI testing."""
@@ -80,7 +81,7 @@ def run_tests(args):
     if args.headless:
         # Use xvfb for headless testing on Linux
         if sys.platform.startswith('linux'):
-            cmd = ["xvfb-run", "-a", "--server-args=-screen 0 1920x1200x24"] + cmd
+            cmd = ["xvfb-run", "-a", "--server-args=-screen 0 1920x1200x24", *cmd]
         else:
             os.environ["QT_QPA_PLATFORM"] = "offscreen"
     
@@ -180,4 +181,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-EOF < /dev/null

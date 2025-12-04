@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 
 from PIL import Image
-
 from utils.constants import BYTES_PER_TILE
 from utils.logging_config import get_logger
 

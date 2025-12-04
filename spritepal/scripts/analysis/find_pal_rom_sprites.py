@@ -3,7 +3,6 @@ from __future__ import annotations
 
 """Find PAL ROM sprite locations by searching for VRAM patterns."""
 
-import os
 import sys
 from pathlib import Path
 
@@ -65,7 +64,7 @@ def search_for_vram_patterns(rom_path: str, vram_samples: list[bytes]):
                     test_data = decompressed[test_offset:test_offset + len(pattern_data)]
 
                     # Calculate similarity
-                    matching_bytes = sum(1 for a, b in zip(pattern_data, test_data) if a == b)
+                    matching_bytes = sum(1 for a, b in zip(pattern_data, test_data, strict=False) if a == b)
                     similarity = matching_bytes / len(pattern_data)
 
                     if similarity > 0.7:  # 70% match threshold

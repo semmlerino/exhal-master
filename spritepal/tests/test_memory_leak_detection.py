@@ -35,12 +35,12 @@ import psutil
 import pytest
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QImage, QPixmap
-
 from ui.workers.batch_thumbnail_worker import (
     BatchThumbnailWorker,
     LRUCache,
     ThumbnailWorkerController,
 )
+
 
 class MemoryMonitor:
     """Monitor memory usage for leak detection."""

@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Protocol
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QApplication
-
 from utils.logging_config import get_logger
 
 from .extraction_manager import ExtractionManager
@@ -145,7 +144,7 @@ class SingletonManagerFactory:
         """
         # Delayed import to avoid circular dependency:
         # factory -> managers -> factory
-        from . import get_extraction_manager  # noqa: PLC0415
+        from . import get_extraction_manager
 
         if parent is not None:
             self._logger.warning(
@@ -169,7 +168,7 @@ class SingletonManagerFactory:
         """
         # Delayed import to avoid circular dependency:
         # factory -> managers -> factory
-        from . import get_injection_manager  # noqa: PLC0415
+        from . import get_injection_manager
 
         if parent is not None:
             self._logger.warning(

@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 
+
 class PytestPatternFixer(ast.NodeTransformer):
     """AST transformer to fix pytest pattern violations."""
 
@@ -42,10 +43,7 @@ class PytestPatternFixer(ast.NodeTransformer):
 
     def _references_exception(self, node, exc_name):
         """Check if an assertion references the exception variable."""
-        for child in ast.walk(node):
-            if isinstance(child, ast.Name) and child.id == exc_name:
-                return True
-        return False
+        return any(isinstance(child, ast.Name) and child.id == exc_name for child in ast.walk(node))
 
     def _record_pt017_fix(self, try_node, handler):
         """Record a fix for PT017 violation."""

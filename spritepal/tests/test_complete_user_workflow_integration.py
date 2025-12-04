@@ -34,8 +34,6 @@ pytestmark = [
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
-
 from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
 from core.managers.registry import (
@@ -45,6 +43,7 @@ from core.managers.registry import (
     initialize_managers as initialize_managers_registry,
 )
 from core.workers import VRAMExtractionWorker
+from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 from utils.constants import (
     BYTES_PER_TILE,
     COLORS_PER_PALETTE,
@@ -52,6 +51,7 @@ from utils.constants import (
     SPRITE_PALETTE_START,
     VRAM_SPRITE_OFFSET,
 )
+
 
 class TestCompleteUserWorkflow:
     """Test complete user workflow scenarios"""

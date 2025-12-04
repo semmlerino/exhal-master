@@ -4,7 +4,6 @@ Validation tests for TestMainWindowHelper
 from __future__ import annotations
 
 import pytest
-
 from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
 
 # Systematic pytest markers applied based on test content analysis

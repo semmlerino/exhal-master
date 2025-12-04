@@ -7,7 +7,7 @@ Shows the final solution working without stretching issues.
 """
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -16,7 +16,6 @@ try:
     from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QFont, QPainter, QPixmap
     from PySide6.QtWidgets import QApplication
-
     from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
     QT_AVAILABLE = True
 except ImportError:
@@ -151,7 +150,7 @@ class DetachedGalleryCapture:
             print("❌ No detached window to capture")
             return
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         save_dir = Path(__file__).parent / "test_screenshots"
 
         # Capture normal size
@@ -172,7 +171,7 @@ class DetachedGalleryCapture:
             print("❌ No detached window to capture")
             return
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         save_dir = Path(__file__).parent / "test_screenshots"
 
         # Capture maximized

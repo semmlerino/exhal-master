@@ -6,7 +6,6 @@ from __future__ import annotations
 import logging
 
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
-
 from ui.styles import get_muted_text_style
 from utils.rom_cache import get_rom_cache
 from utils.settings_manager import get_settings_manager

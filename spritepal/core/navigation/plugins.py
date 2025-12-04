@@ -10,7 +10,8 @@ from __future__ import annotations
 import importlib
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from utils.logging_config import get_logger
 
@@ -100,7 +101,7 @@ class StrategyPlugin(NavigationPlugin):
     def initialize(self) -> bool:
         """Initialize and register strategies."""
         try:
-            from .strategies import get_strategy_registry  # noqa: PLC0415
+            from .strategies import get_strategy_registry
             registry = get_strategy_registry()
 
             for strategy_class in self.strategy_classes:
@@ -125,7 +126,7 @@ class StrategyPlugin(NavigationPlugin):
     def cleanup(self) -> None:
         """Unregister strategies."""
         try:
-            from .strategies import get_strategy_registry  # noqa: PLC0415
+            from .strategies import get_strategy_registry
             registry = get_strategy_registry()
 
             for strategy in self.registered_strategies:

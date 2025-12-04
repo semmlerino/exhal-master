@@ -39,7 +39,7 @@ def main():
     for line in output.split("\n"):
         match = re.match(error_pattern, line)
         if match:
-            file_path, line_num, col_num, message, error_type = match.groups()
+            file_path, line_num, _col_num, message, error_type = match.groups()
             total_errors += 1
 
             if error_type in CRITICAL_TYPES:

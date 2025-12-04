@@ -4,10 +4,8 @@ Tests for manager registry
 from __future__ import annotations
 
 import pytest
-
 from core.managers import (
-# Serial execution required: Thread safety concerns
-
+    # Serial execution required: Thread safety concerns
     ExtractionManager,
     ManagerError,
     SessionManager,
@@ -21,7 +19,7 @@ from core.managers import (
 from core.managers.registry import ManagerRegistry
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.ci_safe,

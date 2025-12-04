@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Any, Protocol, TypeVar
 
 from PySide6.QtWidgets import QDialog, QWidget
-
 from utils.logging_config import get_logger
 
 from .context import ManagerContext, get_current_context

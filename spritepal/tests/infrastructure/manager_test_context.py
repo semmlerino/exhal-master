@@ -13,13 +13,12 @@ import threading
 from collections.abc import Iterator
 from typing import Any, TypeVar, cast
 
-from PySide6.QtCore import QThread
-from PySide6.QtWidgets import QApplication
-
 from core.managers.base_manager import BaseManager
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
+from PySide6.QtCore import QThread
+from PySide6.QtWidgets import QApplication
 
 from .real_component_factory import RealComponentFactory
 from .test_data_repository import get_test_data_repository

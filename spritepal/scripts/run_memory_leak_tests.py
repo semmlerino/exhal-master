@@ -25,6 +25,7 @@ sys.path.insert(0, str(project_root))
 from memory_leak_profiler import MemoryLeakProfiler
 from PySide6.QtWidgets import QApplication
 
+
 def setup_test_environment():
     """Set up the test environment for leak detection."""
     # Ensure we have a Qt application

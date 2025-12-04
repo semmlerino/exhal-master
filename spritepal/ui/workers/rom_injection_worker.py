@@ -7,11 +7,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Signal
-
 from core.rom_injector import ROMInjector
 from core.rom_validator import ROMValidator
 from core.sprite_validator import SpriteValidator
+from PySide6.QtCore import QThread, Signal
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -101,7 +100,7 @@ class ROMInjectionWorker(QThread):
             self.progress.emit("Validating ROM file...")
             self.progress_percent.emit(int((current_step / total_steps) * 100))
             try:
-                header_info, header_offset = ROMValidator.validate_rom_for_injection(
+                _header_info, header_offset = ROMValidator.validate_rom_for_injection(
                     self.rom_input, self.sprite_offset
                 )
             except Exception as e:

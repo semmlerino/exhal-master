@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Debug import issues."""
 
-import sys
 import traceback
+
 
 def test_import(module_name):
     print(f"\nTesting import of {module_name}...")
@@ -18,7 +18,7 @@ def test_import(module_name):
 # Test imports in order
 modules = [
     "core.mmap_rom_reader",
-    "utils.constants", 
+    "utils.constants",
     "core.rom_extractor",
     "core.optimized_rom_extractor",
     "core.managers.base",

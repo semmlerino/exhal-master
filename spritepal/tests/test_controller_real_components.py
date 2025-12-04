@@ -9,22 +9,14 @@ Key improvements:
 """
 from __future__ import annotations
 
-import subprocess
-import sys
-from pathlib import Path
-from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
-from PIL import Image
-
 from core.controller import ExtractionController
 from core.managers import ExtractionManager, InjectionManager, SessionManager
 from core.workers import VRAMExtractionWorker
+from PIL import Image
 from tests.infrastructure.test_doubles import (
-    MockROMFile,
-    MockProgressDialog,
-    MockMessageBox,
     TestDoubleFactory,
     setup_hal_mocking,
     setup_rom_mocking,
@@ -46,12 +38,12 @@ class TestControllerWithRealManagers:
         extraction_manager = ExtractionManager()
         injection_manager = InjectionManager()
         session_manager = SessionManager()
-        
+
         # Setup test doubles only for external dependencies
         setup_hal_mocking(extraction_manager, deterministic=True)
         setup_rom_mocking(extraction_manager, rom_type="standard")
         setup_hal_mocking(injection_manager, deterministic=True)
-        
+
         return {
             'extraction': extraction_manager,
             'injection': injection_manager,
@@ -62,14 +54,14 @@ class TestControllerWithRealManagers:
     def mock_main_window(self):
         """Create a minimal mock main window with required attributes."""
         window = Mock()
-        
+
         # Add required signals
         window.extract_requested = Mock()
         window.open_in_editor_requested = Mock()
         window.arrange_rows_requested = Mock()
         window.arrange_grid_requested = Mock()
         window.inject_requested = Mock()
-        
+
         # Add UI components
         window.extraction_panel = Mock()
         window.rom_extraction_panel = Mock()
@@ -81,17 +73,17 @@ class TestControllerWithRealManagers:
         window.sprite_preview = Mock()
         window.palette_preview = Mock()
         window.extraction_tabs = Mock()
-        
+
         # Add methods
         window.get_extraction_params = Mock()
         window.extraction_failed = Mock()
         window.extraction_completed = Mock()
         window.update_preview = Mock()
-        
+
         # Add state
         window._output_path = ""
         window._extracted_files = []
-        
+
         return window
 
     def test_controller_initialization_with_real_managers(self, mock_main_window, real_managers):
@@ -103,7 +95,7 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Verify controller is properly initialized
         assert controller.main_window == mock_main_window
         assert controller.extraction_manager == real_managers['extraction']
@@ -111,7 +103,7 @@ class TestControllerWithRealManagers:
         assert controller.session_manager == real_managers['session']
         assert controller.worker is None
         assert controller.rom_worker is None
-        
+
         # Verify error handler is set up
         assert controller.error_handler is not None
 
@@ -124,7 +116,7 @@ class TestControllerWithRealManagers:
             "output_base": str(tmp_path / "output"),
             "grayscale_mode": False,
         }
-        
+
         # Create controller with real managers
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -132,15 +124,15 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Act: Start extraction
         controller.start_extraction()
-        
+
         # Assert BEHAVIOR: Error was reported to user
         mock_main_window.extraction_failed.assert_called_once()
         error_msg = mock_main_window.extraction_failed.call_args[0][0]
         assert "VRAM" in error_msg or "required" in error_msg.lower()
-        
+
         # Assert STATE: No worker was created
         assert controller.worker is None
 
@@ -151,11 +143,11 @@ class TestControllerWithRealManagers:
         cgram_file = tmp_path / "test.cgram"
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        
+
         # Write minimal valid data
         vram_file.write_bytes(b'\x00' * 0x10000)  # 64KB VRAM
         cgram_file.write_bytes(b'\x00' * 512)      # 512 bytes CGRAM
-        
+
         # Configure valid extraction params
         mock_main_window.get_extraction_params.return_value = {
             "vram_path": str(vram_file),
@@ -166,7 +158,7 @@ class TestControllerWithRealManagers:
             "create_metadata": True,
             "grayscale_mode": False,
         }
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -174,15 +166,15 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Mock worker creation to avoid Qt thread issues in test
         with patch.object(controller, '_create_vram_worker') as mock_create:
             mock_worker = Mock(spec=VRAMExtractionWorker)
             mock_create.return_value = mock_worker
-            
+
             # Act: Start extraction
             controller.start_extraction()
-            
+
             # Assert BEHAVIOR: Worker was created with correct params
             mock_create.assert_called_once()
             assert controller.worker == mock_worker
@@ -194,7 +186,7 @@ class TestControllerWithRealManagers:
         image_file = tmp_path / "sprite.png"
         test_image = Image.new('RGBA', (64, 64), color=(255, 0, 0, 255))
         test_image.save(image_file)
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -202,16 +194,16 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Mock subprocess to avoid launching real editor
         with patch('core.controller.subprocess.Popen') as mock_popen:
             mock_process = Mock()
             mock_process.poll.return_value = None
             mock_popen.return_value = mock_process
-            
+
             # Act: Open in editor
             controller.open_in_pixel_editor(str(image_file))
-            
+
             # Assert BEHAVIOR: Editor was launched with correct file
             mock_popen.assert_called_once()
             call_args = mock_popen.call_args[0][0]
@@ -223,13 +215,13 @@ class TestControllerWithRealManagers:
         rom_file = tmp_path / "test.sfc"
         rom_data = TestDoubleFactory.create_rom_file()._data
         rom_file.write_bytes(rom_data)
-        
+
         cgram_file = tmp_path / "test.cgram"
         cgram_file.write_bytes(b'\x00' * 512)
-        
+
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -237,7 +229,7 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Setup ROM extraction params
         params = {
             "rom_path": str(rom_file),
@@ -246,15 +238,15 @@ class TestControllerWithRealManagers:
             "output_base": str(output_dir / "sprite"),
             "cgram_path": str(cgram_file),
         }
-        
+
         # Mock worker creation to avoid Qt threads
         with patch('core.controller.ROMExtractionWorker') as mock_worker_class:
             mock_worker = Mock()
             mock_worker_class.return_value = mock_worker
-            
+
             # Act: Start ROM extraction
             controller.start_rom_extraction(params)
-            
+
             # Assert BEHAVIOR: Worker was created and started
             mock_worker_class.assert_called_once()
             mock_worker.start.assert_called_once()
@@ -269,7 +261,7 @@ class TestControllerWithRealManagers:
             "output_base": "/nonexistent/output",
             "grayscale_mode": False,
         }
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -277,10 +269,10 @@ class TestControllerWithRealManagers:
             injection_manager=real_managers['injection'],
             session_manager=real_managers['session']
         )
-        
+
         # Act: Start extraction (will fail validation)
         controller.start_extraction()
-        
+
         # Assert BEHAVIOR: Error was handled gracefully
         mock_main_window.extraction_failed.assert_called()
         assert controller.worker is None  # No worker created on error
@@ -293,13 +285,13 @@ class TestVRAMWorkerWithRealManager:
         # Setup: Create real manager with test doubles
         manager = ExtractionManager()
         setup_hal_mocking(manager, deterministic=True)
-        
+
         # Create test files
         vram_file = tmp_path / "test.vram"
         cgram_file = tmp_path / "test.cgram"
         vram_file.write_bytes(b'\x00' * 0x10000)
         cgram_file.write_bytes(b'\x00' * 512)
-        
+
         # Create worker with real manager
         worker = VRAMExtractionWorker(
             manager=manager,
@@ -308,18 +300,18 @@ class TestVRAMWorkerWithRealManager:
             output_base=str(tmp_path / "output"),
             vram_offset=0x0000,
         )
-        
+
         # Connect signal to capture results
         results = []
         worker.extraction_completed.connect(results.append)
-        
+
         # Mock the actual extraction to return predictable results
         with patch.object(manager, 'extract_from_vram') as mock_extract:
             mock_extract.return_value = ["sprite_0000.png", "sprite_0001.png"]
-            
+
             # Act: Run worker
             worker.run()
-            
+
             # Assert BEHAVIOR: Extraction completed with results
             assert results == [["sprite_0000.png", "sprite_0001.png"]]
 
@@ -327,7 +319,7 @@ class TestVRAMWorkerWithRealManager:
         """Test worker handles extraction errors gracefully."""
         # Setup: Create manager that will fail
         manager = ExtractionManager()
-        
+
         # Create worker with invalid paths
         worker = VRAMExtractionWorker(
             manager=manager,
@@ -336,14 +328,14 @@ class TestVRAMWorkerWithRealManager:
             output_base="/nonexistent/output",
             vram_offset=0x0000,
         )
-        
+
         # Connect signal to capture errors
         errors = []
         worker.extraction_failed.connect(errors.append)
-        
+
         # Act: Run worker (will fail)
         worker.run()
-        
+
         # Assert BEHAVIOR: Error was emitted
         assert len(errors) == 1
         assert "error" in errors[0].lower() or "fail" in errors[0].lower()
@@ -360,12 +352,12 @@ class TestDialogIntegration:
             img = Image.new('RGBA', (32, 32), color=(255, 0, 0, 255))
             img.save(img_file)
             extracted_files.append(str(img_file))
-        
+
         # Create real managers
         extraction_manager = ExtractionManager()
         injection_manager = InjectionManager()
         session_manager = SessionManager()
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -373,16 +365,16 @@ class TestDialogIntegration:
             injection_manager=injection_manager,
             session_manager=session_manager
         )
-        
+
         # Mock dialog creation to avoid Qt display
         with patch('core.controller.GridArrangementDialog') as mock_dialog_class:
             mock_dialog = Mock()
             mock_dialog_class.return_value = mock_dialog
             mock_dialog.exec.return_value = True
-            
+
             # Act: Open grid arrangement
             controller.open_grid_arrangement(extracted_files)
-            
+
             # Assert BEHAVIOR: Dialog was created with files
             mock_dialog_class.assert_called_once()
             call_args = mock_dialog_class.call_args[0]
@@ -395,7 +387,7 @@ class TestDialogIntegration:
         extraction_manager = ExtractionManager()
         injection_manager = InjectionManager()
         session_manager = SessionManager()
-        
+
         # Create controller
         controller = ExtractionController(
             main_window=mock_main_window,
@@ -403,16 +395,16 @@ class TestDialogIntegration:
             injection_manager=injection_manager,
             session_manager=session_manager
         )
-        
+
         # Mock dialog creation
         with patch('core.controller.InjectionDialog') as mock_dialog_class:
             mock_dialog = Mock()
             mock_dialog_class.return_value = mock_dialog
             mock_dialog.exec.return_value = True
-            
+
             # Act: Start injection
             controller.start_injection()
-            
+
             # Assert BEHAVIOR: Dialog was created and shown
             mock_dialog_class.assert_called_once()
             mock_dialog.exec.assert_called_once()
@@ -426,18 +418,18 @@ class TestFileValidation:
         img_file = tmp_path / "test.png"
         img = Image.new('RGBA', (64, 64), color=(0, 255, 0, 255))
         img.save(img_file)
-        
+
         # Validate with real validator
         validator = FileValidator()
         result = validator.validate_image_file(str(img_file))
-        
+
         # Should validate successfully
         assert result is True or result is None  # Depends on implementation
 
     def test_validate_invalid_image_file(self):
         """Test validating non-existent image file."""
         validator = FileValidator()
-        
+
         # Should raise or return False for invalid file
         try:
             result = validator.validate_image_file("/nonexistent/file.png")
@@ -451,9 +443,9 @@ class TestFileValidation:
         # Create test VRAM file
         vram_file = tmp_path / "test.vram"
         vram_file.write_bytes(b'\x00' * 0x10000)  # 64KB
-        
+
         validator = FileValidator()
         result = validator.validate_vram_file(str(vram_file))
-        
+
         # Should validate successfully
         assert result is True or result is None

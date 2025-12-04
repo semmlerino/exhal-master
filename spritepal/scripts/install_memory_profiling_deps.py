@@ -14,6 +14,7 @@ This script installs the required packages for comprehensive memory leak profili
 import subprocess
 import sys
 
+
 def install_package(package_name: str, description: str):
     """Install a package with pip."""
     print(f"Installing {package_name}: {description}")

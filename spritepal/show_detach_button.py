@@ -12,7 +12,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget
-
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 
 

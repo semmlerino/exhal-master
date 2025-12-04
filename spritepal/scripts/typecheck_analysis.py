@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -171,11 +171,11 @@ class TypeCheckAnalyzer:
     def save_report(self, filename: str | None = None):
         """Save analysis report to file."""
         if not filename:
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             filename = f"typecheck_report_{timestamp}.json"
 
         report = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "summary": {
                 "total_errors": len(self.errors),
                 "total_warnings": len(self.warnings),

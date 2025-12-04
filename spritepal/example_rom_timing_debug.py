@@ -16,15 +16,16 @@ import sys
 import time
 from pathlib import Path
 
+
 def run_timing_debug_session(rom_path: str, problematic_offset: str):
     """
     Run complete timing debug session for ROM offset discrepancy.
-    
+
     Args:
         rom_path: Path to ROM file
         problematic_offset: Offset where discrepancy occurs (hex format)
     """
-    
+
     print("="*80)
     print("ROM TIMING DEBUG SESSION")
     print("="*80)
@@ -32,32 +33,32 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
     print(f"Problematic Offset: {problematic_offset}")
     print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print()
-    
+
     # Validate inputs
     if not Path(rom_path).exists():
         print(f"ERROR: ROM file not found: {rom_path}")
         return
-    
+
     try:
         offset_int = int(problematic_offset, 16) if problematic_offset.startswith('0x') else int(problematic_offset)
         print(f"Parsed offset: 0x{offset_int:06X} ({offset_int} decimal)")
     except ValueError:
         print(f"ERROR: Invalid offset format: {problematic_offset}")
         return
-    
+
     print("\n" + "="*80)
     print("PHASE 1: GENERAL ROM TIMING ANALYSIS")
     print("="*80)
-    
+
     # Run general timing profiler
     print("Running comprehensive ROM timing profiler...")
     try:
         result = subprocess.run([
-            sys.executable, "rom_offset_timing_profiler.py", 
-            rom_path, problematic_offset, 
+            sys.executable, "rom_offset_timing_profiler.py",
+            rom_path, problematic_offset,
             "--output", f"timing_analysis_{offset_int:06X}.json"
-        ], capture_output=True, text=True, timeout=120)
-        
+        ], check=False, capture_output=True, text=True, timeout=120)
+
         if result.returncode == 0:
             print("✓ General timing analysis completed successfully")
             print("\nKey findings from general analysis:")
@@ -65,16 +66,16 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
         else:
             print("✗ General timing analysis failed:")
             print(result.stderr)
-            
+
     except subprocess.TimeoutExpired:
         print("✗ General timing analysis timed out (>2 minutes)")
     except Exception as e:
         print(f"✗ General timing analysis error: {e}")
-    
-    print("\n" + "="*80)  
+
+    print("\n" + "="*80)
     print("PHASE 2: SPRITEPAL COMPONENT ANALYSIS")
     print("="*80)
-    
+
     # Run SpritePal-specific analyzer
     print("Running SpritePal component timing analyzer...")
     try:
@@ -82,8 +83,8 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
             sys.executable, "spritepal_timing_analyzer.py",
             rom_path, problematic_offset,
             "--output", f"spritepal_analysis_{offset_int:06X}.json"
-        ], capture_output=True, text=True, timeout=120)
-        
+        ], check=False, capture_output=True, text=True, timeout=120)
+
         if result.returncode == 0:
             print("✓ SpritePal analysis completed successfully")
             print("\nKey findings from SpritePal analysis:")
@@ -91,22 +92,22 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
         else:
             print("✗ SpritePal analysis failed:")
             print(result.stderr)
-            
+
     except subprocess.TimeoutExpired:
         print("✗ SpritePal analysis timed out (>2 minutes)")
     except Exception as e:
         print(f"✗ SpritePal analysis error: {e}")
-    
+
     print("\n" + "="*80)
     print("PHASE 3: MANUAL VERIFICATION")
     print("="*80)
-    
+
     # Manual verification steps
     print("Manual verification steps to perform:")
     print()
     print("1. CLEAR SPRITEPAL CACHES:")
     print("   - Close SpritePal completely")
-    print("   - Delete ~/.spritepal_cache directory") 
+    print("   - Delete ~/.spritepal_cache directory")
     print("   - Delete any .spritepal_*_cache files")
     print("   - Restart SpritePal")
     print()
@@ -126,7 +127,7 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
     print("   - LoROM: ((bank & 0x7F) << 15) + (addr - 0x8000)")
     print("   - HiROM: snes_addr & 0x3FFFFF")
     print()
-    
+
     print("="*80)
     print("DEBUG SESSION COMPLETE")
     print("="*80)
@@ -143,7 +144,7 @@ def run_timing_debug_session(rom_path: str, problematic_offset: str):
 
 def main():
     """Main entry point for debug session example."""
-    
+
     # Example usage
     if len(sys.argv) != 3:
         print("ROM Timing Debug Session")
@@ -167,10 +168,10 @@ def main():
         print("  - Python 3.8+ with required dependencies")
         print()
         sys.exit(1)
-    
+
     rom_path = sys.argv[1]
     offset = sys.argv[2]
-    
+
     run_timing_debug_session(rom_path, offset)
 
 if __name__ == "__main__":

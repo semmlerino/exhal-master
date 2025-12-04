@@ -22,6 +22,7 @@ pytestmark = [
 
 from core.extractor import SpriteExtractor
 
+
 class TestSpriteExtractor:
     """Test the SpriteExtractor functionality"""
 

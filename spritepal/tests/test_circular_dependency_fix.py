@@ -1,13 +1,13 @@
 """Test that the circular dependency between MainWindow and ExtractionController is fixed."""
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtWidgets import QApplication
-
-from ui.main_window import MainWindow
+import pytest
 from core.controller import ExtractionController
+from PySide6.QtWidgets import QApplication
+from ui.main_window import MainWindow
+
 
 class TestCircularDependencyFix:
     """Test suite for circular dependency fix."""
@@ -38,7 +38,7 @@ class TestCircularDependencyFix:
         # Create MainWindow - this should NOT create the controller
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # Verify controller is not created yet (lazy initialization)
         assert window._controller is None, "Controller should not be created during __init__"
 
@@ -46,13 +46,13 @@ class TestCircularDependencyFix:
         """Test that controller is created on first access."""
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # Controller should not exist yet
         assert window._controller is None
-        
+
         # Access controller property - this should trigger lazy initialization
         controller = window.controller
-        
+
         # Verify controller was created
         assert controller is not None, "Controller should be created on first access"
         assert isinstance(controller, ExtractionController)
@@ -62,11 +62,11 @@ class TestCircularDependencyFix:
         """Test that controller property returns the same instance on subsequent access."""
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # Get controller twice
         controller1 = window.controller
         controller2 = window.controller
-        
+
         # Should be the same instance
         assert controller1 is controller2, "Controller should return same instance"
 
@@ -74,13 +74,13 @@ class TestCircularDependencyFix:
         """Test that controller setter works for testing purposes."""
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # Create a mock controller
         mock_controller = MagicMock(spec=ExtractionController)
-        
+
         # Set the controller
         window.controller = mock_controller
-        
+
         # Verify it was set
         assert window.controller is mock_controller, "Controller setter should work"
         assert window._controller is mock_controller, "Internal reference should be updated"
@@ -89,13 +89,13 @@ class TestCircularDependencyFix:
         """Test that controller methods work correctly after lazy initialization."""
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # This should trigger lazy initialization and then call the method
         with patch.object(ExtractionController, 'start_rom_extraction') as mock_method:
             params = {"test": "params"}
             window.controller.start_rom_extraction(params)
             mock_method.assert_called_once_with(params)
-        
+
         # Verify controller was created
         assert window._controller is not None
 
@@ -105,9 +105,9 @@ class TestCircularDependencyFix:
         This test verifies that we can import both modules without issues.
         """
         # These imports should work without circular dependency
-        from ui.main_window import MainWindow
         from core.controller import ExtractionController
-        
+        from ui.main_window import MainWindow
+
         # Verify classes are importable
         assert MainWindow is not None
         assert ExtractionController is not None
@@ -121,7 +121,7 @@ class TestCircularDependencyFix:
         # This should complete quickly, not hang
         window = MainWindow()
         qtbot.addWidget(window)  # Ensure proper cleanup
-        
+
         # If we get here, it didn't hang
         assert window is not None
 
@@ -131,10 +131,10 @@ class TestCircularDependencyFix:
         window2 = MainWindow()
         qtbot.addWidget(window1)  # Ensure proper cleanup
         qtbot.addWidget(window2)  # Ensure proper cleanup
-        
+
         # Access controllers to trigger lazy initialization
         controller1 = window1.controller
         controller2 = window2.controller
-        
+
         # Each window should have its own controller instance
         assert controller1 is not controller2, "Each MainWindow should have its own controller"

@@ -16,25 +16,22 @@ Benefits of real component testing vs mocking:
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from core.managers import cleanup_managers, initialize_managers
+from core.managers.exceptions import ValidationError
+from core.managers.injection_manager import InjectionManager
 from PIL import Image
 
 # Real Component Testing Infrastructure (using available components)
 from tests.fixtures.test_managers import create_injection_manager_fixture
 from tests.fixtures.test_worker_helper import TestWorkerHelper
 
-from core.managers import cleanup_managers, initialize_managers
-from core.managers.exceptions import ValidationError
-from core.managers.injection_manager import InjectionManager
-
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.ci_safe,
@@ -68,12 +65,12 @@ def temp_files_with_real_content(tmp_path):
     sprite_file = tmp_path / "test_sprite.png"
     img = Image.new("RGBA", (64, 64), color=(255, 0, 0, 255))
     img.save(sprite_file)
-    
+
     # Create VRAM file with realistic header and tile data
     vram_file = tmp_path / "test.vram"
     vram_data = b"VRAM" + b"\x00" * 0xFFFC  # 64KB VRAM data with header
     vram_file.write_bytes(vram_data)
-    
+
     # Create ROM file with realistic header
     rom_file = tmp_path / "test.sfc"
     rom_data = (b"\x00" * 0x7FC0 +  # ROM data
@@ -89,7 +86,7 @@ def temp_files_with_real_content(tmp_path):
                 b"\xFF\xFF" +  # Checksum
                 b"\x00" * (0x400000 - 0x7FE0))  # Fill to 4MB
     rom_file.write_bytes(rom_data)
-    
+
     # Create valid JSON metadata
     metadata_file = tmp_path / "metadata.json"
     metadata = {
@@ -99,7 +96,7 @@ def temp_files_with_real_content(tmp_path):
         "format_version": "1.0"
     }
     metadata_file.write_text(json.dumps(metadata, indent=2))
-    
+
     return {
         "sprite_path": str(sprite_file),
         "vram_path": str(vram_file),
@@ -130,7 +127,7 @@ class TestInjectionManagerInitialization:
         assert manager._is_initialized is True
         assert manager._current_worker is None
         assert manager._name == "InjectionManager"
-        
+
         # Verify real dependencies are available (not mocked)
         assert hasattr(manager, 'validate_injection_params')
         assert hasattr(manager, 'start_injection')
@@ -142,12 +139,12 @@ class TestInjectionManagerInitialization:
         Tests proper initialization, operation, and cleanup phases.
         """
         manager = injection_manager_real
-        
+
         # RED: Manager should be properly initialized
         assert isinstance(manager, InjectionManager)
         assert manager._is_initialized is True
         assert manager._current_worker is None
-        
+
         # GREEN: Test lifecycle management
         manager.cleanup()  # Should handle cleanup gracefully
 
@@ -158,7 +155,7 @@ class TestInjectionManagerInitialization:
         """
         manager = injection_manager_real
         worker_helper = TestWorkerHelper(str(tmp_path))
-        
+
         try:
             # Create a real worker (but don't start it to avoid threading complexity)
             real_worker = worker_helper.create_vram_injection_worker()
@@ -173,7 +170,7 @@ class TestInjectionManagerInitialization:
 
             # GREEN: Should clear the worker reference
             assert manager._current_worker is None
-            
+
         finally:
             worker_helper.cleanup()
 
@@ -208,15 +205,15 @@ class TestInjectionManagerParameterValidation:
             # If validation passes, verify the real files exist and are valid
             assert Path(params["sprite_path"]).exists()
             assert Path(params["input_vram"]).exists()
-            
+
             # Verify real file content is reasonable
             sprite_path = Path(params["sprite_path"])
             assert sprite_path.suffix == ".png"
             assert sprite_path.stat().st_size > 0
-            
+
             vram_path = Path(params["input_vram"])
             assert vram_path.stat().st_size > 1024  # Reasonable VRAM size
-            
+
         except ValidationError:
             # If validation fails, it's testing real validation logic
             # This is acceptable as it shows real edge cases
@@ -242,21 +239,21 @@ class TestInjectionManagerParameterValidation:
         # Test real ROM validation without mocks
         try:
             manager.validate_injection_params(params)
-            
+
             # If validation succeeds, verify real ROM file structure
             rom_path = Path(params["input_rom"])
             assert rom_path.exists()
             assert rom_path.suffix == ".sfc"
-            
+
             # Check ROM file has reasonable size (at least 1MB)
             assert rom_path.stat().st_size >= 0x100000
-            
+
             # Verify ROM header structure (tests real ROM validation)
             with rom_path.open("rb") as f:
                 f.seek(0x7FC0)  # ROM title location
                 header = f.read(32)
                 assert len(header) == 32
-            
+
         except ValidationError as e:
             # Real validation may catch issues mocks wouldn't
             # Document what real validation found
@@ -294,7 +291,7 @@ class TestInjectionManagerParameterValidation:
         # Test mode validation with real files (should fail on mode, not files)
         with pytest.raises(ValidationError, match="Invalid injection mode"):
             manager.validate_injection_params(params)
-            
+
         # Verify the sprite file is actually valid
         assert Path(params["sprite_path"]).exists()
 
@@ -316,7 +313,7 @@ class TestInjectionManagerParameterValidation:
         # Test real filesystem validation - no mocks
         with pytest.raises(ValidationError, match="(sprite.*does not exist|file does not exist)"):
             manager.validate_injection_params(params)
-            
+
         # Verify the files actually don't exist
         assert not Path(params["sprite_path"]).exists()
         assert not Path(params["input_vram"]).exists()
@@ -342,7 +339,7 @@ class TestInjectionManagerParameterValidation:
         # This ensures the validation logic itself is tested, not mock setup
         with pytest.raises(ValidationError, match="offset.*must be >= 0"):
             manager.validate_injection_params(params)
-            
+
         # Verify the real files are valid (offset validation should fail first)
         assert Path(params["sprite_path"]).exists()
         assert Path(params["input_vram"]).exists()
@@ -367,11 +364,11 @@ class TestInjectionManagerParameterValidation:
         # Test real JSON validation without mocks
         try:
             manager.validate_injection_params(params)
-            
+
             # If validation passes, verify real JSON content
             metadata_path = Path(params["metadata_path"])
             assert metadata_path.exists()
-            
+
             # Test actual JSON parsing (catches real JSON errors)
             with metadata_path.open("r") as f:
                 metadata = json.load(f)
@@ -379,7 +376,7 @@ class TestInjectionManagerParameterValidation:
                 # Verify our test metadata structure
                 assert "source_vram" in metadata
                 assert "format_version" in metadata
-                
+
         except ValidationError:
             # Real validation may find issues with JSON structure
             # This is valuable testing that mocks cannot provide
@@ -404,7 +401,7 @@ class TestInjectionManagerParameterValidation:
         # Test real file existence validation
         with pytest.raises(ValidationError, match="(metadata.*does not exist|file does not exist)"):
             manager.validate_injection_params(params)
-            
+
         # Verify that valid files exist (so only metadata path fails)
         assert Path(params["sprite_path"]).exists()
         assert Path(params["input_vram"]).exists()
@@ -792,14 +789,14 @@ def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
     - Memory and resource management
     """
     manager = InjectionManager()
-    
+
     # Create temporary test data using fixtures
     injection_fixture = create_injection_manager_fixture(str(tmp_path))
-    
+
     try:
         # Get real injection test data from fixture
         fixture_params = injection_fixture.get_vram_injection_params()
-        
+
         # GREEN: Validate parameters with real files
         params = {
             "mode": "vram",
@@ -808,39 +805,39 @@ def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
             "output_vram": str(tmp_path / "output.vram"),
             "offset": fixture_params["vram_offset"],
         }
-        
+
         # REFACTOR: Real validation catches actual edge cases
         manager.validate_injection_params(params)
-        
+
         # Real signal connection testing
         progress_messages = []
         finished_results = []
-        
+
         def on_progress(msg):
             progress_messages.append(msg)
-            
+
         def on_finished(success, msg):
             finished_results.append((success, msg))
-        
+
         manager.injection_progress.connect(on_progress)
         manager.injection_finished.connect(on_finished)
-        
+
         # Test real signal emission
         manager._on_worker_progress("Test progress")
         manager._on_worker_finished(True, "Test complete")
-        
+
         # Wait for Qt event processing
         qtbot.waitUntil(lambda: len(progress_messages) > 0, timeout=1000)
         qtbot.waitUntil(lambda: len(finished_results) > 0, timeout=1000)
-        
+
         # Verify real signal behavior
         assert "Test progress" in progress_messages
         assert (True, "Test complete") in finished_results
-        
+
         # Verify files exist and are reasonable
         assert Path(params["sprite_path"]).exists()
         assert Path(params["input_vram"]).exists()
-        
+
     except ValidationError as e:
         # Real validation may find issues that need documentation
         pytest.skip(f"Real validation found issue (valuable test result): {e}")

@@ -111,7 +111,7 @@ class PreviewCache:
             key: Cache key
             data: Tuple of (tile_data, width, height, sprite_name)
         """
-        tile_data, width, height, sprite_name = data
+        tile_data, _width, _height, sprite_name = data
         data_size = len(tile_data) + len(sprite_name) + 16  # Rough size estimate
 
         with self._lock:

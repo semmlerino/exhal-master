@@ -7,9 +7,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
 
-from PySide6.QtCore import Signal
-
 from core.workers.base import BaseWorker, handle_worker_errors
+from PySide6.QtCore import Signal
 from utils.logging_config import get_logger
 from utils.rom_cache import get_rom_cache
 

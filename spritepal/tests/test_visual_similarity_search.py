@@ -13,8 +13,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from core.visual_similarity_search import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     SimilarityMatch,
     SpriteGroupFinder,
     SpriteHash,

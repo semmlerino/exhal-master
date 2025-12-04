@@ -3,14 +3,12 @@ Unit tests for GridPreviewGenerator
 """
 from __future__ import annotations
 
-import pytest
 from unittest.mock import Mock
 
+import pytest
 from PIL import Image, ImageDraw
-
 from ui.row_arrangement.grid_arrangement_manager import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     ArrangementType,
     GridArrangementManager,
     TileGroup,

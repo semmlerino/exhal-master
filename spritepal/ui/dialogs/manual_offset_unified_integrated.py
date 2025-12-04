@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from PySide6.QtGui import QAction, QCloseEvent, QHideEvent, QKeyEvent
 else:
     from PySide6.QtGui import QAction, QCloseEvent, QHideEvent, QKeyEvent
+from core.sprite_finder import SpriteFinder
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -58,8 +59,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.sprite_finder import SpriteFinder
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 
@@ -1446,7 +1445,7 @@ Cache Misses: {session_stats['misses']}"""
         if not self.isVisible():
             return
 
-        from PySide6.QtGui import QGuiApplication  # noqa: PLC0415
+        from PySide6.QtGui import QGuiApplication
 
         # Defensive check for test environments with mock objects
         try:

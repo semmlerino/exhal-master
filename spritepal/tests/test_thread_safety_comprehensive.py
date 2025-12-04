@@ -34,12 +34,12 @@ from unittest.mock import Mock, patch
 import pytest
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal
 from PySide6.QtGui import QImage
-
 from ui.workers.batch_thumbnail_worker import (
     BatchThumbnailWorker,
     LRUCache,
     ThumbnailWorkerController,
 )
+
 
 class ThreadSafetyValidator:
     """Helper class to validate thread safety."""
@@ -499,7 +499,7 @@ class TestDeadlockPrevention:
         # Simulate nested operations that could deadlock
         for i in range(100):
             cache.put((i, i), mock_qimage)
-            stats = cache.get_stats()  # Nested mutex lock
+            cache.get_stats()  # Nested mutex lock
             if i > 0:
                 cache.get((i-1, i-1))  # Another nested lock
 

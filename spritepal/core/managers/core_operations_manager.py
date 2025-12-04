@@ -10,11 +10,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QObject, Signal
-
 from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
 from core.rom_extractor import ROMExtractor
+from PySide6.QtCore import QObject, Signal
 from ui.common import WorkerManager
 from ui.workers.injection_worker import InjectionWorker
 from ui.workers.rom_injection_worker import ROMInjectionWorker

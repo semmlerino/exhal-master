@@ -7,26 +7,24 @@ name = "spritepal"
 version = "0.1.0"
 description = "SNES Sprite Editor for Kirby Super Star"
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "MIT"}
+requires-python = ">=3.11"
+license = "MIT"
 authors = [
-    {name = "SpritePal Contributors", email = ""}
+    {name = "SpritePal Contributors"}
 ]
 keywords = ["snes", "sprite", "editor", "kirby", "retro", "gaming"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Games/Entertainment",
     "Topic :: Multimedia :: Graphics :: Editors",
 ]
+
 dependencies = [
-    "PyQt6>=6.5.0",
+    "PySide6>=6.5.0",
     "Pillow>=10.0.0",
     "numpy>=1.24.0",
 ]
@@ -36,174 +34,153 @@ dev = [
     "pytest>=7.4.0",
     "pytest-qt>=4.3.0",
     "pytest-cov>=4.1.0",
-    "ruff>=0.6.0",
-    "mypy>=1.8.0",
+    "pytest-xvfb>=3.0.0",
+    "ruff>=0.8.0",
+    "basedpyright>=1.18.0",
     "pre-commit>=3.6.0",
-    "bandit[toml]>=1.7.5",
-    "safety>=3.0.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/your-username/spritepal"
 Repository = "https://github.com/your-username/spritepal"
-Issues = "https://github.com/your-username/spritepal/issues"
-Documentation = "https://spritepal.readthedocs.io"
 
 [project.scripts]
 spritepal = "spritepal.launch_spritepal:main"
 
-[tool.ruff]
-line-length = 88
-target-version = "py39"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["spritepal*"]
 
-# Exclude a variety of commonly ignored directories.
+# ============================================================================
+# Ruff Configuration
+# ============================================================================
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
 exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
     ".git",
-    ".hg",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
     ".venv",
-    "__pypackages__",
-    "_build",
-    "buck-out",
+    "__pycache__",
     "build",
     "dist",
-    "node_modules",
+    "*.egg-info",
     "venv",
+    "migration_report.txt",
 ]
 
 [tool.ruff.lint]
-# Enable all pycodestyle errors and warnings.
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "N",  # pep8-naming
-    "UP", # pyupgrade
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "DTZ", # flake8-datetimez
-    "T10", # flake8-debugger
-    "EXE", # flake8-executable
-    "ISC", # flake8-implicit-str-concat
-    "PIE", # flake8-pie
-    "PT", # flake8-pytest-style
-    "Q",  # flake8-quotes
-    "RET", # flake8-return
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TCH", # flake8-type-checking
-    "ARG", # flake8-unused-arguments
-    "PTH", # flake8-use-pathlib
-    "ERA", # eradicate
-    "PD", # pandas-vet
-    "PGH", # pygrep-hooks
-    "PL", # Pylint
-    "TRY", # tryceratops
-    "NPY", # NumPy-specific rules
-    "RUF", # Ruff-specific rules
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
 ]
 
-# Never enforce E501 (line length violations).
 ignore = [
-    "E501",      # line length violations
-    "PLR0913",   # too many arguments
-    "PLR2004",   # magic numbers
-    "PTH",       # use pathlib - too many changes needed
-    "TRY003",    # long exception messages
-    "ARG001",    # unused function argument
-    "ARG002",    # unused method argument  
-    "ARG005",    # unused lambda argument
-    "PLR0912",   # too many branches
-    "PLR0915",   # too many statements
+    # Formatting (handled by formatter or not critical)
+    "E501",     # line length
+    "W291",     # trailing-whitespace
+    "W293",     # blank-line-with-whitespace
+
+    # Import ordering (Qt apps need delayed imports)
+    "E402",     # module level import not at top
+    "PLC0415",  # import-outside-top-level
+
+    # Complexity (complex Qt widgets are normal)
+    "PLR0912",  # too-many-branches
+    "PLR0915",  # too-many-statements
+    "PLR0911",  # too-many-return-statements
+
+    # Style preferences (not bugs)
+    "SIM102",   # collapsible-if
+    "SIM105",   # suppressible-exception
+    "SIM108",   # if-else-block-instead-of-if-exp
+    "SIM117",   # multiple-with-statements
+    "SIM103",   # needless-bool
+    "SIM115",   # open-file-with-context-handler
+    "E712",     # true-false-comparison
+
+    # Qt-specific patterns
+    "RUF012",   # mutable class default
+    "RUF059",   # unused-unpacked-variable (common in signal handlers)
+    "B007",     # unused-loop-control-variable
+
+    # Not critical for this app
+    "DTZ005",   # datetime-now-without-tzinfo
+    "PTH123",   # builtin-open
+    "PTH110",   # os-path-exists
+    "PTH109",   # os-getcwd
+    "PTH113",   # os-path-isfile
+    "RUF001",   # ambiguous-unicode-character-string
+    "B023",     # function-uses-loop-variable (common in Qt callbacks)
+    "RUF034",   # useless-if-else
+    "RUF005",   # collection-literal-concatenation
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"tests/*.py" = ["S101", "ARG", "PLR2004"]
-"*pixel*editor*.py" = ["N802", "N815"]  # PyQt naming conventions
-"pixel_editor_widgets.py" = ["N802", "N815"]  # PyQt naming conventions
-"PYQT6_BEST_PRACTICES_EXAMPLES.py" = ["N802", "F821"]  # PyQt naming and example code
-"sprite_editor/**/*.py" = ["N802", "N815"]  # PyQt naming conventions
+"__init__.py" = ["F401"]  # unused imports in __init__ files
+"tests/**/*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043"]  # test-specific patterns
+"**/test_*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043", "F401"]  # test files
+"spritepal/test_*.py" = ["S101", "PLR2004", "B017", "B018", "RUF043", "F401"]  # root test files
+"spritepal/mesen2_integration/*.py" = ["E722", "B904"]  # experimental integration scripts
+"spritepal/scripts/*.py" = ["E722", "B904", "F401"]  # utility scripts
 
-[tool.isort]
-profile = "black"
-line_length = 88
-known_third_party = ["PIL", "PyQt6", "numpy", "pytest"]
-known_first_party = ["sprite_editor"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
-import_heading_stdlib = "Standard library imports"
-import_heading_thirdparty = "Third-party imports"
-import_heading_firstparty = "Local imports"
+# ============================================================================
+# Basedpyright Configuration
+# ============================================================================
+[tool.basedpyright]
+include = ["spritepal/core", "spritepal/ui", "spritepal/utils"]
+exclude = [
+    "**/__pycache__",
+    "**/.*",
+    "build",
+    "dist",
+    "spritepal/tests",
+]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingImports = true
+reportMissingTypeStubs = false
 
-[tool.black]
-line-length = 88
-target-version = ['py39']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
-
-[tool.mypy]
-python_version = "3.9"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = "PyQt6.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "PIL.*"
-ignore_missing_imports = true
-
+# ============================================================================
+# Pytest Configuration
+# ============================================================================
 [tool.pytest.ini_options]
-testpaths = ["sprite_editor/tests"]
+testpaths = ["spritepal/tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --tb=short --strict-markers"
 markers = [
-    "unit: Unit tests",
+    "unit: Unit tests (fast, no Qt required)",
     "integration: Integration tests",
-    "slow: Slow tests"
+    "gui: Tests requiring Qt display",
+    "headless: Tests that work without display",
+    "slow: Slow tests",
+    "serial: Tests that cannot run in parallel",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
 ]
 
+# ============================================================================
+# Coverage Configuration
+# ============================================================================
 [tool.coverage.run]
-source = ["sprite_editor"]
+source = ["spritepal"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
     "*/__pycache__/*",
     "*/venv/*",
+    "*/.venv/*",
 ]
 
 [tool.coverage.report]

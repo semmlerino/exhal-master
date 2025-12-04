@@ -21,6 +21,7 @@ from tests.infrastructure import (
     TestDataRepository,
 )
 
+
 class TestSimpleRealIntegration:
     """Simple real integration tests to validate infrastructure."""
 

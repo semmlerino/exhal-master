@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from utils.settings_manager import SettingsManager, get_settings_manager
 
 # Systematic pytest markers applied based on test content analysis
@@ -39,7 +38,7 @@ class TestSettingsManager:
         # Create temp settings file path
         settings_file = Path(temp_dir) / ".testapp_settings.json"
 
-        # Create a session manager with our temp settings file  
+        # Create a session manager with our temp settings file
         with patch("core.managers.get_session_manager") as mock_get_sm:
             session_manager = SessionManager(settings_path=settings_file)
             mock_get_sm.return_value = session_manager
@@ -270,13 +269,13 @@ class TestGlobalSettingsInstance:
 
     def test_get_settings_manager_singleton(self):
         """Test that get_settings_manager returns singleton"""
-        # Reset global instance  
+        # Reset global instance
         import utils.settings_manager
 
         utils.settings_manager._SettingsManagerSingleton._instance = None
 
         # Initialize managers for global instance to work
-        from core.managers import initialize_managers, cleanup_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:
@@ -296,7 +295,7 @@ class TestGlobalSettingsInstance:
         utils.settings_manager._SettingsManagerSingleton._instance = None
 
         # Initialize managers for global instance to work
-        from core.managers import initialize_managers, cleanup_managers
+        from core.managers import cleanup_managers, initialize_managers
         initialize_managers("TestApp")
 
         try:

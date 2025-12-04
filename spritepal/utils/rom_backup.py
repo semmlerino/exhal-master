@@ -4,7 +4,7 @@ ROM backup utilities for SpritePal
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +49,7 @@ class ROMBackupManager:
         rom_path_obj = Path(rom_path)
         rom_base = rom_path_obj.stem
         rom_ext = rom_path_obj.suffix
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         backup_name = f"{rom_base}_backup_{timestamp}{rom_ext}"
         backup_path = backup_subdir / backup_name
 
@@ -185,7 +185,7 @@ class ROMBackupManager:
                             "size": stat.st_size,
                             "mtime": stat.st_mtime,
                             "timestamp_str": timestamp_str,
-                            "date": datetime.fromtimestamp(stat.st_mtime, timezone.utc).strftime(
+                            "date": datetime.fromtimestamp(stat.st_mtime, UTC).strftime(
                                 "%Y-%m-%d %H:%M:%S"
                             ),
                         }

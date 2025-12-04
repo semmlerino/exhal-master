@@ -24,7 +24,7 @@ from utils.constants import (
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.ci_safe,

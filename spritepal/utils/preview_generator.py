@@ -19,18 +19,18 @@ import threading
 import time
 import weakref
 from collections import OrderedDict
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from PIL import Image
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QPixmap
-
     from core.managers.extraction_manager import ExtractionManager
     from core.rom_extractor import ROMExtractor
+    from PySide6.QtGui import QPixmap
 
 from .image_utils import pil_to_qpixmap
 from .logging_config import get_logger

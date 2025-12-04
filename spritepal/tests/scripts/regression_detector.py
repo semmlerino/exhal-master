@@ -560,8 +560,8 @@ class RegressionDetector:
         # Create pairs for comparison
         pairs = []
         for i in range(len(recent_files) - 1):
-            before_time, before_file = recent_files[i]
-            after_time, after_file = recent_files[i + 1]
+            _before_time, before_file = recent_files[i]
+            _after_time, after_file = recent_files[i + 1]
             pairs.append((before_file, after_file))
 
         return pairs

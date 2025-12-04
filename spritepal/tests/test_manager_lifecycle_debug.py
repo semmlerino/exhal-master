@@ -2,12 +2,11 @@
 Debug test to investigate manager lifecycle issues.
 """
 
-import pytest
 import tempfile
 
+import pytest
 from core.managers import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     are_managers_initialized,
     cleanup_managers,
     get_extraction_manager,

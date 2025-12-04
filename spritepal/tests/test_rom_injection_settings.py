@@ -9,12 +9,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from core.managers import InjectionManager
 from ui.injection_dialog import InjectionDialog
 from utils.constants import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     SETTINGS_KEY_FAST_COMPRESSION,
     SETTINGS_KEY_LAST_CUSTOM_OFFSET,
     SETTINGS_KEY_LAST_INPUT_ROM,

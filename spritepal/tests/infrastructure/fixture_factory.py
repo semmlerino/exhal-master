@@ -56,12 +56,12 @@ from __future__ import annotations
 import logging
 import threading
 import weakref
+from collections.abc import Callable
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     TypeVar,
 )
 

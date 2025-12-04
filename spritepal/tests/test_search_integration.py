@@ -21,7 +21,7 @@ from ui.rom_extraction.workers.search_worker import SpriteSearchWorker
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.ci_safe,
@@ -477,40 +477,41 @@ class TestAdvancedSearchDialogIntegration:
 
     def test_search_history_persistence(self, large_temp_rom_file):
         """Test search history persistence across dialog instances."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with patch("pathlib.Path.home", return_value=Path(temp_dir)):
-                # Create first dialog and add history
-                with patch("ui.dialogs.advanced_search_dialog.SearchWorker"):
-                    dialog1 = AdvancedSearchDialog(large_temp_rom_file)
+        with tempfile.TemporaryDirectory() as temp_dir, patch("pathlib.Path.home", return_value=Path(temp_dir)):
+            # Create first dialog and add history
+            with patch("ui.dialogs.advanced_search_dialog.SearchWorker"):
+                dialog1 = AdvancedSearchDialog(large_temp_rom_file)
 
-                # Add history entry
-                from ui.dialogs.advanced_search_dialog import (
-                    SearchFilter,
-                    SearchHistoryEntry,
-                )
-                entry = SearchHistoryEntry(
-                    timestamp=datetime.now(),
-                    search_type="Integration Test",
-                    query="0x10000-0x20000",
-                    filters=SearchFilter(
-                        min_size=1024, max_size=32768, min_tiles=4, max_tiles=128,
-                        alignment=0x100, include_compressed=True,
-                        include_uncompressed=False, confidence_threshold=0.7
-                    ),
-                    results_count=10
-                )
-                dialog1.search_history.append(entry)
-                dialog1._save_history()
+            # Add history entry
+            from datetime import datetime
 
-                # Create second dialog and load history
-                with patch("ui.dialogs.advanced_search_dialog.SearchWorker"):
-                    dialog2 = AdvancedSearchDialog(large_temp_rom_file)
+            from ui.dialogs.advanced_search_dialog import (
+                SearchFilter,
+                SearchHistoryEntry,
+            )
+            entry = SearchHistoryEntry(
+                timestamp=datetime.now(),
+                search_type="Integration Test",
+                query="0x10000-0x20000",
+                filters=SearchFilter(
+                    min_size=1024, max_size=32768, min_tiles=4, max_tiles=128,
+                    alignment=0x100, include_compressed=True,
+                    include_uncompressed=False, confidence_threshold=0.7
+                ),
+                results_count=10
+            )
+            dialog1.search_history.append(entry)
+            dialog1._save_history()
 
-                # History should be loaded
-                assert len(dialog2.search_history) == 1
-                loaded_entry = dialog2.search_history[0]
-                assert loaded_entry.search_type == "Integration Test"
-                assert loaded_entry.results_count == 10
+            # Create second dialog and load history
+            with patch("ui.dialogs.advanced_search_dialog.SearchWorker"):
+                dialog2 = AdvancedSearchDialog(large_temp_rom_file)
+
+            # History should be loaded
+            assert len(dialog2.search_history) == 1
+            loaded_entry = dialog2.search_history[0]
+            assert loaded_entry.search_type == "Integration Test"
+            assert loaded_entry.results_count == 10
 
 class TestSpriteSearchWorkerIntegration:
     """Integration tests for SpriteSearchWorker."""

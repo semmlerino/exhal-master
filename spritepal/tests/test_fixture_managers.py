@@ -15,8 +15,7 @@ real implementations instead of mocks.
 
 import pytest
 from tests.fixtures.test_managers import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     create_colorizer_fixture,
     create_grid_arrangement_fixture,
     create_grid_processor_fixture,

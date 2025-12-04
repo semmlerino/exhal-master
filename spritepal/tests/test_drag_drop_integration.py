@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 # We'll test the core drag-drop logic without Qt dependencies
 from utils.constants import VRAM_SPRITE_OFFSET
 
+
 class TestDragDropIntegration:
     """Test drag & drop functionality integration"""
 

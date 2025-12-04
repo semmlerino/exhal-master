@@ -4,6 +4,9 @@ Shows visual preview of sprites with optional palette support
 """
 from __future__ import annotations
 
+from core.default_palette_loader import DefaultPaletteLoader
+from core.managers import get_extraction_manager
+from core.visual_similarity_search import VisualSimilarityEngine
 from PIL import Image
 from PySide6.QtCore import QSize, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QImage, QPixmap
@@ -19,10 +22,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.default_palette_loader import DefaultPaletteLoader
-from core.managers import get_extraction_manager
-from core.visual_similarity_search import VisualSimilarityEngine
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.common.spacing_constants import (
     COLOR_MUTED,

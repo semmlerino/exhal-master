@@ -14,8 +14,7 @@ from PIL import Image
 from PySide6.QtGui import QPixmap
 from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from utils.preview_generator import (
-# Test characteristics: Timer usage
-
+    # Test characteristics: Timer usage
     LRUCache,
     PaletteData,
     PreviewGenerator,

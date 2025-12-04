@@ -5,11 +5,8 @@ Tests the scan_for_sprites method and related quality assessment features.
 from __future__ import annotations
 
 import pytest
-
 from core.rom_extractor import ROMExtractor
-from tests.infrastructure.test_doubles import (
-    MockHALCompressor, TestDoubleFactory, setup_hal_mocking
-)
+from tests.infrastructure.test_doubles import MockHALCompressor
 
 # Systematic pytest markers applied based on test content analysis
 pytestmark = [
@@ -25,16 +22,16 @@ pytestmark = [
 
 class CustomMockHALCompressor(MockHALCompressor):
     """Custom HAL compressor for ROM scanning tests with specific size control."""
-    
+
     def __init__(self):
         super().__init__()
         self._sprite_responses = {}  # Map offset to (compressed_size, decompressed_data)
-        
+
     def configure_sprite_response(self, offset: int, compressed_size: int, decompressed_data: bytes):
         """Configure specific response for a ROM offset."""
         self._sprite_responses[offset] = (compressed_size, decompressed_data)
-        
-    def decompress_from_rom(self, rom_path: str, offset: int, output_path: str = None) -> bytes:
+
+    def decompress_from_rom(self, rom_path: str, offset: int, output_path: str | None = None) -> bytes:
         """Return configured sprite data or raise exception."""
         if offset in self._sprite_responses:
             _, decompressed_data = self._sprite_responses[offset]
@@ -79,13 +76,13 @@ class TestROMScanning:
         """Test basic sprite scanning functionality"""
         # Set up custom HAL compressor with specific responses
         mock_hal = CustomMockHALCompressor()
-        
+
         # Configure responses for test offsets (16 tiles = 512 bytes)
         sprite_data = b"\x00" * 512
         mock_hal.configure_sprite_response(0x8000, 64, sprite_data)
         mock_hal.configure_sprite_response(0x10000, 64, sprite_data)
         mock_hal.configure_sprite_response(0x18000, 64, sprite_data)
-        
+
         # Replace the HAL compressor
         rom_extractor.rom_injector.hal_compressor = mock_hal
 
@@ -130,13 +127,13 @@ class TestROMScanning:
     def test_scan_for_sprites_quality_filtering(self, rom_extractor, mock_rom_file):
         """Test that sprites are sorted by quality score"""
         from unittest.mock import patch
-        
+
         # Set up custom HAL compressor with different sprite data
         mock_hal = CustomMockHALCompressor()
         mock_hal.configure_sprite_response(0x8000, 32, b"\x00" * 512)  # Good sprite
-        mock_hal.configure_sprite_response(0x10000, 48, b"\x11" * 512)  # Better sprite  
+        mock_hal.configure_sprite_response(0x10000, 48, b"\x11" * 512)  # Better sprite
         mock_hal.configure_sprite_response(0x18000, 16, b"\x22" * 512)  # Different sprite
-        
+
         rom_extractor.rom_injector.hal_compressor = mock_hal
 
         # Mock quality assessment (still need this since it's on rom_extractor)
@@ -168,13 +165,13 @@ class TestROMScanning:
     def test_scan_for_sprites_alignment_validation(self, rom_extractor, mock_rom_file):
         """Test sprite alignment validation during scanning"""
         from unittest.mock import patch
-        
+
         # Set up custom HAL compressor with different alignment scenarios
         mock_hal = CustomMockHALCompressor()
         mock_hal.configure_sprite_response(0x8000, 64, b"\x00" * 512)  # Perfect alignment (16 tiles)
         mock_hal.configure_sprite_response(0x10000, 68, b"\x11" * 520)  # Minor misalignment (16 tiles + 8 extra)
         mock_hal.configure_sprite_response(0x18000, 16, b"\x22" * 32)   # Too small (1 tile)
-        
+
         rom_extractor.rom_injector.hal_compressor = mock_hal
 
         with patch.object(rom_extractor, "_assess_sprite_quality", return_value=80.0):
@@ -202,7 +199,7 @@ class TestROMScanning:
 
     def test_scan_for_sprites_large_range_completion(self, rom_extractor, mock_rom_file):
         """Test that scanning completes successfully over a large range"""
-        # Set up HAL compressor that returns no sprites  
+        # Set up HAL compressor that returns no sprites
         mock_hal = CustomMockHALCompressor()
         rom_extractor.rom_injector.hal_compressor = mock_hal
 
@@ -348,8 +345,9 @@ class TestROMExtractorAdvancedFeatures:
     def test_get_known_sprite_locations_with_kirby_rom(self, rom_extractor, tmp_path):
         """Test getting known sprite locations for a Kirby ROM"""
         from unittest.mock import patch
+
         from core.rom_injector import SpritePointer
-        
+
         # Create a ROM with KIRBY in the title
         rom_path = tmp_path / "kirby_test.sfc"
         rom_data = bytearray(64 * 1024)  # 64KB ROM

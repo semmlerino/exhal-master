@@ -18,13 +18,13 @@ logger = get_logger(__name__)
 def test_detached_gallery():
     """Test detached gallery with division by zero and full ROM scan fixes"""
     app = QApplication.instance() or QApplication(sys.argv)
-    
+
     # Create detached gallery window
     window = DetachedGalleryWindow()
-    
+
     # Show window
     window.show()
-    
+
     print("Detached Gallery Window opened successfully!")
     print("\nFixes applied:")
     print("1. Division by zero error fixed in progress calculations")
@@ -36,7 +36,7 @@ def test_detached_gallery():
     print("\nThe scan should now:")
     print("- Not crash with division by zero")
     print("- Scan much more of the ROM (not just 0xC0000-0xF0000)")
-    
+
     # Run the application
     sys.exit(app.exec())
 

@@ -12,10 +12,9 @@ from typing import TYPE_CHECKING, TypeGuard, TypeVar
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from PySide6.QtCore import QObject
-
     from core.managers.base_manager import BaseManager
     from core.protocols.manager_protocols import ExtractionParams
+    from PySide6.QtCore import QObject
 
 # Type variable for manager type guards
 T = TypeVar('T', bound='BaseManager')

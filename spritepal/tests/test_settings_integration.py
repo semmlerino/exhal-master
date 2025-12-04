@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from core.controller import ExtractionController
 from core.managers import cleanup_managers, initialize_managers
 from utils.settings_manager import SettingsManager, get_settings_manager
@@ -55,7 +54,7 @@ class TestSettingsIntegration:
         """Test that settings persist across application restarts"""
         # Initialize managers first
         initialize_managers("TestApp")
-        
+
         # Session 1: Save settings
         settings1 = SettingsManager("TestApp")
 
@@ -71,10 +70,10 @@ class TestSettingsIntegration:
 
         # Clean up first session
         cleanup_managers()
-        
+
         # Initialize for session 2
         initialize_managers("TestApp")
-        
+
         # Session 2: Load settings in new instance
         settings2 = SettingsManager("TestApp")
 
@@ -119,7 +118,7 @@ class TestSettingsIntegration:
         """Test UI geometry settings persistence"""
         # Initialize managers first
         initialize_managers("SpritePal")
-        
+
         # Create fresh settings instance to avoid conflicts
         settings = SettingsManager("SpritePal")
 
@@ -140,10 +139,10 @@ class TestSettingsIntegration:
 
         # Clean up first session
         cleanup_managers()
-        
-        # Initialize for second session  
+
+        # Initialize for second session
         initialize_managers("SpritePal")
-        
+
         # Load in new instance
         new_settings = SettingsManager("SpritePal")
 
@@ -209,10 +208,10 @@ class TestSettingsIntegration:
 
         # Clean up first session
         cleanup_managers()
-        
+
         # Initialize for second session
         initialize_managers("TestApp")
-        
+
         # Verify in new session
         new_settings = get_settings_manager()
         for key, expected in prefs.items():

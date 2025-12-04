@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from core.palette_manager import PaletteManager
 from utils.constants import SPRITE_PALETTE_END, SPRITE_PALETTE_START
 
+
 class TestPaletteManagerExtended:
     """Extended tests for PaletteManager functionality"""
 

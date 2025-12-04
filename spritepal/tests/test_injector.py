@@ -22,6 +22,7 @@ pytestmark = [
 
 from core.injector import InjectionWorker, SpriteInjector, encode_4bpp_tile
 
+
 # Module-level fixtures for shared use
 @pytest.fixture
 def temp_sprite_image(tmp_path):

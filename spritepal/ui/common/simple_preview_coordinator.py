@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
 
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
-
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -202,7 +201,7 @@ class SimplePreviewCoordinator(QObject):
         # Try to get ROM data from provider if available
         if self._rom_data_provider:
             try:
-                rom_path, extractor, rom_cache = self._rom_data_provider()
+                rom_path, extractor, _rom_cache = self._rom_data_provider()
                 self._current_rom_path = rom_path
                 self._extractor = extractor
             except Exception as e:

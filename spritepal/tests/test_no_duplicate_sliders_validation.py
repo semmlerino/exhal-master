@@ -12,12 +12,10 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from PySide6.QtWidgets import QSlider, QSpinBox
-
 from core.managers.extraction_manager import ExtractionManager
+from PySide6.QtWidgets import QSlider, QSpinBox
 from ui.rom_extraction_panel import (
-# Test characteristics: Singleton management
-
+    # Test characteristics: Singleton management
     ManualOffsetDialogSingleton,
     ROMExtractionPanel,
 )

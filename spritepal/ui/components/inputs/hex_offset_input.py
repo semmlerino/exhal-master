@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import builtins
 import contextlib
-from typing import Callable
+from collections.abc import Callable
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
-
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.common import WorkerManager
 from ui.components.dialogs import RangeScanDialog
 from ui.components.visualization import ROMMapWidget

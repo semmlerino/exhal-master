@@ -7,8 +7,8 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Any, Generator
-from unittest.mock import Mock, mock_open, patch
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 from PySide6.QtTest import QSignalSpy
@@ -16,7 +16,7 @@ from PySide6.QtTest import QSignalSpy
 # Add parent directories to path
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.dialog,
@@ -34,10 +34,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import core.controller
 from core.controller import ExtractionController
-from core.workers import VRAMExtractionWorker
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
 from core.managers.session_manager import SessionManager
+from core.workers import VRAMExtractionWorker
+
 
 # Defer MainWindow import to avoid potential initialization issues
 def get_main_window():
@@ -76,7 +77,7 @@ class TestExtractionController:
     @pytest.fixture
     def main_window(self) -> Any:
         """Create mock main window for testing"""
-        from unittest.mock import Mock, MagicMock
+        from unittest.mock import MagicMock, Mock
         MainWindow = get_main_window()
         window = Mock(spec=MainWindow)
         # Add required signals as mock signals with proper spec
@@ -111,12 +112,12 @@ class TestExtractionController:
         extraction_manager = Mock(spec=ExtractionManager)
         injection_manager = Mock(spec=InjectionManager)
         session_manager = Mock(spec=SessionManager)
-        
+
         # Patch get_error_handler to return a mock to avoid QWidget issues
         with patch('core.controller.get_error_handler') as mock_get_error_handler:
             mock_error_handler = Mock()
             mock_get_error_handler.return_value = mock_error_handler
-            
+
             # Create a REAL controller with mock dependencies
             controller = ExtractionController(
                 main_window=main_window,
@@ -124,10 +125,10 @@ class TestExtractionController:
                 injection_manager=injection_manager,
                 session_manager=session_manager
             )
-            
+
             # Store the mock error handler for tests to access if needed
             controller.mock_error_handler = mock_error_handler
-        
+
         # The controller is real and will execute real code
         # Only the dependencies are mocked
         return controller
@@ -136,10 +137,10 @@ class TestExtractionController:
         """Test controller initialization connects signals"""
         # With real Qt signals, we verify connections work by checking that
         # signals have receivers (meaning something is connected)
-        
+
         assert controller.main_window == main_window
         assert controller.worker is None
-        
+
         # Verify that the controller has the expected methods that should be connected
         assert hasattr(controller, 'start_extraction')
         assert hasattr(controller, 'open_in_editor')
@@ -147,22 +148,23 @@ class TestExtractionController:
         assert hasattr(controller, 'open_grid_arrangement')
         assert hasattr(controller, 'start_injection')
         assert hasattr(controller, 'update_preview_with_offset')
-        
+
         # Verify the main window has the expected signals
         assert hasattr(main_window, 'extract_requested')
         assert hasattr(main_window, 'open_in_editor_requested')
         assert hasattr(main_window, 'arrange_rows_requested')
         assert hasattr(main_window, 'arrange_grid_requested')
         assert hasattr(main_window, 'inject_requested')
-        
+
         # Note: Can't test signal connections with Mock objects
         # Real signal connection tests are in test_controller_real.py
 
     def test_parameter_validation_missing_vram(self):
         """Test parameter validation when VRAM path is missing"""
         from unittest.mock import Mock, patch
+
         from core.controller import ExtractionController
-        
+
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -171,38 +173,39 @@ class TestExtractionController:
             "output_base": "/path/to/output",
         }
         mock_main_window.get_extraction_params.return_value = invalid_params
-        
+
         # Mock the manager getters to avoid initialization issues
         with patch('core.controller.get_extraction_manager') as mock_get_extraction, \
              patch('core.controller.get_injection_manager') as mock_get_injection, \
              patch('core.controller.get_session_manager') as mock_get_session:
-            
+
             # Create mock managers
             mock_extraction_manager = Mock()
             mock_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
             mock_get_extraction.return_value = mock_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
-            
+
             # Create controller with mock window
             controller = ExtractionController(mock_main_window)
 
             # Start extraction (should fail validation immediately)
             controller.start_extraction()
-            
+
             # Verify BEHAVIOR: error was reported with correct message
             assert mock_main_window.extraction_failed.called
             error_message = mock_main_window.extraction_failed.call_args[0][0]
             assert "VRAM file is required for extraction" in error_message
-            
+
             # Verify STATE: no worker was created when validation fails
             assert controller.worker is None
 
     def test_parameter_validation_missing_cgram(self):
         """Test parameter validation when CGRAM path is missing"""
         from unittest.mock import Mock, patch
+
         from core.controller import ExtractionController
-        
+
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -212,12 +215,12 @@ class TestExtractionController:
             "grayscale_mode": False,  # CGRAM is required when not in grayscale mode
         }
         mock_main_window.get_extraction_params.return_value = invalid_params
-        
+
         # Mock the manager getters to avoid initialization issues
         with patch('core.controller.get_extraction_manager') as mock_get_extraction, \
              patch('core.controller.get_injection_manager') as mock_get_injection, \
              patch('core.controller.get_session_manager') as mock_get_session:
-            
+
             # Create mock managers
             mock_extraction_manager = Mock()
             expected_msg = "CGRAM file is required for Full Color mode.\nPlease provide a CGRAM file or switch to Grayscale Only mode."
@@ -225,7 +228,7 @@ class TestExtractionController:
             mock_get_extraction.return_value = mock_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
-            
+
             # Create controller with mock window
             controller = ExtractionController(mock_main_window)
 
@@ -236,15 +239,16 @@ class TestExtractionController:
             assert mock_main_window.extraction_failed.called
             error_message = mock_main_window.extraction_failed.call_args[0][0]
             assert expected_msg in error_message
-            
+
             # Verify STATE: no worker created when CGRAM missing in color mode
             assert controller.worker is None
 
     def test_parameter_validation_missing_both(self):
         """Test parameter validation when both paths are missing"""
         from unittest.mock import Mock, patch
+
         from core.controller import ExtractionController
-        
+
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -253,19 +257,19 @@ class TestExtractionController:
             "output_base": "/path/to/output",
         }
         mock_main_window.get_extraction_params.return_value = invalid_params
-        
+
         # Mock the manager getters to avoid initialization issues
         with patch('core.controller.get_extraction_manager') as mock_get_extraction, \
              patch('core.controller.get_injection_manager') as mock_get_injection, \
              patch('core.controller.get_session_manager') as mock_get_session:
-            
+
             # Create mock managers
             mock_extraction_manager = Mock()
             mock_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
             mock_get_extraction.return_value = mock_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
-            
+
             # Create controller with mock window
             controller = ExtractionController(mock_main_window)
 
@@ -276,16 +280,17 @@ class TestExtractionController:
             assert mock_main_window.extraction_failed.called
             error_message = mock_main_window.extraction_failed.call_args[0][0]
             assert "VRAM file is required for extraction" in error_message
-            
+
             # Verify STATE: no worker created when both files missing
             assert controller.worker is None
 
     def test_start_extraction_valid_params(self):
         """Test starting extraction with valid parameters"""
         from unittest.mock import Mock, patch
+
         from core.controller import ExtractionController
         from core.workers import VRAMExtractionWorker
-        
+
         # Create simple mock main window
         mock_main_window = Mock()
         valid_params = {
@@ -295,7 +300,7 @@ class TestExtractionController:
             "grayscale_mode": True,
         }
         mock_main_window.get_extraction_params.return_value = valid_params
-        
+
         # Mock the manager getters, file validation, and worker creation
         with patch('core.controller.get_extraction_manager') as mock_get_extraction, \
              patch('core.controller.get_injection_manager') as mock_get_injection, \
@@ -303,46 +308,46 @@ class TestExtractionController:
              patch('core.controller.FileValidator.validate_vram_file') as mock_vram_validator, \
              patch('core.controller.FileValidator.validate_cgram_file') as mock_cgram_validator, \
              patch('core.controller.VRAMExtractionWorker') as mock_worker_class:
-            
+
             # Create mock managers (validation passes)
             mock_extraction_manager = Mock()
             mock_extraction_manager.validate_extraction_params.return_value = None  # No exception = valid
             mock_get_extraction.return_value = mock_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
-            
+
             # Mock file validation to return valid results
             mock_vram_result = Mock()
             mock_vram_result.is_valid = True
             mock_vram_result.warnings = []
             mock_vram_validator.return_value = mock_vram_result
-            
+
             mock_cgram_result = Mock()
             mock_cgram_result.is_valid = True
             mock_cgram_result.warnings = []
             mock_cgram_validator.return_value = mock_cgram_result
-            
+
             # Create mock worker instance
             mock_worker = Mock(spec=VRAMExtractionWorker)
             mock_worker_class.return_value = mock_worker
-            
+
             # Create controller
             controller = ExtractionController(mock_main_window)
 
             # Start extraction (should create worker)
             controller.start_extraction()
-            
+
             # Verify BEHAVIOR: worker was created with correct parameters
             assert mock_worker_class.called
             worker_params = mock_worker_class.call_args[0][0]  # First argument (params)
             assert worker_params["vram_path"] == valid_params["vram_path"]
-            assert worker_params["cgram_path"] == valid_params["cgram_path"] 
+            assert worker_params["cgram_path"] == valid_params["cgram_path"]
             assert worker_params["output_base"] == valid_params["output_base"]
-            
+
             # Verify STATE: controller holds the worker instance
             assert controller.worker is not None
             assert controller.worker == mock_worker
-            
+
             # Verify BEHAVIOR: worker thread was started
             assert mock_worker.start.called  # Thread activation occurred
 
@@ -370,7 +375,7 @@ class TestExtractionController:
         # For real components, verify the preview was updated
         if hasattr(main_window, 'sprite_preview') and main_window.sprite_preview:
             assert main_window.sprite_preview is not None
-        
+
         if hasattr(main_window, 'preview_coordinator') and main_window.preview_coordinator:
             assert main_window.preview_coordinator is not None
 
@@ -410,7 +415,7 @@ class TestExtractionController:
     def test_on_extraction_finished_handler(self, controller, main_window):
         """Test extraction finished handler"""
         extracted_files = ["sprite.png", "sprite.pal.json", "metadata.json"]
-        
+
         # Create a simple worker placeholder for cleanup test
         class DummyWorker:
             def isRunning(self):
@@ -418,22 +423,22 @@ class TestExtractionController:
             def deleteLater(self):
                 pass
         controller.worker = DummyWorker()
-        
+
         # Call the real controller method
         controller._on_extraction_finished(extracted_files)
-        
+
         # Verify BEHAVIOR: extraction completion was signaled with files
         assert main_window.extraction_complete.called
         signaled_files = main_window.extraction_complete.call_args[0][0]
         assert signaled_files == extracted_files
-        
+
         # Verify STATE: worker was cleaned up after completion
         assert controller.worker is None
 
     def test_on_extraction_error_handler(self, controller, main_window):
         """Test extraction error handler"""
         error_message = "Failed to read VRAM file"
-        
+
         # Create a simple worker placeholder for cleanup test
         class DummyWorker:
             def isRunning(self):
@@ -441,15 +446,15 @@ class TestExtractionController:
             def deleteLater(self):
                 pass
         controller.worker = DummyWorker()
-        
+
         # Call the real controller method
         controller._on_extraction_error(error_message)
-        
+
         # Verify BEHAVIOR: error was reported to UI
         assert main_window.extraction_failed.called
         reported_error = main_window.extraction_failed.call_args[0][0]
         assert reported_error == error_message
-        
+
         # Verify STATE: worker was cleaned up after error
         assert controller.worker is None
 
@@ -613,9 +618,9 @@ class TestVRAMExtractionWorker:
             # Create real worker with test parameters
             # Now get_extraction_manager() will find the manager in the context
             worker = VRAMExtractionWorker(worker_params)
-            
+
             yield worker
-            
+
             # Cleanup
             if worker.isRunning():
                 worker.quit()
@@ -658,7 +663,7 @@ class TestVRAMExtractionWorker:
             # Verify BEHAVIOR: successful extraction signaled with files
             assert extraction_spy.count() == 1
             assert extraction_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
-            
+
             # Verify STATE: no errors occurred
             assert error_spy.count() == 0
 
@@ -680,7 +685,7 @@ class TestVRAMExtractionWorker:
             assert error_spy.count() == 1
             expected_error = "VRAM extraction failed: Test error"
             assert expected_error in error_spy.at(0)[0]
-            
+
             # Verify finished signal was not emitted
             assert finished_spy.count() == 0
 
@@ -696,14 +701,14 @@ class TestVRAMExtractionWorker:
         with patch.object(worker.manager, "extract_from_vram", return_value=["output.png"]) as mock_extract:
             worker.run()
 
-            # Verify BEHAVIOR: extraction proceeds without CGRAM 
+            # Verify BEHAVIOR: extraction proceeds without CGRAM
             assert mock_extract.called
             extract_args = mock_extract.call_args[1]
             assert extract_args["cgram_path"] is None  # CGRAM not provided
-            
+
             # Verify BEHAVIOR: successful completion signaled
             assert finished_spy.count() == 1
-            
+
             # Verify STATE: no errors with missing CGRAM
             assert error_spy.count() == 0
 
@@ -725,11 +730,11 @@ class TestVRAMExtractionWorker:
             assert mock_extract.called
             extract_args = mock_extract.call_args[1]
             assert extract_args.get("oam_path") is None  # OAM not provided
-            
+
             # Verify BEHAVIOR: successful completion with results
             assert finished_spy.count() == 1
             assert finished_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
-            
+
             # Verify STATE: no errors without OAM
             assert error_spy.count() == 0
 
@@ -751,12 +756,12 @@ class TestVRAMExtractionWorker:
             assert mock_extract.called
             extract_args = mock_extract.call_args[1]
             assert extract_args["create_metadata"] is False
-            
+
             # Verify BEHAVIOR: extraction completed without metadata file
             assert finished_spy.count() == 1
             result_files = finished_spy.at(0)[0]
             assert result_files == ["output.png", "output.pal.json"]  # No metadata file
-            
+
             # Verify STATE: successful without metadata
             assert error_spy.count() == 0
 
@@ -776,12 +781,12 @@ class TestVRAMExtractionWorker:
             assert mock_extract.called
             extract_args = mock_extract.call_args[1]
             assert extract_args["create_grayscale"] is False
-            
+
             # Verify BEHAVIOR: extraction completed successfully
             assert finished_spy.count() == 1
             result_files = finished_spy.at(0)[0]
             assert result_files == ["output.png"]  # Only main output
-            
+
             # Verify STATE: successful without grayscale
             assert error_spy.count() == 0
 
@@ -800,7 +805,7 @@ class TestVRAMExtractionWorker:
             # Verify finished signal was emitted with correct files
             assert finished_spy.count() == 1
             assert finished_spy.at(0)[0] == ["output.png", "output.pal.json", "output.metadata.json"]
-            
+
             # Verify error signal was not emitted
             assert error_spy.count() == 0
 
@@ -1001,12 +1006,12 @@ class TestControllerWorkerIntegration:
         """Create real main window for integration testing"""
         window = real_factory.create_main_window(with_managers=True)
         qtbot.addWidget(window)  # Ensure proper cleanup order
-        
+
         # Set up test data using TestDataRepository
         from .infrastructure.test_data_repository import TestDataRepository
         repo = TestDataRepository()
         test_data = repo.get_vram_extraction_data("medium")
-        
+
         # Set real extraction parameters
         extraction_params = {
             "vram_path": test_data["vram_path"],
@@ -1017,21 +1022,21 @@ class TestControllerWorkerIntegration:
             "create_metadata": True,
             "grayscale_mode": True,  # Simplify for testing
         }
-        
+
         if hasattr(window, 'set_extraction_params'):
             window.set_extraction_params(extraction_params)
         else:
             window.get_extraction_params = lambda: extraction_params
-        
+
         yield window
-        
+
         # Ensure any active controller workers are stopped before window deletion
         if hasattr(window, 'controller') and hasattr(window.controller, 'worker'):
             worker = window.controller.worker
             if worker and worker.isRunning():
                 worker.quit()
                 worker.wait(1000)
-        
+
         # Cleanup
         repo.cleanup()
 
@@ -1039,14 +1044,14 @@ class TestControllerWorkerIntegration:
     def integration_controller(self, integration_main_window, real_extraction_manager, real_injection_manager, real_session_manager):
         """Create controller instance for integration tests with real managers"""
         controller = ExtractionController(integration_main_window)
-        
+
         # Inject real managers
         controller.extraction_manager = real_extraction_manager
         controller.injection_manager = real_injection_manager
         controller.session_manager = real_session_manager
-        
+
         yield controller
-        
+
         # Cleanup any running worker - disconnect signals first
         if controller.worker:
             # Disconnect all signals to prevent signal emission to deleted objects
@@ -1061,12 +1066,12 @@ class TestControllerWorkerIntegration:
             except (TypeError, RuntimeError):
                 # Signals may not be connected or already disconnected
                 pass
-            
+
             # Now stop the worker
             if controller.worker.isRunning():
                 controller.worker.quit()
                 controller.worker.wait(1000)
-            
+
             # Delete the worker reference
             controller.worker.deleteLater()
             controller.worker = None
@@ -1077,14 +1082,14 @@ class TestControllerWorkerIntegration:
         """Test that worker signals are properly connected to controller handlers"""
         # Track original worker state
         original_worker = integration_controller.worker
-        
+
         # Start extraction with real components
         integration_controller.start_extraction()
-        
+
         # Verify worker was created
         assert integration_controller.worker is not None
         assert integration_controller.worker != original_worker
-        
+
         # For real workers, verify they have the expected signals
         worker = integration_controller.worker
         assert hasattr(worker, 'progress')
@@ -1094,7 +1099,7 @@ class TestControllerWorkerIntegration:
         assert hasattr(worker, 'active_palettes_ready')
         assert hasattr(worker, 'extraction_finished')
         assert hasattr(worker, 'error')
-        
+
         # Verify worker is running or has attempted to run
         # (it may finish quickly with test data)
         assert worker.isFinished() or worker.isRunning()
@@ -1103,15 +1108,15 @@ class TestControllerWorkerIntegration:
         """Test full signal chain from worker to UI"""
         # Use QSignalSpy to monitor signal emissions
         complete_spy = QSignalSpy(integration_main_window.extraction_completed)
-        
+
         # Simulate worker signals with real components
         integration_controller._on_progress(10, "Starting extraction...")
-        
+
         # Use real PIL Image for testing
         from PIL import Image
         test_image = Image.new('RGB', (8, 8), color='green')
         grayscale_image = Image.new('L', (8, 8), color=100)
-        
+
         integration_controller._on_preview_ready(test_image, 10)
         integration_controller._on_preview_image_ready(grayscale_image)
         integration_controller._on_palettes_ready({8: [[0, 0, 0]]})
@@ -1121,7 +1126,7 @@ class TestControllerWorkerIntegration:
         # Verify signal was emitted
         assert complete_spy.count() == 1
         assert complete_spy.at(0)[0] == ["sprite.png", "palette.json"]
-        
+
         # For real components, verify they exist and were potentially updated
         assert integration_main_window.sprite_preview is not None
         if hasattr(integration_main_window, 'palette_preview'):
@@ -1133,10 +1138,10 @@ class TestControllerWorkerIntegration:
         from ui.dialogs import user_error_dialog
         mock_show_error = Mock()
         monkeypatch.setattr(user_error_dialog.UserErrorDialog, 'show_error', mock_show_error)
-        
+
         # Use QSignalSpy to monitor error signal
         failed_spy = QSignalSpy(integration_main_window.extraction_error_occurred)
-        
+
         # Create simple worker placeholder
         class DummyWorker:
             def isRunning(self):
@@ -1151,10 +1156,10 @@ class TestControllerWorkerIntegration:
         # Verify BEHAVIOR: error signal was emitted with message
         assert failed_spy.count() == 1
         assert failed_spy.at(0)[0] == "Failed to read file"
-        
+
         # Verify STATE: worker was cleaned up after error
         assert integration_controller.worker is None
-        
+
         # Verify BEHAVIOR: error dialog was shown to user
         assert mock_show_error.called
         # Could also verify the error message if show_error takes arguments
@@ -1200,14 +1205,14 @@ class TestControllerWorkerIntegration:
         # Should have different workers (test concurrency handling)
         assert first_worker != second_worker
         assert integration_controller.worker == second_worker
-        
+
         # Clean up both workers to prevent signals to deleted objects
         for worker in [first_worker, second_worker]:
             if worker and hasattr(worker, 'isRunning'):
                 # Disconnect signals if possible
                 try:
                     worker.progress.disconnect()
-                    worker.preview_ready.disconnect() 
+                    worker.preview_ready.disconnect()
                     worker.preview_image_ready.disconnect()
                     worker.palettes_ready.disconnect()
                     worker.active_palettes_ready.disconnect()
@@ -1215,7 +1220,7 @@ class TestControllerWorkerIntegration:
                     worker.error.disconnect()
                 except (TypeError, RuntimeError, AttributeError):
                     pass
-                
+
                 # Stop the worker if running
                 if worker.isRunning():
                     worker.quit()
@@ -1225,7 +1230,7 @@ class TestControllerWorkerIntegration:
 @pytest.mark.no_manager_setup
 class TestControllerManagerContextIntegration:
     """Test controller integration with manager context system."""
-    
+
     def test_controller_manager_access(self, mock_main_window, real_extraction_manager, real_injection_manager, real_session_manager):
         """Test that controller can access managers through real components."""
         # Pass managers directly to avoid registry lookup
@@ -1235,12 +1240,12 @@ class TestControllerManagerContextIntegration:
             injection_manager=real_injection_manager,
             session_manager=real_session_manager
         )
-        
+
         # Verify manager access with real components
         assert isinstance(controller.extraction_manager, ExtractionManager)
         assert isinstance(controller.injection_manager, InjectionManager)
         assert isinstance(controller.session_manager, SessionManager)
-    
+
     @pytest.mark.skip(reason="Complex Qt/Mock interaction issues - needs refactoring")
     def test_controller_context_isolation(self, mock_main_window, real_extraction_manager, real_injection_manager, real_session_manager):
         """Test that controllers are properly isolated with their own components."""
@@ -1251,18 +1256,18 @@ class TestControllerManagerContextIntegration:
             injection_manager=real_injection_manager,
             session_manager=real_session_manager
         )
-        
+
         # Set unique value on manager
         controller1.extraction_manager.test_value = "controller1"
-        
+
         # Create second controller with separate managers - use RealComponentFactory for isolation
-        from tests.infrastructure.real_component_factory import RealComponentFactory
         from core.managers.extraction_manager import ExtractionManager
         from core.managers.injection_manager import InjectionManager
         from core.managers.session_manager import SessionManager
+        from tests.infrastructure.real_component_factory import RealComponentFactory
         factory = RealComponentFactory()
         window2 = factory.create_main_window()
-        
+
         # Create new managers for isolation
         controller2 = ExtractionController(
             window2,
@@ -1270,33 +1275,33 @@ class TestControllerManagerContextIntegration:
             injection_manager=InjectionManager(),
             session_manager=SessionManager()
         )
-        
+
         # Set different value on manager
         controller2.extraction_manager.test_value = "controller2"
-        
+
         # Verify isolation - each controller has its own manager instance
         assert controller2.extraction_manager is not controller1.extraction_manager
         assert controller2.extraction_manager.test_value == "controller2"
         assert controller1.extraction_manager.test_value == "controller1"
-    
+
     def test_controller_manager_state_persistence(self, real_factory):
         """Test that real managers maintain their state independently."""
         # Create shared manager instance
         shared_manager = real_factory.create_extraction_manager()
-        
+
         # Create first controller using shared manager
         window1 = real_factory.create_main_window(with_managers=True)
         controller1 = ExtractionController(window1)
         controller1.extraction_manager = shared_manager
-        
+
         # Modify manager state
         controller1.extraction_manager.test_state = "persistent_value"
-        
+
         # Create second controller using same manager instance
         window2 = real_factory.create_main_window(with_managers=True)
         controller2 = ExtractionController(window2)
         controller2.extraction_manager = shared_manager
-        
+
         # Manager state should persist since it's the same instance
         assert controller2.extraction_manager is controller1.extraction_manager
         assert controller2.extraction_manager.test_state == "persistent_value"
@@ -1309,17 +1314,17 @@ class TestPrivateAttributeAccessFix:
     def test_main_window(self, mock_main_window):
         """Create test main window for output path testing"""
         window = mock_main_window
-        
+
         # Add test methods for output path testing
         def mock_get_output_path():
             return getattr(window, '_test_output_path', '')
-        
+
         def set_test_output_path(path):
             window._test_output_path = path
-        
+
         window.get_output_path = mock_get_output_path
         window.set_test_output_path = set_test_output_path
-        
+
         return window
 
     @pytest.fixture
@@ -1336,10 +1341,10 @@ class TestPrivateAttributeAccessFix:
         # Arrange
         test_path = "/path/to/output/sprite"
         test_main_window.set_test_output_path(test_path)
-        
+
         # Act
         result = test_main_window.get_output_path()
-        
+
         # Assert
         assert result == test_path
 
@@ -1347,10 +1352,10 @@ class TestPrivateAttributeAccessFix:
         """Test that get_output_path() method handles empty path"""
         # Arrange
         test_main_window.set_test_output_path("")
-        
+
         # Act
         result = test_main_window.get_output_path()
-        
+
         # Assert
         assert result == ""
 
@@ -1358,10 +1363,10 @@ class TestPrivateAttributeAccessFix:
         """Test that get_output_path() method handles None value"""
         # Arrange
         test_main_window.set_test_output_path(None)
-        
+
         # Act
         result = test_main_window.get_output_path()
-        
+
         # Assert
         assert result is None
 
@@ -1377,12 +1382,12 @@ class TestPrivateAttributeAccessFix:
             "/path/with/émojis🎮/output",
             "/path/with/unicode_文字/output"
         ]
-        
+
         for test_path in special_paths:
             # Act
             test_main_window.set_test_output_path(test_path)
             result = test_main_window.get_output_path()
-            
+
             # Assert
             assert result == test_path
 
@@ -1391,21 +1396,21 @@ class TestPrivateAttributeAccessFix:
         # Arrange
         test_path = "/valid/output/path"
         test_main_window.set_test_output_path(test_path)
-        
+
         # Track method calls
         original_get_path = test_main_window.get_output_path
         call_count = 0
-        
+
         def tracked_get_path():
             nonlocal call_count
             call_count += 1
             return original_get_path()
-        
+
         test_main_window.get_output_path = tracked_get_path
-        
+
         # Act
         test_controller.start_injection()
-        
+
         # Assert - verify controller called the public method
         assert call_count >= 1
 
@@ -1413,10 +1418,10 @@ class TestPrivateAttributeAccessFix:
         """Test that controller properly handles empty output path"""
         # Arrange
         test_main_window.set_test_output_path("")
-        
+
         # Act
         test_controller.start_injection()
-        
+
         # Assert - check status bar was updated with appropriate message
         if hasattr(test_main_window, 'status_bar') and test_main_window.status_bar:
             current_message = test_main_window.status_bar.currentMessage()
@@ -1426,10 +1431,10 @@ class TestPrivateAttributeAccessFix:
         """Test that controller properly handles None output path"""
         # Arrange
         test_main_window.set_test_output_path(None)
-        
+
         # Act
         test_controller.start_injection()
-        
+
         # Assert - check status bar was updated with appropriate message
         if hasattr(test_main_window, 'status_bar') and test_main_window.status_bar:
             current_message = test_main_window.status_bar.currentMessage()
@@ -1439,13 +1444,13 @@ class TestPrivateAttributeAccessFix:
         """Test that controller properly handles whitespace-only output path"""
         # Arrange
         whitespace_paths = ["   ", "\t", "\n", "  \t  \n  "]
-        
+
         for test_path in whitespace_paths:
             test_main_window.set_test_output_path(test_path)
-            
+
             # Act
             test_controller.start_injection()
-            
+
             # Whitespace-only strings are truthy, so they don't trigger "No extraction" message
             # This tests the actual behavior with real components
             # (The actual handling depends on controller implementation)
@@ -1455,13 +1460,13 @@ class TestPrivateAttributeAccessFix:
         # Arrange
         test_path = "/valid/output/path"
         test_main_window.set_test_output_path(test_path)
-        
+
         # Set up manager to handle injection gracefully
         # Real managers handle validation internally
-        
+
         # Act
         test_controller.start_injection()
-        
+
         # Assert - controller should attempt to proceed with injection
         # (The exact behavior depends on validation and other factors)
         assert test_main_window.get_output_path() == test_path
@@ -1471,10 +1476,10 @@ class TestPrivateAttributeAccessFix:
         # Arrange
         test_main_window._test_private_path = "/private/path"  # Private attribute simulation
         test_main_window.set_test_output_path("")  # Public method returns empty
-        
+
         # Act
         test_controller.start_injection()
-        
+
         # Assert - controller should use public method
         # The fact that private attribute has value but get_output_path returns ""
         # proves the controller is using the public method properly

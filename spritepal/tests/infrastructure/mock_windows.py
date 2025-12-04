@@ -12,7 +12,8 @@ Following Qt Testing Best Practices:
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import Mock
 
 from .mock_dialogs_base import CallbackSignal

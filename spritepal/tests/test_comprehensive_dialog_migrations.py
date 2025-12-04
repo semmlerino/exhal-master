@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from PIL import Image
-
 from ui.components import BaseDialog, SplitterDialog, TabbedDialog
 from ui.dialogs.user_error_dialog import UserErrorDialog
 from ui.grid_arrangement_dialog import GridArrangementDialog
@@ -51,13 +51,13 @@ class TestComprehensiveDialogMigrations:
             os.unlink(temp_file.name)
 
     def test_all_dialogs_inherit_from_correct_base_classes(
-        self, 
-        safe_qtbot: Any, 
-        test_sprite_image: str, 
+        self,
+        safe_qtbot: Any,
+        test_sprite_image: str,
         manager_context_factory: Any
     ) -> None:
         """Test that all migrated dialogs inherit from the correct component base classes"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Test UserErrorDialog inherits from BaseDialog
             error_dialog = UserErrorDialog("Test error")
             safe_qtbot.addWidget(error_dialog)
@@ -81,7 +81,7 @@ class TestComprehensiveDialogMigrations:
             safe_qtbot.addWidget(grid_dialog)
             assert isinstance(grid_dialog, SplitterDialog)
             assert isinstance(grid_dialog, BaseDialog)  # SplitterDialog inherits from BaseDialog
-            
+
             # Clean up
             for dialog in [error_dialog, injection_dialog, row_dialog, grid_dialog]:
                 try:
@@ -90,19 +90,19 @@ class TestComprehensiveDialogMigrations:
                     pass
 
     def test_all_dialogs_have_consistent_component_features(
-        self, 
-        safe_qtbot: Any, 
-        test_sprite_image: str, 
+        self,
+        safe_qtbot: Any,
+        test_sprite_image: str,
         manager_context_factory: Any
     ) -> None:
         """Test that all migrated dialogs have consistent component features"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             dialogs = [
                 UserErrorDialog("Test error"),
                 InjectionDialog(),
                 RowArrangementDialog(test_sprite_image),
             ]
-            
+
             # Handle grid dialog with error patching
             with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 dialogs.append(GridArrangementDialog(test_sprite_image))
@@ -120,7 +120,7 @@ class TestComprehensiveDialogMigrations:
 
                 # All should have proper titles
                 assert dialog.windowTitle() != ""
-            
+
             # Clean up
             for dialog in dialogs:
                 try:
@@ -130,7 +130,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_button_integration_consistency(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that all dialogs have consistent button integration"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # UserErrorDialog has custom OK button (creates button box manually)
             error_dialog = UserErrorDialog("Test error")
             safe_qtbot.addWidget(error_dialog)
@@ -154,7 +154,7 @@ class TestComprehensiveDialogMigrations:
             safe_qtbot.addWidget(grid_dialog)
             assert grid_dialog.button_box is not None
             assert hasattr(grid_dialog, "export_btn")
-            
+
             # Clean up
             for dialog in [error_dialog, injection_dialog, row_dialog, grid_dialog]:
                 try:
@@ -164,12 +164,12 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_status_bar_integration_consistency(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that status bar integration is consistent across dialogs"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Dialogs with status bars
             status_dialogs = [
                 RowArrangementDialog(test_sprite_image),
             ]
-            
+
             # Handle grid dialog with error patching
             with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 status_dialogs.append(GridArrangementDialog(test_sprite_image))
@@ -182,7 +182,7 @@ class TestComprehensiveDialogMigrations:
                 # Test status update functionality
                 dialog.update_status("Test message")
                 assert dialog.status_bar.currentMessage() == "Test message"
-            
+
             # Clean up
             for dialog in status_dialogs:
                 try:
@@ -192,7 +192,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_component_api_consistency(self, safe_qtbot, manager_context_factory):
         """Test that component APIs are consistent across dialogs"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Test InjectionDialog component usage
             injection_dialog = InjectionDialog()
             safe_qtbot.addWidget(injection_dialog)
@@ -210,13 +210,13 @@ class TestComprehensiveDialogMigrations:
             assert hasattr(injection_dialog.vram_offset_input, "set_text")
             assert hasattr(injection_dialog.sprite_file_selector, "get_path")
             assert hasattr(injection_dialog.sprite_file_selector, "set_path")
-            
+
             # Clean up
             injection_dialog.close()
 
     def test_dialog_layout_architecture_consistency(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that layout architecture is consistent after migrations"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Test TabbedDialog structure
             injection_dialog = InjectionDialog()
             safe_qtbot.addWidget(injection_dialog)
@@ -255,7 +255,7 @@ class TestComprehensiveDialogMigrations:
                     print(f"DEBUG GridArrangementDialog: Widget {i}: {widget} (type: {type(widget).__name__})")
 
             assert grid_dialog.main_splitter.count() == 2  # Left and right panels
-            
+
             # Clean up
             for dialog in [injection_dialog, row_dialog, grid_dialog]:
                 try:
@@ -265,7 +265,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_signal_integration_preservation(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that signal integration is preserved after migrations"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Test RowArrangementDialog signals
             row_dialog = RowArrangementDialog(test_sprite_image)
             safe_qtbot.addWidget(row_dialog)
@@ -283,7 +283,7 @@ class TestComprehensiveDialogMigrations:
             assert hasattr(grid_dialog, "arrangement_manager")
             assert hasattr(grid_dialog, "grid_view")
             assert hasattr(grid_dialog.grid_view, "tile_clicked")
-            
+
             # Clean up
             for dialog in [row_dialog, grid_dialog]:
                 try:
@@ -293,7 +293,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_error_handling_consistency(self, safe_qtbot, manager_context_factory):
         """Test that error handling is consistent across migrated dialogs"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Test error dialog functionality
             error_dialog = UserErrorDialog("Test error", "Test details")
             safe_qtbot.addWidget(error_dialog)
@@ -312,7 +312,7 @@ class TestComprehensiveDialogMigrations:
             # Should handle error gracefully and maintain structure
             assert isinstance(grid_dialog, SplitterDialog)
             assert grid_dialog.status_bar is not None
-            
+
             # Clean up
             for dialog in [error_dialog, memory_error_dialog, grid_dialog]:
                 try:
@@ -322,7 +322,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_memory_management_consistency(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that memory management is consistent across dialogs"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Only GridArrangementDialog has _cleanup_resources method
             with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
@@ -343,7 +343,7 @@ class TestComprehensiveDialogMigrations:
 
             # Should still close properly without explicit cleanup
             assert row_dialog.isVisible() or True  # Should not crash
-            
+
             # Clean up
             for dialog in [grid_dialog, row_dialog]:
                 try:
@@ -353,7 +353,7 @@ class TestComprehensiveDialogMigrations:
 
     def test_cross_dialog_workflow_integration(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that dialogs can work together in typical workflows"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Simulate workflow: Extract -> Arrange -> Inject
 
             # 1. Start with arrangement dialog (simulating extraction output)
@@ -377,7 +377,7 @@ class TestComprehensiveDialogMigrations:
 
             injection_dialog.set_current_tab(1)  # ROM tab
             assert injection_dialog.get_current_tab_index() == 1
-            
+
             # Clean up
             for dialog in [arrangement_dialog, injection_dialog]:
                 try:
@@ -387,11 +387,11 @@ class TestComprehensiveDialogMigrations:
 
     def test_dialog_component_isolation(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that component changes don't affect other dialogs"""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Create multiple dialogs
             injection_dialog = InjectionDialog()
             row_dialog = RowArrangementDialog(test_sprite_image)
-            
+
             with patch("ui.grid_arrangement_dialog.QMessageBox.critical"):
                 grid_dialog = GridArrangementDialog(test_sprite_image)
 
@@ -407,7 +407,7 @@ class TestComprehensiveDialogMigrations:
 
             # Each dialog should maintain its own component state
             assert injection_dialog.vram_offset_input.get_value() == 0x8000
-            
+
             # Clean up
             for dialog in [injection_dialog, row_dialog, grid_dialog]:
                 try:
@@ -418,72 +418,72 @@ class TestComprehensiveDialogMigrations:
 # Manager Context Integration Tests
 class TestManagerContextIntegration:
     """Test manager context integration with dialog migrations."""
-    
+
     def test_injection_dialog_manager_access(self, safe_qtbot, manager_context_factory):
         """Test that InjectionDialog can access managers through context."""
         with manager_context_factory() as context:
             injection_dialog = InjectionDialog()
             safe_qtbot.addWidget(injection_dialog)
-            
+
             # Verify dialog can access required managers
             injection_manager = context.get_manager("injection", object)
             assert injection_manager is not None
-            
+
             session_manager = context.get_manager("session", object)
             assert session_manager is not None
-            
+
             # Clean up
             injection_dialog.close()
-    
+
     def test_dialog_context_isolation(self, safe_qtbot, test_sprite_image, manager_context_factory):
         """Test that dialogs are properly isolated with their own contexts."""
         # First context
         with manager_context_factory(name="context1") as ctx1:
             dialog1 = InjectionDialog()
             safe_qtbot.addWidget(dialog1)
-            
+
             # Verify context1 managers
             manager1 = ctx1.get_manager("injection", object)
             assert manager1 is not None
-            
+
             dialog1.close()
-        
+
         # Second context should be isolated
         with manager_context_factory(name="context2") as ctx2:
             dialog2 = InjectionDialog()
             safe_qtbot.addWidget(dialog2)
-            
+
             # Verify context2 managers are different instances
             manager2 = ctx2.get_manager("injection", object)
             assert manager2 is not None
             assert manager2 is not manager1  # Should be different instances
-            
+
             dialog2.close()
-    
+
     def test_dialog_manager_state_persistence(self, safe_qtbot, manager_context_factory):
         """Test that manager state persists within a context."""
         with manager_context_factory() as context:
             # Create first dialog and modify manager state
             dialog1 = InjectionDialog()
             safe_qtbot.addWidget(dialog1)
-            
+
             injection_manager = context.get_manager("injection", object)
             injection_manager.test_value = "test_state"
-            
+
             dialog1.close()
-            
+
             # Create second dialog in same context
             dialog2 = InjectionDialog()
             safe_qtbot.addWidget(dialog2)
-            
+
             # Manager state should persist
             same_manager = context.get_manager("injection", object)
             assert same_manager is injection_manager
             assert hasattr(same_manager, 'test_value')
             assert same_manager.test_value == "test_state"
-            
+
             dialog2.close()
-    
+
     @pytest.fixture
     def test_sprite_image(self):
         """Create a test sprite image for dialog testing"""

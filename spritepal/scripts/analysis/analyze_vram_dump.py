@@ -5,7 +5,6 @@ from __future__ import annotations
 Analyze VRAM dumps to identify sprite patterns and search for them in ROM
 """
 
-import os
 import sys
 from pathlib import Path
 

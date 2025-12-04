@@ -34,7 +34,7 @@ class TestROMMapWidgetFixed:
         # Create widget with no parent first
         parent = QWidget()
         qtbot.addWidget(parent)
-        
+
         # Create widget with proper parent
         widget = ROMMapWidget(parent)
         qtbot.addWidget(widget)
@@ -49,7 +49,7 @@ class TestROMMapWidgetFixed:
         """Test adding sprite data to ROM map with qtbot"""
         from PySide6.QtWidgets import QWidget
         from ui.components.visualization.rom_map_widget import ROMMapWidget
-        
+
         parent = QWidget()
         qtbot.addWidget(parent)
         widget = ROMMapWidget(parent)

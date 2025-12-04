@@ -27,7 +27,7 @@ class SettingsManager:
         # Use SessionManager for all storage operations
         # REQUIRED DELAYED IMPORT: Prevents circular dependency:
         # settings_manager -> session_manager -> managers -> settings_manager
-        from core.managers import get_session_manager  # noqa: PLC0415
+        from core.managers import get_session_manager
         self._session_manager = get_session_manager()
         # Initialize default settings if not present
         self._ensure_default_settings()

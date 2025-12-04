@@ -14,7 +14,8 @@ Key Features:
 from __future__ import annotations
 
 import weakref
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from PySide6.QtCore import QObject, QPoint, Qt, QTimer
 from PySide6.QtTest import QTest

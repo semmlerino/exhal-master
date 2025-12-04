@@ -5,7 +5,6 @@ from __future__ import annotations
 Search VRAM for actual tile graphics data (not tilemap indices)
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
+
 
 def analyze_vram_region(vram_data, start_offset, region_size, region_name):
     """Analyze a VRAM region to determine what type of data it contains"""

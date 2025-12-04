@@ -5,7 +5,6 @@ from __future__ import annotations
 Extract sprites from VRAM at the CORRECT offsets (0x4000/0x6000)
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.rom_extractor import ROMExtractor
+
 
 def extract_sprites_from_vram(vram_path, output_prefix):
     """Extract sprites from VRAM at correct offsets"""

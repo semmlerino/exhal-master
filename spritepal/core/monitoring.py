@@ -9,8 +9,9 @@ from __future__ import annotations
 import functools
 import time
 import traceback
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from utils.logging_config import get_logger
 

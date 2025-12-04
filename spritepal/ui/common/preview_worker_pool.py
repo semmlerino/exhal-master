@@ -18,7 +18,6 @@ import weakref
 from pathlib import Path
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
-
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 from utils.logging_config import get_logger
 

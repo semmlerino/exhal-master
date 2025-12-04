@@ -22,7 +22,7 @@ import pytest
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.cache,
@@ -40,6 +40,7 @@ from utils.preview_generator import (
     cleanup_preview_generator,
     get_preview_generator,
 )
+
 
 class TestPreviewGeneratorThreadSafety:
     """Test thread safety of PreviewGenerator singleton."""

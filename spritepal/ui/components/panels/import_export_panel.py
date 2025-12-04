@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.components.visualization import ROMMapWidget
 from ui.styles import get_panel_style
 
@@ -101,7 +100,7 @@ class ImportExportPanel(QWidget):
             return
 
         # Get save file path
-        default_name = f"sprite_offsets_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
+        default_name = f"sprite_offsets_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Sprite Offsets",
@@ -137,7 +136,7 @@ class ImportExportPanel(QWidget):
                 "metadata": {
                     "rom_path": self.rom_path,
                     "rom_size": self.rom_size,
-                    "export_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "export_timestamp": datetime.now(UTC).isoformat(),
                     "spritepal_version": "1.0.0",
                     "total_sprites": len(self.found_sprites)
                 },

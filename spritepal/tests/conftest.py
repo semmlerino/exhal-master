@@ -59,11 +59,10 @@ from unittest.mock import Mock, patch
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from pytest import FixtureRequest
-
     from core.managers.extraction_manager import ExtractionManager
     from core.managers.injection_manager import InjectionManager
     from core.managers.session_manager import SessionManager
+    from pytest import FixtureRequest
     from tests.infrastructure.test_protocols import (
         MockExtractionManagerProtocol,
         MockInjectionManagerProtocol,
@@ -365,9 +364,8 @@ def session_managers() -> Iterator[None]:
             pass
     """
     # Lazy import manager functions
-    from PySide6.QtWidgets import QApplication
-
     from core.managers import cleanup_managers, initialize_managers
+    from PySide6.QtWidgets import QApplication
 
     # Ensure Qt app exists
     app = QApplication.instance()
@@ -423,9 +421,8 @@ def setup_managers(request: FixtureRequest) -> Iterator[None]:
 
     # Lazy import manager functions to reduce startup overhead
     # Ensure Qt app exists before initializing managers
-    from PySide6.QtWidgets import QApplication
-
     from core.managers import cleanup_managers, initialize_managers
+    from PySide6.QtWidgets import QApplication
     app = QApplication.instance()
     if app is None and not IS_HEADLESS:
         app = QApplication([])

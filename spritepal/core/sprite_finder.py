@@ -10,11 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
-
 from core.region_analyzer import EmptyRegionConfig, EmptyRegionDetector
 from core.rom_extractor import ROMExtractor
 from core.sprite_visual_validator import SpriteVisualValidator
+from PIL import Image
 from utils.constants import (
     BYTES_PER_TILE,
     ROM_SCAN_STEP_DEFAULT,

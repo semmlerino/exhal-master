@@ -30,35 +30,35 @@ if "--no-qt" not in sys.argv:
 
 from core.sprite_finder import SpriteFinder
 from tests.infrastructure.test_doubles import (
-    MockCacheManager, MockGalleryWidget, MockProgressDialog, 
-    MockSpriteFinderExternal, TestDoubleFactory
+    MockCacheManager,
+    TestDoubleFactory,
 )
+
 
 def create_mock_gallery_tab():
     """Create a mock SpriteGalleryTab for testing without Qt dependencies."""
     from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 
     # Mock Qt widget initialization
-    with patch('ui.tabs.sprite_gallery_tab.QWidget.__init__'):
-        with patch.object(SpriteGalleryTab, '_setup_ui'):
-            tab = SpriteGalleryTab()
-            # Initialize required attributes
-            tab.rom_path = None
-            tab.rom_size = 0
-            tab.sprites_data = []
-            
-            # Use test doubles for external dependencies
-            tab.gallery_widget = TestDoubleFactory.create_gallery_widget()
-            tab.info_label = Mock()
-            tab.toolbar = Mock()
-            tab.compare_btn = Mock()
-            tab.palette_btn = Mock()
-            tab.thumbnail_worker = None
-            tab.progress_dialog = None
-            
-            # Add cache manager test double
-            tab._cache_manager = MockCacheManager()
-            return tab
+    with patch('ui.tabs.sprite_gallery_tab.QWidget.__init__'), patch.object(SpriteGalleryTab, '_setup_ui'):
+        tab = SpriteGalleryTab()
+        # Initialize required attributes
+        tab.rom_path = None
+        tab.rom_size = 0
+        tab.sprites_data = []
+
+        # Use test doubles for external dependencies
+        tab.gallery_widget = TestDoubleFactory.create_gallery_widget()
+        tab.info_label = Mock()
+        tab.toolbar = Mock()
+        tab.compare_btn = Mock()
+        tab.palette_btn = Mock()
+        tab.thumbnail_worker = None
+        tab.progress_dialog = None
+
+        # Add cache manager test double
+        tab._cache_manager = MockCacheManager()
+        return tab
 
 class TestSpriteGalleryCaching:
     """Unit tests for the gallery caching mechanism."""
@@ -100,7 +100,7 @@ class TestSpriteGalleryCaching:
             "scan_mode": tab.scan_mode,
             "timestamp": time.time()
         })
-        
+
         # Verify real _save_scan_cache behavior by calling it with mock path
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             tab._save_scan_cache()
@@ -139,7 +139,7 @@ class TestSpriteGalleryCaching:
 
         # Try to load cache for a different ROM using test double
         tab._cache_manager.save_cache("/different/rom.sfc", cache_data)
-        
+
         # Try loading cache for different ROM path - should fail validation
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             result = tab._load_scan_cache("/my/rom.sfc")
@@ -164,7 +164,7 @@ class TestSpriteGalleryCaching:
 
         # Try to load old cache using test double
         tab._cache_manager.save_cache(str(tmp_path / "test.sfc"), cache_data)
-        
+
         # Try loading old version cache - should fail validation
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             result = tab._load_scan_cache(str(tmp_path / "test.sfc"))
@@ -193,7 +193,7 @@ class TestSpriteGalleryCaching:
 
         # Load cache using test double
         tab._cache_manager.save_cache(str(tmp_path / "test.sfc"), cache_data)
-        
+
         # Load cache - keep _refresh_thumbnails real but mock external dependencies
         with patch.object(tab, '_get_cache_path', return_value=cache_file):
             # Keep internal logic real, only mock external dependencies if needed
@@ -472,9 +472,8 @@ class TestGalleryRobustness:
                 mock_dialog.wasCanceled.return_value = False
                 mock_dialog.setValue = Mock()
 
-                with patch.object(tab, '_save_scan_cache'):
-                    with patch.object(tab, '_refresh_thumbnails'):
-                        tab._start_sprite_scan()
+                with patch.object(tab, '_save_scan_cache'), patch.object(tab, '_refresh_thumbnails'):
+                    tab._start_sprite_scan()
 
         # Should complete without error
         assert tab.sprites_data == []

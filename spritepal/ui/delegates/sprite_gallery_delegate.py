@@ -12,7 +12,6 @@ from PySide6.QtGui import (
     QPen,
 )
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
-
 from ui.models.sprite_gallery_model import SpriteGalleryModel
 from utils.logging_config import get_logger
 

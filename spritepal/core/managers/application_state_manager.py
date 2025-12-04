@@ -13,12 +13,11 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TypeVar
 
 from PySide6.QtCore import QObject, Signal
-
 from utils.type_aliases import override
 
 from .base_manager import BaseManager
@@ -400,7 +399,7 @@ class ApplicationStateManager(BaseManager):
             sprite_info = {
                 "offset": offset,
                 "quality": quality,
-                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "metadata": metadata or {}
             }
 

@@ -4,12 +4,12 @@ Tests for sprite finder
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from core.sprite_finder import SpriteCandidate, SpriteFinder
 
 # Systematic pytest markers applied based on test content analysis

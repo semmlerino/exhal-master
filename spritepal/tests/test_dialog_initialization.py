@@ -8,19 +8,18 @@ from __future__ import annotations
 
 import pytest
 from PySide6.QtWidgets import QApplication
+from tests.infrastructure.mock_dialogs import MockGridArrangementDialog as GridArrangementDialog
+from tests.infrastructure.mock_dialogs import MockResumeScanDialog as ResumeScanDialog
+from tests.infrastructure.mock_dialogs import MockRowArrangementDialog as RowArrangementDialog
+from tests.infrastructure.mock_dialogs import MockSettingsDialog as SettingsDialog
 
 # Import mock dialog infrastructure
 from tests.infrastructure.mock_dialogs import (
-# Serial execution required: QApplication management
-
+    # Serial execution required: QApplication management
     MockUnifiedManualOffsetDialog as ManualOffsetDialog,
-    MockSettingsDialog as SettingsDialog,
-    MockGridArrangementDialog as GridArrangementDialog,
-    MockRowArrangementDialog as RowArrangementDialog,
-    MockResumeScanDialog as ResumeScanDialog,
-    MockUserErrorDialog as UserErrorDialog,
-    patch_dialog_imports
 )
+from tests.infrastructure.mock_dialogs import MockUserErrorDialog as UserErrorDialog
+from tests.infrastructure.mock_dialogs import patch_dialog_imports
 
 # Apply dialog patching
 patch_dialog_imports()
@@ -45,7 +44,7 @@ mock_injection_dialog.rom_offset_input = MagicMock()
 InjectionDialog = MagicMock(return_value=mock_injection_dialog)
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.cache,

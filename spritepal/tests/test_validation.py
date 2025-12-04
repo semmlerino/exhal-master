@@ -28,6 +28,7 @@ from utils.validation import (
     validate_vram_file,
 )
 
+
 class TestFileValidation:
     """Test file validation functions"""
 

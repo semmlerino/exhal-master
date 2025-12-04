@@ -17,15 +17,21 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
-from PySide6.QtCore import Qt, QPoint, QRect
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QKeySequence
-from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QSlider, QPushButton, QDialog,
-    QLineEdit, QLabel, QVBoxLayout, QHBoxLayout
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSlider,
+    QVBoxLayout,
+    QWidget,
 )
 
 # Test markers
@@ -39,8 +45,9 @@ pytestmark = [
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from core.managers.registry import cleanup_managers, initialize_managers
 from ui.main_window import MainWindow
-from core.managers.registry import initialize_managers, cleanup_managers
+
 
 class TestUIInteractionExamples:
     """
@@ -380,7 +387,7 @@ class TestUIInteractionExamples:
         qtbot.mouseClick(widget.trigger_button, Qt.MouseButton.LeftButton)
         
         # Wait for immediate signal (should be very fast)
-        with qtbot.waitSignal(widget.immediate_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(widget.immediate_signal, timeout=1000):
             pass
         
         immediate_time = time.time() - start_time
@@ -389,7 +396,7 @@ class TestUIInteractionExamples:
         assert immediate_spy[0][0] == "immediate", "Immediate signal should contain correct data"
         
         # Wait for delayed signal
-        with qtbot.waitSignal(widget.delayed_signal, timeout=2000) as blocker:
+        with qtbot.waitSignal(widget.delayed_signal, timeout=2000):
             pass
         
         delayed_time = time.time() - start_time
@@ -397,7 +404,7 @@ class TestUIInteractionExamples:
         assert len(delayed_spy) == 1, "Delayed signal should be emitted once"
         
         # Wait for sequence completion
-        with qtbot.waitSignal(widget.sequence_signal, timeout=3000) as blocker:
+        with qtbot.waitSignal(widget.sequence_signal, timeout=3000):
             pass
         
         total_time = time.time() - start_time
@@ -558,4 +565,3 @@ class TestUIInteractionExamples:
 if __name__ == "__main__":
     # Run examples when executed directly
     pytest.main([__file__, "-v", "--tb=short"])
-EOF < /dev/null

@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget
-
 from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
 from ui.dialogs.manual_offset.components import (
     LayoutManagerComponent,

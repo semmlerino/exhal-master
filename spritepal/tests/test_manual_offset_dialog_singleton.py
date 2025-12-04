@@ -8,8 +8,8 @@ rather than Qt GUI details.
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
-import pytest
 
+import pytest
 from ui.rom_extraction_panel import (
     ManualOffsetDialogSingleton,
     ROMExtractionPanel,
@@ -36,7 +36,7 @@ def mock_dialog():
     dialog.hide.return_value = None
     dialog.finished = MagicMock()
     dialog.finished.connect = MagicMock()
-    dialog.rejected = MagicMock()  
+    dialog.rejected = MagicMock()
     dialog.rejected.connect = MagicMock()
     dialog.destroyed = MagicMock()
     dialog.destroyed.connect = MagicMock()
@@ -87,11 +87,11 @@ class TestManualOffsetDialogSingleton:
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
             dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_rom_panel)
             dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_rom_panel)
-            
+
             # Both calls should return the same instance
             assert dialog1 is dialog2, "Singleton should return same instance"
             assert id(dialog1) == id(dialog2), "Object IDs should be identical"
-            
+
             # Verify singleton state - now _creator_panel should be set
             assert ManualOffsetDialogSingleton._instance is dialog1
             assert ManualOffsetDialogSingleton._creator_panel is mock_rom_panel
@@ -114,10 +114,10 @@ class TestManualOffsetDialogSingleton:
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
             dialog = ManualOffsetDialogSingleton.get_dialog(mock_rom_panel)
             assert ManualOffsetDialogSingleton._instance is dialog
-            
+
             # Simulate dialog close triggering cleanup
             ManualOffsetDialogSingleton._on_dialog_closed()
-            
+
             # Instance should be cleaned up
             assert ManualOffsetDialogSingleton._instance is None
             assert ManualOffsetDialogSingleton._creator_panel is None

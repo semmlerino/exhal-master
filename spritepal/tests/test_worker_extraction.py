@@ -9,15 +9,14 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 import pytest
+from core.managers.base_manager import BaseManager
+from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
 from PIL import Image
 from PySide6.QtTest import QSignalSpy
 
-from core.managers.base_manager import BaseManager
-from core.workers.extraction import ROMExtractionWorker, VRAMExtractionWorker
-
 # Serial execution required: QApplication management
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.headless,
@@ -218,16 +217,16 @@ class TestVRAMExtractionWorker:
             "vram_path": "/test/vram.dmp",
             "output_base": "/test/output",
         }
-        
+
         with patch("core.workers.extraction.get_extraction_manager") as mock_get_manager:
             # Create a properly mocked manager
             mock_manager = Mock()
             mock_manager.extraction_progress = Mock()
-            mock_manager.palettes_extracted = Mock() 
+            mock_manager.palettes_extracted = Mock()
             mock_manager.active_palettes_found = Mock()
             mock_manager.preview_generated = Mock()
             mock_manager.extract_vram_sprites = Mock(return_value=["output1.png", "output2.png"])
-            
+
             # Set up mock returns for signal connections
             mock_connection = Mock()
             mock_connection.disconnect = Mock()
@@ -235,32 +234,32 @@ class TestVRAMExtractionWorker:
             mock_manager.palettes_extracted.connect.return_value = mock_connection
             mock_manager.active_palettes_found.connect.return_value = mock_connection
             mock_manager.preview_generated.connect.return_value = mock_connection
-            
+
             mock_get_manager.return_value = mock_manager
-            
+
             worker = VRAMExtractionWorker(params)
             qtbot.addWidget(worker)
-            
+
             # Set up signal spies
             operation_spy = QSignalSpy(worker.operation_finished)
             extraction_spy = QSignalSpy(worker.extraction_finished)
-            
+
             # Connect manager signals
             worker.connect_manager_signals()
-            
+
             # Perform operation
             worker.perform_operation()
-            
+
             # Verify manager method was called
             mock_manager.extract_vram_sprites.assert_called_once_with(params)
-            
+
             # Verify signals emitted
             assert operation_spy.count() == 1
             assert operation_spy.at(0) == [True, "VRAM extraction completed successfully"]
-            
+
             assert extraction_spy.count() == 1
             assert extraction_spy.at(0) == [["output1.png", "output2.png"]]
-            
+
             # Test disconnection
             worker.disconnect_manager_signals()
             mock_connection.disconnect.assert_called()

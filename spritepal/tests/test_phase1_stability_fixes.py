@@ -51,6 +51,7 @@ from core.managers.base_manager import BaseManager
 from core.managers.registry import ManagerRegistry
 from ui.common.worker_manager import WorkerManager
 
+
 class TestWorkerCancellationStability:
     """Test WorkerManager safe cancellation mechanisms."""
 

@@ -13,8 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pytest
 from PySide6.QtWidgets import QApplication, QWidget
 from utils.thread_safe_singleton import (
-# Serial execution required: QApplication management, Thread safety concerns
-
+    # Serial execution required: QApplication management, Thread safety concerns
     LazyThreadSafeSingleton,
     QtThreadSafeSingleton,
     ThreadSafeSingleton,
@@ -23,7 +22,7 @@ from utils.thread_safe_singleton import (
 )
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.thread_safety,

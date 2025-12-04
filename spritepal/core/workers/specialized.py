@@ -10,14 +10,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from PIL import Image
-
     from core.managers import ExtractionManager, InjectionManager
     from core.managers.factory import ManagerFactory
-
-from PySide6.QtCore import QObject, Signal
+    from PIL import Image
 
 from core.managers.base_manager import BaseManager
+from PySide6.QtCore import QObject, Signal
 from utils.logging_config import get_logger
 
 from .base import BaseWorker, ManagedWorker
@@ -213,7 +211,7 @@ class WorkerOwnedManagerMixin:
         # Create manager factory if none provided
         if manager_factory is None:
             # Delayed import to avoid circular dependency in worker initialization
-            from core.managers.factory import StandardManagerFactory  # noqa: PLC0415
+            from core.managers.factory import StandardManagerFactory
             manager_factory = StandardManagerFactory(default_parent_strategy="none")
 
         # Create the manager (parent will be set after super init)

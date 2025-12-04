@@ -12,11 +12,10 @@ from __future__ import annotations
 from unittest.mock import Mock, cast
 
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtTest import QSignalSpy
-
 from core.managers.extraction_manager import ExtractionManager
 from core.managers.injection_manager import InjectionManager
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QSignalSpy
 from tests.infrastructure.manager_test_context import manager_context
 
 # OLD imports (being phased out)
@@ -129,7 +128,7 @@ class TestWorkerTestingMigration:
 
             return mock_worker, mock_manager
 
-        worker, manager = old_worker_testing_pattern()
+        worker, _manager = old_worker_testing_pattern()
 
         # Old testing approach - testing mock behavior
         worker.start()
@@ -209,7 +208,7 @@ class TestUIComponentMigration:
 
             return mock_main_window, mock_extraction_panel
 
-        window, panel = old_ui_mocking_pattern()
+        _window, panel = old_ui_mocking_pattern()
 
         # Old testing - mock signal testing
         callback = Mock()

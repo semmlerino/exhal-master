@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.components.navigation.region_jump_widget import RegionJumpWidget

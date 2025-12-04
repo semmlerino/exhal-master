@@ -4,9 +4,9 @@ Simple test for SearchWorker without importing the dialog.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -43,7 +43,7 @@ class TestSearchWorkerSimple:
 
     def test_parallel_search_mocked(self, temp_rom_file):
         """Test parallel search with full mocking."""
-        
+
         # Create a mock SearchWorker
         mock_worker = Mock()
         mock_worker.search_type = "parallel"
@@ -54,18 +54,18 @@ class TestSearchWorkerSimple:
             "num_workers": 2,
             "step_size": 0x100
         }
-        
+
         # Mock signals
         mock_worker.progress = Mock()
         mock_worker.result_found = Mock()
         mock_worker.search_complete = Mock()
         mock_worker.error = Mock()
-        
+
         # Mock the finder
         mock_finder = Mock()
         mock_finder.search_parallel = Mock(return_value=[])
         mock_finder.shutdown = Mock()
-        
+
         # Simulate the search
         mock_worker.finder = mock_finder
         results = mock_finder.search_parallel(
@@ -73,26 +73,26 @@ class TestSearchWorkerSimple:
             start_offset=0x0,
             end_offset=0x1000
         )
-        
+
         # Verify behavior
         assert results == []
         mock_finder.search_parallel.assert_called_once()
-        
+
         # Simulate cleanup
         mock_finder.shutdown()
         mock_finder.shutdown.assert_called_once()
-        
+
     def test_search_worker_initialization(self):
         """Test that SearchWorker can be initialized without hanging."""
         # This test doesn't import the actual SearchWorker
         # It just validates the mocking approach
-        
+
         mock_worker = Mock()
         mock_worker.search_type = "parallel"
         mock_worker.params = {"test": "params"}
         mock_worker.finder = None
         mock_worker._cancelled = False
-        
+
         assert mock_worker.search_type == "parallel"
         assert mock_worker.params == {"test": "params"}
         assert mock_worker.finder is None

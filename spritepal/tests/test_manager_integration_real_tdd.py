@@ -23,35 +23,24 @@ Benefits of real integration testing vs mocking:
 
 from __future__ import annotations
 
-import json
-import tempfile
 from pathlib import Path
-from typing import Any, Generator
 
 import pytest
+from core.managers.exceptions import ValidationError
 from PIL import Image
+from tests.infrastructure.manager_test_context import (
+    # Serial execution required: Thread safety concerns, Real Qt components
+    manager_context,
+)
 
 # Phase 2 Real Component Testing Infrastructure
-from tests.infrastructure.real_component_factory import RealComponentFactory
-from tests.infrastructure.manager_test_context import (
-# Serial execution required: Thread safety concerns, Real Qt components
-
-    ManagerTestContext,
-    manager_context,
-    isolated_manager_test,
-)
 from tests.infrastructure.test_data_repository import (
     TestDataRepository,
     get_test_data_repository,
 )
 
-from core.managers.extraction_manager import ExtractionManager
-from core.managers.injection_manager import InjectionManager
-from core.managers.exceptions import ValidationError
-from core.managers.session_manager import SessionManager
-
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.ci_safe,
@@ -90,24 +79,24 @@ class TestManagerIntegrationTDD:
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
-            
+
             # Get real test data for complete workflow
             vram_data = test_data_repo.get_vram_extraction_data("small")
-            
+
             # Track integration workflow signals
             extraction_files = []
             injection_results = []
-            
+
             def on_extraction_complete(files):
                 extraction_files.extend(files)
-                
+
             def on_injection_complete(success, message):
                 injection_results.append((success, message))
-            
+
             # Connect to real Qt signals across managers
             extraction_mgr.files_created.connect(on_extraction_complete)
             injection_mgr.injection_finished.connect(on_injection_complete)
-            
+
             try:
                 # Phase 1: Extract sprite from VRAM (real extraction)
                 with qtbot.waitSignal(extraction_mgr.files_created, timeout=10000):
@@ -116,7 +105,7 @@ class TestManagerIntegrationTDD:
                         vram_data["output_base"],
                         grayscale_mode=True
                     )
-                
+
                 # Verify extraction produced real files
                 assert len(extracted_files) > 0, "Extraction should create files"
                 sprite_file = None
@@ -124,18 +113,18 @@ class TestManagerIntegrationTDD:
                     if file_path.endswith('.png'):
                         sprite_file = file_path
                         break
-                        
+
                 assert sprite_file is not None, "Should extract PNG sprite"
                 assert Path(sprite_file).exists(), "Sprite file should exist"
-                
+
                 # Verify real image was created
                 img = Image.open(sprite_file)
                 assert img.size[0] > 0 and img.size[1] > 0
-                
+
                 # Phase 2: Inject extracted sprite back to VRAM (real injection)
                 # Create VRAM file for injection target
                 output_vram = str(Path(vram_data["output_base"]).parent / "injected.vram")
-                
+
                 injection_params = {
                     "mode": "vram",
                     "sprite_path": sprite_file,
@@ -143,21 +132,21 @@ class TestManagerIntegrationTDD:
                     "output_vram": output_vram,
                     "offset": 0x4000,  # Different offset to avoid overwrite
                 }
-                
+
                 # Test injection parameter validation with extracted sprite
                 injection_mgr.validate_injection_params(injection_params)
-                
+
                 # Wait for all Qt events to complete
                 qtbot.waitUntil(lambda: len(extraction_files) > 0, timeout=2000)
-                
+
                 # Verify complete integration workflow
                 assert len(extraction_files) > 0, "Should have extraction results"
                 assert Path(sprite_file).exists(), "Integrated workflow preserved files"
-                
+
                 # Verify managers maintained consistent state
                 assert not extraction_mgr.is_operation_active("vram_extraction")
                 assert not injection_mgr.is_injection_active()
-                
+
             except Exception as e:
                 # Real integration may reveal issues not seen in isolated tests
                 pytest.skip(f"Real integration workflow found issue: {e}")
@@ -173,34 +162,34 @@ class TestManagerIntegrationTDD:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
             session_mgr = ctx.get_session_manager()
-            
+
             # Get test data
             vram_data = test_data_repo.get_vram_extraction_data("small")
-            
+
             try:
                 # Test session integration with extraction
                 session_mgr.set("extraction", "last_vram_path", vram_data["vram_path"])
                 session_mgr.set("extraction", "last_extraction_mode", "vram")
-                
+
                 # Verify session data is available to injection manager
-                suggested_vram = injection_mgr.get_smart_vram_suggestion(vram_data["vram_path"])
-                
+                injection_mgr.get_smart_vram_suggestion(vram_data["vram_path"])
+
                 # Session integration may or may not work depending on implementation
                 # Test that it doesn't break the managers
                 assert extraction_mgr.is_initialized()
                 assert injection_mgr.is_initialized()
                 assert session_mgr.is_initialized()
-                
+
                 # Test session cleanup doesn't break manager integration
                 session_mgr.clear_session()
-                
+
                 # Managers should still function after session clear
                 test_params = {
                     "vram_path": vram_data["vram_path"],
                     "output_base": vram_data["output_base"]
                 }
                 extraction_mgr.validate_extraction_params(test_params)
-                
+
             except Exception as e:
                 # Session integration issues are valuable test results
                 pytest.skip(f"Session integration found issue: {e}")
@@ -215,17 +204,17 @@ class TestManagerIntegrationTDD:
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
-            
+
             # Test invalid file propagation between managers
             invalid_params = {
                 "vram_path": "/nonexistent/file.vram",
                 "output_base": "/invalid/path/sprite"
             }
-            
+
             # Extraction manager should reject invalid parameters
             with pytest.raises(ValidationError):
                 extraction_mgr.validate_extraction_params(invalid_params)
-            
+
             # Injection manager should also reject related invalid parameters
             injection_params = {
                 "mode": "vram",
@@ -234,10 +223,10 @@ class TestManagerIntegrationTDD:
                 "output_vram": "/invalid/output.vram",
                 "offset": 0x8000
             }
-            
+
             with pytest.raises(ValidationError):
                 injection_mgr.validate_injection_params(injection_params)
-            
+
             # Verify managers maintain clean state after errors
             assert extraction_mgr.is_initialized()
             assert injection_mgr.is_initialized()
@@ -254,21 +243,21 @@ class TestManagerIntegrationTDD:
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
-            
+
             # Get test data for both managers
             vram_data = test_data_repo.get_vram_extraction_data("small")
             injection_data = test_data_repo.get_injection_data("small")
-            
+
             try:
                 # Start operations on both managers
                 extraction_mgr._start_operation("vram_extraction")
-                
+
                 # Create temporary VRAM file for injection if needed
                 if not Path(injection_data.get("vram_path", "")).exists():
                     temp_vram = str(Path(injection_data["output_dir"]) / "temp.vram")
                     Path(temp_vram).write_bytes(b"\x00" * 0x4000)
                     injection_data["vram_path"] = temp_vram
-                
+
                 injection_params = {
                     "mode": "vram",
                     "sprite_path": injection_data["sprite_path"],
@@ -276,26 +265,26 @@ class TestManagerIntegrationTDD:
                     "output_vram": str(Path(injection_data["output_dir"]) / "concurrent.vram"),
                     "offset": 0x8000
                 }
-                
+
                 # Both managers should handle concurrent validation
                 extraction_params = {
                     "vram_path": vram_data["vram_path"],
                     "output_base": vram_data["output_base"]
                 }
-                
+
                 extraction_mgr.validate_extraction_params(extraction_params)
                 injection_mgr.validate_injection_params(injection_params)
-                
+
                 # Verify concurrent operation states
                 assert extraction_mgr.is_operation_active("vram_extraction")
                 # Injection operation state depends on implementation
-                
+
                 # Cleanup
                 extraction_mgr._finish_operation("vram_extraction")
-                
+
                 # Verify clean concurrent state
                 assert not extraction_mgr.is_operation_active("vram_extraction")
-                
+
             except Exception as e:
                 # Concurrent operation issues are valuable findings
                 pytest.skip(f"Concurrent manager operations found issue: {e}")
@@ -310,23 +299,23 @@ class TestManagerIntegrationTDD:
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
-            
+
             # Verify managers don't interfere with each other's resources
             assert extraction_mgr._sprite_extractor is not None
             assert extraction_mgr._rom_extractor is not None
-            
+
             # Test that managers maintain independent state
             extraction_mgr._start_operation("test_op")
             assert extraction_mgr.is_operation_active("test_op")
             assert not injection_mgr.is_injection_active()
-            
+
             # Test cleanup doesn't affect other managers
             extraction_mgr._finish_operation("test_op")
             extraction_mgr.cleanup()
-            
+
             # Injection manager should be unaffected
             assert injection_mgr.is_initialized()
-            
+
             # Test injection manager cleanup doesn't affect extraction
             injection_mgr.cleanup()
             assert extraction_mgr.is_initialized()
@@ -344,23 +333,23 @@ class TestManagerLifecycleIntegrationTDD:
         # Test extraction -> injection -> session order
         with manager_context("extraction") as ctx1:
             ctx1.initialize_managers("injection", "session")
-            
+
             extraction_mgr = ctx1.get_extraction_manager()
             injection_mgr = ctx1.get_injection_manager()
             session_mgr = ctx1.get_session_manager()
-            
+
             assert extraction_mgr.is_initialized()
             assert injection_mgr.is_initialized()
             assert session_mgr.is_initialized()
-        
+
         # Test reverse order: session -> injection -> extraction
         with manager_context("session") as ctx2:
             ctx2.initialize_managers("injection", "extraction")
-            
+
             session_mgr = ctx2.get_session_manager()
             injection_mgr = ctx2.get_injection_manager()
             extraction_mgr = ctx2.get_extraction_manager()
-            
+
             assert session_mgr.is_initialized()
             assert injection_mgr.is_initialized()
             assert extraction_mgr.is_initialized()
@@ -376,20 +365,20 @@ class TestManagerLifecycleIntegrationTDD:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
             session_mgr = ctx.get_session_manager()
-            
+
             # Set up some state in each manager
             extraction_mgr._start_operation("test_extraction")
             session_mgr.set("test", "test_key", "test_value")
-            
+
             # Verify state is set
             assert extraction_mgr.is_operation_active("test_extraction")
             assert session_mgr.get("test", "test_key") == "test_value"
-            
+
             # Individual cleanup should not affect other managers
             injection_mgr.cleanup()
             assert extraction_mgr.is_initialized()
             assert session_mgr.is_initialized()
-            
+
             # Context cleanup should handle all managers
             # (cleanup happens automatically when exiting context)
 
@@ -407,39 +396,39 @@ def test_manager_integration_performance_baseline_tdd(test_data_repo, benchmark)
         with manager_context("extraction", "injection") as ctx:
             extraction_mgr = ctx.get_extraction_manager()
             injection_mgr = ctx.get_injection_manager()
-            
+
             try:
                 # Quick validation workflow (no actual file operations)
                 vram_data = test_data_repo.get_vram_extraction_data("small")
-                
+
                 extraction_params = {
                     "vram_path": vram_data["vram_path"],
                     "output_base": vram_data["output_base"]
                 }
                 extraction_mgr.validate_extraction_params(extraction_params)
-                
+
                 # Create minimal injection params
                 injection_params = {
                     "mode": "vram",
                     "sprite_path": vram_data.get("sprite_path", vram_data["vram_path"].replace(".vram", ".png")),
-                    "input_vram": vram_data["vram_path"], 
+                    "input_vram": vram_data["vram_path"],
                     "output_vram": "/tmp/benchmark_output.vram",
                     "offset": 0x8000
                 }
-                
+
                 # This may fail validation but tests manager coordination performance
                 try:
                     injection_mgr.validate_injection_params(injection_params)
                 except ValidationError:
                     pass  # Expected for benchmark
-                
+
                 return True
             except Exception:
                 return False
-    
+
     # Benchmark integration workflow performance
     result = benchmark(run_integration_workflow)
-    
+
     # Performance test should complete successfully
     assert result is True or result is False  # Should return boolean
 

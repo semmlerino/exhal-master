@@ -31,7 +31,7 @@ from PySide6.QtWidgets import QCheckBox, QLineEdit, QPushButton
 # Add parent directory for imports
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.dialog,
@@ -50,6 +50,7 @@ sys.path.insert(0, str(parent_dir))
 sys.path.insert(0, str(current_dir))
 
 # Import real testing infrastructure
+from core.managers.registry import cleanup_managers, initialize_managers
 from tests.infrastructure import (
     QtTestingFramework,
     RealManagerFixtureFactory,
@@ -59,10 +60,9 @@ from tests.infrastructure import (
     validate_qt_object_lifecycle,
 )
 
-from core.managers.registry import cleanup_managers, initialize_managers
-
 # Import real MainWindow (not mocked!)
 from ui.main_window import MainWindow
+
 
 class TestRealMainWindowStateIntegration:
     """

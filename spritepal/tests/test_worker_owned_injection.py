@@ -15,23 +15,21 @@ import tempfile
 import time
 
 import pytest
+from core.managers.factory import StandardManagerFactory
+from core.workers.injection import (
+    ROMInjectionParams,
+    # Serial execution required: QApplication management
+    VRAMInjectionParams,
+    WorkerOwnedROMInjectionWorker,
+    WorkerOwnedVRAMInjectionWorker,
+)
 from PIL import Image
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication
 
-from core.managers.factory import StandardManagerFactory
-from core.workers.injection import (
-# Serial execution required: QApplication management
-
-    VRAMInjectionParams,
-    ROMInjectionParams,
-    WorkerOwnedROMInjectionWorker,
-    WorkerOwnedVRAMInjectionWorker,
-)
-
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.qt_application,
     pytest.mark.headless,
@@ -222,7 +220,6 @@ class TestWorkerOwnedInjectionPattern:
         worker2.perform_operation()
 
         # Wait for completion
-        import time
         time.sleep(0.3)
 
         # The core test: verify no Qt lifecycle errors occurred (architectural success)
@@ -270,7 +267,6 @@ class TestWorkerOwnedInjectionPattern:
 
         worker.perform_operation()
 
-        import time
         time.sleep(0.2)
 
         # Verify no Qt lifecycle errors (the main architectural test)
@@ -348,7 +344,7 @@ def qtbot():
     class QtBot:
         def __init__(self):
             self._app: QApplication | QCoreApplication | None = None
-            
+
         def addWidget(self, widget):
             pass
 

@@ -20,7 +20,7 @@ import argparse
 import os
 import subprocess
 import sys
-from pathlib import Path
+
 
 def is_display_available() -> bool:
     """Check if display is available for GUI testing."""
@@ -29,13 +29,13 @@ def is_display_available() -> bool:
 def run_headless_tests() -> int:
     """Run headless regression tests."""
     print("Running headless UI improvement tests...")
-    
+
     cmd = [
         sys.executable, "-m", "pytest",
         "tests/test_recent_ui_improvements_integration.py::TestRegressionPrevention",
         "-v", "--tb=short", "-m", "not gui"
     ]
-    
+
     return subprocess.run(cmd).returncode
 
 def run_gui_tests() -> int:
@@ -62,13 +62,13 @@ def run_gui_tests() -> int:
             "tests/test_recent_ui_improvements_integration.py",
             "-v", "--tb=short", "-m", "gui"
         ]
-    
+
     return subprocess.run(cmd).returncode
 
 def run_validation_test() -> int:
     """Run a simple validation test to ensure the test file is working."""
     print("Validating test infrastructure...")
-    
+
     validation_code = '''
 import sys
 sys.path.insert(0, ".")
@@ -104,53 +104,53 @@ except Exception as e:
     print(f"✗ Validation failed: {e}")
     sys.exit(1)
 '''
-    
+
     result = subprocess.run([sys.executable, "-c", validation_code], capture_output=True, text=True)
     if result.returncode == 0:
         print(result.stdout)
     else:
         print("Validation failed:")
         print(result.stderr)
-    
+
     return result.returncode
 
 def main():
     """Main test runner function."""
     parser = argparse.ArgumentParser(description="Run SpritePal UI improvements integration tests")
     parser.add_argument("--gui", action="store_true", help="Run GUI tests")
-    parser.add_argument("--headless", action="store_true", help="Run headless tests only")  
+    parser.add_argument("--headless", action="store_true", help="Run headless tests only")
     parser.add_argument("--all", action="store_true", help="Run all tests")
     parser.add_argument("--validate", action="store_true", help="Run validation test only")
-    
+
     args = parser.parse_args()
-    
+
     # Default to validation if no specific option is chosen
     if not any([args.gui, args.headless, args.all, args.validate]):
         args.validate = True
-    
+
     total_return_code = 0
-    
+
     if args.validate:
         print("=== SpritePal UI Improvements Test Validation ===")
         return_code = run_validation_test()
         total_return_code += return_code
         return total_return_code
-    
+
     if args.headless or args.all:
         print("\n=== Running Headless UI Improvement Tests ===")
         return_code = run_headless_tests()
         total_return_code += return_code
-    
+
     if args.gui or args.all:
         print("\n=== Running GUI Integration Tests ===")
         return_code = run_gui_tests()
         total_return_code += return_code
-    
+
     if total_return_code == 0:
         print("\n✓ All requested tests completed successfully!")
     else:
         print(f"\n✗ Some tests failed (return code: {total_return_code})")
-    
+
     return total_return_code
 
 if __name__ == "__main__":

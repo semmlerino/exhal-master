@@ -6,7 +6,7 @@ including duplicate prevention, limit enforcement, and data management.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -49,7 +49,7 @@ class SpriteHistoryManager:
         sprite_info = {
             "offset": offset,
             "quality": quality,
-            "timestamp": datetime.now(tz=timezone.utc)
+            "timestamp": datetime.now(tz=UTC)
         }
 
         # Add to history

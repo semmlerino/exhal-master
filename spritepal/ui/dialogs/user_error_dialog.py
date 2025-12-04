@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
 )
-
 from ui.components.base import BaseDialog
 from ui.styles import (
     get_bold_text_style,

@@ -9,13 +9,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from core.rom_injector import SpritePointer
 from utils.rom_cache import ROMCache, get_rom_cache
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.cache,
@@ -111,10 +110,10 @@ class TestROMCacheCore:
         hash1 = rom_cache._get_rom_hash_cached(test_rom_file)
         assert isinstance(hash1, str)
         assert len(hash1) == 64
-        
+
         # Verify cache is populated
         assert len(rom_cache._hash_cache) > 0
-        
+
         # Second call should use cached hash
         with patch.object(rom_cache, '_compute_full_hash') as mock_compute:
             hash2 = rom_cache._get_rom_hash_cached(test_rom_file)
@@ -126,37 +125,36 @@ class TestROMCacheCore:
         """Test ROM hash cache invalidation when file changes."""
         # Get initial hash
         hash1 = rom_cache._get_rom_hash_cached(test_rom_file)
-        
+
         # Verify cache contains the hash
         assert len(rom_cache._hash_cache) > 0
-        
+
         # Modify the file (change modification time)
         test_file = Path(test_rom_file)
         original_content = test_file.read_bytes()
         test_file.write_bytes(original_content + b"MODIFIED")
-        
+
         # Hash should be recalculated due to changed mtime/size
         hash2 = rom_cache._get_rom_hash_cached(test_rom_file)
         assert hash2 != hash1
 
     def test_rom_hash_cache_thread_safety(self, rom_cache, test_rom_file) -> None:
         """Test ROM hash cache thread safety."""
-        import threading
         import concurrent.futures
-        
+
         results = []
-        
+
         def get_hash():
             return rom_cache._get_rom_hash_cached(test_rom_file)
-        
+
         # Simulate concurrent access
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(get_hash) for _ in range(10)]
             results = [future.result() for future in futures]
-        
+
         # All results should be the same (consistent)
         assert all(result == results[0] for result in results)
-        
+
         # Cache should have exactly one entry for this file
         assert len(rom_cache._hash_cache) == 1
 
@@ -168,27 +166,27 @@ class TestROMCacheCore:
             test_file = tmp_path / f"test_rom_{i:03d}.sfc"
             test_file.write_bytes(f"TEST_ROM_DATA_{i}".encode() * 100)
             test_files.append(str(test_file))
-        
+
         # Hash all files
         for test_file in test_files:
             rom_cache._get_rom_hash_cached(test_file)
-        
+
         # Cache should be limited to 100 entries (oldest removed)
         assert len(rom_cache._hash_cache) <= 100
 
     def test_rom_hash_nonexistent_file_handling(self, rom_cache) -> None:
         """Test ROM hash handling for non-existent files."""
         nonexistent_file = "/path/to/nonexistent/rom.sfc"
-        
+
         # Should not raise exception
         hash1 = rom_cache._get_rom_hash_cached(nonexistent_file)
         assert isinstance(hash1, str)
         assert len(hash1) == 64
-        
+
         # Same non-existent file should return same hash
         hash2 = rom_cache._get_rom_hash_cached(nonexistent_file)
         assert hash1 == hash2
-        
+
         # Different non-existent files should return different hashes
         hash3 = rom_cache._get_rom_hash_cached("/different/nonexistent/rom.sfc")
         assert hash3 != hash1
@@ -197,7 +195,7 @@ class TestROMCacheCore:
         """Test ROM hash handling when file permissions prevent access."""
         test_file = tmp_path / "protected_rom.sfc"
         test_file.write_bytes(b"PROTECTED_ROM_DATA" * 100)
-        
+
         # Simulate permission error - patch Path.open to raise permission error
         with patch('pathlib.Path.open', side_effect=PermissionError("Access denied")):
             # Should fall back to path-based hash
@@ -209,15 +207,15 @@ class TestROMCacheCore:
         """Test ROM hash cache key format includes metadata."""
         # Get hash to populate cache
         rom_cache._get_rom_hash_cached(test_rom_file)
-        
+
         # Check cache key format
         assert len(rom_cache._hash_cache) == 1
-        cache_key = list(rom_cache._hash_cache.keys())[0]
-        
+        cache_key = next(iter(rom_cache._hash_cache.keys()))
+
         # Key should contain path, mtime, and size
         assert test_rom_file in cache_key
         assert "_" in cache_key  # Should have separators
-        
+
         # Should be able to find the file metadata components
         parts = cache_key.split("_")
         assert len(parts) >= 3  # path, mtime, size (may have more due to path separators)
@@ -227,11 +225,11 @@ class TestROMCacheCore:
         # Create a larger test file (1MB)
         large_file = tmp_path / "large_rom.sfc"
         large_file.write_bytes(b"LARGE_ROM_DATA" * 75000)  # ~1MB
-        
+
         start_time = time.time()
         hash_result = rom_cache._compute_full_hash(str(large_file))
         compute_time = time.time() - start_time
-        
+
         assert isinstance(hash_result, str)
         assert len(hash_result) == 64
         # Should complete in reasonable time (< 1 second for 1MB)
@@ -242,13 +240,13 @@ class TestROMCacheCore:
         # Populate cache
         rom_cache._get_rom_hash_cached(test_rom_file)
         assert len(rom_cache._hash_cache) > 0
-        
+
         # Clear cache
         with rom_cache._hash_cache_lock:
             rom_cache._hash_cache.clear()
-        
+
         assert len(rom_cache._hash_cache) == 0
-        
+
         # Next call should recompute hash
         with patch.object(rom_cache, '_compute_full_hash', return_value="new_hash") as mock_compute:
             rom_cache._get_rom_hash_cached(test_rom_file)
@@ -262,24 +260,24 @@ class TestROMCacheCore:
             test_file = tmp_path / f"lru_test_{i}.sfc"
             test_file.write_bytes(f"LRU_TEST_DATA_{i}".encode() * 100)
             test_files.append(str(test_file))
-        
+
         # Artificially set a small cache limit
-        original_cache = rom_cache._hash_cache.copy()
-        
+        rom_cache._hash_cache.copy()
+
         # Mock the cache to have only 2 entries max for testing
         with patch.object(rom_cache, '_hash_cache', {}) as mock_cache:
             # Add first file
             rom_cache._get_rom_hash_cached(test_files[0])
             assert len(mock_cache) == 1
-            
+
             # Add second file
             rom_cache._get_rom_hash_cached(test_files[1])
             assert len(mock_cache) == 2
-            
+
             # Simulate reaching limit by manually populating cache to 100 entries
             for i in range(98):
                 mock_cache[f"dummy_key_{i}"] = f"dummy_hash_{i}"
-            
+
             # Add third file should trigger LRU removal
             rom_cache._get_rom_hash_cached(test_files[2])
             # Should still be limited (removed oldest entry)

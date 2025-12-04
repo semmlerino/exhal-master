@@ -15,22 +15,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-
 from tests.infrastructure.environment_detection import (
+    ci_safe,
+    configure_qt_for_environment,
     get_environment_info,
     get_environment_report,
-    is_headless_environment,
-    is_ci_environment,
-    is_wsl_environment,
     has_display_available,
-    is_xvfb_available,
-    skip_if_no_display,
-    skip_in_ci,
-    requires_display,
     headless_safe,
-    ci_safe,
+    is_ci_environment,
+    is_headless_environment,
+    is_wsl_environment,
+    is_xvfb_available,
+    requires_display,
+    skip_if_no_display,
     skip_if_wsl,
-    configure_qt_for_environment,
+    skip_in_ci,
 )
 
 pytestmark = [
@@ -45,7 +44,7 @@ pytestmark = [
 def test_environment_detection_basic():
     """Test basic environment detection functions work."""
     env_info = get_environment_info()
-    
+
     # Basic assertions that should work in any environment
     assert isinstance(env_info.platform, str)
     assert isinstance(env_info.python_version, str)
@@ -59,11 +58,11 @@ def test_environment_detection_basic():
 def test_environment_report_generation():
     """Test that environment report can be generated without errors."""
     report = get_environment_report()
-    
+
     # Report should be non-empty string
     assert isinstance(report, str)
     assert len(report) > 0
-    
+
     # Should contain key information
     assert "SpritePal Test Environment Report" in report
     assert "Platform:" in report
@@ -74,11 +73,11 @@ def test_convenience_functions():
     """Test that convenience functions work correctly."""
     # These should not raise exceptions
     is_headless = is_headless_environment()
-    is_ci = is_ci_environment() 
+    is_ci = is_ci_environment()
     is_wsl = is_wsl_environment()
     has_display = has_display_available()
     has_xvfb = is_xvfb_available()
-    
+
     # All should be boolean
     assert isinstance(is_headless, bool)
     assert isinstance(is_ci, bool)
@@ -91,7 +90,7 @@ def test_qt_configuration():
     """Test Qt configuration helper."""
     # This should not raise exceptions even if Qt is not available
     configure_qt_for_environment()
-    
+
     # Test passes if no exception was raised
     assert True
 
@@ -110,7 +109,7 @@ def test_skip_in_ci_decorator():
     # If this runs, we're not in CI
     assert not is_ci_environment()
 
-@skip_if_no_display("Testing skip_if_no_display decorator")  
+@skip_if_no_display("Testing skip_if_no_display decorator")
 def test_skip_if_no_display_decorator():
     """This test should be skipped if no display is available."""
     # If this runs, we should have a display
@@ -142,17 +141,17 @@ def test_environment_specific_skip():
 def test_environment_consistency():
     """Test that environment detection is internally consistent."""
     env_info = get_environment_info()
-    
+
     # If we're in CI, we should probably be headless
     if env_info.is_ci:
         # Most CI environments are headless, but not necessarily all
         # So we can't assert this absolutely, but can log it
         print(f"CI environment detected: {env_info.ci_system}, headless: {env_info.is_headless}")
-    
+
     # If we're headless and have no display, xvfb might be available
     if env_info.is_headless and not env_info.has_display:
         print(f"Headless without display, xvfb available: {env_info.xvfb_available}")
-    
+
     # Basic consistency: if we have a display, we shouldn't be headless
     # (unless explicitly forced)
     if env_info.has_display and not env_info.is_ci:
@@ -162,11 +161,11 @@ if __name__ == "__main__":
     # If run directly, print environment report
     print("Running environment detection validation...")
     print(get_environment_report())
-    
+
     # Run a few basic tests
     test_environment_detection_basic()
     test_environment_report_generation()
     test_convenience_functions()
     test_qt_configuration()
-    
+
     print("Environment detection validation completed successfully!")

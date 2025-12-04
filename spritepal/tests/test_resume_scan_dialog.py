@@ -6,9 +6,9 @@ Follows Qt Testing Best Practices by mocking Qt object creation.
 """
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from ui.dialogs import ResumeScanDialog
 
 # Systematic pytest markers applied based on test content analysis
@@ -62,10 +62,10 @@ class TestResumeScanDialog:
     def test_dialog_creation(self, sample_scan_info, mock_dialog):
         """Test dialog can be created with scan info"""
         mock_dialog.scan_info = sample_scan_info
-        
+
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
             dialog = ResumeScanDialog(sample_scan_info)
-            
+
             assert dialog.windowTitle() == "Resume Sprite Scan?"
             assert dialog.scan_info == sample_scan_info
             assert dialog.user_choice == ResumeScanDialog.CANCEL
@@ -80,12 +80,12 @@ class TestResumeScanDialog:
         )
         mock_dialog._format_progress_info.return_value = expected_progress
         mock_dialog.scan_info = sample_scan_info
-        
+
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
             dialog = ResumeScanDialog(sample_scan_info)
-            
+
             progress_info = dialog._format_progress_info()
-            
+
             # Check all expected information is present
             assert "Progress: 50.0% complete" in progress_info
             assert "Sprites found: 2" in progress_info
@@ -101,16 +101,16 @@ class TestResumeScanDialog:
         mock_dialog.cancel_button = MagicMock()
         mock_dialog.cancel_button.text.return_value = "Cancel"
         mock_dialog.get_user_choice = MagicMock(return_value=ResumeScanDialog.RESUME)
-        
+
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
             dialog = ResumeScanDialog(sample_scan_info)
-            
+
             # Test button properties exist and have correct text
             assert dialog.resume_button.text() == "Resume Scan"
             assert dialog.resume_button.isDefault()
             assert dialog.fresh_button.text() == "Start Fresh"
             assert dialog.cancel_button.text() == "Cancel"
-            
+
             # Test that get_user_choice returns expected value
             assert dialog.get_user_choice() == ResumeScanDialog.RESUME
 
@@ -121,7 +121,7 @@ class TestResumeScanDialog:
             "current_offset": 0,
             "scan_range": {},
         }
-        
+
         # Configure mock for empty scan info
         empty_progress = "Progress: 0.0% complete\nSprites found: 0\n"
         mock_dialog._format_progress_info.return_value = empty_progress
@@ -129,7 +129,7 @@ class TestResumeScanDialog:
 
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
             dialog = ResumeScanDialog(empty_info)
-            
+
             progress_info = dialog._format_progress_info()
             assert "Progress:" in progress_info
             assert "Sprites found: 0" in progress_info
@@ -137,9 +137,9 @@ class TestResumeScanDialog:
     def test_convenience_method(self, sample_scan_info, mock_dialog):
         """Test static show_resume_dialog method"""
         mock_dialog.user_choice = ResumeScanDialog.RESUME
-        
+
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
-            with patch('spritepal.ui.dialogs.resume_scan_dialog.ResumeScanDialog.show_resume_dialog', 
+            with patch('spritepal.ui.dialogs.resume_scan_dialog.ResumeScanDialog.show_resume_dialog',
                             return_value=ResumeScanDialog.RESUME) as mock_show:
                 choice = ResumeScanDialog.show_resume_dialog(sample_scan_info)
                 assert choice == ResumeScanDialog.RESUME
@@ -158,7 +158,7 @@ class TestResumeScanDialog:
                 "step": 0x100,
             },
         }
-        
+
         # Configure mock for completed scan
         completed_progress = "Progress: 100.0% complete\nSprites found: 3\n"
         mock_dialog._format_progress_info.return_value = completed_progress
@@ -166,6 +166,6 @@ class TestResumeScanDialog:
 
         with patch('ui.dialogs.resume_scan_dialog.ResumeScanDialog', return_value=mock_dialog):
             dialog = ResumeScanDialog(completed_info)
-            
+
             progress_info = dialog._format_progress_info()
             assert "Progress: 100.0% complete" in progress_info

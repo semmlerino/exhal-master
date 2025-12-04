@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 from PySide6.QtCore import QObject, QRect, Qt, Signal
 from PySide6.QtGui import QGuiApplication
-
 from utils.logging_config import get_logger
 from utils.settings_manager import get_settings_manager
 

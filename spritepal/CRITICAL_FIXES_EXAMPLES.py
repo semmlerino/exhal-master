@@ -392,7 +392,7 @@ def example_usage():
 
     # Example 3: Create accessible form
     input_widget = QLineEdit()
-    label, input_widget = create_accessible_label_input_pair(
+    _label, input_widget = create_accessible_label_input_pair(
         "&ROM Path:",
         input_widget,
         "Path to the ROM file to analyze"

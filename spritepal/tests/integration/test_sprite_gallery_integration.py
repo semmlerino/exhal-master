@@ -8,12 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from PySide6.QtCore import Qt
-from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QSizePolicy
-
+from tests.infrastructure.thread_safe_test_image import ThreadSafeTestImage
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab
 from ui.windows.detached_gallery_window import DetachedGalleryWindow
+
 
 @pytest.fixture
 def gallery_tab(qtbot):
@@ -217,7 +216,7 @@ class TestDetachedGalleryWindow:
 
         # Simulate sprite selection in detached window
         if detached_gallery.thumbnails:
-            first_offset = list(detached_gallery.thumbnails.keys())[0]
+            first_offset = next(iter(detached_gallery.thumbnails.keys()))
             detached_gallery.sprite_selected.emit(first_offset)
 
             # Check signal was propagated

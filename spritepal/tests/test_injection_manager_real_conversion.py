@@ -9,22 +9,19 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
-from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
-from tests.infrastructure import (
-# Systematic pytest markers applied based on test content analysis
-
-    TestApplicationFactory,
-)
-
 from core.controller import ExtractionController
 from core.managers import (
     cleanup_managers,
     get_injection_manager,
     initialize_managers,
+)
+from tests.fixtures.test_main_window_helper_simple import TestMainWindowHelperSimple
+from tests.infrastructure import (
+    # Systematic pytest markers applied based on test content analysis
+    TestApplicationFactory,
 )
 
 pytestmark = [

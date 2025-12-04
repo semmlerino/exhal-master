@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
-
 from utils.image_utils import create_checkerboard_pattern, pil_to_qpixmap
 
 # Check if Qt is available without initializing

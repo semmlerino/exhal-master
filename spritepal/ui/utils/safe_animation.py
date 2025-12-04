@@ -9,7 +9,8 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from typing import TYPE_CHECKING, Callable, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QEasingCurve, QObject, QPropertyAnimation

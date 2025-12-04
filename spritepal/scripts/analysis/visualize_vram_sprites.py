@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+
 def decode_4bpp_tiles(data: bytes, tiles_per_row: int = 16) -> np.ndarray:
     """Decode 4bpp SNES tile data to pixel array."""
     bytes_per_tile = 32  # 8x8 tile in 4bpp

@@ -9,7 +9,6 @@ from __future__ import annotations
 # No longer need Optional import for Python 3.10+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QSplitter, QWidget
-
 from ui.styles import get_splitter_style
 
 
@@ -69,7 +68,7 @@ class StyledSplitter(QSplitter):
         elif len(stretch_factors) != len(widgets):
             raise ValueError("Number of stretch factors must match number of widgets")
 
-        for widget, stretch_factor in zip(widgets, stretch_factors):
+        for widget, stretch_factor in zip(widgets, stretch_factors, strict=False):
             self.add_widget(widget, stretch_factor)
 
     def set_panel_ratios(self, ratios: list[int]):

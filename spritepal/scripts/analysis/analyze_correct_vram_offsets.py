@@ -6,7 +6,6 @@ Analyze VRAM dumps at the CORRECT sprite offsets
 Based on research findings that sprites are at 0x4000 or 0x6000, not 0xC000
 """
 
-import os
 import sys
 from pathlib import Path
 

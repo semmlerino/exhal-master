@@ -6,11 +6,9 @@ from __future__ import annotations
 import struct
 
 import pytest
-
 from core.rom_validator import ROMValidator
 from utils.rom_exceptions import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     InvalidROMError,
     ROMChecksumError,
     ROMHeaderError,

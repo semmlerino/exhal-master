@@ -4,10 +4,9 @@ This module contains the Qt-specific worker thread for sprite injection.
 """
 from __future__ import annotations
 
+from core.injector import SpriteInjector
 from PySide6.QtCore import QThread, Signal
 from typing_extensions import override
-
-from core.injector import SpriteInjector
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)

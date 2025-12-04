@@ -12,10 +12,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Signal
-
 from core.managers.base_manager import BaseManager
 from core.managers.exceptions import NavigationError
+from PySide6.QtCore import Signal
 from utils.logging_config import get_logger
 
 from .data_structures import NavigationContext, NavigationHint, SpriteLocation
@@ -426,7 +425,7 @@ class NavigationManager(BaseManager):
         """Set up cache directory for region maps."""
         try:
             # Try to get cache directory from settings
-            from utils.settings_manager import get_settings_manager  # noqa: PLC0415
+            from utils.settings_manager import get_settings_manager
             settings = get_settings_manager()
             if settings:
                 cache_location = settings.get_cache_location()
@@ -449,7 +448,7 @@ class NavigationManager(BaseManager):
         """Register default navigation strategies."""
         # Import and register default strategies
         try:
-            from .implementations import (  # noqa: PLC0415
+            from .implementations import (
                 LinearNavigationStrategy,
                 PatternBasedStrategy,
                 SimilarityStrategy,

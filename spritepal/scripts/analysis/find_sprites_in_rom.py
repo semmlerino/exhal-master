@@ -5,7 +5,6 @@ from __future__ import annotations
 Search for VRAM sprite patterns in ROM
 """
 
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -16,6 +15,7 @@ sys.path.insert(0, str(parent_dir))
 
 # Import after path setup
 from core.hal_compression import HALCompressor
+
 
 def extract_kirby_patterns(vram_path: str):
     """Extract known Kirby sprite patterns from VRAM"""

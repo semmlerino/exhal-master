@@ -38,10 +38,11 @@ import time
 import traceback
 import tracemalloc
 import warnings
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 from unittest.mock import Mock
 
 # Third-party imports
@@ -59,7 +60,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from ui.components.base.composed.migration_adapter import (
     DialogBaseMigrationAdapter,
 )
-from ui.components.base.dialog_base import DialogBase  # noqa: E402
+from ui.components.base.dialog_base import DialogBase
 
 
 # Performance thresholds
@@ -141,14 +142,14 @@ class MemoryTracker:
     def _get_memory_usage(self) -> float:
         """Get current memory usage in MB."""
         if tracemalloc.is_tracing():
-            current, peak = tracemalloc.get_traced_memory()
+            current, _peak = tracemalloc.get_traced_memory()
             return current / 1024 / 1024  # Convert to MB
         return 0.0
 
     def get_peak_usage(self) -> float:
         """Get peak memory usage in MB."""
         if tracemalloc.is_tracing():
-            current, peak = tracemalloc.get_traced_memory()
+            _current, peak = tracemalloc.get_traced_memory()
             return peak / 1024 / 1024
         return 0.0
 
@@ -793,7 +794,7 @@ def main():
     if "DISPLAY" not in os.environ and sys.platform.startswith("linux"):
         print("⚠️  No display found. Setting up virtual display...")
         try:
-            from pyvirtualdisplay import Display  # noqa: PLC0415
+            from pyvirtualdisplay import Display
             display = Display(visible=False, size=(800, 600))
             display.start()
         except ImportError:

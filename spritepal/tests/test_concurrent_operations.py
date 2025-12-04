@@ -14,15 +14,13 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtCore import QThread, QTimer, Signal
-from PySide6.QtTest import QTest
-
-from core.managers import cleanup_managers, initialize_managers
 from core.rom_extractor import ROMExtractor
 from core.workers import VRAMExtractionWorker
+from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtTest import QTest
 from ui.rom_extraction.workers.scan_worker import SpriteScanWorker
 from utils.rom_cache import ROMCache, get_rom_cache
 
@@ -32,7 +30,7 @@ from utils.rom_cache import ROMCache, get_rom_cache
 
 # Serial execution required: Thread safety concerns
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.cache,
@@ -102,7 +100,7 @@ def real_cache(temp_dirs):
     mock_settings.get_cache_enabled.return_value = True  # Boolean, not mock
     mock_settings.get_cache_location.return_value = str(temp_dirs["cache"])  # String, not mock
     mock_settings.get_cache_expiration_days.return_value = 7  # Integer, not mock
-    
+
     with patch("utils.settings_manager.get_settings_manager", return_value=mock_settings):
         # Create fresh cache with clean directory
         cache_dir = temp_dirs["cache"] / "test_clean_cache"
@@ -119,19 +117,19 @@ def mock_main_window():
             self.status_bar = MagicMock()
             self.preview_info = MagicMock()
             self.signal_emissions = {"status_messages": []}
-            
+
             # Track status messages
             def track_status(msg):
                 self.signal_emissions["status_messages"].append(msg)
-            
+
             self.status_bar.showMessage.side_effect = track_status
-        
+
         def get_signal_emissions(self):
             return self.signal_emissions
-        
+
         def cleanup(self):
             pass
-    
+
     return MockMainWindow()
 
 # ============================================================================
@@ -191,22 +189,22 @@ class TestConcurrentROMScanning:
         """Test multiple ROM scans accessing cache concurrently."""
         # Use real components to avoid mock-related serialization issues
         from core.managers.extraction_manager import ExtractionManager
-        from core.managers.session_manager import SessionManager
         from core.managers.injection_manager import InjectionManager
-        
+        from core.managers.session_manager import SessionManager
+
         # Use all real managers to avoid any mock contamination
         real_extraction_manager = ExtractionManager()
         real_session_manager = SessionManager()
         real_injection_manager = InjectionManager()
-        
+
         # Create context with all real managers
         context_managers = {
             "extraction": real_extraction_manager,
             "injection": real_injection_manager,
             "session": real_session_manager,
         }
-        
-        with manager_context_factory(context_managers) as context:
+
+        with manager_context_factory(context_managers):
             # Test basic cache functionality with clean data
             from core.rom_injector import SpritePointer
 
@@ -215,9 +213,9 @@ class TestConcurrentROMScanning:
             # Test 1: Basic save and load with completely clean data
             test_sprites = {
                 "TestSprite": SpritePointer(
-                    offset=0x1000, 
-                    bank=0x20, 
-                    address=0x8000, 
+                    offset=0x1000,
+                    bank=0x20,
+                    address=0x8000,
                     compressed_size=256,
                     offset_variants=None  # Explicitly set to avoid any mock contamination
                 )
@@ -266,7 +264,7 @@ class TestConcurrentROMScanning:
 
     def test_concurrent_cache_read_write(self, safe_qtbot, sample_files, real_cache, manager_context_factory):
         """Test concurrent cache reads and writes don't cause locks."""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             results = {"reads": 0, "writes": 0, "errors": []}
 
             class CacheReader(QThread):
@@ -361,17 +359,17 @@ class TestConcurrentExtraction:
         # during concurrent UI operations
         from core.managers.extraction_manager import ExtractionManager
         from tests.infrastructure.test_manager_factory import TestManagerFactory
-        
+
         real_extraction_manager = ExtractionManager()
-        
+
         # Create context with real extraction manager but mock others
         context_managers = {
             "extraction": real_extraction_manager,
             "injection": TestManagerFactory.create_test_injection_manager(),
             "session": TestManagerFactory.create_test_session_manager(),
         }
-        
-        with manager_context_factory(context_managers) as context:
+
+        with manager_context_factory(context_managers):
             results = {"extraction_done": False, "ui_updates": 0, "errors": []}
 
             # Create extraction parameters
@@ -438,17 +436,17 @@ class TestConcurrentExtraction:
         # Use real extraction manager for this test since we want to test actual file creation
         from core.managers.extraction_manager import ExtractionManager
         from tests.infrastructure.test_manager_factory import TestManagerFactory
-        
+
         real_extraction_manager = ExtractionManager()
-        
+
         # Create context with real extraction manager but mock others
         context_managers = {
             "extraction": real_extraction_manager,
             "injection": TestManagerFactory.create_test_injection_manager(),
             "session": TestManagerFactory.create_test_session_manager(),
         }
-        
-        with manager_context_factory(context_managers) as context:
+
+        with manager_context_factory(context_managers):
             # The ExtractionManager prevents concurrent VRAM extractions
             # This test verifies that multiple extraction requests are handled sequentially
 
@@ -511,11 +509,11 @@ class TestSettingsChangeDuringOperations:
 
     def test_cache_disable_during_scan(self, safe_qtbot, sample_files, real_cache, manager_context_factory):
         """Test disabling cache while scan is in progress."""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Mock settings manager
             mock_settings = MagicMock()
             mock_settings.get_cache_enabled.return_value = True
-            
+
             with patch("utils.settings_manager.get_settings_manager", return_value=mock_settings):
                 results = {"scan_finished": False}
 
@@ -546,15 +544,15 @@ class TestSettingsChangeDuringOperations:
 
     def test_cache_location_change_during_operation(self, safe_qtbot, sample_files, temp_dirs, manager_context_factory):
         """Test changing cache location while operations are active."""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Mock settings manager
             mock_settings = MagicMock()
-            
+
             # Set initial cache location
             cache_dir1 = temp_dirs["cache"] / "cache1"
             cache_dir1.mkdir()
             mock_settings.get_cache_location.return_value = str(cache_dir1)
-            
+
             with patch("utils.settings_manager.get_settings_manager", return_value=mock_settings):
                 # Get cache instance
                 cache = get_rom_cache()
@@ -619,7 +617,7 @@ class TestUIResponsiveness:
 
     def test_ui_responsive_during_large_scan(self, safe_qtbot, sample_files, mock_main_window, manager_context_factory):
         """Test that long operations complete successfully in background."""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             # Simple test that a worker thread can run while UI remains active
             operation_completed = False
 
@@ -715,7 +713,7 @@ class TestRaceConditions:
 
     def test_cache_save_during_read(self, safe_qtbot, sample_files, real_cache, manager_context_factory):
         """Test saving to cache while another thread is reading."""
-        with manager_context_factory() as context:
+        with manager_context_factory():
             rom_path = sample_files["rom_path"]
             race_detected = {"collision": False}
 
@@ -764,36 +762,36 @@ class TestRaceConditions:
             assert "NewSprite" in final_data
 
 # ============================================================================
-# Manager Context Isolation Tests  
+# Manager Context Isolation Tests
 # ============================================================================
 
 class TestManagerContextIsolation:
     """Test manager context isolation in concurrent scenarios."""
-    
+
     def test_concurrent_contexts_isolated(self, safe_qtbot, sample_files, manager_context_factory):
         """Test that concurrent operations with different contexts are isolated."""
         results = {"context1_ops": 0, "context2_ops": 0, "errors": []}
-        
+
         class ContextWorker(QThread):
             finished = Signal()
             error = Signal(str)
-            
+
             def __init__(self, context_name, context_factory):
                 super().__init__()
                 self.context_name = context_name
                 self.context_factory = context_factory
-            
+
             def run(self):
                 try:
                     with self.context_factory(name=self.context_name) as context:
                         manager = context.get_manager("extraction", object)
-                        
+
                         # Set a unique value on this context's manager
                         manager.test_context_value = self.context_name
-                        
+
                         # Perform some operations
                         for i in range(5):
-                            # Verify the value is still correct (isolation test) 
+                            # Verify the value is still correct (isolation test)
                             if hasattr(manager, 'test_context_value'):
                                 assert manager.test_context_value == self.context_name
                                 if self.context_name == "context1":
@@ -801,61 +799,61 @@ class TestManagerContextIsolation:
                                 else:
                                     results["context2_ops"] += 1
                             time.sleep(0.01)
-                    
+
                     self.finished.emit()
                 except Exception as e:
                     results["errors"].append(str(e))
                     self.error.emit(str(e))
-        
+
         # Create workers with different contexts
         worker1 = ContextWorker("context1", manager_context_factory)
         worker2 = ContextWorker("context2", manager_context_factory)
-        
+
         # Start both workers concurrently
         worker1.start()
         worker2.start()
-        
+
         # Wait for completion
         worker1.wait(5000)
         worker2.wait(5000)
-        
+
         # Verify both contexts operated independently
         assert results["context1_ops"] == 5
         assert results["context2_ops"] == 5
         assert len(results["errors"]) == 0
-    
+
     def test_context_cleanup_during_operations(self, safe_qtbot, manager_context_factory):
         """Test that context cleanup doesn't affect ongoing operations."""
         results = {"operations_completed": 0, "errors": []}
-        
+
         class LongRunningWorker(QThread):
             finished = Signal()
             error = Signal(str)
-            
+
             def __init__(self, context_factory):
                 super().__init__()
                 self.context_factory = context_factory
-            
+
             def run(self):
                 try:
                     with self.context_factory(name="long_running") as context:
                         manager = context.get_manager("extraction", object)
-                        
+
                         # Simulate long-running operation
                         for i in range(10):
                             # Access manager during operation
                             assert hasattr(manager, 'is_initialized')
                             results["operations_completed"] += 1
                             time.sleep(0.05)
-                    
+
                     self.finished.emit()
                 except Exception as e:
                     results["errors"].append(str(e))
                     self.error.emit(str(e))
-        
+
         worker = LongRunningWorker(manager_context_factory)
         worker.start()
-        
+
         # Create and quickly cleanup other contexts while worker runs
         for i in range(3):
             with manager_context_factory(name=f"temp_context_{i}") as temp_context:
@@ -863,10 +861,10 @@ class TestManagerContextIsolation:
                 temp_manager.temp_value = f"temp_{i}"
             # Context exits and cleans up here
             time.sleep(0.02)
-        
+
         # Wait for long-running worker to complete
         worker.wait(3000)
-        
+
         # Verify the long-running operation completed successfully
         assert results["operations_completed"] == 10
         assert len(results["errors"]) == 0

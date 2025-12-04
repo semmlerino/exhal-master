@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from core.managers import get_injection_manager
+from core.sprite_validator import SpriteValidator
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
@@ -24,9 +26,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.managers import get_injection_manager
-from core.sprite_validator import SpriteValidator
 from ui.components import (
     FileSelector,
     FormRow,
@@ -1001,7 +1000,7 @@ class InjectionDialog(TabbedDialog):
             return
 
         # Perform validation
-        is_valid, errors, warnings = SpriteValidator.validate_sprite_comprehensive(
+        _is_valid, errors, warnings = SpriteValidator.validate_sprite_comprehensive(
             self.sprite_path, self.metadata_path
         )
 

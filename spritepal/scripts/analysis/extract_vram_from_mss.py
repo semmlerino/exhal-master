@@ -6,6 +6,7 @@ from __future__ import annotations
 import zlib
 from pathlib import Path
 
+
 def extract_vram_from_mss(mss_path: str) -> bytes:
     """Extract VRAM data from MSS savestate file."""
     print(f"Reading MSS file: {mss_path}")

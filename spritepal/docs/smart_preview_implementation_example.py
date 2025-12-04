@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.common.smart_preview_coordinator import SmartPreviewCoordinator
 from ui.widgets.sprite_preview_widget import SpritePreviewWidget
 
@@ -129,7 +128,7 @@ class SmartPreviewExample(QWidget):
     def _get_rom_data(self):
         """Provide ROM data for preview generation with cache support."""
         # In real implementation, return actual ROM path, extractor, and cache
-        from utils.rom_cache import get_rom_cache  # noqa: PLC0415
+        from utils.rom_cache import get_rom_cache
         rom_cache = get_rom_cache()
         return ("/path/to/rom.smc", None, rom_cache)  # Mock data with cache
 

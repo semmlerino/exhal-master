@@ -8,7 +8,6 @@ from typing import Protocol
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QGridLayout, QPushButton, QWidget
-
 from ui.styles import get_button_style
 
 

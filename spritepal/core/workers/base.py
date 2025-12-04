@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import weakref
 from abc import abstractmethod
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 from PySide6.QtCore import QMetaObject, QThread, Signal
 

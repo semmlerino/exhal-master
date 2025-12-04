@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from core.monitoring import get_monitoring_manager
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
@@ -32,8 +33,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.monitoring import get_monitoring_manager
 from utils.logging_config import get_logger
 
 
@@ -155,7 +154,7 @@ class PerformanceTab(QWidget):
             self.thumbnail_metric, self.injection_metric
         ]
 
-        for op, widget in zip(operations, metric_widgets):
+        for op, widget in zip(operations, metric_widgets, strict=False):
             stats = monitoring_manager.get_performance_stats(op, hours)
             if stats:
                 mean_ms = stats['duration_stats']['mean_ms']

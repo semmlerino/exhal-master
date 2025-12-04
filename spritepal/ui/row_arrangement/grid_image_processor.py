@@ -6,7 +6,6 @@ from __future__ import annotations
 import os
 
 from PIL import Image
-
 from utils.exceptions import TileError
 
 from .grid_arrangement_manager import TileGroup, TilePosition

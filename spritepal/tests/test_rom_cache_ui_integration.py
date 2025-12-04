@@ -11,17 +11,16 @@ import time
 from unittest.mock import patch
 
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel
 
 # Managers are handled by conftest.py
 from core.rom_extractor import ROMExtractor
 from core.rom_injector import SpritePointer
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel
 from ui.dialogs.resume_scan_dialog import ResumeScanDialog
 from ui.rom_extraction.widgets.rom_file_widget import ROMFileWidget
 from ui.rom_extraction.widgets.sprite_selector_widget import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     SpriteSelectorWidget,
 )
 from ui.rom_extraction.workers.scan_worker import SpriteScanWorker

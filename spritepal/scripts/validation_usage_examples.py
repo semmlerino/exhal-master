@@ -71,7 +71,7 @@ def helper_function():  # This should trigger warning
     return "helper"
 '''
 
-    is_valid, formatted_code, issues = validate_test_code(test_code)
+    is_valid, _formatted_code, issues = validate_test_code(test_code)
 
     print(f"Valid: {is_valid}")
     print(f"Issues found: {len(issues)}")
@@ -103,7 +103,7 @@ class MyWidget(QWidget):
             self.layout.addWidget(self.button)
 '''
 
-    is_valid, formatted_code, issues = validate_qt_code(qt_code)
+    is_valid, _formatted_code, issues = validate_qt_code(qt_code)
 
     print(f"Valid: {is_valid}")
     print(f"Issues found: {len(issues)}")

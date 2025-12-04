@@ -13,7 +13,6 @@ import pytest
 from PySide6.QtCore import QPropertyAnimation
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QLabel, QVBoxLayout
-
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 
 # Systematic pytest markers applied based on test content analysis
@@ -184,7 +183,7 @@ class TestCollapsibleGroupBox:
 
         # Verify BEHAVIOR: successful connections were cleaned up despite errors in others
         assert successful_connection.called
-        assert successful_connection2.called  
+        assert successful_connection2.called
         assert mock_animation.stop.called
         # Original connections should be cleared, new ones created for new animation
         assert len(widget._animation_connections) > 0
@@ -313,7 +312,7 @@ class TestCollapsibleGroupBox:
     @patch("ui.common.collapsible_group_box.SafeAnimation")
     def test_animation_creation_and_cleanup_integration(self, mock_animation_class, qtbot):
         """Test full animation lifecycle with cleanup integration"""
-        # Mock animation instance - set up BEFORE widget creation  
+        # Mock animation instance - set up BEFORE widget creation
         mock_animation = Mock()
         mock_animation_class.return_value = mock_animation
 

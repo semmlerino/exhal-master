@@ -5,9 +5,9 @@ from __future__ import annotations
 Simple VRAM analyzer to extract sprite patterns
 """
 
-import os
 import sys
 from pathlib import Path
+
 
 def analyze_vram(vram_path: str):
     """Analyze VRAM dump and show sprite patterns"""

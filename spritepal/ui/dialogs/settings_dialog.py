@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from ui.components.base import BaseDialog
 from ui.styles import get_button_style, get_muted_text_style
 from utils.rom_cache import get_rom_cache

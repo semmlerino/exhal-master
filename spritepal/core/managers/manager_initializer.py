@@ -9,8 +9,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtWidgets import QApplication
-
 from core.di_container import (
     get_container,
     inject,
@@ -21,6 +19,7 @@ from core.protocols.manager_protocols import (
     NavigationManagerProtocol,
     SessionManagerProtocol,
 )
+from PySide6.QtWidgets import QApplication
 
 from .exceptions import ManagerError
 from .extraction_manager import ExtractionManager

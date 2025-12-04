@@ -11,22 +11,18 @@ This refactored test suite demonstrates best practices:
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
-from typing import Generator
+from collections.abc import Generator
 
 import pytest
-from PIL import Image
-
 from core.managers import cleanup_managers, initialize_managers
 from core.managers.exceptions import ValidationError
 from core.managers.injection_manager import InjectionManager
-from core.workers.injection import VRAMInjectionWorker, ROMInjectionWorker
+from PIL import Image
 from tests.infrastructure.real_component_factory import RealComponentFactory
 
 # Serial execution required: Real Qt components
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.file_io,
     pytest.mark.gui,
@@ -38,25 +34,25 @@ pytestmark = [
 
 class TestInjectionManagerReal:
     """Test InjectionManager with real components and minimal mocking."""
-    
+
     @pytest.fixture(scope="class")
     def class_managers(self):
         """Class-scoped managers for performance."""
         initialize_managers("TestApp")
         yield
         cleanup_managers()
-    
+
     @pytest.fixture
     def injection_manager(self, class_managers):
         """Provide real injection manager."""
         return InjectionManager()
-    
+
     @pytest.fixture
     def real_factory(self) -> Generator[RealComponentFactory, None, None]:
         """Provide real component factory."""
         with RealComponentFactory() as factory:
             yield factory
-    
+
     @pytest.fixture
     def test_files(self, tmp_path):
         """Create real test files for injection."""
@@ -64,12 +60,12 @@ class TestInjectionManagerReal:
         sprite_file = tmp_path / "test_sprite.png"
         img = Image.new("RGBA", (64, 64), color=(255, 0, 0, 255))
         img.save(sprite_file)
-        
+
         # Create valid VRAM file
         vram_file = tmp_path / "test.vram"
         vram_data = b"\x00" * 0x10000  # 64KB VRAM
         vram_file.write_bytes(vram_data)
-        
+
         # Create valid ROM file with proper SNES header
         rom_file = tmp_path / "test.sfc"
         rom_data = bytearray(0x100000)  # 1MB ROM
@@ -80,7 +76,7 @@ class TestInjectionManagerReal:
         rom_data[header_offset+22] = 0x00  # Cartridge type
         rom_data[header_offset+23] = 0x0A  # ROM size
         rom_file.write_bytes(bytes(rom_data))
-        
+
         # Create valid metadata
         metadata_file = tmp_path / "metadata.json"
         metadata = {
@@ -92,7 +88,7 @@ class TestInjectionManagerReal:
             "palette_count": 1
         }
         metadata_file.write_text(json.dumps(metadata, indent=2))
-        
+
         return {
             "sprite_path": str(sprite_file),
             "vram_path": str(vram_file),
@@ -106,7 +102,7 @@ class TestInjectionManagerReal:
         assert injection_manager._is_initialized is True
         assert injection_manager._current_worker is None
         assert injection_manager._name == "InjectionManager"
-        
+
         # Verify real methods exist
         assert hasattr(injection_manager, 'validate_injection_params')
         assert hasattr(injection_manager, 'start_injection')
@@ -121,10 +117,10 @@ class TestInjectionManagerReal:
             "vram_offset": 0x4000,
             "cgram_offset": 0,
         }
-        
+
         # Should not raise
         injection_manager.validate_injection_params(params)
-        
+
         # Invalid file should raise ValidationError
         params["sprite_path"] = "/nonexistent/file.png"
         with pytest.raises(ValidationError, match="Sprite file not found"):
@@ -138,10 +134,10 @@ class TestInjectionManagerReal:
             "sprite_offset": 0x10000,
             "metadata_path": test_files["metadata_path"],
         }
-        
+
         # Valid params should pass
         injection_manager.validate_injection_params(params)
-        
+
         # Invalid ROM path should fail
         params["rom_path"] = "/invalid/rom.sfc"
         with pytest.raises(ValidationError, match="ROM file not found"):
@@ -155,13 +151,13 @@ class TestInjectionManagerReal:
             "vram_offset": 0x4000,
             "cgram_offset": 0,
         }
-        
+
         # Start real injection
         result = injection_manager.start_injection(params)
-        
+
         # Verify injection started successfully
         assert result is True
-        
+
         # Clean up worker
         injection_manager.cleanup()
         assert injection_manager._current_worker is None
@@ -174,13 +170,13 @@ class TestInjectionManagerReal:
             "sprite_offset": 0x10000,
             "metadata_path": test_files["metadata_path"],
         }
-        
+
         # Start real injection
         result = injection_manager.start_injection(params)
-        
+
         # Verify injection started successfully
         assert result is True
-        
+
         # Clean up
         injection_manager.cleanup()
         assert injection_manager._current_worker is None
@@ -192,15 +188,15 @@ class TestInjectionManagerReal:
             "vram_path": test_files["vram_path"],
             "vram_offset": 0x4000,
         }
-        
+
         # Create first worker
         result1 = injection_manager.start_injection(params)
         assert result1 is True
-        
+
         # Starting new worker should clean up old one
         result2 = injection_manager.start_injection(params)
         assert result2 is True
-        
+
         # Cleanup should handle current worker
         injection_manager.cleanup()
 
@@ -209,13 +205,13 @@ class TestInjectionManagerReal:
         # Create an invalid sprite file (not an image)
         bad_sprite = tmp_path / "bad_sprite.txt"
         bad_sprite.write_text("This is not an image")
-        
+
         params = {
             "sprite_path": str(bad_sprite),
             "vram_path": str(tmp_path / "test.vram"),
             "vram_offset": 0x4000,
         }
-        
+
         # Should raise validation error for invalid image
         with pytest.raises(ValidationError):
             injection_manager.validate_injection_params(params)
@@ -227,28 +223,28 @@ class TestInjectionManagerReal:
             "vram_path": test_files["vram_path"],
             "vram_offset": 0x4000,
         }
-        
+
         # Start first injection
         result1 = injection_manager.start_injection(params)
         assert result1 is True
-        
+
         # Second injection should replace first
         result2 = injection_manager.start_injection(params)
         assert result2 is True
-        
+
         # Clean up
         injection_manager.cleanup()
 
     def test_manager_signals_real(self, injection_manager, test_files):
         """Test manager signals with real operations."""
         from PySide6.QtTest import QSignalSpy
-        
+
         # Set up signal spy
         progress_spy = QSignalSpy(injection_manager.injection_progress)
-        
+
         # Emit progress signal
         injection_manager.injection_progress.emit(50, "Test progress")
-        
+
         # Verify signal was emitted
         assert progress_spy.count() == 1
         assert progress_spy.at(0) == [50, "Test progress"]
@@ -258,12 +254,12 @@ class TestInjectionManagerReal:
         # Load real metadata
         with open(test_files["metadata_path"]) as f:
             metadata = json.load(f)
-        
+
         # Verify metadata structure
         assert "format_version" in metadata
         assert "sprite_count" in metadata
         assert metadata["sprite_count"] == 1
-        
+
         # Test with ROM injection params including metadata
         params = {
             "sprite_path": test_files["sprite_path"],
@@ -271,7 +267,7 @@ class TestInjectionManagerReal:
             "sprite_offset": 0x10000,
             "metadata_path": test_files["metadata_path"],
         }
-        
+
         # Should validate successfully
         injection_manager.validate_injection_params(params)
 
@@ -281,17 +277,17 @@ class TestInjectionManagerReal:
         huge_sprite = tmp_path / "huge.png"
         img = Image.new("RGBA", (2048, 2048), color=(0, 0, 255, 255))
         img.save(huge_sprite)
-        
+
         # Create small VRAM file
         small_vram = tmp_path / "small.vram"
         small_vram.write_bytes(b"\x00" * 1024)  # Only 1KB
-        
+
         params = {
             "sprite_path": str(huge_sprite),
             "vram_path": str(small_vram),
             "vram_offset": 0,
         }
-        
+
         # Note: Real validation may or may not check size limits
         # This test documents actual behavior
         try:
@@ -306,20 +302,20 @@ class TestInjectionManagerReal:
         """Test that workers are cleaned up when manager is deleted."""
         # Create manager in local scope
         manager = InjectionManager()
-        
+
         params = {
             "sprite_path": test_files["sprite_path"],
             "vram_path": test_files["vram_path"],
             "vram_offset": 0x4000,
         }
-        
+
         # Start worker
         result = manager.start_injection(params)
         assert result is True
-        
+
         # Delete manager (should trigger cleanup)
         del manager
-        
+
         # Worker should be cleaned up (no longer running)
         # Note: Can't directly test worker state after manager deletion
         # This documents that cleanup is handled

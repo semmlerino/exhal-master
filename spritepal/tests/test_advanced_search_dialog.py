@@ -6,12 +6,11 @@ This version avoids import-time hangs by deferring imports and using more target
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
-from pathlib import Path
-from typing import Any, Generator
-from unittest.mock import Mock, MagicMock, patch
+from collections.abc import Generator
 from dataclasses import dataclass
+from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -83,21 +82,21 @@ class TestSearchWorker:
         """Test that SearchWorker can be created without hanging."""
         # Defer import to avoid collection-time hangs
         from PySide6.QtCore import QThread, Signal
-        
+
         # Create a mock SearchWorker class
         class MockSearchWorker(QThread):
             progress = Signal(int, int)
             result_found = Signal(object)
             search_complete = Signal(list)
             error = Signal(str)
-            
+
             def __init__(self, search_type: str, params: dict):
                 super().__init__()
                 self.search_type = search_type
                 self.params = params
                 self.finder = None
                 self._cancelled = False
-        
+
         # Test creation
         worker = MockSearchWorker("parallel", {"test": "params"})
         assert worker.search_type == "parallel"
@@ -119,7 +118,7 @@ class TestSearchWorker:
         mock_finder = Mock()
         mock_finder.search_parallel = Mock(return_value=[])
         mock_finder.shutdown = Mock()
-        
+
         # Mock the worker
         mock_worker = Mock()
         mock_worker.search_type = "parallel"
@@ -129,7 +128,7 @@ class TestSearchWorker:
         mock_worker.result_found = Mock()
         mock_worker.search_complete = Mock()
         mock_worker.error = Mock()
-        
+
         # Simulate _run_parallel_search behavior
         mock_worker.finder = mock_finder
         results = mock_finder.search_parallel(
@@ -138,18 +137,18 @@ class TestSearchWorker:
             end_offset=0x1000
         )
         mock_worker.search_complete.emit(results)
-        
+
         # Verify BEHAVIOR: search was executed and results were emitted
         assert mock_finder.search_parallel.called
         search_args = mock_finder.search_parallel.call_args[1]
         assert search_args["rom_path"] == temp_rom_file
         assert search_args["start_offset"] == 0x0
         assert search_args["end_offset"] == 0x1000
-        
+
         assert mock_worker.search_complete.emit.called
         emitted_results = mock_worker.search_complete.emit.call_args[0][0]
         assert emitted_results == []  # Empty results as mocked
-        
+
         # Verify STATE: finder was properly shut down
         assert mock_finder.shutdown.called
 
@@ -163,7 +162,7 @@ class TestSearchWorker:
             confidence=0.8,  # Above threshold
             metadata={}
         )
-        
+
         # Mock the filter application logic
         def apply_filters(result, filters):
             # Check size
@@ -184,7 +183,7 @@ class TestSearchWorker:
             if filters.include_uncompressed and result.compressed_size == 0:
                 return True
             return False
-        
+
         # Alignment filter: 0x1000 % 0x100 == 0
         assert apply_filters(result, search_filter) is True
 
@@ -198,13 +197,13 @@ class TestSearchWorker:
             confidence=0.8,
             metadata={}
         )
-        
+
         # Mock the filter application logic
         def apply_filters(result, filters):
             if not (filters.min_size <= result.size <= filters.max_size):
                 return False
             return True
-        
+
         assert apply_filters(result, search_filter) is False
 
     def test_apply_filters_invalid_alignment(self, search_filter):
@@ -217,13 +216,13 @@ class TestSearchWorker:
             confidence=0.8,
             metadata={}
         )
-        
+
         # Mock the filter application logic
         def apply_filters(result, filters):
             if result.offset % filters.alignment != 0:
                 return False
             return True
-        
+
         assert apply_filters(result, search_filter) is False
 
 class TestAdvancedSearchDialog:
@@ -236,7 +235,7 @@ class TestAdvancedSearchDialog:
         mock_dialog.rom_path = "/test/rom.smc"
         mock_dialog.search_history = []
         mock_dialog.search_worker = None
-        
+
         # Mock UI elements
         mock_dialog.search_type_combo = Mock()
         mock_dialog.search_input = Mock()
@@ -244,12 +243,12 @@ class TestAdvancedSearchDialog:
         mock_dialog.progress_bar = Mock()
         mock_dialog.start_button = Mock()
         mock_dialog.cancel_button = Mock()
-        
+
         # Test initial state
         assert mock_dialog.rom_path == "/test/rom.smc"
         assert mock_dialog.search_history == []
         assert mock_dialog.search_worker is None
-        
+
         # Simulate setting search type
         mock_dialog.search_type_combo.currentText = Mock(return_value="Parallel")
         assert mock_dialog.search_type_combo.currentText() == "Parallel"
@@ -258,25 +257,25 @@ class TestAdvancedSearchDialog:
         """Test search history functionality."""
         # Create mock history
         history = []
-        
+
         # Add entries
         entry1 = {"timestamp": "2024-01-01", "query": "test1", "results": 5}
         entry2 = {"timestamp": "2024-01-02", "query": "test2", "results": 10}
-        
+
         history.append(entry1)
         history.append(entry2)
-        
+
         assert len(history) == 2
         assert history[0]["query"] == "test1"
         assert history[1]["results"] == 10
-        
+
         # Test history limit (e.g., max 10 entries)
         MAX_HISTORY = 10
         for i in range(20):
             history.append({"timestamp": f"2024-01-{i+3:02d}", "query": f"test{i+3}", "results": i})
             if len(history) > MAX_HISTORY:
                 history.pop(0)
-        
+
         assert len(history) == MAX_HISTORY
 
     def test_progress_reporting(self):
@@ -286,24 +285,24 @@ class TestAdvancedSearchDialog:
         progress_bar.setMaximum = Mock()
         progress_bar.setValue = Mock()
         progress_bar.setFormat = Mock()
-        
+
         # Simulate progress updates
         total = 100
         progress_bar.setMaximum(total)
-        
+
         for i in range(0, total + 1, 10):
             progress_bar.setValue(i)
             progress_bar.setFormat(f"Searching... {i}%")
-        
+
         # Verify BEHAVIOR: progress bar was updated correctly
         assert progress_bar.setMaximum.called
         max_value = progress_bar.setMaximum.call_args[0][0]
         assert max_value == 100
-        
+
         assert progress_bar.setValue.called
         final_value = progress_bar.setValue.call_args[0][0]
         assert final_value == 100  # Progress completed
-        
+
         # Verify progress format was updated throughout
         assert progress_bar.setFormat.call_count == 11  # 0, 10, 20, ..., 100
 
@@ -316,30 +315,30 @@ class TestSearchIntegration:
         mock_dialog = Mock()
         mock_worker = Mock()
         mock_finder = Mock()
-        
+
         # Setup
         mock_dialog.rom_path = temp_rom_file
         mock_dialog.search_worker = None
-        
+
         # Start search
         mock_dialog.search_worker = mock_worker
         mock_worker.finder = mock_finder
-        
+
         # Simulate search
         results = [
             SearchResult(0x1000, 2048, 16, 1024, 0.8, {}),
             SearchResult(0x2000, 4096, 32, 2048, 0.9, {}),
         ]
         mock_finder.search_parallel = Mock(return_value=results)
-        
+
         # Execute
         found_results = mock_finder.search_parallel()
-        
+
         # Verify
         assert len(found_results) == 2
         assert found_results[0].offset == 0x1000
         assert found_results[1].confidence == 0.9
-        
+
         # Cleanup
         mock_finder.shutdown = Mock()
         mock_finder.shutdown()

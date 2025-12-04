@@ -14,7 +14,6 @@ import tempfile
 
 import pytest
 from PIL import Image
-
 from ui.components import SplitterDialog
 from ui.grid_arrangement_dialog import GridArrangementDialog
 

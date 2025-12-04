@@ -9,6 +9,7 @@ from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
+from core.managers import get_extraction_manager
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
@@ -26,8 +27,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.managers import get_extraction_manager
 from ui.common import WorkerManager
 from ui.components.navigation import SpriteNavigator
 from ui.dialogs import ResumeScanDialog, UnifiedManualOffsetDialog, UserErrorDialog

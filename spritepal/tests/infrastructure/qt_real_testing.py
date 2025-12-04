@@ -18,9 +18,9 @@ import gc
 import os
 import sys
 import weakref
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from PySide6.QtCore import (
     QCoreApplication,

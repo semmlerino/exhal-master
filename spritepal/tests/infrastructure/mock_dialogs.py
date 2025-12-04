@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import contextlib
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from unittest.mock import MagicMock, Mock
 
 from .mock_dialogs_base import CallbackSignal, TestDialogBase

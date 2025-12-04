@@ -13,6 +13,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from core.parallel_sprite_finder import ParallelSpriteFinder, SearchResult
+from core.visual_similarity_search import SimilarityMatch, VisualSimilarityEngine
+from core.workers.base import handle_worker_errors
 from PySide6.QtCore import QMutex, Qt, QThread, QWaitCondition, Signal
 from PySide6.QtGui import QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
@@ -37,10 +40,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.parallel_sprite_finder import ParallelSpriteFinder, SearchResult
-from core.visual_similarity_search import SimilarityMatch, VisualSimilarityEngine
-from core.workers.base import handle_worker_errors
 from ui.dialogs.similarity_results_dialog import show_similarity_results
 from utils.constants import MAX_SPRITE_SIZE, MIN_SPRITE_SIZE
 from utils.preview_generator import PreviewGenerator, PreviewRequest
@@ -478,7 +477,7 @@ class SearchWorker(QThread):
         if offset + len(pattern_bytes) > len(rom_data):
             return False
 
-        for i, (pattern_byte, mask_byte) in enumerate(zip(pattern_bytes, mask_bytes)):
+        for i, (pattern_byte, mask_byte) in enumerate(zip(pattern_bytes, mask_bytes, strict=False)):
             rom_byte = rom_data[offset + i]
             if mask_byte == 0xFF and rom_byte != pattern_byte:
                 return False

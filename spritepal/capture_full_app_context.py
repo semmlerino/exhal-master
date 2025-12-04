@@ -16,12 +16,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from typing import cast
 
+# Import main components
+from core.managers.registry import initialize_managers
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication
-
-# Import main components
-from core.managers.registry import initialize_managers
 from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 from ui.main_window import MainWindow
 from ui.tabs.sprite_gallery_tab import SpriteGalleryTab

@@ -7,7 +7,8 @@ It's designed to be composed into dialogs via the DialogBase composition system.
 from __future__ import annotations
 
 import os
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialogButtonBox, QPushButton

@@ -6,13 +6,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from tests.fixtures.test_managers import (
-# Systematic pytest markers applied based on test content analysis
-
-    create_extraction_manager_fixture,
-    create_injection_manager_fixture,
-)
-
 from core.managers import (
     cleanup_managers,
     get_extraction_manager,
@@ -21,6 +14,11 @@ from core.managers import (
     initialize_managers,
 )
 from core.managers.exceptions import ValidationError
+from tests.fixtures.test_managers import (
+    # Systematic pytest markers applied based on test content analysis
+    create_extraction_manager_fixture,
+    create_injection_manager_fixture,
+)
 
 pytestmark = [
     pytest.mark.file_io,

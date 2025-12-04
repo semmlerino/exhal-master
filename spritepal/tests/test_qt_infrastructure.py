@@ -6,8 +6,9 @@ Qt testing issues like multiple QApplication instances and resource leaks.
 """
 from __future__ import annotations
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 # Test markers for Qt infrastructure validation
 pytest_plugins = ["pytestqt"]
@@ -30,18 +31,18 @@ def test_qapplication_singleton(qapp_session):
     """Verify single QApplication instance across test session."""
     try:
         from PySide6.QtWidgets import QApplication
-        
+
         # Get instances multiple times
         app1 = QApplication.instance()
         app2 = QApplication.instance()
-        
+
         # Should be the same instance
         assert app1 is app2
         assert app1 is not None
-        
+
         # Should match our fixture
         assert app1 is qapp_session
-        
+
     except ImportError:
         # In environments without Qt, should get mock
         assert isinstance(qapp_session, Mock)
@@ -49,23 +50,23 @@ def test_qapplication_singleton(qapp_session):
 def test_qtbot_widget_cleanup(qtbot):
     """Verify widgets are properly registered with qtbot for cleanup."""
     try:
-        from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
-        
+        from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+
         # Create a test widget
         widget = QWidget()
         qtbot.addWidget(widget)
-        
+
         # Add some content
         label = QLabel("Test content")
         layout = QVBoxLayout()
         layout.addWidget(label)
         widget.setLayout(layout)
-        
+
         # Widget should be registered with qtbot
         # qtbot will handle cleanup automatically
         assert widget is not None
         assert label.text() == "Test content"
-        
+
     except ImportError:
         # In headless environments, qtbot might be mocked
         assert hasattr(qtbot, 'addWidget')
@@ -75,24 +76,24 @@ def test_qtbot_widget_cleanup(qtbot):
 def test_qt_gui_functionality(qtbot):
     """Test that requires full Qt GUI capabilities."""
     try:
-        from PySide6.QtWidgets import QWidget, QPushButton
         from PySide6.QtCore import QTimer, Signal
-        
+        from PySide6.QtWidgets import QPushButton, QWidget
+
         class TestWidget(QWidget):
             clicked = Signal()
-            
+
             def __init__(self):
                 super().__init__()
                 self.button = QPushButton("Test Button")
                 self.button.clicked.connect(self.clicked.emit)
-        
+
         widget = TestWidget()
         qtbot.addWidget(widget)
-        
+
         # Test signal emission
         with qtbot.waitSignal(widget.clicked, timeout=1000):
             widget.button.click()
-            
+
     except ImportError:
         # In mock environments, just verify mock functionality
         assert hasattr(qtbot, 'waitSignal')
@@ -106,7 +107,7 @@ def test_safe_qtbot_fallback(safe_qtbot):
     assert hasattr(safe_qtbot, 'wait')
     assert hasattr(safe_qtbot, 'mouseClick')
     assert hasattr(safe_qtbot, 'keyClick')
-    
+
     # Should be callable without errors
     safe_qtbot.addWidget(Mock())
     safe_qtbot.wait(1)
@@ -115,7 +116,7 @@ def test_safe_qapp_functionality(safe_qapp):
     """Test that safe_qapp provides necessary QApplication functionality."""
     # Should always have processEvents method
     assert hasattr(safe_qapp, 'processEvents')
-    
+
     # Should be callable without errors
     safe_qapp.processEvents()
 
@@ -128,21 +129,22 @@ def test_no_gui_marker():
 def test_qt_cleanup_integration(qtbot, qapp_session):
     """Test that Qt cleanup works properly between tests."""
     try:
-        from PySide6.QtWidgets import QWidget
         import gc
-        
+
+        from PySide6.QtWidgets import QWidget
+
         # Create widgets that will be cleaned up
         widgets = [QWidget() for _ in range(5)]
         for widget in widgets:
             qtbot.addWidget(widget)
-        
+
         # Force garbage collection
         gc.collect()
-        
+
         # Process events to allow cleanup
         if hasattr(qapp_session, 'processEvents'):
             qapp_session.processEvents()
-            
+
     except ImportError:
         # In mock environments, just verify structure
         pass
@@ -150,7 +152,7 @@ def test_qt_cleanup_integration(qtbot, qapp_session):
 def test_thread_safety_marker():
     """Test Qt thread safety markers work correctly."""
     import threading
-    
+
     # Should be running in main thread for Qt operations
     assert threading.current_thread() is threading.main_thread()
 
@@ -160,32 +162,31 @@ def test_mock_gui_in_headless():
     # This test should run even in headless environments
     # because it uses mocks instead of real Qt widgets
     from unittest.mock import Mock
-    
+
     mock_widget = Mock()
     mock_widget.show = Mock()
     mock_widget.close = Mock()
-    
+
     # Mock GUI operations
     mock_widget.show()
     mock_widget.close()
-    
+
     assert mock_widget.show.called
     assert mock_widget.close.called
 
 def test_qt_markers_configuration():
     """Test that Qt-specific pytest markers are properly configured."""
-    import pytest
-    
+
     # Verify our custom markers are available
     # This helps ensure the pytest configuration is working
     marker_names = {
         'qt_app',
-        'gui', 
+        'gui',
         'mock_gui',
         'no_gui',
         'thread_safety'
     }
-    
+
     # At least some of our markers should be recognized
     # (exact verification depends on pytest internals)
     assert len(marker_names) > 0
@@ -195,16 +196,16 @@ def test_multiple_qapplication_prevention():
     """Test that we prevent multiple QApplication instances."""
     try:
         from PySide6.QtWidgets import QApplication
-        
+
         # Get the current instance
         app1 = QApplication.instance()
-        
+
         # Attempting to create another should return the same instance
         # (QApplication constructor will raise an error if we try to create another)
         app2 = QApplication.instance()
-        
+
         assert app1 is app2
-        
+
     except ImportError:
         # In mock environments, this is handled by our fixture
         pass
@@ -212,14 +213,14 @@ def test_multiple_qapplication_prevention():
 def test_qt_resource_cleanup():
     """Test that Qt resources are properly cleaned up."""
     import gc
-    
+
     # Force garbage collection
     gc.collect()
-    
+
     # Check active thread count (should be reasonable)
     import threading
     active_count = threading.active_count()
-    
+
     # Should not have excessive threads
     # Allow some tolerance for background threads
     assert active_count < 10, f"Too many active threads: {active_count}"

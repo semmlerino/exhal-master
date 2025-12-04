@@ -35,7 +35,7 @@ def get_settings_manager():
     try:
         # REQUIRED DELAYED IMPORT: Prevents circular dependency:
         # rom_cache -> settings_manager -> session_manager -> managers -> rom_cache
-        from utils.settings_manager import get_settings_manager as _gsm  # noqa: PLC0415
+        from utils.settings_manager import get_settings_manager as _gsm
         return _gsm()
     except ImportError:
         logger.warning("Could not import settings manager")

@@ -41,8 +41,7 @@ from core.managers.exceptions import ValidationError
 from PIL import Image
 from tests.utils.file_helpers import create_temp_directory, create_test_files
 from utils.constants import (
-# Serial execution required: Thread safety concerns
-
+    # Serial execution required: Thread safety concerns
     BYTES_PER_TILE,
     CGRAM_EXPECTED_SIZE,
     CGRAM_PATTERNS,
@@ -73,7 +72,7 @@ from utils.unified_error_handler import (
 )
 
 pytestmark = [
-    
+
     pytest.mark.serial,
     pytest.mark.thread_safety,
     pytest.mark.cache,

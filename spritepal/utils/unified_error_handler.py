@@ -12,10 +12,11 @@ import logging
 import threading
 import traceback
 import weakref
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget as _QWidget

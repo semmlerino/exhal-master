@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from PySide6.QtWidgets import QDialog, QWidget
-
 from core.managers import (  # This now supports contexts!
     get_extraction_manager,
     get_injection_manager,
@@ -25,6 +23,7 @@ from core.managers.injectable import (
     InjectableWidget,
     InjectionMixin,
 )
+from PySide6.QtWidgets import QDialog, QWidget
 
 
 def example_1_existing_code_unchanged():

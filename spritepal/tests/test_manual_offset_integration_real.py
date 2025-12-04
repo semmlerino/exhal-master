@@ -14,30 +14,28 @@ Key improvements over mocked version:
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from PySide6.QtCore import QTimer, Qt
-from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
+
 
 def is_headless_environment() -> bool:
     """Detect if we're in a headless environment."""
     # Check multiple conditions for headless environment
     if os.environ.get("CI"):
         return True
-    
+
     if not os.environ.get("DISPLAY"):
         return True
-    
+
     # Check if X11 forwarding is actually working
     if os.environ.get("SSH_CONNECTION") and not os.environ.get("DISPLAY"):
         return True
-        
+
     # Try to check if we can actually create QApplication and access screen
     try:
         app = QApplication.instance()
@@ -63,7 +61,7 @@ def is_headless_environment() -> bool:
             screen_geometry = primary_screen.geometry()
             if screen_geometry.width() <= 0 or screen_geometry.height() <= 0:
                 return True
-                
+
         return False
     except Exception:
         # Any exception means we can't access display properly
@@ -95,14 +93,14 @@ if not os.environ.get('QT_QPA_PLATFORM'):
     if is_headless_environment():
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
+from tests.infrastructure.qt_real_testing import QtTestCase
 from ui.dialogs.manual_offset_unified_integrated import (
-    UnifiedManualOffsetDialog,
-    SimpleBrowseTab, 
+    SimpleBrowseTab,
+    SimpleHistoryTab,
     SimpleSmartTab,
-    SimpleHistoryTab
+    UnifiedManualOffsetDialog,
 )
-from ui.rom_extraction_panel import ManualOffsetDialogSingleton, ROMExtractionPanel
-from tests.infrastructure.qt_real_testing import QtTestCase, EventLoopHelper
+
 
 @pytest.mark.integration
 class TestManualOffsetDialogIntegrationReal(QtTestCase):
@@ -119,9 +117,9 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
             rom_data[i:i+4] = b'TEST'
         temp_file.write(rom_data)
         temp_file.close()
-        
+
         yield Path(temp_file.name)
-        
+
         # Cleanup
         try:
             Path(temp_file.name).unlink()
@@ -142,18 +140,18 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Create real dialog components directly
         dialog = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog)
-        
+
         # Verify it's a real dialog with actual properties
         assert dialog.windowTitle() == "Manual Offset Browser"
         assert hasattr(dialog, 'browse_tab')
         assert hasattr(dialog, 'smart_tab')
         assert hasattr(dialog, 'history_tab')
-        
+
         # Verify tabs are real Qt objects
         assert isinstance(dialog.browse_tab, SimpleBrowseTab)
-        assert isinstance(dialog.smart_tab, SimpleSmartTab) 
+        assert isinstance(dialog.smart_tab, SimpleSmartTab)
         assert isinstance(dialog.history_tab, SimpleHistoryTab)
-        
+
         # Verify tab widgets have expected components
         assert hasattr(dialog.browse_tab, 'position_slider')
         assert hasattr(dialog.browse_tab, 'get_current_offset')
@@ -163,7 +161,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         """Test that real slider adjustments work correctly."""
         dialog = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog)
-        
+
         # Set initial ROM data with minimal mock
         extraction_manager = MagicMock()
         dialog.set_rom_data("/fake/rom.sfc", 0x400000, extraction_manager)
@@ -171,7 +169,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Get the actual slider from the browse tab
         browse_tab = dialog.browse_tab
         position_slider = browse_tab.position_slider
-        
+
         # Verify slider is real Qt widget
         from PySide6.QtWidgets import QSlider
         assert isinstance(position_slider, QSlider)
@@ -179,12 +177,12 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Test real slider interaction
         initial_offset = browse_tab.get_current_offset()
         assert isinstance(initial_offset, int)
-        
+
         # Simulate user moving slider
         new_slider_value = position_slider + 100
         position_slider.setValue(new_slider_value)
         qtbot.wait(wait_timeout // 20)  # Allow signal processing
-        
+
         # Verify offset changed accordingly
         new_offset = browse_tab.get_current_offset()
         assert new_offset != initial_offset
@@ -193,21 +191,21 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         """Test dialog close and cleanup behavior."""
         dialog1 = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog1)
-        
+
         # Verify dialog is visible initially after show
         dialog1.show()
         qtbot.waitUntil(lambda: dialog1.isVisible(), timeout=1000)
         assert dialog1.isVisible()
-        
+
         # User closes dialog
         dialog1.close()
         qtbot.wait(wait_timeout // 15)  # Allow close event to process
         assert not dialog1.isVisible()
-        
+
         # Create new dialog - should be different instance
-        dialog2 = self.create_widget(UnifiedManualOffsetDialog) 
+        dialog2 = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog2)
-        
+
         assert id(dialog1) != id(dialog2)  # Different instances
         assert isinstance(dialog2, UnifiedManualOffsetDialog)
 
@@ -223,7 +221,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Get the actual history tab
         history_tab = dialog.history_tab
         initial_count = history_tab.get_sprite_count()
-        
+
         # Verify history tab is real component
         assert isinstance(history_tab, SimpleHistoryTab)
         assert hasattr(history_tab, 'add_sprite')
@@ -238,7 +236,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
 
         for offset, quality in sprite_data:
             dialog.add_found_sprite(offset, quality)
-            
+
             # Verify sprite was added to history
             current_count = history_tab.get_sprite_count()
             assert current_count > initial_count
@@ -261,7 +259,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         dialog.set_offset(0x500000)  # Beyond 4MB - should be clamped
         current_offset = dialog.get_current_offset()
         assert current_offset <= 0x400000  # Within ROM bounds
-        
+
         # Should be able to work normally after boundary test
         dialog.set_offset(0x250000)
         assert dialog.get_current_offset() == 0x250000
@@ -270,34 +268,34 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         """Test that multiple dialog instances work independently."""
         # Create multiple dialog instances
         dialog1 = self.create_widget(UnifiedManualOffsetDialog)
-        dialog2 = self.create_widget(UnifiedManualOffsetDialog) 
+        dialog2 = self.create_widget(UnifiedManualOffsetDialog)
         dialog3 = self.create_widget(UnifiedManualOffsetDialog)
-        
+
         qtbot.addWidget(dialog1)
-        qtbot.addWidget(dialog2) 
+        qtbot.addWidget(dialog2)
         qtbot.addWidget(dialog3)
 
         # All should be different instances
         assert dialog1 is not dialog2
         assert dialog2 is not dialog3
         assert dialog1 is not dialog3
-        
+
         # But all should be valid UnifiedManualOffsetDialog instances
         assert isinstance(dialog1, UnifiedManualOffsetDialog)
         assert isinstance(dialog2, UnifiedManualOffsetDialog)
         assert isinstance(dialog3, UnifiedManualOffsetDialog)
-        
+
         # Each should have independent state
         extraction_manager = MagicMock()
         dialog1.set_rom_data("/fake/rom1.sfc", 0x400000, extraction_manager)
         dialog2.set_rom_data("/fake/rom2.sfc", 0x200000, extraction_manager)
         dialog3.set_rom_data("/fake/rom3.sfc", 0x600000, extraction_manager)
-        
+
         # Set different offsets
         dialog1.set_offset(0x100000)
-        dialog2.set_offset(0x150000) 
+        dialog2.set_offset(0x150000)
         dialog3.set_offset(0x200000)
-        
+
         # Verify independent state
         assert dialog1.get_current_offset() == 0x100000
         assert dialog2.get_current_offset() == 0x150000
@@ -317,18 +315,18 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         assert hasattr(browse_tab, 'position_slider')
         assert hasattr(browse_tab, 'get_current_offset')
         assert hasattr(browse_tab, 'set_offset')
-        
+
         assert hasattr(preview_widget, 'update_preview')
         assert hasattr(preview_widget, 'clear_preview')
-        
+
         assert hasattr(history_tab, 'get_sprite_count')
         assert hasattr(history_tab, 'add_sprite')
-        
+
         # Verify UI components are consistent (not recreated)
         browse_tab2 = dialog.browse_tab
         preview_widget2 = dialog.preview_widget
         history_tab2 = dialog.history_tab
-        
+
         assert browse_tab is browse_tab2
         assert preview_widget is preview_widget2
         assert history_tab is history_tab2
@@ -350,7 +348,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         dialog.hide()
         qtbot.waitUntil(lambda: not dialog.isVisible(), timeout=1000)
         assert not dialog.isVisible()
-        
+
         # Show again to verify it still works
         dialog.show()
         qtbot.waitUntil(lambda: dialog.isVisible(), timeout=1000)
@@ -378,7 +376,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         new_rom_path = "/test/rom2.sfc"
         new_rom_size = 0x200000
         dialog.set_rom_data(new_rom_path, new_rom_size, extraction_manager)
-        
+
         # Verify data updated
         assert browse_tab._rom_path == new_rom_path
         assert browse_tab._rom_size == new_rom_size
@@ -387,7 +385,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         """Test that real Qt signals work correctly."""
         dialog = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog)
-        
+
         # Set ROM data to enable functionality
         extraction_manager = MagicMock()
         dialog.set_rom_data("/fake/rom.sfc", 0x400000, extraction_manager)
@@ -395,7 +393,7 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Test offset_changed signal
         with qtbot.waitSignal(dialog.offset_changed, timeout=signal_timeout) as blocker:
             dialog.set_offset(0x250000)
-        
+
         # Verify signal was emitted with correct value
         assert len(blocker.args) == 1
         assert blocker.args[0] == 0x250000
@@ -403,31 +401,31 @@ class TestManualOffsetDialogIntegrationReal(QtTestCase):
         # Test that we can connect custom slots
         received_offsets = []
         dialog.offset_changed.connect(lambda offset: received_offsets.append(offset))
-        
+
         dialog.set_offset(0x300000)
         qtbot.wait(wait_timeout // 30)  # Allow signal processing
-        
+
         assert 0x300000 in received_offsets
 
     def test_dialog_thread_affinity_real(self, qtbot, wait_timeout):
         """Test that dialog works correctly with Qt's thread model."""
         dialog = self.create_widget(UnifiedManualOffsetDialog)
         qtbot.addWidget(dialog)
-        
+
         # Verify dialog is in main thread
         from PySide6.QtCore import QThread
         assert dialog.thread() is QThread.currentThread()
-        
+
         # Verify all components are in main thread
         assert dialog.browse_tab.thread() is QThread.currentThread()
         assert dialog.smart_tab.thread() is QThread.currentThread()
         assert dialog.history_tab.thread() is QThread.currentThread()
         assert dialog.preview_widget.thread() is QThread.currentThread()
-        
+
         # Test rapid operations (simulates user clicking quickly)
         extraction_manager = MagicMock()
         dialog.set_rom_data("/fake/rom.sfc", 0x400000, extraction_manager)
-        
+
         for i in range(10):
             offset = 0x200000 + (i * 0x1000)
             dialog.set_offset(offset)

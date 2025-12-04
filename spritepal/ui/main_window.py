@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from PySide6.QtGui import QCloseEvent, QKeyEvent
 else:
     from PySide6.QtGui import QCloseEvent, QKeyEvent
+from core.managers import get_session_manager
 from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
@@ -28,8 +29,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.managers import get_session_manager
 from ui.dialogs import SettingsDialog, UserErrorDialog
 from ui.extraction_panel import ExtractionPanel
 from ui.managers import (
@@ -307,7 +306,7 @@ class MainWindow(QMainWindow):
     def clear_all_caches(self) -> None:
         """Clear all ROM caches with confirmation"""
         # Delayed import to minimize startup dependencies
-        from utils.rom_cache import get_rom_cache  # noqa: PLC0415
+        from utils.rom_cache import get_rom_cache
 
         reply = QMessageBox.question(
             self,
@@ -422,7 +421,7 @@ class MainWindow(QMainWindow):
 
             # Validate parameters using extraction manager
             # Delayed import to avoid initialization order issues
-            from core.managers import get_extraction_manager  # noqa: PLC0415
+            from core.managers import get_extraction_manager
             try:
                 extraction_manager = get_extraction_manager()
                 extraction_manager.validate_extraction_params(params)
@@ -579,8 +578,8 @@ class MainWindow(QMainWindow):
         """Handle settings change from settings dialog"""
         # Reload any settings that affect the main window
         # Delayed imports to minimize main window startup dependencies
-        from utils.rom_cache import get_rom_cache  # noqa: PLC0415
-        from utils.settings_manager import get_settings_manager  # noqa: PLC0415
+        from utils.rom_cache import get_rom_cache
+        from utils.settings_manager import get_settings_manager
 
         settings_manager = get_settings_manager()
         cache_enabled = settings_manager.get_cache_enabled()
@@ -764,7 +763,7 @@ class MainWindow(QMainWindow):
         """
         if self._controller is None:
             # Import here to avoid circular dependency at module level
-            from core.controller import ExtractionController  # noqa: PLC0415
+            from core.controller import ExtractionController
             self._controller = ExtractionController(self)
         return self._controller
 

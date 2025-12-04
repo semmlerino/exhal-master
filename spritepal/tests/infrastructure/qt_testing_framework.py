@@ -8,8 +8,9 @@ bugs and ensuring proper Qt lifecycle management.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from contextlib import contextmanager, suppress
-from typing import Any, Callable
+from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtTest import QSignalSpy

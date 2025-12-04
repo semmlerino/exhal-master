@@ -17,7 +17,6 @@ try:
     from PySide6.QtCore import Qt, QTimer
     from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
     from PySide6.QtWidgets import QApplication, QWidget
-
     from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 
     # Import the gallery components

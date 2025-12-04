@@ -40,6 +40,7 @@ from tests.fixtures.test_preview_helper import (
     ensure_headless_qt,
 )
 
+
 # Ensure QApplication exists for all tests
 @pytest.fixture(scope="module", autouse=True)
 def qt_app():

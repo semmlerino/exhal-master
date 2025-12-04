@@ -5,8 +5,9 @@ Breaks circular dependencies and improves testability.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from threading import Lock
-from typing import Any, Callable, Protocol, Type, TypeVar
+from typing import Any, Protocol, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class DIContainer:
 
     def __init__(self):
         """Initialize the DI container."""
-        self._singletons: dict[Type, Any] = {}
-        self._factories: dict[Type, Callable[[], Any]] = {}
+        self._singletons: dict[type, Any] = {}
+        self._factories: dict[type, Callable[[], Any]] = {}
         self._lock = Lock()
         logger.debug("DIContainer initialized")
 
@@ -98,7 +99,7 @@ class DIContainer:
         except ValueError:
             return None
 
-    def has(self, interface: Type) -> bool:
+    def has(self, interface: type) -> bool:
         """
         Check if an interface is registered.
 
@@ -118,7 +119,7 @@ class DIContainer:
             self._factories.clear()
             logger.debug("DIContainer cleared")
 
-    def unregister(self, interface: Type) -> None:
+    def unregister(self, interface: type) -> None:
         """
         Remove a registration.
 

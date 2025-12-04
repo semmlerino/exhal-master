@@ -7,8 +7,9 @@ enabling efficient ROM exploration by filtering out empty areas.
 from __future__ import annotations
 
 import statistics
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, TypedDict
+from typing import TypedDict
 
 from utils.constants import (
     MAX_SPRITE_COUNT_HEADER,
@@ -173,7 +174,7 @@ class SpriteRegionDetector:
                 next_region = regions[i + 1]
                 merged_sprites = list(zip(
                     current.sprite_offsets + next_region.sprite_offsets,
-                    current.sprite_qualities + next_region.sprite_qualities
+                    current.sprite_qualities + next_region.sprite_qualities, strict=False
                 ))
                 merged_region = self._create_region(
                     current.start_offset,

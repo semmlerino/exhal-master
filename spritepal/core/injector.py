@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image
-
 from utils.constants import (
     IMAGE_DIMENSION_MULTIPLE,
     PIXEL_MASK_4BIT,

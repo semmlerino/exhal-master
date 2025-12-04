@@ -35,6 +35,7 @@ from ui.row_arrangement.grid_preview_generator import GridPreviewGenerator
 from ui.row_arrangement.palette_colorizer import PaletteColorizer
 from ui.row_arrangement.preview_generator import PreviewGenerator
 
+
 class TestExtractionManagerFixture:
     """Test fixture providing real ExtractionManager with test data"""
 

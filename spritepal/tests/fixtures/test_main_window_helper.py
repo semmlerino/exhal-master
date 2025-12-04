@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QLabel, QStatusBar
-
 from ui.palette_preview import PalettePreviewWidget
 from ui.zoomable_preview import PreviewPanel
 

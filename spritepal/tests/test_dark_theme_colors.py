@@ -7,10 +7,8 @@ from ui.styles.theme.py following TDD principles with real implementations.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 import pytest
-
 from ui.styles.theme import (
     COLORS,
     DIMENSIONS,
@@ -20,13 +18,14 @@ from ui.styles.theme import (
     get_theme_style,
 )
 
+
 class TestColorConstants:
     """Test dark theme color constants validation."""
 
     def test_all_colors_are_valid_hex(self) -> None:
         """All color constants should be valid hex color codes."""
         hex_pattern = re.compile(r'^#[0-9A-Fa-f]{6}$')
-        
+
         for color_name, color_value in COLORS.items():
             assert isinstance(color_value, str), f"Color {color_name} should be string"
             assert hex_pattern.match(color_value), f"Color {color_name} ({color_value}) should be valid hex"
@@ -41,7 +40,7 @@ class TestColorConstants:
             "success", "warning", "danger", "info",
             "disabled", "disabled_text"
         ]
-        
+
         for color in required_colors:
             assert color in COLORS, f"Required color '{color}' is missing"
 
@@ -49,12 +48,12 @@ class TestColorConstants:
         """Color variations should have consistent naming patterns."""
         # Test that hover/pressed variants exist for action colors
         action_colors = ["primary", "secondary", "accent", "extract", "editor"]
-        
+
         for base_color in action_colors:
             if base_color in COLORS:
                 hover_key = f"{base_color}_hover"
                 pressed_key = f"{base_color}_pressed"
-                
+
                 assert hover_key in COLORS, f"Missing hover variant for {base_color}"
                 assert pressed_key in COLORS, f"Missing pressed variant for {base_color}"
 
@@ -74,11 +73,11 @@ class TestColorConstants:
         r = int(color_hex[1:3], 16)
         g = int(color_hex[3:5], 16)
         b = int(color_hex[5:7], 16)
-        
+
         # Calculate perceived brightness (0-255)
         brightness = (r * 0.299 + g * 0.587 + b * 0.114)
         is_dark = brightness < 128
-        
+
         assert is_dark == expected_darkness, (
             f"Color {color_key} ({color_hex}) brightness={brightness:.1f} "
             f"should be {'dark' if expected_darkness else 'light'}"
@@ -97,13 +96,13 @@ class TestFontConstants:
     def test_font_sizes_defined(self) -> None:
         """Font sizes should be defined with px units."""
         size_keys = ["small_size", "default_size", "medium_size", "large_size"]
-        
+
         for size_key in size_keys:
             assert size_key in FONTS
             size_value = FONTS[size_key]
             assert isinstance(size_value, str)
             assert size_value.endswith("px"), f"Font size {size_key} should end with 'px'"
-            
+
             # Extract numeric value and validate
             numeric_part = size_value[:-2]
             assert numeric_part.isdigit(), f"Font size {size_key} should have numeric value"
@@ -122,7 +121,7 @@ class TestDimensionConstants:
     def test_spacing_dimensions_are_positive_integers(self) -> None:
         """Spacing dimensions should be positive integers."""
         spacing_keys = ["spacing_xs", "spacing_sm", "spacing_md", "spacing_lg", "spacing_xl"]
-        
+
         for key in spacing_keys:
             assert key in DIMENSIONS
             value = DIMENSIONS[key]
@@ -134,7 +133,7 @@ class TestDimensionConstants:
         # Test button heights
         assert 20 <= DIMENSIONS["button_height"] <= 40, "Button height should be reasonable"
         assert 20 <= DIMENSIONS["input_height"] <= 40, "Input height should be reasonable"
-        
+
         # Test widths
         assert 50 <= DIMENSIONS["button_min_width"] <= 200, "Button min width should be reasonable"
         assert 100 <= DIMENSIONS["combo_min_width"] <= 400, "Combo min width should be reasonable"
@@ -142,7 +141,7 @@ class TestDimensionConstants:
     def test_border_dimensions_are_small_positive_integers(self) -> None:
         """Border widths should be small positive integers."""
         border_keys = ["border_width", "border_width_thick"]
-        
+
         for key in border_keys:
             assert key in DIMENSIONS
             value = DIMENSIONS[key]
@@ -154,36 +153,36 @@ class TestThemeClass:
 
     def test_theme_class_provides_primary_colors(self) -> None:
         """Theme class should provide access to primary color variations."""
-        assert Theme.PRIMARY == COLORS["primary"]
-        assert Theme.PRIMARY_LIGHT == COLORS["primary_hover"]
-        assert Theme.PRIMARY_DARK == COLORS["primary_pressed"]
+        assert COLORS["primary"] == Theme.PRIMARY
+        assert COLORS["primary_hover"] == Theme.PRIMARY_LIGHT
+        assert COLORS["primary_pressed"] == Theme.PRIMARY_DARK
 
     def test_theme_class_provides_background_colors(self) -> None:
         """Theme class should provide access to background colors."""
-        assert Theme.BACKGROUND == COLORS["background"]
-        assert Theme.SURFACE == COLORS["panel_background"]
-        assert Theme.INPUT_BACKGROUND == COLORS["input_background"]
-        assert Theme.PREVIEW_BACKGROUND == COLORS["preview_background"]
+        assert COLORS["background"] == Theme.BACKGROUND
+        assert COLORS["panel_background"] == Theme.SURFACE
+        assert COLORS["input_background"] == Theme.INPUT_BACKGROUND
+        assert COLORS["preview_background"] == Theme.PREVIEW_BACKGROUND
 
     def test_theme_class_provides_text_colors(self) -> None:
         """Theme class should provide access to text colors."""
-        assert Theme.TEXT == COLORS["text_primary"]
-        assert Theme.TEXT_SECONDARY == COLORS["text_secondary"]
-        assert Theme.TEXT_MUTED == COLORS["text_muted"]
-        assert Theme.TEXT_DISABLED == COLORS["disabled_text"]
+        assert COLORS["text_primary"] == Theme.TEXT
+        assert COLORS["text_secondary"] == Theme.TEXT_SECONDARY
+        assert COLORS["text_muted"] == Theme.TEXT_MUTED
+        assert COLORS["disabled_text"] == Theme.TEXT_DISABLED
 
     def test_theme_class_provides_status_colors(self) -> None:
         """Theme class should provide access to status colors."""
-        assert Theme.SUCCESS == COLORS["success"]
-        assert Theme.WARNING == COLORS["warning"]
-        assert Theme.DANGER == COLORS["danger"]
-        assert Theme.INFO == COLORS["info"]
+        assert COLORS["success"] == Theme.SUCCESS
+        assert COLORS["warning"] == Theme.WARNING
+        assert COLORS["danger"] == Theme.DANGER
+        assert COLORS["info"] == Theme.INFO
 
     def test_theme_class_provides_border_colors(self) -> None:
         """Theme class should provide access to border colors."""
-        assert Theme.BORDER == COLORS["border"]
-        assert Theme.BORDER_FOCUS == COLORS["border_focus"]
-        assert Theme.BORDER_ERROR == COLORS["border_error"]
+        assert COLORS["border"] == Theme.BORDER
+        assert COLORS["border_focus"] == Theme.BORDER_FOCUS
+        assert COLORS["border_error"] == Theme.BORDER_ERROR
 
 class TestThemeStylingFunctions:
     """Test basic theme styling functions."""
@@ -191,16 +190,16 @@ class TestThemeStylingFunctions:
     def test_get_theme_style_returns_valid_css(self) -> None:
         """get_theme_style should return valid CSS string."""
         css = get_theme_style()
-        
+
         assert isinstance(css, str)
         assert len(css) > 0
-        
+
         # Check for essential CSS structure
         assert "QWidget {" in css
         assert "QGroupBox {" in css
         assert "QLabel {" in css
         assert "QStatusBar {" in css
-        
+
         # Check for color references
         assert COLORS["text_primary"] in css
         assert COLORS["background"] in css
@@ -209,16 +208,16 @@ class TestThemeStylingFunctions:
     def test_get_theme_style_contains_expected_properties(self) -> None:
         """Theme style should contain expected CSS properties."""
         css = get_theme_style()
-        
+
         # Check for font properties
         assert f"font-family: {FONTS['default_family']}" in css
         assert f"font-size: {FONTS['default_size']}" in css
-        
+
         # Check for colors
         assert f"color: {COLORS['text_primary']}" in css
         assert f"background-color: {COLORS['background']}" in css
         assert f"background-color: {COLORS['panel_background']}" in css
-        
+
         # Check for dimensions
         assert f"{DIMENSIONS['border_width']}px solid" in css
         assert f"border-radius: {DIMENSIONS['border_radius']}px" in css
@@ -226,13 +225,13 @@ class TestThemeStylingFunctions:
     def test_get_disabled_state_style_returns_valid_css(self) -> None:
         """get_disabled_state_style should return valid CSS for disabled widgets."""
         css = get_disabled_state_style()
-        
+
         assert isinstance(css, str)
         assert len(css) > 0
-        
+
         # Check for disabled selector
         assert ":disabled {" in css
-        
+
         # Check for disabled colors
         assert COLORS["disabled"] in css
         assert COLORS["disabled_text"] in css
@@ -242,7 +241,7 @@ class TestThemeStylingFunctions:
         # This test ensures robustness - functions should complete even if some constants change
         css = get_theme_style()
         disabled_css = get_disabled_state_style()
-        
+
         # Basic validation that functions complete
         assert isinstance(css, str)
         assert isinstance(disabled_css, str)
@@ -281,7 +280,7 @@ class TestColorConstantsHeadless:
         """COLORS dictionary should be a stable reference for imports."""
         # This tests that the COLORS dict is consistently available
         from ui.styles.theme import COLORS as colors_import
-        
+
         assert colors_import is COLORS
         assert len(colors_import) > 0
 
@@ -291,7 +290,7 @@ class TestColorConstantsHeadless:
             Theme.PRIMARY, Theme.BACKGROUND, Theme.TEXT,
             Theme.BORDER, Theme.SUCCESS
         ]
-        
+
         for constant in test_constants:
             assert isinstance(constant, str)
             assert constant.startswith("#")

@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import pytest
 from ui.styles import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     COLORS,
     DIMENSIONS,
     get_dialog_button_box_style,

@@ -7,12 +7,11 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
+from typing import TYPE_CHECKING, Any, NotRequired, Protocol, TypedDict, cast
 
 from PIL import Image
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget
-from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from core.protocols.manager_protocols import (

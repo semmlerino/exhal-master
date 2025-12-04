@@ -7,8 +7,7 @@ the critical singleton functionality.
 """
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -38,6 +37,7 @@ patch_dialog_imports()
 # Now safe to import the singleton after patching
 from ui.rom_extraction_panel import ManualOffsetDialogSingleton
 
+
 @pytest.mark.no_manager_setup
 @pytest.mark.unit
 @pytest.mark.mock_dialogs
@@ -53,9 +53,9 @@ class TestManualOffsetDialogSingletonUnit:
                 ManualOffsetDialogSingleton._instance.close()
             ManualOffsetDialogSingleton._instance = None
         ManualOffsetDialogSingleton._destroyed = False
-        
+
         yield ManualOffsetDialogSingleton, MockUnifiedManualOffsetDialog
-        
+
         # Clean up after test
         if ManualOffsetDialogSingleton._instance is not None:
             if hasattr(ManualOffsetDialogSingleton._instance, 'close'):
@@ -83,7 +83,7 @@ class TestManualOffsetDialogSingletonUnit:
     def test_singleton_instance_creation(self, setup_singleton_cleanup, mock_panel):
         """Test that singleton creates instance on first call."""
         ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
-        
+
         # Create mock dialog instance with proper signals
         mock_dialog = MockDialogClass()
         mock_dialog.finished = MagicMock()
@@ -92,13 +92,13 @@ class TestManualOffsetDialogSingletonUnit:
         mock_dialog.finished.connect = MagicMock()
         mock_dialog.rejected.connect = MagicMock()
         mock_dialog.destroyed.connect = MagicMock()
-        
-        # Mock at the import location in ui.rom_extraction_panel 
+
+        # Mock at the import location in ui.rom_extraction_panel
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog) as MockDialog:
             with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
                 # First call should create instance
                 dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
+
                 assert dialog is not None
                 assert ManualOffsetDialogSingleton._instance is dialog
                 assert dialog is mock_dialog
@@ -108,7 +108,7 @@ class TestManualOffsetDialogSingletonUnit:
     def test_singleton_reuse_same_instance(self, setup_singleton_cleanup, mock_panel):
         """Test that singleton returns same instance on multiple calls."""
         ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
-        
+
         # Create mock dialog instance
         mock_dialog = MockDialogClass()
         mock_dialog.finished = MagicMock()
@@ -117,15 +117,15 @@ class TestManualOffsetDialogSingletonUnit:
         mock_dialog.finished.connect = MagicMock()
         mock_dialog.rejected.connect = MagicMock()
         mock_dialog.destroyed.connect = MagicMock()
-        
+
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog) as MockDialog:
             with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
                 # First call
                 dialog1 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
-                # Second call  
+
+                # Second call
                 dialog2 = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
+
                 # Should return same instance
                 assert dialog1 is dialog2
                 assert ManualOffsetDialogSingleton._instance is dialog1
@@ -135,10 +135,10 @@ class TestManualOffsetDialogSingletonUnit:
     def test_singleton_is_dialog_open_method(self, setup_singleton_cleanup, mock_panel):
         """Test is_dialog_open method."""
         ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
-        
+
         # No dialog exists
         assert not ManualOffsetDialogSingleton.is_dialog_open()
-        
+
         # Create mock dialog instance
         mock_dialog = MockDialogClass()
         mock_dialog.visible = False  # Start as hidden
@@ -149,20 +149,20 @@ class TestManualOffsetDialogSingletonUnit:
         mock_dialog.finished.connect = MagicMock()
         mock_dialog.rejected.connect = MagicMock()
         mock_dialog.destroyed.connect = MagicMock()
-        
+
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
             with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
                 # Create dialog
                 dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
+
                 # Dialog should not be visible initially
                 assert not ManualOffsetDialogSingleton.is_dialog_open()
-                
+
                 # Make dialog visible
                 dialog.visible = True
                 dialog.isVisible.return_value = True
                 assert ManualOffsetDialogSingleton.is_dialog_open()
-                
+
                 # Make dialog not visible
                 dialog.visible = False
                 dialog.isVisible.return_value = False
@@ -171,10 +171,10 @@ class TestManualOffsetDialogSingletonUnit:
     def test_singleton_get_current_dialog_method(self, setup_singleton_cleanup, mock_panel):
         """Test get_current_dialog method."""
         ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
-        
+
         # No dialog exists
         assert ManualOffsetDialogSingleton.get_current_dialog() is None
-        
+
         # Create mock dialog instance
         mock_dialog = MockDialogClass()
         mock_dialog.visible = False
@@ -185,23 +185,23 @@ class TestManualOffsetDialogSingletonUnit:
         mock_dialog.finished.connect = MagicMock()
         mock_dialog.rejected.connect = MagicMock()
         mock_dialog.destroyed.connect = MagicMock()
-        
+
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
             with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
                 # Create dialog
                 dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
+
                 # Dialog not visible initially
                 assert ManualOffsetDialogSingleton.get_current_dialog() is None
-                
+
                 # Make dialog visible
                 dialog.visible = True
                 dialog.isVisible.return_value = True
-                
+
                 # Should return the dialog
                 current = ManualOffsetDialogSingleton.get_current_dialog()
                 assert current is dialog
-                
+
                 # Make dialog not visible
                 dialog.visible = False
                 dialog.isVisible.return_value = False
@@ -210,7 +210,7 @@ class TestManualOffsetDialogSingletonUnit:
     def test_singleton_with_parent_panel(self, setup_singleton_cleanup, mock_panel):
         """Test singleton creation with parent panel."""
         ManualOffsetDialogSingleton, MockDialogClass = setup_singleton_cleanup
-        
+
         # Create mock dialog instance
         mock_dialog = MockDialogClass()
         mock_dialog.finished = MagicMock()
@@ -219,20 +219,20 @@ class TestManualOffsetDialogSingletonUnit:
         mock_dialog.finished.connect = MagicMock()
         mock_dialog.rejected.connect = MagicMock()
         mock_dialog.destroyed.connect = MagicMock()
-        
+
         with patch('ui.rom_extraction_panel.UnifiedManualOffsetDialog', return_value=mock_dialog):
             with patch.object(ManualOffsetDialogSingleton, '_ensure_main_thread', return_value=None):
                 # Create dialog with panel
                 dialog = ManualOffsetDialogSingleton.get_dialog(mock_panel)
-                
+
                 # Should store panel reference
                 assert dialog is not None
                 assert ManualOffsetDialogSingleton._instance is dialog
-                
+
                 # The panel should have managers
                 assert mock_panel.extraction_manager is not None
                 assert mock_panel.rom_extractor is not None
-                
+
                 # Dialog can have managers set via set_managers method
                 dialog.set_managers(mock_panel.extraction_manager, mock_panel.rom_extractor)
                 assert dialog.extraction_manager == mock_panel.extraction_manager

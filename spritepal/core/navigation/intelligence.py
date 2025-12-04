@@ -670,7 +670,7 @@ class SimilarityEngine:
             return 0.5  # Unknown similarity
 
         # Hamming distance for fingerprint comparison
-        differences = sum(b1 != b2 for b1, b2 in zip(fp1, fp2))
+        differences = sum(b1 != b2 for b1, b2 in zip(fp1, fp2, strict=False))
         return 1.0 - (differences / len(fp1))
 
     def _calculate_metadata_similarity(self, sprite1: SpriteLocation, sprite2: SpriteLocation) -> float:

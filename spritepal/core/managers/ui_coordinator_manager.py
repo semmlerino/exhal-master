@@ -7,7 +7,8 @@ into a single cohesive unit for better UI coordination.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Protocol
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Protocol
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
@@ -20,7 +21,6 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QToolBar,
 )
-
 from utils.type_aliases import override
 
 from .base_manager import BaseManager

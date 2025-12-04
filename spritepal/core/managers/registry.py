@@ -8,7 +8,6 @@ import weakref
 from typing import Any
 
 from PySide6.QtWidgets import QApplication
-
 from utils.logging_config import get_logger
 from utils.safe_logging import (
     safe_debug,

@@ -17,17 +17,17 @@ from __future__ import annotations
 
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from queue import Empty, PriorityQueue
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QPixmap
-
     from core.async_rom_cache import AsyncROMCache
+    from PySide6.QtGui import QPixmap
     from ui.common.preview_worker_pool import PreviewWorkerPool
     from utils.rom_cache import ROMCache
 

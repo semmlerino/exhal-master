@@ -10,16 +10,15 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 
 # Import all dialogs
 from ui.dialogs import (
-# Systematic pytest markers applied based on test content analysis
-
+    # Systematic pytest markers applied based on test content analysis
     ResumeScanDialog,
     SettingsDialog,
     UserErrorDialog,
 )
+from ui.dialogs import UnifiedManualOffsetDialog as ManualOffsetDialog
 from ui.grid_arrangement_dialog import GridArrangementDialog
 from ui.injection_dialog import InjectionDialog
 from ui.row_arrangement_dialog import RowArrangementDialog
@@ -58,7 +57,7 @@ class TestDialogInstantiation:
         # Test that preview widget is initialized
         assert dialog.preview_widget is not None
         assert dialog.status_panel is not None
-        
+
         # Test that we can call basic methods that use these components
         # If any widget is None, this will raise AttributeError naturally
         # Don't call set_rom_data as it needs a real extraction_manager

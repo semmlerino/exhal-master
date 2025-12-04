@@ -6,6 +6,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+
 def fix_remaining_mock_issues(filepath: Path) -> None:
     """Fix remaining Mock parent issues that the automated script missed."""
     content = filepath.read_text()

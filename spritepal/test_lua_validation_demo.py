@@ -10,8 +10,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from validate_lua_vs_spritepal_offsets import LuaSpritePalValidator
 from utils.logging_config import get_logger
+from validate_lua_vs_spritepal_offsets import LuaSpritePalValidator
 
 logger = get_logger(__name__)
 
@@ -42,7 +42,7 @@ def create_sample_lua_output():
             {"offset": 0x320000, "hits": 11}   # Another test area
         ]
     }
-    
+
     return sample_data
 
 
@@ -69,7 +69,7 @@ def create_sample_precise_lua_output():
             "0x340000": True   # Edge case area
         }
     }
-    
+
     return sample_data
 
 
@@ -81,54 +81,54 @@ def run_validation_demo(rom_path: str):
         rom_path: Path to a ROM file for testing
     """
     logger.info("=== ROM Offset Validation Demo ===")
-    
+
     if not Path(rom_path).exists():
         logger.error(f"ROM file not found: {rom_path}")
         logger.info("Please provide a valid ROM file path to run the demo")
         return
-        
+
     # Create temporary JSON files with sample data
     with tempfile.NamedTemporaryFile(mode='w', suffix='_fixed.json', delete=False) as f:
         json.dump(create_sample_lua_output(), f, indent=2)
         fixed_json_path = f.name
-        
+
     with tempfile.NamedTemporaryFile(mode='w', suffix='_precise.json', delete=False) as f:
         json.dump(create_sample_precise_lua_output(), f, indent=2)
         precise_json_path = f.name
-        
+
     try:
         # Test both formats
         for json_path, script_type in [(fixed_json_path, "Fixed Offsets"), (precise_json_path, "Precise Offsets")]:
             logger.info(f"\n--- Testing {script_type} Format ---")
-            
+
             # Initialize validator
             validator = LuaSpritePalValidator(rom_path)
-            
+
             # Load Lua results
             lua_offsets = validator.load_lua_results(json_path)
             logger.info(f"Loaded {len(lua_offsets)} offsets from {script_type} data")
-            
+
             # Validate with SpritePal
             logger.info("Running SpritePal validation on each offset...")
             validation_results = validator.validate_offsets_with_spritepal(lua_offsets)
-            
+
             # Analyze results
             summary = validator.analyze_results(lua_offsets, validation_results)
-            
+
             # Print results
             print(f"\n{script_type} Results:")
             print(f"  Total offsets: {summary['total_lua_offsets']}")
             print(f"  Valid sprites: {summary['valid_sprites_found']}")
             print(f"  Accuracy: {summary['accuracy_rate']:.1%}")
             print(f"  High confidence: {summary['high_confidence_sprites']}")
-            
+
             # Show some example results
             if summary['valid_sprites_found'] > 0:
                 print("  Example valid sprites:")
                 for result in validator.results["matches"][:3]:  # Show first 3
                     print(f"    {result['offset_hex']}: confidence={result['confidence']:.3f}, "
                           f"tiles={result['tile_count']}")
-                          
+
     finally:
         # Clean up temporary files
         Path(fixed_json_path).unlink()
@@ -180,17 +180,17 @@ and provides confidence in sprite detection accuracy.
 def main():
     """Main demo routine."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Demo ROM offset validation")
     parser.add_argument("--rom", help="Path to ROM file for testing")
     parser.add_argument("--explain", action="store_true", help="Explain the validation process")
-    
+
     args = parser.parse_args()
-    
+
     if args.explain:
         explain_validation_process()
         return
-        
+
     if args.rom:
         run_validation_demo(args.rom)
     else:

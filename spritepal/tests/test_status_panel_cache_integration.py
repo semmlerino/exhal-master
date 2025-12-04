@@ -20,9 +20,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtWidgets import QApplication
-
 from core.managers import cleanup_managers, initialize_managers
+from PySide6.QtWidgets import QApplication
 from ui.components.panels.status_panel import StatusPanel
 from utils.rom_cache import ROMCache
 
