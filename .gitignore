@@ -27,12 +27,15 @@ MANIFEST
 
 # Virtual Environments
 .env
-.venv
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+.venv_temp/
+**/venv/
+**/.venv/
 
 # PyInstaller
 *.manifest
@@ -211,6 +214,15 @@ partui.jpg
 spriUI.jpg
 uiv2.jpg
 stillno.jpg
+ScreenWin*.jpg
+*_screenshot*.png
+Clipboard\ Image*.jpg
+
+# Document files (PDFs, Word docs)
+*.pdf
+*.docx
+*.doc
+!docs/**/*.pdf
 
 # VRAM analysis files
 vram_*.png
@@ -225,3 +237,45 @@ sprite_scan_results_*.json
 # Metrics and benchmarks
 metrics/
 benchmark_results.json
+
+# Mesen2 emulator files
+Mesen2/
+mesen2_automation/
+mesen2_integration/
+*.lua.bak
+
+# Extracted/generated sprite directories
+extracted_sprites/
+roms/
+sprite_output/
+
+# Serena MCP cache
+.serena/
+
+# UITest settings
+*uitest_settings.json
+
+# Pip install artifacts (version strings)
+=*
+
+# One-off scripts that shouldn't be committed
+aggressive_fix.py
+analyze_test_failures.py
+build_sprite_map.py
+capture_*.py
+check_*.lua
+create_mock_*.py
+debug_*.py
+describe_*.py
+diagnose_*.py
+example_*.py
+filter_*.py
+find_sprite_*.py
+fix_*.py
+gallery_tab_info.py
+generate_mock_*.py
+inspect_*.py
+install_pyside6.py
+
+# uv lock file (optional - comment out if you want to track it)
+# uv.lock
