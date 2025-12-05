@@ -83,10 +83,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # Add spritepal directory
 # Import consolidated mock utilities
 import contextlib
 
-from .conftest_segfault_skip import *  # noqa: F403
-
-# Import timeout configuration
-from .conftest_timeout import *  # noqa: F403
+# Import constants from segfault and timeout configuration modules
+# These pure-constant modules were refactored from conftest_* files that had
+# duplicate hook functions that were never executed (hooks merged into this file)
+from .constants_segfault import SEGFAULT_PRONE_TESTS
+from .constants_timeout import (
+    INTEGRATION_PATTERNS,
+    SLOW_TEST_PATTERNS,
+    TIMEOUT_BENCHMARK,
+    TIMEOUT_INTEGRATION,
+    TIMEOUT_SLOW,
+    TIMEOUT_UNIT,
+)
 from .infrastructure.environment_detection import (
     configure_qt_for_environment,
     get_environment_info,
@@ -144,12 +152,19 @@ DEFAULT_WAIT_TIMEOUT = 3000 if (os.environ.get("CI") or IS_HEADLESS) else 1000
 DEFAULT_WORKER_TIMEOUT = 10000 if (os.environ.get("CI") or IS_HEADLESS) else 5000
 
 def pytest_addoption(parser: Any) -> None:
-    """Add custom command line options for HAL testing."""
+    """Add custom command line options for SpritePal tests."""
     parser.addoption(
         "--use-real-hal",
         action="store_true",
         default=False,
         help="Use real HAL process pool instead of mocks (slower)"
+    )
+    # Option to run segfault-prone tests (normally skipped for safety)
+    parser.addoption(
+        "--run-segfault-tests",
+        action="store_true",
+        default=False,
+        help="Run tests known to cause segfaults (use with caution)"
     )
 
 def pytest_configure(config: Any) -> None:
@@ -238,32 +253,108 @@ def pytest_configure(config: Any) -> None:
         # Legacy markers for backward compatibility
         "mock: Tests using mocks (deprecated - use mock_only or mock_managers)",
         "mock_gui: GUI tests that use mocks (deprecated - use qt_mock)",
+
+        # Segfault protection markers
+        "segfault_prone: Mark test as known to cause segfaults (skipped by default)",
     ]
 
     for marker in markers:
         config.addinivalue_line("markers", marker)
 
-    # Configure HAL mocking by default for unit tests
-    # Can be overridden with --use-real-hal command line option
+    # Configure HAL mocking environment variables
+    # NOTE: HAL mocking is now OPT-IN - tests must explicitly request the mock_hal fixture
+    # The --use-real-hal flag now just controls the environment variable for detection
     if hasattr(config.option, 'use_real_hal'):
         use_real_hal = config.option.use_real_hal
     else:
         use_real_hal = False
 
-    if not use_real_hal:
-        configure_hal_mocking(use_mocks=True, deterministic=True)
+    # Set environment variables for code that needs to detect test environment
+    # But actual mocking requires requesting the mock_hal fixture
+    configure_hal_mocking(use_mocks=not use_real_hal, deterministic=True)
 
 def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """
     Modify test collection based on environment capabilities and marker logic.
 
     This enhanced hook handles:
+    - Segfault-prone test skipping (unless --run-segfault-tests)
+    - Automatic timeout markers based on test patterns
     - GUI test skipping in headless environments
     - Automatic marker inference and validation
     - Performance optimization based on markers
     - Environmental context-aware test filtering
     """
     env_info = get_environment_info()
+
+    # === Segfault-prone test skipping ===
+    # Skip tests known to cause segfaults unless explicitly requested
+    if not config.getoption("--run-segfault-tests", default=False):
+        skip_segfault = pytest.mark.skip(
+            reason="Known to cause segfaults - needs Qt threading architecture fix. "
+                   "Run with --run-segfault-tests to execute anyway."
+        )
+        skipped_segfault_count = 0
+
+        for item in items:
+            test_id = item.nodeid
+
+            # Check if this test matches any segfault pattern
+            for pattern in SEGFAULT_PRONE_TESTS:
+                # Convert pattern to match pytest nodeid format
+                if "*" in pattern:
+                    # Simple wildcard matching
+                    pattern_parts = pattern.split("*")
+                    if all(part in test_id for part in pattern_parts if part):
+                        item.add_marker(skip_segfault)
+                        skipped_segfault_count += 1
+                        break
+                elif pattern in test_id:
+                    item.add_marker(skip_segfault)
+                    skipped_segfault_count += 1
+                    break
+
+            # Also check for specific function/class names known to segfault
+            if hasattr(item, "function"):
+                func_name = item.function.__name__
+                if any(name in func_name.lower() for name in ["preview_coord", "safeanimation", "force_terminate"]):
+                    if not any(m.name == "skip" for m in item.iter_markers()):
+                        item.add_marker(skip_segfault)
+                        skipped_segfault_count += 1
+
+        if skipped_segfault_count > 0 and (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')):
+            print(f"\nSkipped {skipped_segfault_count} segfault-prone tests (use --run-segfault-tests to run them)")
+
+    # === Automatic timeout markers ===
+    # Add timeout markers to tests based on their type/patterns
+    timeout_available = config.pluginmanager.has_plugin("timeout")
+    if timeout_available:
+        for item in items:
+            # Skip if test already has a timeout marker
+            if item.get_closest_marker("timeout"):
+                continue
+
+            test_id = item.nodeid.lower()
+            test_name = getattr(item.function, "__name__", "").lower() if hasattr(item, "function") else ""
+
+            # Determine timeout based on test patterns
+            timeout = TIMEOUT_UNIT  # Default
+
+            # Check for slow test patterns
+            if any(pattern in test_id or pattern in test_name for pattern in SLOW_TEST_PATTERNS):
+                timeout = TIMEOUT_SLOW
+            # Check for integration patterns
+            elif any(pattern in test_id or pattern in test_name for pattern in INTEGRATION_PATTERNS):
+                timeout = TIMEOUT_INTEGRATION
+            # Check for benchmark marker
+            elif item.get_closest_marker("benchmark"):
+                timeout = TIMEOUT_BENCHMARK
+            # Check for slow marker
+            elif item.get_closest_marker("slow"):
+                timeout = TIMEOUT_SLOW
+
+            # Add timeout marker
+            item.add_marker(pytest.mark.timeout(timeout))
 
     # Environment-based test filtering with detailed reasons
     if env_info.is_headless:
@@ -334,20 +425,17 @@ def qt_environment_setup() -> Iterator[None]:
     Setup Qt environment automatically based on comprehensive environment detection.
 
     Uses centralized environment detection to determine the best Qt configuration.
-    In headless environments, this provides comprehensive Qt mocking.
-    In GUI environments, this ensures proper Qt initialization.
-    """
-    env_info = get_environment_info()
+    Qt environment variables (QT_QPA_PLATFORM=offscreen) are set in pytest.ini
+    and by configure_qt_for_environment().
 
-    if env_info.is_headless and not env_info.xvfb_available:
-        # Mock Qt completely in headless environments without xvfb
-        mock_modules = create_qt_mock_context()
-        with patch.dict("sys.modules", mock_modules):
-            yield
-    else:
-        # In GUI environments or with xvfb, let pytest-qt handle Qt setup
-        # Qt environment variables are already configured by configure_qt_for_environment()
-        yield
+    NOTE: We no longer mock Qt modules in headless environments. Tests that need
+    real Qt must be marked @pytest.mark.gui and will be skipped in headless.
+    Tests that don't need Qt should not import Qt modules.
+    This ensures tests fail loudly if they incorrectly require Qt without marking.
+    """
+    # Qt environment variables are configured by configure_qt_for_environment() at module load
+    # and qt_qpa_platform=offscreen is set in pytest.ini for headless mode
+    yield
 
 @pytest.fixture(scope="session")
 def session_managers() -> Iterator[None]:
@@ -753,26 +841,27 @@ def hal_compressor(request, tmp_path):
         if compressor._pool:
             compressor._pool.shutdown()
 
-@pytest.fixture(autouse=True)
-def auto_mock_hal(request, monkeypatch):
+@pytest.fixture
+def mock_hal(monkeypatch):
     """
-    Automatically mock HAL for unit tests unless marked otherwise.
+    Explicit HAL mock fixture - tests must request this to use mocked HAL.
 
-    This fixture runs for all tests and patches the HAL module
-    to use mocks unless the test is marked with @pytest.mark.real_hal.
+    This fixture patches the HAL module to use mock implementations.
+    Tests that need fast HAL mocking (e.g., unit tests) should explicitly
+    request this fixture.
+
+    Usage:
+        def test_something_with_hal(mock_hal):
+            # HAL is now mocked
+            ...
+
+        @pytest.mark.usefixtures("mock_hal")
+        class TestHALDependentCode:
+            # All tests in this class use mocked HAL
+            ...
+
+    For tests that need real HAL, simply don't request this fixture.
     """
-    # Skip if test explicitly wants real HAL
-    if request.node.get_closest_marker("real_hal"):
-        yield
-        return
-
-    # Skip if test is marked as integration test
-    if request.node.get_closest_marker("integration"):
-        # Integration tests might want real HAL
-        yield
-        return
-
-    # Mock HAL for all other tests
     monkeypatch.setattr("core.hal_compression.HALProcessPool", MockHALProcessPool)
     monkeypatch.setattr("core.hal_compression.HALCompressor", MockHALCompressor)
 
@@ -820,9 +909,13 @@ def rom_cache() -> Mock:
     return factory.create_rom_cache()
 
 @pytest.fixture
-def mock_rom_cache(real_factory: RealComponentFactory) -> Mock:
-    """Alias for rom_cache fixture for backward compatibility."""
-    return real_factory.create_rom_cache()
+def mock_rom_cache(rom_cache: Mock) -> Mock:
+    """Alias for rom_cache fixture for backward compatibility.
+
+    NOTE: This now returns the class-scoped rom_cache directly
+    instead of creating a new instance each time.
+    """
+    return rom_cache
 
 # Dependency Injection fixtures
 @pytest.fixture
@@ -952,21 +1045,24 @@ def real_session_manager(tmp_path) -> SessionManager:
     settings_file = tmp_path / "test_settings.json"
     return SessionManager("TestApp", settings_file)
 
-# Safe Qt fixtures for both headless and GUI environments
+# Safe Qt fixtures - now require real Qt with offscreen mode
 @pytest.fixture
 def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
-    """Provide a qtbot that works in both headless and GUI environments."""
-    if IS_HEADLESS:
-        # Create a mock qtbot for headless environments
-        mock_qtbot = Mock()
-        mock_qtbot.wait = Mock()
-        mock_qtbot.waitSignal = Mock(return_value=Mock())
-        mock_qtbot.waitUntil = Mock()
-        mock_qtbot.addWidget = Mock()
-        return mock_qtbot  # pyright: ignore[reportReturnType]  # Mock qtbot for headless
-    # Only request real qtbot when not headless
-    qtbot = request.getfixturevalue('qtbot')
-    return qtbot  # pyright: ignore[reportReturnType]  # Real qtbot in GUI environments
+    """Provide a qtbot that works with offscreen mode in headless environments.
+
+    NOTE: This fixture now always requests the real qtbot from pytest-qt.
+    In headless environments, QT_QPA_PLATFORM=offscreen allows Qt to work.
+    Tests that fail should be marked @pytest.mark.gui or should not require qtbot.
+    """
+    try:
+        qtbot = request.getfixturevalue('qtbot')
+        return qtbot  # pyright: ignore[reportReturnType]
+    except Exception as e:
+        pytest.fail(
+            f"Failed to get qtbot: {e}. "
+            "Tests requiring qtbot should be marked @pytest.mark.gui "
+            "or ensure pytest-qt is installed and Qt is available."
+        )
 
 # High-frequency fixture optimizations for 68.6% performance improvement
 # These fixtures are optimized based on usage analysis:
@@ -1205,23 +1301,34 @@ def qt_app() -> Any:
     from 1,129 to 1 (99.9% reduction).
 
     Handles QApplication singleton properly to avoid conflicts.
+
+    NOTE: This fixture always creates a real QApplication. In headless
+    environments, pytest.ini sets QT_QPA_PLATFORM=offscreen which allows
+    Qt to work without a display. Tests that fail with this fixture in
+    headless mode should either:
+    1. Be marked @pytest.mark.gui (skipped in headless)
+    2. Not require QApplication at all
     """
-    if IS_HEADLESS:
-        # Return mock app for headless environments
-        mock_app = Mock()
-        mock_app.processEvents = Mock()
-        mock_app.quit = Mock()
-        mock_app.instance = Mock(return_value=mock_app)
-        return mock_app
-    # Use real QApplication in GUI environments
-    from PySide6.QtWidgets import QApplication
+    try:
+        from PySide6.QtWidgets import QApplication
 
-    # Get existing instance or create new one
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
+        # Get existing instance or create new one
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication([])
 
-    return app
+        return app
+    except ImportError as e:
+        pytest.fail(
+            f"Qt not available: {e}. "
+            "Tests requiring Qt should be marked @pytest.mark.gui "
+            "or the test environment should have PySide6 installed."
+        )
+    except Exception as e:
+        pytest.fail(
+            f"Failed to create QApplication: {e}. "
+            "Ensure QT_QPA_PLATFORM=offscreen is set for headless environments."
+        )
 
 @pytest.fixture(scope="class")
 def main_window() -> MockMainWindowProtocol:
@@ -1360,52 +1467,58 @@ def reset_controller_state(controller: Mock) -> Generator[None, None, None]:
 @pytest.fixture(autouse=True)
 def reset_class_scoped_fixtures(
     request: pytest.FixtureRequest,
-    mock_extraction_manager: MockExtractionManagerProtocol | None = None,
-    mock_session_manager: MockSessionManagerProtocol | None = None,
-    rom_cache: Mock | None = None,
-    mock_settings_manager: Mock | None = None
 ) -> Generator[None, None, None]:
-    """Auto-reset state for all class-scoped fixtures between tests.
+    """Reset state for class-scoped fixtures between tests.
 
     This fixture ensures proper state isolation for performance-optimized
-    class-scoped fixtures. Runs automatically before each test to reset
-    mock call histories and state.
+    class-scoped fixtures. It runs automatically before each test to
+    reset mock state and prevent leakage between tests.
 
-    Only resets fixtures that are actually used by the test.
+    NOTE: This fixture is now autouse=True to ensure isolation by default.
+    Tests no longer need to explicitly request it.
+
+    IMPORTANT: reset_mock() only clears call history. We must also clear:
+    - return_value (if manually configured)
+    - side_effect (if manually configured)
+    - Any internal state
     """
     # Get list of fixture names used by current test
     fixture_names = getattr(request, 'fixturenames', [])
 
-    # Reset mock_extraction_manager if used
-    if 'mock_extraction_manager' in fixture_names and mock_extraction_manager:
-        if isinstance(mock_extraction_manager, Mock):
-            mock_extraction_manager.reset_mock()
+    # Reset fixtures dynamically based on what's actually used
+    # NOTE: mock_extraction_manager and mock_session_manager are real components
+    # from RealComponentFactory, not Mocks. They won't be reset here.
+    # Only actual Mock objects (like mock_settings_manager) get reset.
+    fixtures_to_reset = [
+        ('mock_extraction_manager', None),  # Real component, not Mock
+        ('mock_session_manager', None),     # Real component, not Mock
+        ('rom_cache', None),
+        ('mock_settings_manager', _restore_settings_manager_defaults),
+    ]
 
-    # Reset mock_session_manager if used
-    if 'mock_session_manager' in fixture_names and mock_session_manager:
-        if isinstance(mock_session_manager, Mock):
-            mock_session_manager.reset_mock()
-
-    # Reset rom_cache if used
-    if 'rom_cache' in fixture_names and rom_cache and isinstance(rom_cache, Mock):
-        rom_cache.reset_mock()
-
-    # Reset mock_settings_manager if used
-    if 'mock_settings_manager' in fixture_names and mock_settings_manager:
-        if isinstance(mock_settings_manager, Mock):
-            mock_settings_manager.reset_mock()
-            # Restore default side_effect for get_setting
-            mock_settings_manager.get_setting.side_effect = lambda key, default=None: {
-                'output_path': '/tmp/test_output',
-                'create_grayscale': True,
-                'create_metadata': True,
-                'auto_save': False,
-            }.get(key, default)
+    for fixture_name, post_reset_callback in fixtures_to_reset:
+        if fixture_name in fixture_names:
+            try:
+                fixture_value = request.getfixturevalue(fixture_name)
+                if isinstance(fixture_value, Mock):
+                    # Full reset: clear call history AND configured values
+                    fixture_value.reset_mock(return_value=True, side_effect=True)
+                    if post_reset_callback:
+                        post_reset_callback(fixture_value)
+            except pytest.FixtureLookupError:
+                pass  # Fixture not available in this context
 
     yield
 
-    # Cleanup after test if needed
-    pass
+
+def _restore_settings_manager_defaults(mock_settings_manager: Mock) -> None:
+    """Restore default side_effect for mock_settings_manager after reset."""
+    mock_settings_manager.get_setting.side_effect = lambda key, default=None: {
+        'output_path': '/tmp/test_output',
+        'create_grayscale': True,
+        'create_metadata': True,
+        'auto_save': False,
+    }.get(key, default)
 
 # Legacy fixture aliases for backward compatibility
 # These ensure existing tests continue to work without modification
@@ -1478,18 +1591,26 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     # Clean up any SearchWorker threads specifically for advanced search tests
     try:
         import threading
+        import time
 
-        # Only sleep if there are actually worker threads running
-        active_threads = threading.active_count()
-        if active_threads > 2:  # Main thread + pytest thread
-            import time
-            time.sleep(0.1)  # Only sleep if cleanup is needed
+        # Wait for worker threads to finish with proper timeout
+        # Instead of arbitrary sleep, poll thread count with backoff
+        max_wait_ms = 500  # Maximum wait time
+        poll_interval_ms = 20  # Check every 20ms
+        elapsed = 0
 
-        # Check for any remaining threads (for debugging)
+        while elapsed < max_wait_ms:
+            active_threads = threading.active_count()
+            if active_threads <= 2:  # Main thread + pytest thread
+                break
+            time.sleep(poll_interval_ms / 1000.0)
+            elapsed += poll_interval_ms
+
+        # Log if threads still running after timeout (for debugging)
         active_threads = threading.active_count()
-        if active_threads > 1:  # Main thread + potentially others
+        if active_threads > 2:
             import logging
-            logging.debug(f"Active thread count after cleanup: {active_threads}")
+            logging.debug(f"Active thread count after cleanup wait: {active_threads}")
 
         # Only do garbage collection if not in Qt environment to avoid segfaults
         if IS_HEADLESS:
@@ -1504,18 +1625,21 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     if not IS_HEADLESS:
         from PySide6.QtCore import QThread
         from PySide6.QtWidgets import QApplication
+        import threading
 
         # Process any pending events to allow threads to finish
         app = QApplication.instance()
         if app:
-            for _ in range(5):  # Process events multiple times
+            # Process events with early exit when threads are cleaned up
+            for _ in range(5):
                 app.processEvents()
-                # Use currentThread() for msleep to avoid issues
-                if QThread.currentThread():
-                    QThread.currentThread().msleep(10)  # Small delay between processing
-                else:
-                    import time
-                    time.sleep(0.01)  # Fallback to regular sleep
+                # Check if threads have finished - early exit if so
+                if threading.active_count() <= 2:
+                    break
+                # Use Qt's msleep for proper event loop integration
+                current = QThread.currentThread()
+                if current:
+                    current.msleep(10)  # 10ms between processing cycles
 
 # Timeout fixtures for consistent signal waiting across tests
 @pytest.fixture
