@@ -657,68 +657,129 @@ _fixture_manager = SafeFixtureManager()
 
 # Factory functions for creating safe fixtures
 
-def create_safe_qtbot(request: FixtureRequest | None = None, timeout_override: int | None = None) -> SafeQtBotProtocol:
+def create_safe_qtbot(
+    request: FixtureRequest | None = None,
+    timeout_override: int | None = None,
+    allow_mock: bool = False,
+) -> SafeQtBotProtocol:
     """
-    Create safe qtbot that works in both headless and GUI environments.
+    Create safe qtbot that works with real Qt in offscreen mode.
+
+    By default, this function requires real Qt and fails loudly if unavailable.
+    Use allow_mock=True only for tests that explicitly don't need real Qt behavior.
 
     Args:
         request: Pytest fixture request (optional)
         timeout_override: Override default timeouts for specific tests
+        allow_mock: If True, allow mock fallback. If False (default), require real Qt.
 
     Returns:
-        Safe qtbot implementation (real or mock based on environment)
+        Safe qtbot implementation (real in offscreen mode, or mock if allow_mock=True)
+
+    Raises:
+        HeadlessModeError: If real Qt unavailable and allow_mock=False
     """
+    import os
+
     env_info = get_environment_info()
 
+    # In headless mode without xvfb, ensure offscreen platform is configured
     if env_info.is_headless and not env_info.xvfb_available:
-        # Use mock qtbot in headless environments without display
-        qtbot = SafeQtBot(headless=True)
-        logger.info("Created mock qtbot for headless environment")
-    else:
-        # Try to use real qtbot in GUI environments or with xvfb
-        try:
-            import pytest_qt  # noqa: F401
-            # Get real qtbot from pytest-qt if available
-            real_qtbot = None
-            if request and hasattr(request, 'getfixturevalue'):
-                try:
-                    # This might fail if pytest-qt fixtures aren't available
-                    real_qtbot = request.getfixturevalue('qtbot')
-                except Exception:
-                    pass
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-            qtbot = SafeQtBot(real_qtbot=real_qtbot, headless=False)
-            logger.info("Created real qtbot wrapper for GUI environment")
-        except ImportError:
-            # Fallback to mock if pytest-qt not available
+    # Try to create real qtbot with offscreen rendering
+    try:
+        import pytest_qt  # noqa: F401
+
+        # Get real qtbot from pytest-qt if available
+        real_qtbot = None
+        if request and hasattr(request, 'getfixturevalue'):
+            try:
+                real_qtbot = request.getfixturevalue('qtbot')
+            except Exception as e:
+                logger.debug(f"Could not get real qtbot from request: {e}")
+
+        qtbot = SafeQtBot(real_qtbot=real_qtbot, headless=False)
+        logger.info("Created real qtbot wrapper (offscreen mode if headless)")
+
+    except ImportError as e:
+        # pytest-qt not available
+        if allow_mock:
             qtbot = SafeQtBot(headless=True)
-            logger.warning("pytest-qt not available, using mock qtbot")
+            logger.warning(f"pytest-qt not available, using mock qtbot (allow_mock=True): {e}")
+        else:
+            raise HeadlessModeError(
+                f"Cannot create real qtbot: pytest-qt not available ({e})\n"
+                "Options:\n"
+                "  1. Install pytest-qt: pip install pytest-qt\n"
+                "  2. Use mock_qtbot fixture for tests that don't need real Qt\n"
+                "  3. Mark test with @pytest.mark.mock_qt"
+            ) from e
+
+    except Exception as e:
+        # Other Qt initialization errors
+        if allow_mock:
+            qtbot = SafeQtBot(headless=True)
+            logger.warning(f"Qt initialization failed, using mock qtbot (allow_mock=True): {e}")
+        else:
+            raise HeadlessModeError(
+                f"Cannot create real qtbot: {e}\n"
+                "Options:\n"
+                "  1. Set QT_QPA_PLATFORM=offscreen for headless environments\n"
+                "  2. Install xvfb and run with: xvfb-run pytest\n"
+                "  3. Use mock_qtbot fixture for tests that don't need real Qt"
+            ) from e
 
     # Register for cleanup
     _fixture_manager.register_qtbot(qtbot)
 
     return qtbot  # type: ignore[return-value]  # Runtime protocol compliance
 
-def create_safe_qapp(args: list[str] | None = None) -> SafeQApplicationProtocol:
+def create_safe_qapp(
+    args: list[str] | None = None,
+    allow_mock: bool = False,
+) -> SafeQApplicationProtocol:
     """
-    Create safe QApplication that works in both headless and GUI environments.
+    Create safe QApplication that works with real Qt in offscreen mode.
+
+    By default, this function requires real Qt and fails loudly if unavailable.
+    Use allow_mock=True only for tests that explicitly don't need real Qt behavior.
 
     Args:
         args: Command line arguments for QApplication
+        allow_mock: If True, allow mock fallback. If False (default), require real Qt.
 
     Returns:
-        Safe QApplication implementation (real or mock based on environment)
+        Safe QApplication implementation (real in offscreen mode, or mock if allow_mock=True)
+
+    Raises:
+        HeadlessModeError: If real Qt unavailable and allow_mock=False
     """
+    import os
+
     env_info = get_environment_info()
 
+    # In headless mode without xvfb, ensure offscreen platform is configured
     if env_info.is_headless and not env_info.xvfb_available:
-        # Use mock app in headless environments
-        app = SafeQApplication(headless=True, args=args)
-        logger.info("Created mock QApplication for headless environment")
-    else:
-        # Use real app in GUI environments or with xvfb
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
+    # Try to create real QApplication with offscreen rendering
+    try:
         app = SafeQApplication(headless=False, args=args)
-        logger.info("Created real QApplication for GUI environment")
+        logger.info("Created real QApplication (offscreen mode if headless)")
+
+    except Exception as e:
+        if allow_mock:
+            app = SafeQApplication(headless=True, args=args)
+            logger.warning(f"QApplication creation failed, using mock (allow_mock=True): {e}")
+        else:
+            raise HeadlessModeError(
+                f"Cannot create real QApplication: {e}\n"
+                "Options:\n"
+                "  1. Set QT_QPA_PLATFORM=offscreen for headless environments\n"
+                "  2. Install xvfb and run with: xvfb-run pytest\n"
+                "  3. Use allow_mock=True for tests that don't need real Qt"
+            ) from e
 
     # Register for cleanup
     _fixture_manager.register_app(app)

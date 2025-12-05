@@ -95,16 +95,33 @@ class RealComponentFactory:
     - Integration with TestDataRepository
     """
 
-    def __init__(self, data_repository: TestDataRepository | None = None):
+    def __init__(
+        self,
+        data_repository: TestDataRepository | None = None,
+        settings_dir: Path | None = None,
+    ):
         """
         Initialize the real component factory.
 
         Args:
             data_repository: Optional test data repository to use
+            settings_dir: Optional directory for test settings files.
+                         If not provided, a temp directory will be created
+                         and cleaned up when cleanup() is called.
         """
         self._data_repo = data_repository or get_test_data_repository()
         self._temp_dirs: list[Path] = []
         self._created_components: list[QObject] = []
+
+        # Set up isolated settings directory
+        if settings_dir is not None:
+            self._settings_dir = settings_dir
+        else:
+            # Create temp settings dir for isolation
+            self._settings_dir = Path(tempfile.mkdtemp(prefix="spritepal_settings_"))
+            self._temp_dirs.append(self._settings_dir)
+
+        self._settings_path = self._settings_dir / ".testapp_settings.json"
 
         # Ensure QApplication exists for Qt components
         if QApplication.instance() is None:
@@ -195,12 +212,16 @@ class RealComponentFactory:
 
         Returns:
             ManagerRegistry instance with real managers
+
+        Note:
+            Uses isolated temp settings path to avoid polluting repo
+            with .testapp_settings.json in the project root.
         """
         registry = ManagerRegistry()
 
         if populate:
-            # Initialize real managers via registry
-            registry.initialize_managers("TestApp", settings_path=Path(".testapp_settings.json"))
+            # Initialize real managers via registry with isolated settings
+            registry.initialize_managers("TestApp", settings_path=self._settings_path)
 
         return registry
 
@@ -215,10 +236,10 @@ class RealComponentFactory:
             Real MainWindow instance
         """
         if with_managers:
-            # Ensure managers are initialized
+            # Ensure managers are initialized with isolated settings
             registry = ManagerRegistry()
             if not registry.is_initialized():
-                registry.initialize_managers("TestApp", settings_path=Path(".testapp_settings.json"))
+                registry.initialize_managers("TestApp", settings_path=self._settings_path)
 
         window = MainWindow()
         self._created_components.append(window)

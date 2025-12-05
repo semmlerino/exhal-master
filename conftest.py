@@ -1,9 +1,12 @@
 """
 Root conftest.py for all tests in the project.
-Configures Qt for headless testing environments.
+Delegates Qt configuration to SpritePal's infrastructure.
+
+NOTE: SpritePal uses PySide6, NOT PyQt6. All Qt configuration is delegated
+to spritepal.tests.infrastructure.environment_detection which properly
+configures PySide6 for headless/offscreen testing.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -13,44 +16,27 @@ import pytest
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-# Qt imports - conditional to avoid issues when Qt is not needed
+# Delegate Qt configuration to SpritePal's infrastructure
+# This handles PySide6 configuration correctly for all environments
 try:
-    from PyQt6.QtWidgets import QApplication
-
-    QT_AVAILABLE = True
+    from spritepal.tests.infrastructure.environment_detection import (
+        configure_qt_for_environment,
+        get_environment_info,
+    )
+    configure_qt_for_environment()
+    _env_info = get_environment_info()
+    QT_CONFIGURED = True
 except ImportError:
-    QT_AVAILABLE = False
-
-
-def is_headless_environment():
-    """Detect if running in a headless environment"""
-    # Check for common headless environment indicators
-    if os.environ.get("CI"):  # Common CI environment variable
-        return True
-    if not os.environ.get("DISPLAY"):  # No X11 display
-        return True
-    if os.environ.get("QT_QPA_PLATFORM") == "offscreen":  # Already set
-        return True
-    # Check if we're in WSL
-    if sys.platform == "linux" and "microsoft" in os.uname().release.lower():
-        return True
-    return False
-
-
-# Configure Qt for headless testing if needed
-if QT_AVAILABLE and is_headless_environment():
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    os.environ["QT_QUICK_BACKEND"] = "software"
-    os.environ["QT_LOGGING_RULES"] = "*.debug=false"
+    # SpritePal infrastructure not available (e.g., running non-SpritePal tests)
+    QT_CONFIGURED = False
+    _env_info = None
 
 
 @pytest.fixture(scope="session", autouse=True)
 def qt_headless_config():
     """
     Automatically configure Qt for headless testing.
-    This runs before any tests to ensure Qt is properly configured.
+    Delegates to SpritePal's infrastructure for proper PySide6 configuration.
     """
-    if QT_AVAILABLE and is_headless_environment():
-        print("Detected headless environment - using Qt offscreen platform")
-        # Ensure the environment is set
-        os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    if QT_CONFIGURED and _env_info and _env_info.is_headless:
+        print(f"Qt configured for headless environment: {_env_info.platform}")

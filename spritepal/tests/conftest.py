@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         MockQtBotProtocol,
         MockSessionManagerProtocol,
     )
+    from utils.rom_cache import ROMCache
 
 import pytest
 
@@ -265,6 +266,9 @@ def pytest_configure(config: Any) -> None:
         "mock: Tests using mocks (deprecated - use mock_only or mock_managers)",
         "mock_gui: GUI tests that use mocks (deprecated - use qt_mock)",
 
+        # Explicit mock Qt marker
+        "mock_qt: Tests that explicitly use mock Qt (with mock_qtbot fixture)",
+
         # Segfault protection markers
         "segfault_prone: Mark test as known to cause segfaults (skipped by default)",
     ]
@@ -298,14 +302,20 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """
     env_info = get_environment_info()
 
-    # === Segfault-prone test skipping ===
-    # Skip tests known to cause segfaults unless explicitly requested
+    # === Segfault-prone test marking ===
+    # Mark tests known to cause segfaults as xfail(strict=True) unless explicitly requested
+    # Using xfail instead of skip ensures:
+    # 1. Tests still run and we track their actual status
+    # 2. If they unexpectedly pass, CI fails (forces acknowledgment of fixes)
+    # 3. Coverage visibility is maintained
     if not config.getoption("--run-segfault-tests", default=False):
-        skip_segfault = pytest.mark.skip(
+        xfail_segfault = pytest.mark.xfail(
             reason="Known to cause segfaults - needs Qt threading architecture fix. "
-                   "Run with --run-segfault-tests to execute anyway."
+                   "Run with --run-segfault-tests to execute without xfail marker.",
+            strict=True,  # Fail if test unexpectedly passes (forces acknowledgment)
+            run=True,     # Still run the test
         )
-        skipped_segfault_count = 0
+        xfail_segfault_count = 0
 
         for item in items:
             test_id = item.nodeid
@@ -317,24 +327,24 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
                     # Simple wildcard matching
                     pattern_parts = pattern.split("*")
                     if all(part in test_id for part in pattern_parts if part):
-                        item.add_marker(skip_segfault)
-                        skipped_segfault_count += 1
+                        item.add_marker(xfail_segfault)
+                        xfail_segfault_count += 1
                         break
                 elif pattern in test_id:
-                    item.add_marker(skip_segfault)
-                    skipped_segfault_count += 1
+                    item.add_marker(xfail_segfault)
+                    xfail_segfault_count += 1
                     break
 
             # Also check for specific function/class names known to segfault
             if hasattr(item, "function"):
                 func_name = item.function.__name__
                 if any(name in func_name.lower() for name in ["preview_coord", "safeanimation", "force_terminate"]):
-                    if not any(m.name == "skip" for m in item.iter_markers()):
-                        item.add_marker(skip_segfault)
-                        skipped_segfault_count += 1
+                    if not any(m.name == "xfail" for m in item.iter_markers()):
+                        item.add_marker(xfail_segfault)
+                        xfail_segfault_count += 1
 
-        if skipped_segfault_count > 0 and (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')):
-            print(f"\nSkipped {skipped_segfault_count} segfault-prone tests (use --run-segfault-tests to run them)")
+        if xfail_segfault_count > 0 and (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')):
+            print(f"\nMarked {xfail_segfault_count} segfault-prone tests as xfail (use --run-segfault-tests to run normally)")
 
     # === Automatic timeout markers ===
     # Add timeout markers to tests based on their type/patterns
@@ -460,13 +470,15 @@ def qt_environment_setup() -> Iterator[None]:
     yield
 
 @pytest.fixture(scope="session")
-def session_managers() -> Iterator[None]:
+def session_managers(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     """
     Session-scoped managers for performance optimization.
 
     This fixture initializes managers once per test session and keeps them
     alive for the entire session. Tests can use this for better performance
     by depending on this fixture instead of setup_managers.
+
+    Uses isolated temp settings directory to avoid polluting repo root.
 
     Usage:
         def test_something(session_managers):
@@ -477,12 +489,16 @@ def session_managers() -> Iterator[None]:
     from core.managers import cleanup_managers, initialize_managers
     from PySide6.QtWidgets import QApplication
 
+    # Create session-specific settings directory for isolation
+    settings_dir = tmp_path_factory.mktemp("session_settings")
+    settings_path = settings_dir / ".test_settings.json"
+
     # Ensure Qt app exists
     app = QApplication.instance()
     if app is None and not IS_HEADLESS:
         app = QApplication([])
 
-    initialize_managers("TestApp")
+    initialize_managers("TestApp", settings_path=settings_path)
     yield
     cleanup_managers()
 
@@ -492,7 +508,7 @@ def session_managers() -> Iterator[None]:
 
 
 @pytest.fixture
-def isolated_managers() -> Iterator[None]:
+def isolated_managers(tmp_path: Path) -> Iterator[None]:
     """
     Function-scoped managers for tests that need complete isolation.
 
@@ -504,6 +520,9 @@ def isolated_managers() -> Iterator[None]:
 
     Note: This is slower than session_managers but provides complete isolation.
 
+    IMPORTANT: This fixture includes an isolation guard that fails if the
+    ManagerRegistry is already initialized (indicates test pollution).
+
     Usage:
         def test_something_that_modifies_state(isolated_managers):
             # Fresh managers, isolated from other tests
@@ -512,21 +531,35 @@ def isolated_managers() -> Iterator[None]:
             # ... test code that modifies manager state ...
     """
     from core.managers import cleanup_managers, initialize_managers
+    from core.managers.registry import ManagerRegistry
     from PySide6.QtWidgets import QApplication
+
+    # Isolation guard: fail if registry already initialized (indicates pollution)
+    registry = ManagerRegistry()
+    if registry.is_initialized():
+        # Try to clean up first
+        try:
+            cleanup_managers()
+        except Exception:
+            pass
+        # If still initialized, fail with clear message
+        if registry.is_initialized():
+            pytest.fail(
+                "isolated_managers fixture requires uninitialized ManagerRegistry. "
+                "Another fixture or test may have leaked state. "
+                "Use session_managers for shared state, or ensure cleanup in prior tests."
+            )
+
+    # Use temp settings path for isolation
+    settings_path = tmp_path / ".test_settings.json"
 
     # Ensure Qt app exists
     app = QApplication.instance()
     if app is None and not IS_HEADLESS:
         app = QApplication([])
 
-    # Clean up any existing managers first
-    try:
-        cleanup_managers()
-    except Exception:
-        pass  # May fail if not initialized
-
-    # Initialize fresh managers for this test
-    initialize_managers("TestApp_Isolated")
+    # Initialize fresh managers for this test with isolated settings
+    initialize_managers("TestApp_Isolated", settings_path=settings_path)
 
     yield
 
@@ -967,19 +1000,20 @@ def hal_test_data() -> dict[str, bytes]:
     }
 
 @pytest.fixture(scope="class")
-def rom_cache() -> Mock:
+def rom_cache() -> ROMCache:
     """Class-scoped ROM cache fixture for performance optimization.
 
     Used 48 times across tests. Class scope reduces instantiations
     from 48 to ~10 (79% reduction).
 
     Provides a real ROM cache with common caching functionality.
+    Reset between tests via clear_cache() in reset_class_scoped_fixtures.
     """
     factory = RealComponentFactory()
     return factory.create_rom_cache()
 
 @pytest.fixture
-def mock_rom_cache(rom_cache: Mock) -> Mock:
+def mock_rom_cache(rom_cache: ROMCache) -> ROMCache:
     """Alias for rom_cache fixture for backward compatibility.
 
     NOTE: This now returns the class-scoped rom_cache directly
@@ -1150,112 +1184,94 @@ def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
 @pytest.fixture
 def enhanced_safe_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
     """
-    Enhanced safe qtbot fixture that works in both headless and GUI environments.
+    Enhanced safe qtbot fixture that requires real Qt (with offscreen in headless).
 
-    This fixture automatically detects the environment and provides:
-    - Real pytest-qt qtbot in GUI environments
-    - Mock qtbot with compatible API in headless environments
-    - Automatic cleanup and error handling
-    - Thread-safe resource management
+    This fixture provides real Qt functionality and fails loudly if Qt is unavailable.
+    Use mock_qtbot fixture instead for tests that explicitly don't need real Qt.
+
+    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
     """
-    try:
-        qtbot = create_safe_qtbot(request)
-        yield qtbot
-    except Exception as e:
-        report_fixture_error('enhanced_safe_qtbot', e, request)
-        # Provide mock qtbot as fallback
-        from .infrastructure.safe_fixtures import SafeQtBot
-        yield SafeQtBot(headless=True)
-    finally:
-        # Cleanup handled by fixture manager
-        pass
+    # No try/except - let HeadlessModeError propagate for clear failure
+    qtbot = create_safe_qtbot(request, allow_mock=False)
+    yield qtbot
+    # Cleanup handled by fixture manager
+
+
+@pytest.fixture
+def mock_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
+    """
+    Explicit mock qtbot fixture for tests that don't need real Qt.
+
+    Use this fixture with @pytest.mark.mock_qt to document that a test
+    intentionally uses mock Qt behavior.
+
+    Only use when:
+    - Testing logic that doesn't depend on real Qt signal/slot behavior
+    - Testing code paths that should work without Qt installed
+    - Unit tests that mock Qt components anyway
+    """
+    from .infrastructure.safe_fixtures import SafeQtBot
+
+    qtbot = SafeQtBot(headless=True)
+    yield qtbot
+    qtbot.cleanup()
+
 
 @pytest.fixture(scope="session")
 def enhanced_safe_qapp() -> SafeQApplicationProtocol:
     """
-    Enhanced safe QApplication fixture with session scope for performance.
+    Enhanced safe QApplication fixture that requires real Qt (with offscreen in headless).
 
-    This fixture provides:
-    - Real QApplication in GUI environments
-    - Mock QApplication in headless environments
-    - Proper singleton handling to avoid conflicts
-    - Automatic environment detection and configuration
+    This fixture provides real Qt functionality and fails loudly if Qt is unavailable.
+
+    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
     """
-    try:
-        qapp = create_safe_qapp()
-        yield qapp
-    except Exception as e:
-        report_fixture_error('enhanced_safe_qapp', e)
-        # Provide mock app as fallback
-        from .infrastructure.safe_fixtures import SafeQApplication
-        yield SafeQApplication(headless=True)
-    finally:
-        # Cleanup handled by fixture manager
-        pass
+    # No try/except - let HeadlessModeError propagate for clear failure
+    qapp = create_safe_qapp(allow_mock=False)
+    yield qapp
+    # Cleanup handled by fixture manager
 
 @pytest.fixture
 def safe_widget_factory_fixture(request: FixtureRequest):
     """
-    Safe widget factory for creating Qt widgets in any environment.
+    Safe widget factory for creating Qt widgets (with offscreen in headless).
 
-    Provides environment-appropriate widget creation:
-    - Real Qt widgets in GUI environments
-    - Mock widgets in headless environments
-    - Automatic cleanup and resource management
+    Provides real Qt widget creation and fails loudly if Qt is unavailable.
+
+    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
     """
-    try:
-        factory = create_safe_widget_factory()
-        yield factory
-    except Exception as e:
-        report_fixture_error('safe_widget_factory_fixture', e, request)
-        # Provide mock factory as fallback
-        from .infrastructure.safe_fixtures import SafeWidgetFactory
-        yield SafeWidgetFactory(headless=True)
+    # No try/except - let errors propagate for clear failure
+    factory = create_safe_widget_factory()
+    yield factory
+    factory.cleanup()
+
 
 @pytest.fixture
 def safe_dialog_factory_fixture(request: FixtureRequest):
     """
-    Safe dialog factory for creating Qt dialogs without crashes.
+    Safe dialog factory for creating Qt dialogs (with offscreen in headless).
 
-    Provides crash-safe dialog creation:
-    - Real Qt dialogs in GUI environments
-    - Mock dialogs in headless environments
-    - Comprehensive error handling and fallbacks
+    Provides real Qt dialog creation and fails loudly if Qt is unavailable.
+
+    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
     """
-    try:
-        factory = create_safe_dialog_factory()
-        yield factory
-    except Exception as e:
-        report_fixture_error('safe_dialog_factory_fixture', e, request)
-        # Provide mock factory as fallback
-        from .infrastructure.safe_fixtures import SafeDialogFactory
-        yield SafeDialogFactory(headless=True)
+    # No try/except - let errors propagate for clear failure
+    factory = create_safe_dialog_factory()
+    yield factory
+    factory.cleanup()
 
 @pytest.fixture
 def safe_qt_environment(request: FixtureRequest):
     """
-    Complete safe Qt environment with all components.
+    Complete safe Qt environment with all components (offscreen in headless).
 
-    Provides a complete Qt testing environment:
-    - Safe QApplication
-    - Safe qtbot
-    - Widget and dialog factories
-    - Automatic environment detection
-    - Centralized cleanup
+    Provides a complete Qt testing environment and fails loudly if Qt unavailable.
+
+    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
     """
-    try:
-        with safe_qt_context(request) as qt_env:
-            yield qt_env
-    except Exception as e:
-        report_fixture_error('safe_qt_environment', e, request)
-        # Provide minimal fallback environment
-        yield {
-            'qapp': None,
-            'qtbot': None,
-            'widget_factory': None,
-            'dialog_factory': None,
-            'env_info': get_environment_info(),
-        }
+    # No try/except - let errors propagate for clear failure
+    with safe_qt_context(request) as qt_env:
+        yield qt_env
 
 # Override pytest-qt fixtures to use safe versions
 
@@ -1285,6 +1301,32 @@ def cleanup_safe_fixtures_session():
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Error during safe fixtures cleanup: {e}")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_test_data_repository_session() -> Iterator[None]:
+    """Session-scoped cleanup for TestDataRepository.
+
+    Ensures all temporary files created by TestDataRepository
+    are cleaned up at the end of the test session.
+
+    This addresses Issue 7: TestDataRepository singleton was never cleaned up,
+    causing temp files to accumulate across test runs.
+    """
+    yield
+
+    # Cleanup TestDataRepository at session end
+    try:
+        from .infrastructure.test_data_repository import cleanup_test_data_repository
+        cleanup_test_data_repository()
+        import logging
+        logging.getLogger(__name__).info("TestDataRepository cleanup completed")
+    except ImportError:
+        pass  # test_data_repository not available
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error during TestDataRepository cleanup: {e}")
+
 
 # Validation fixture for debugging
 
@@ -1583,12 +1625,21 @@ def reset_class_scoped_fixtures(
                 elif hasattr(fixture_value, 'reset_state'):
                     # Real component with explicit reset method
                     fixture_value.reset_state()
+                elif hasattr(fixture_value, 'clear_cache'):
+                    # ROMCache and similar use clear_cache() method
+                    fixture_value.clear_cache()
                 elif hasattr(fixture_value, 'clear'):
-                    # Clear internal caches/collections (e.g., rom_cache)
-                    with contextlib.suppress(Exception):
-                        fixture_value.clear()
+                    # Generic clear for collections
+                    fixture_value.clear()
             except pytest.FixtureLookupError:
                 pass  # Fixture not available in this context
+            except Exception as e:
+                # Log reset failures but don't fail the test
+                # Reset is best-effort to improve isolation
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Failed to reset fixture {fixture_name}: {e}"
+                )
 
     yield
 
