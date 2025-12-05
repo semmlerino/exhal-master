@@ -59,7 +59,7 @@ class RegionJumpWidget(QWidget):
         self._setup_ui()
         self._connect_signals()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Create the UI layout"""
         layout = QVBoxLayout(self)
         layout.setSpacing(6)

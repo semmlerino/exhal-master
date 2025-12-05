@@ -1,3 +1,5 @@
+from typing import Any
+
 """CGRAM file selector widget for ROM extraction"""
 
 from PySide6.QtCore import Qt, Signal
@@ -21,7 +23,7 @@ class CGRAMSelectorWidget(BaseExtractionWidget):
     # Signals
     browse_clicked = Signal()  # Emitted when browse button clicked
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self._setup_ui()
 

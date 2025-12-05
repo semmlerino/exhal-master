@@ -6,9 +6,10 @@ exactly replicating the splitter patterns from existing dialogs.
 """
 from __future__ import annotations
 
-# No longer need Optional import for Python 3.10+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QSplitter, QWidget
+
+# No longer need Optional import for Python 3.10+
 from ui.styles import get_splitter_style
 
 
@@ -29,8 +30,8 @@ class StyledSplitter(QSplitter):
         self,
         orientation: Qt.Orientation = Qt.Orientation.Horizontal,
         handle_width: int = 8,
-        parent=None
-    ):
+        parent: QWidget | None = None
+    ) -> None:
         super().__init__(orientation, parent)
 
         self._handle_width = handle_width
@@ -61,7 +62,7 @@ class StyledSplitter(QSplitter):
 
         Args:
             widgets: List of widgets to add
-            stretch_factors: list of stretch factors (defaults to 1 for each)
+            stretch_factors: list[Any] of stretch factors (defaults to 1 for each)
         """
         if stretch_factors is None:
             stretch_factors = [1] * len(widgets)

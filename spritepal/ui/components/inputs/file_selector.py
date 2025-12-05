@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QWidget,
 )
+from typing_extensions import override
 from utils.settings_manager import get_settings_manager
 
 
@@ -42,7 +43,7 @@ class FileSelector(QWidget):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         label_text: str = "",
         placeholder: str = "",
         browse_text: str = "Browse...",
@@ -198,7 +199,8 @@ class FileSelector(QWidget):
         """Set read-only state of the path input"""
         self.path_edit.setReadOnly(read_only)
 
-    def setFocus(self, reason=None):
+    @override
+    def setFocus(self, reason: Qt.FocusReason | None = None) -> None:
         """Set focus to the path input field"""
         if reason is not None:
             self.path_edit.setFocus(reason)

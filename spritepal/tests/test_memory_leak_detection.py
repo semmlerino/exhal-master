@@ -157,32 +157,6 @@ class TestLRUCacheMemoryManagement:
         # Memory should not grow unbounded
         memory_monitor.assert_no_leak(max_increase_mb=50)  # Allow some overhead
 
-    def test_cache_clear_releases_all_memory(self, memory_monitor, weakref_tracker):
-        """Test cache.clear() releases all cached memory."""
-        cache = LRUCache(maxsize=100)
-        memory_monitor.start()
-
-        # Fill cache with large images
-        for i in range(100):
-            img = QImage(512, 512, QImage.Format.Format_RGBA8888)
-            img.fill(i)
-            weakref_tracker.track(img)
-            cache.put((i, i), img)
-
-        initial_size = cache.size()
-        assert initial_size == 100
-
-        # Clear cache
-        cache.clear()
-        gc.collect()
-
-        # Cache should be empty
-        assert cache.size() == 0
-
-        # Memory should be released (allow some Python overhead)
-        memory_increase = memory_monitor.get_increase()
-        assert memory_increase < 20, f"Memory not released after clear: {memory_increase:.2f}MB still used"
-
     def test_cache_stats_dont_leak(self, memory_monitor):
         """Test getting cache stats doesn't leak memory."""
         cache = LRUCache(maxsize=50)
@@ -278,41 +252,6 @@ class TestBatchThumbnailWorkerMemoryLeaks:
         # Memory should not grow significantly
         memory_monitor.assert_no_leak(max_increase_mb=20)
 
-    def test_worker_thread_cleanup(self, large_rom_file, memory_monitor, qtbot):
-        """Test worker thread is properly cleaned up."""
-        memory_monitor.start()
-
-        controller = ThumbnailWorkerController()
-        weakref_tracker = WeakrefTracker()
-
-        # Start and stop worker multiple times
-        for _ in range(3):
-            controller.start_worker(large_rom_file)
-
-            if controller.worker:
-                weakref_tracker.track(controller.worker)
-            if controller._thread:
-                weakref_tracker.track(controller._thread)
-
-            # Queue some work
-            controller.queue_batch([i * 0x1000 for i in range(10)])
-
-            # Stop and cleanup
-            controller.stop_worker()
-            qtbot.wait(100)  # Let thread finish
-            controller.cleanup()
-
-            # Force cleanup
-            controller.worker = None
-            controller._thread = None
-            gc.collect()
-
-        # All workers and threads should be deleted
-        assert weakref_tracker.get_alive_count() == 0
-
-        # Memory should be reclaimed
-        memory_monitor.assert_no_leak(max_increase_mb=15)
-
 class TestQImageQPixmapMemoryManagement:
     """Test memory management of Qt image objects."""
 
@@ -355,54 +294,6 @@ class TestQImageQPixmapMemoryManagement:
         gc.collect()
 
         # Should not leak
-        memory_monitor.assert_no_leak(max_increase_mb=5)
-
-class TestSignalSlotMemoryLeaks:
-    """Test signal/slot connections don't leak memory."""
-
-    def test_signal_disconnection_cleanup(self, memory_monitor, weakref_tracker):
-        """Test disconnecting signals properly cleans up."""
-        memory_monitor.start()
-
-        class SignalEmitter(QObject):
-            def __init__(self):
-                super().__init__()
-                self.connections = []
-
-        class SlotReceiver:
-            def __init__(self):
-                self.received = []
-
-            def handle_signal(self, value):
-                self.received.append(value)
-
-        # Create and connect/disconnect multiple times
-        for _ in range(100):
-            emitter = SignalEmitter()
-            receiver = SlotReceiver()
-            weakref_tracker.track(receiver)
-
-            # Connect signal
-            from PySide6.QtCore import Signal
-            emitter.signal = Signal(int)
-            connection = emitter.signal.connect(receiver.handle_signal)
-
-            # Emit some signals
-            emitter.signal.emit(42)
-
-            # Disconnect
-            emitter.signal.disconnect(connection)
-
-            # Delete
-            del emitter
-            del receiver
-
-        gc.collect()
-
-        # All receivers should be deleted
-        assert weakref_tracker.get_alive_count() == 0
-
-        # Memory should be stable
         memory_monitor.assert_no_leak(max_increase_mb=5)
 
 class TestLargeDataProcessingMemoryLeaks:

@@ -148,8 +148,8 @@ def initialize_managers(app_name: str = "SpritePal", settings_path: Path | None 
             # Other managers should already have proper parents from their constructors
             # if they were created with parent=app, but let's ensure they have parents
             for manager in [extraction_manager, injection_manager, navigation_manager]:
-                if manager and hasattr(manager, 'setParent') and manager.parent() != app:
-                    manager.setParent(app)
+                if manager and hasattr(manager, 'setParent') and manager.parent() != app:  # type: ignore[attr-defined]  # Qt method not in protocol
+                    manager.setParent(app)  # type: ignore[attr-defined]  # Qt method not in protocol
         else:
             logger.warning("No QApplication instance found - managers will have no Qt parent")
 
@@ -309,7 +309,7 @@ def validate_manager_dependencies() -> bool:
         injection_manager = get_injection_manager()
 
         # Validate that managers are properly initialized
-        if not all(hasattr(mgr, 'is_initialized') and mgr.is_initialized()
+        if not all(hasattr(mgr, 'is_initialized') and mgr.is_initialized()  # type: ignore[attr-defined]  # Method not in protocol
                   for mgr in [session_manager, extraction_manager, injection_manager]):
             logger.error("Some managers are not properly initialized")
             return False

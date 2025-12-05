@@ -30,19 +30,6 @@ pytestmark = [
 class TestControllerDependencyInjection:
     """Test dependency injection functionality for ExtractionController."""
 
-    @pytest.mark.skip(reason="Requires managers to be initialized via initialize_managers() - global registry not available")
-    def test_backward_compatibility_uses_global_registry(self):
-        """Test that controller works without injected managers (backward compatibility)."""
-        mock_main_window = Mock()
-
-        # Create controller without injected managers
-        controller = ExtractionController(mock_main_window)
-
-        # Verify managers are from global registry
-        assert isinstance(controller.extraction_manager, ExtractionManager)
-        assert isinstance(controller.session_manager, SessionManager)
-        assert isinstance(controller.injection_manager, InjectionManager)
-
     def test_dependency_injection_with_custom_managers(self):
         """Test that controller uses injected managers when provided."""
         mock_main_window = Mock()
@@ -64,27 +51,6 @@ class TestControllerDependencyInjection:
         assert controller.extraction_manager is real_extraction_manager
         assert controller.session_manager is real_session_manager
         assert controller.injection_manager is real_injection_manager
-
-    @pytest.mark.skip(reason="Requires managers to be initialized via initialize_managers() - global registry not available")
-    def test_partial_dependency_injection(self):
-        """Test that controller can have some managers injected and others from registry."""
-        mock_main_window = Mock()
-
-        # Create only extraction manager mock
-        real_extraction_manager = Mock(spec=ExtractionManager)
-
-        # Create controller with only extraction manager injected
-        controller = ExtractionController(
-            mock_main_window,
-            extraction_manager=real_extraction_manager
-        )
-
-        # Verify extraction manager is the injected one
-        assert controller.extraction_manager is real_extraction_manager
-
-        # Verify other managers are from global registry
-        assert isinstance(controller.session_manager, SessionManager)
-        assert isinstance(controller.injection_manager, InjectionManager)
 
     def test_controller_signals_connected_with_injected_managers(self):
         """Test that controller properly connects signals with injected managers."""

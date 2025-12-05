@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QToolBar,
 )
-from utils.type_aliases import override
+from typing_extensions import override
 
 from .base_manager import BaseManager
 

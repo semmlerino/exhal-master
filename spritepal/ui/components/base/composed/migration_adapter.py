@@ -14,7 +14,12 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
+
+from typing_extensions import override
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QCloseEvent
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -66,8 +71,8 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         default_tab: int | None = None,
         orientation: Any | None = None,  # For splitter dialogs
         splitter_handle_width: int = 8,  # For splitter dialogs
-        **kwargs  # Accept any additional keyword arguments
-    ):
+        **kwargs: Any  # Accept any additional keyword arguments
+    ) -> None:
         """
         Initialize the dialog with DialogBase-compatible parameters.
 
@@ -210,6 +215,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         if not hasattr(self, 'content_widget'):
             self.content_widget = self.context.content_widget
 
+    @override
     def __setattr__(self, name: str, value: Any) -> None:
         """
         Override setattr for initialization order checking (compatibility).
@@ -272,6 +278,7 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         pass
 
     # Override setup_ui to call _setup_ui for compatibility
+    @override
     def setup_ui(self) -> None:
         """ComposedDialog setup_ui - delegates to _setup_ui for compatibility."""
         # First ensure compatibility properties are set up
@@ -490,7 +497,8 @@ class DialogBaseMigrationAdapter(ComposedDialog):
         reply = QMessageBox.question(self, title, message)
         return reply == QMessageBox.StandardButton.Yes
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Handle close event and set WA_DeleteOnClose at the right time."""
         logger.debug("DEBUGGING: closeEvent called, now setting WA_DeleteOnClose")
         if getattr(self, '_should_delete_on_close', False):

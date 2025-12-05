@@ -27,8 +27,8 @@ class StyledGroupBox(QGroupBox):
         self,
         title: str = "",
         panel_type: str = "default",
-        parent=None,
-    ):
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(title, parent)
 
         self._panel_type = panel_type

@@ -13,7 +13,9 @@ from PIL import Image
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
+    QCloseEvent,
     QColor,
+    QFocusEvent,
     QImage,
     QKeyEvent,
     QPen,
@@ -36,6 +38,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 
 from .components import SplitterDialog
 from .row_arrangement import PaletteColorizer
@@ -66,7 +69,7 @@ class GridGraphicsView(QGraphicsView):
     selection_completed = Signal()
     zoom_changed = Signal(float)  # Zoom level changed
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.tile_width = 8
         self.tile_height = 8
@@ -155,7 +158,8 @@ class GridGraphicsView(QGraphicsView):
                     scene.addItem(rect)
                     self.selection_rects[tile_pos] = rect
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, event: Any):
         """Handle mouse press"""
         if event and event.button() == Qt.MouseButton.LeftButton:
             # Check if we should pan instead of select
@@ -190,7 +194,8 @@ class GridGraphicsView(QGraphicsView):
 
         super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event):
+    @override
+    def mouseMoveEvent(self, event: Any):
         """Handle mouse move"""
         if event and self.is_panning and self.last_pan_point is not None:
             # Pan the view
@@ -217,7 +222,8 @@ class GridGraphicsView(QGraphicsView):
 
         super().mouseMoveEvent(event)
 
-    def wheelEvent(self, event):
+    @override
+    def wheelEvent(self, event: Any):
         """Handle mouse wheel for zooming"""
         if event and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Zoom with Ctrl+Wheel
@@ -227,10 +233,10 @@ class GridGraphicsView(QGraphicsView):
             # Default scroll behavior
             super().wheelEvent(event)
 
-    def keyPressEvent(self, a0):
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         """Handle keyboard navigation and shortcuts"""
         if not a0:
-            super().keyPressEvent(a0)
             return
 
         # Zoom shortcuts (existing functionality)
@@ -282,7 +288,7 @@ class GridGraphicsView(QGraphicsView):
         else:
             super().keyPressEvent(a0)
 
-    def _zoom_at_point(self, point, zoom_factor):
+    def _zoom_at_point(self, point: Any, zoom_factor: float) -> None:
         """Zoom at a specific point"""
         # Calculate new zoom level
         new_zoom = self.zoom_level * zoom_factor
@@ -360,7 +366,8 @@ class GridGraphicsView(QGraphicsView):
         """Get current zoom level"""
         return self.zoom_level
 
-    def mouseReleaseEvent(self, event):
+    @override
+    def mouseReleaseEvent(self, event: Any):
         """Handle mouse release"""
         if event and event.button() == Qt.MouseButton.LeftButton:
             if self.is_panning:
@@ -405,7 +412,7 @@ class GridGraphicsView(QGraphicsView):
         rect.setZValue(1)  # Above grid lines
         return rect
 
-    def _handle_arrow_key_navigation(self, event):
+    def _handle_arrow_key_navigation(self, event: QKeyEvent) -> None:
         """Handle arrow key navigation between tiles"""
         if not self.keyboard_focus_pos:
             # Initialize focus at top-left if not set
@@ -557,17 +564,21 @@ class GridGraphicsView(QGraphicsView):
             scene.addItem(rect)
             self.selection_rects[tile_pos] = rect
 
-    def focusInEvent(self, event):
+    @override
+    def focusInEvent(self, event: QFocusEvent | None) -> None:
         """Handle focus in event"""
-        super().focusInEvent(event)
+        if event:
+            super().focusInEvent(event)
 
         # If no keyboard focus set, initialize at (0,0)
         if not self.keyboard_focus_pos and self.grid_rows > 0 and self.grid_cols > 0:
             self._set_keyboard_focus(TilePosition(0, 0))
 
-    def focusOutEvent(self, event):
+    @override
+    def focusOutEvent(self, event: QFocusEvent | None) -> None:
         """Handle focus out event"""
-        super().focusOutEvent(event)
+        if event:
+            super().focusOutEvent(event)
 
         # Keep focus indicator visible but maybe dim it
         # This allows users to see where they were when returning focus
@@ -662,7 +673,7 @@ class GridGraphicsView(QGraphicsView):
 class GridArrangementDialog(SplitterDialog):
     """Dialog for grid-based sprite arrangement with row and column support"""
 
-    def __init__(self, sprite_path: str, tiles_per_row: int = 16, parent=None):
+    def __init__(self, sprite_path: str, tiles_per_row: int = 16, parent: QWidget | None = None) -> None:
         # Step 1: Declare instance variables BEFORE super().__init__()
         self.sprite_path = sprite_path
         self.tiles_per_row = tiles_per_row
@@ -728,6 +739,7 @@ class GridArrangementDialog(SplitterDialog):
         else:
             self.update_status("Error: Unable to load sprite file")
 
+    @override
     def _setup_ui(self):
         """Set up the dialog UI using SplitterDialog panels"""
         # Call parent _setup_ui first to initialize the main splitter
@@ -1041,7 +1053,7 @@ class GridArrangementDialog(SplitterDialog):
         preview_group.setLayout(preview_layout)
         return preview_group
 
-    def _on_mode_changed(self, button) -> None:
+    def _on_mode_changed(self, button: QRadioButton) -> None:
         """Handle selection mode change"""
         mode = button.property("mode")
         self.grid_view.set_selection_mode(mode)
@@ -1287,10 +1299,11 @@ class GridArrangementDialog(SplitterDialog):
             if self.zoom_level_label:
                 self.zoom_level_label.setText(f"{zoom_percent}%")
 
-    def _on_zoom_changed(self, zoom_level):
+    def _on_zoom_changed(self, zoom_level: int):
         """Handle zoom level change"""
         self._update_zoom_level_display()
 
+    @override
     def keyPressEvent(self, a0: QKeyEvent | None):
         """Handle keyboard shortcuts"""
         if a0 and a0.key() == Qt.Key.Key_G:
@@ -1323,10 +1336,12 @@ class GridArrangementDialog(SplitterDialog):
         """Get the path to the exported arrangement"""
         return self.output_path
 
-    def closeEvent(self, a0) -> None:
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle dialog close event with proper cleanup"""
         self._cleanup_resources()
-        super().closeEvent(a0)
+        if a0:
+            super().closeEvent(a0)
 
     def _cleanup_resources(self) -> None:
         """Clean up resources to prevent memory leaks"""

@@ -32,7 +32,7 @@ class ThumbnailTask:
     priority: int
     offset: int = field(compare=False)
     size: tuple[int, int] = field(compare=False)
-    callback: Callable | None = field(compare=False, default=None)
+    callback: Callable[..., Any] | None = field(compare=False, default=None)
     cache_key: str = field(compare=False, default="")
 
     def __post_init__(self):
@@ -221,11 +221,11 @@ class OptimizedThumbnailGenerator:
         self._queue_lock = Lock()
 
         # Active futures
-        self._active_futures: dict[str, concurrent.futures.Future] = {}
+        self._active_futures: dict[str, concurrent.futures.Future[Image.Image | None]] = {}
         self._futures_lock = Lock()
 
         # Generation function (to be set by user)
-        self._generate_func: Callable | None = None
+        self._generate_func: Callable[[int, tuple[int, int]], Image.Image] | None = None
 
         # Statistics
         self._generated_count = 0
@@ -250,7 +250,7 @@ class OptimizedThumbnailGenerator:
         offset: int,
         size: tuple[int, int] = (128, 128),
         priority: int = 100,
-        callback: Callable | None = None,
+        callback: Callable[..., Any] | None = None,
         use_cache: bool = True
     ) -> Image.Image | None:
         """
@@ -310,7 +310,7 @@ class OptimizedThumbnailGenerator:
         offsets: list[int],
         size: tuple[int, int] = (128, 128),
         priority_start: int = 100,
-        callback: Callable | None = None,
+        callback: Callable[..., Any] | None = None,
         parallel: bool = True
     ) -> dict[int, Image.Image | None]:
         """
@@ -403,8 +403,8 @@ class OptimizedThumbnailGenerator:
                 self._active_futures[task.cache_key] = future
 
             # Add completion callback
-            def make_callback(t):
-                def on_complete(f):
+            def make_callback(t: ThumbnailTask) -> Callable[[concurrent.futures.Future[Image.Image | None]], None]:
+                def on_complete(f: concurrent.futures.Future[Image.Image | None]) -> None:
                     try:
                         result = f.result()
                         if result and t.callback:
@@ -478,8 +478,8 @@ class OptimizedThumbnailGenerator:
         logger.info("Thumbnail generator shutdown complete")
 
 def create_optimized_generator(
-    rom_extractor,
-    tile_renderer,
+    rom_extractor: Any,
+    tile_renderer: Any,
     rom_path: str | Path,
     max_workers: int = 4
 ) -> OptimizedThumbnailGenerator:

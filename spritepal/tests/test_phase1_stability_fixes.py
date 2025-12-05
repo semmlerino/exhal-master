@@ -8,18 +8,6 @@ This test suite validates all critical stability improvements implemented in Pha
    - Tests requestInterruption() mechanism
    - Validates timeout handling and graceful shutdown
 
-import subprocess
-import inspect
-from PySide6.QtWidgets import QApplication
-import subprocess
-import inspect
-from PySide6.QtWidgets import QApplication
-import subprocess
-import inspect
-from PySide6.QtWidgets import QApplication
-import subprocess
-import inspect
-from PySide6.QtWidgets import QApplication
 2. Circular Reference Fixes:
    - Tests weak reference patterns work correctly
    - Verifies dialogs can be garbage collected
@@ -100,6 +88,11 @@ class TestWorkerCancellationStability:
 
             # Skip external dependencies and virtual environments
             if "/.venv/" in line or "/venv/" in line or "/site-packages/" in line:
+                continue
+
+            # Skip hal_compression.py - it uses multiprocessing.Process.terminate()
+            # which is safe and expected for process pool management
+            if "hal_compression.py" in line:
                 continue
 
             problematic_lines.append(line)

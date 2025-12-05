@@ -26,6 +26,11 @@ pytestmark = [
 class TestROMExtractorScanMethods:
     """Test advanced ROM scanning and analysis methods"""
 
+    @pytest.fixture(autouse=True)
+    def seed_random(self):
+        """Seed random for reproducible test data."""
+        random.seed(42)
+
     @pytest.fixture
     def extractor(self):
         """Create ROM extractor with mocked dependencies"""

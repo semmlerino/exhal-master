@@ -4,14 +4,18 @@ Handles efficient painting of sprites with selection and hover effects.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, QRectF, QSize, Qt
+from typing import Any, cast
+
+from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QPersistentModelIndex, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor,
     QFont,
+    QMouseEvent,
     QPainter,
     QPen,
 )
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
+from typing_extensions import override
 from ui.models.sprite_gallery_model import SpriteGalleryModel
 from utils.logging_config import get_logger
 
@@ -20,7 +24,7 @@ logger = get_logger(__name__)
 class SpriteGalleryDelegate(QStyledItemDelegate):
     """Custom delegate for rendering sprites in gallery view."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         """Initialize the sprite gallery delegate."""
         super().__init__(parent)
 
@@ -49,6 +53,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         self._offset_font.setBold(True)
         self._info_font = QFont("Arial", 9)
 
+    @override
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Paint the sprite thumbnail.
@@ -204,6 +209,7 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         painter.setFont(QFont("Arial", 12))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "SPRITE")
 
+    @override
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QSize:
         """
         Return size hint for the item.
@@ -242,10 +248,11 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
             self._offset_font.setPointSize(10)
             self._info_font.setPointSize(9)
 
+    @override
     def editorEvent(
         self,
-        event,
-        model,
+        event: QEvent,
+        model: QAbstractItemModel,
         option: QStyleOptionViewItem,
         index: QModelIndex | QPersistentModelIndex
     ) -> bool:
@@ -263,7 +270,8 @@ class SpriteGalleryDelegate(QStyledItemDelegate):
         """
         # Handle mouse clicks for selection
         if event.type() == event.Type.MouseButtonPress:
-            if event.button() == Qt.MouseButton.LeftButton:
+            mouse_event = cast(QMouseEvent, event)
+            if mouse_event.button() == Qt.MouseButton.LeftButton:
                 # Toggle selection
                 current_selection = index.data(SpriteGalleryModel.SelectedRole)
                 model.setData(index, not current_selection, SpriteGalleryModel.SelectedRole)

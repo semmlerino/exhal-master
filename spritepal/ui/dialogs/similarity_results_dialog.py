@@ -5,6 +5,8 @@ Shows similar sprites with thumbnails, similarity scores, and allows navigation.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from core.visual_similarity_search import SimilarityMatch
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
@@ -18,6 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.components import BaseDialog
 from utils.logging_config import get_logger
 
@@ -28,7 +31,7 @@ class SimilarityResultWidget(QFrame):
 
     sprite_selected = Signal(int)  # Emitted when sprite is selected
 
-    def __init__(self, match: SimilarityMatch, thumbnail: QPixmap | None = None, parent=None):
+    def __init__(self, match: SimilarityMatch, thumbnail: QPixmap | None = None, parent: QWidget | None = None):
         super().__init__(parent)
         self.match = match
         self.thumbnail = thumbnail
@@ -119,7 +122,8 @@ class SimilarityResultWidget(QFrame):
 
         self.setLayout(layout)
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, event: Any):
         """Handle mouse clicks to select sprite."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.sprite_selected.emit(self.match.offset)
@@ -130,7 +134,7 @@ class SimilarityResultsDialog(BaseDialog):
 
     sprite_selected = Signal(int)  # Emitted when user selects a sprite
 
-    def __init__(self, matches: list[SimilarityMatch], source_offset: int, parent=None):
+    def __init__(self, matches: list[SimilarityMatch], source_offset: int, parent: QWidget | None = None):
         # Declare instance variables before super().__init__()
         self.matches = matches
         self.source_offset = source_offset
@@ -211,7 +215,7 @@ class SimilarityResultsDialog(BaseDialog):
 def show_similarity_results(
     matches: list[SimilarityMatch],
     source_offset: int,
-    parent=None
+    parent: QWidget | None = None
 ) -> SimilarityResultsDialog:
     """
     Convenience function to show similarity results dialog.

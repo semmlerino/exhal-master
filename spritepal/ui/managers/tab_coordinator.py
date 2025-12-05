@@ -3,7 +3,7 @@ Tab coordination and switching logic for MainWindow
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QTabWidget
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class TabCoordinatorActionsProtocol(Protocol):
     """Protocol defining the interface for tab coordinator actions"""
 
-    def get_rom_extraction_params(self) -> dict | None:
+    def get_rom_extraction_params(self) -> dict[str, Any] | None:
         """Get ROM extraction parameters"""
         ...
 

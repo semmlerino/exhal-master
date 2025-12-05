@@ -10,7 +10,7 @@ import contextlib
 import os
 import sys
 from collections.abc import Callable
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QEasingCurve, QObject, QPropertyAnimation
@@ -91,8 +91,8 @@ class SafeAnimation:
         self._duration = 250
         self._is_headless = is_headless_environment()
         self._animation: QPropertyAnimation | None = None
-        self._finished_callbacks: list[Callable] = []
-        self._value_changed_callbacks: list[Callable] = []
+        self._finished_callbacks: list[Callable[..., Any]] = []
+        self._value_changed_callbacks: list[Callable[..., Any]] = []
 
         # Only create real animation if not headless
         if not self._is_headless and target and property_name:
@@ -110,13 +110,13 @@ class SafeAnimation:
         if self._animation:
             self._animation.setDuration(duration)
 
-    def setStartValue(self, value) -> None:
+    def setStartValue(self, value: Any) -> None:
         """Set start value for animation."""
         self._start_value = value
         if self._animation:
             self._animation.setStartValue(value)
 
-    def setEndValue(self, value) -> None:
+    def setEndValue(self, value: Any) -> None:
         """Set end value for animation."""
         self._end_value = value
         if self._animation:
@@ -183,15 +183,15 @@ class SafeAnimation:
     class _MockSignal:
         """Mock signal for headless mode."""
 
-        def __init__(self, callbacks: list[Callable]):
+        def __init__(self, callbacks: list[Callable[..., Any]]):
             self._callbacks = callbacks
 
-        def connect(self, callback: Callable) -> None:
+        def connect(self, callback: Callable[..., Any]) -> None:
             """Connect a callback."""
             if callback not in self._callbacks:
                 self._callbacks.append(callback)
 
-        def disconnect(self, callback: Callable) -> None:
+        def disconnect(self, callback: Callable[..., Any]) -> None:
             """Disconnect a callback."""
             if callback in self._callbacks:
                 self._callbacks.remove(callback)

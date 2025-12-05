@@ -11,6 +11,7 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QStatusBar, QWidget
+from typing_extensions import override
 
 
 class StatusBarManager(QObject):
@@ -214,21 +215,22 @@ class StatusBarManager(QObject):
                 self._message = ""
                 self._permanent_widgets = []
 
-            def showMessage(self, message, timeout=0):
+            def showMessage(self, message: str, timeout: int = 0) -> None:
                 self._message = message
 
-            def clearMessage(self):
+            def clearMessage(self) -> None:
                 self._message = ""
 
-            def addPermanentWidget(self, widget, stretch=0):
+            def addPermanentWidget(self, widget: Any, stretch: int = 0) -> None:
                 self._permanent_widgets.append(widget)
 
-            def removeWidget(self, widget):
+            def removeWidget(self, widget: Any) -> None:
                 if widget in self._permanent_widgets:
                     self._permanent_widgets.remove(widget)
 
         return TestStatusBar()
 
+    @override
     def __repr__(self) -> str:
         """Return string representation of the manager."""
         status = "available" if self.is_available else "not available"

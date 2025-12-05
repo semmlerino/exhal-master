@@ -64,6 +64,7 @@ class VRAMInjectionWorker(InjectionWorkerBase):
         self.params = params
         self._operation_name = "VRAMInjectionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -121,6 +122,7 @@ class ROMInjectionWorker(InjectionWorkerBase):
         self.params = params
         self._operation_name = "ROMInjectionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -196,6 +198,7 @@ class WorkerOwnedVRAMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixi
         self.params = params
         self._operation_name = "WorkerOwnedVRAMInjectionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -270,6 +273,7 @@ class WorkerOwnedROMInjectionWorker(InjectionWorkerBase, WorkerOwnedManagerMixin
         self.params = params
         self._operation_name = "WorkerOwnedROMInjectionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect injection manager signals to worker signals."""
         helper = SignalConnectionHelper(self)

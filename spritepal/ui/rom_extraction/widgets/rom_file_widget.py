@@ -30,7 +30,7 @@ class ROMFileWidget(BaseExtractionWidget):
     cache_status_changed = Signal(dict)  # Emitted when cache status changes
     partial_scan_detected = Signal(dict)  # Emitted when partial scan cache found
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self._rom_path = ""
         self._cache_status = {"has_cache": False, "cache_type": None}

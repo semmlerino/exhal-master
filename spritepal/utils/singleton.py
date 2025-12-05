@@ -11,6 +11,8 @@ for global variables and the PLW0603 error.
 import threading
 from typing import Any, ClassVar, TypeVar
 
+from typing_extensions import override
+
 T = TypeVar("T")
 
 class ThreadSafeSingleton(type):
@@ -28,15 +30,16 @@ class ThreadSafeSingleton(type):
     _instances: ClassVar[dict[type[Any], Any]] = {}
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
+    @override
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         # Fast path - check without lock
-        if cls in cls._instances:
+        if cls in cls._instances:  # type: ignore[comparison-overlap]
             return cls._instances[cls]
 
         # Slow path - create with lock
         with cls._lock:
             # Double-check pattern
-            if cls not in cls._instances:
+            if cls not in cls._instances:  # type: ignore[comparison-overlap]
                 instance = super().__call__(*args, **kwargs)
                 cls._instances[cls] = instance
 
@@ -63,8 +66,9 @@ class SimpleSingleton(type):
     """
     _instances: ClassVar[dict[type[Any], Any]] = {}
 
+    @override
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
-        if cls not in cls._instances:
+        if cls not in cls._instances:  # type: ignore[comparison-overlap]
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
 

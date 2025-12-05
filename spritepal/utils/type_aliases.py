@@ -12,31 +12,7 @@ from typing import Any, TypeAlias
 
 # Python compatibility imports for typing
 # These are re-exported for use in other modules
-try:
-    from typing_extensions import override
-    __all__ = [
-        "ImageMode", "ImageSize", "NotRequired", "PILImage", "Protocol", "TypeGuard", "TypedDict", "override", ]
-except ImportError:
-    # Fallback for older Python versions
-    try:
-        from typing import NotRequired, TypeGuard
-
-        from typing_extensions import (
-            Protocol,
-            TypedDict,
-        )
-        __all__ = [
-            "ImageMode",
-            "ImageSize",
-            "NotRequired",
-            "PILImage",
-            "Protocol",
-            "TypeGuard",
-            "TypedDict",
-            "override",
-        ]
-    except ImportError:
-        __all__ = ["ImageMode", "ImageSize", "PILImage"]
+__all__ = ["ImageMode", "ImageSize", "PILImage"]
 
 from PIL import Image
 from PySide6.QtGui import QPixmap

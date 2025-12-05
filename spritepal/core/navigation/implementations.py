@@ -11,6 +11,7 @@ import statistics
 from collections import Counter, defaultdict
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 from .data_structures import (
@@ -45,6 +46,7 @@ class LinearNavigationStrategy(AbstractNavigationStrategy):
         self.default_step = 0x40  # Default step size
         self.adaptive_stepping = True
 
+    @override
     def find_next_sprites(
         self,
         context: NavigationContext,
@@ -81,6 +83,7 @@ class LinearNavigationStrategy(AbstractNavigationStrategy):
 
         return hints[:context.max_hints]
 
+    @override
     def learn_from_discovery(self, hint: NavigationHint, actual_location: SpriteLocation | None) -> None:
         """Learn from discovery results to optimize step sizes."""
         success = actual_location is not None
@@ -90,6 +93,7 @@ class LinearNavigationStrategy(AbstractNavigationStrategy):
             # Adjust step size based on success patterns
             logger.debug(f"Linear strategy success at offset {hint.target_offset:08X}")
 
+    @override
     def get_confidence_estimate(self, context: NavigationContext) -> float:
         """Linear strategy has consistent moderate confidence."""
         return 0.5  # Always moderate confidence
@@ -168,6 +172,7 @@ class PatternBasedStrategy(AbstractPatternStrategy):
         self.offset_predictor = OffsetPredictor()
         self.min_sprites_for_analysis = 5
 
+    @override
     def find_next_sprites(
         self,
         context: NavigationContext,
@@ -204,6 +209,7 @@ class PatternBasedStrategy(AbstractPatternStrategy):
         sorted_hints = sorted(unique_hints, key=lambda h: h.confidence, reverse=True)
         return sorted_hints[:context.max_hints]
 
+    @override
     def learn_from_discovery(self, hint: NavigationHint, actual_location: SpriteLocation | None) -> None:
         """Learn from discovery results to improve patterns."""
         success = actual_location is not None
@@ -215,6 +221,7 @@ class PatternBasedStrategy(AbstractPatternStrategy):
             if strategy_used == NavigationStrategy.PATTERN_BASED:
                 logger.debug(f"Pattern-based success: {hint.reasoning}")
 
+    @override
     def get_confidence_estimate(self, context: NavigationContext) -> float:
         """Estimate confidence based on pattern strength."""
         if not self._patterns:
@@ -233,10 +240,12 @@ class PatternBasedStrategy(AbstractPatternStrategy):
 
         return min(overall_confidence, 0.9)  # Cap at 90% confidence
 
+    @override
     def _extract_patterns(self, region_map: SpriteRegionMap) -> dict[str, Any]:
         """Extract comprehensive patterns from region map."""
         return self.pattern_analyzer.get_comprehensive_analysis(region_map)
 
+    @override
     def _apply_patterns(self, patterns: dict[str, Any], context: NavigationContext) -> list[NavigationHint]:
         """Apply learned patterns to generate navigation hints."""
         hints = []
@@ -356,6 +365,7 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
         self.reference_sprites: list[SpriteLocation] = []
         self.max_reference_sprites = 10
 
+    @override
     def find_next_sprites(
         self,
         context: NavigationContext,
@@ -393,6 +403,7 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
 
         return sorted_hints[:context.max_hints]
 
+    @override
     def learn_from_discovery(self, hint: NavigationHint, actual_location: SpriteLocation | None) -> None:
         """Learn from discovery results to improve similarity matching."""
         success = actual_location is not None
@@ -408,6 +419,7 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
 
             logger.debug(f"Added reference sprite for similarity: 0x{actual_location.offset:06X}")
 
+    @override
     def get_confidence_estimate(self, context: NavigationContext) -> float:
         """Estimate confidence based on similarity data quality."""
         if not self.reference_sprites:
@@ -417,10 +429,12 @@ class SimilarityStrategy(AbstractSimilarityStrategy):
         ref_count_factor = min(1.0, len(self.reference_sprites) / self.max_reference_sprites)
         return 0.4 + (ref_count_factor * 0.4)
 
+    @override
     def _calculate_similarity(self, sprite1: SpriteLocation, sprite2: SpriteLocation) -> float:
         """Calculate similarity between two sprites."""
         return self.similarity_engine.calculate_similarity(sprite1, sprite2)
 
+    @override
     def _find_similar_sprites(
         self,
         target_sprite: SpriteLocation,
@@ -536,6 +550,7 @@ class HybridNavigationStrategy(AbstractNavigationStrategy):
             "pattern": 0.4,
             "similarity": 0.3
         }
+    @override
 
     def find_next_sprites(
         self,
@@ -573,6 +588,7 @@ class HybridNavigationStrategy(AbstractNavigationStrategy):
         sorted_hints = sorted(combined_hints, key=lambda h: h.confidence, reverse=True)
 
         return sorted_hints[:context.max_hints]
+    @override
 
     def learn_from_discovery(self, hint: NavigationHint, actual_location: SpriteLocation | None) -> None:
         """Learn from discovery results and update strategy weights."""
@@ -592,6 +608,7 @@ class HybridNavigationStrategy(AbstractNavigationStrategy):
                 self.strategy_weights[strategy_used] = min(0.8, self.strategy_weights[strategy_used] + 0.05)
                 # Normalize weights
                 self._normalize_weights()
+    @override
 
     def get_confidence_estimate(self, context: NavigationContext) -> float:
         """Estimate confidence based on component strategies."""

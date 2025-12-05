@@ -14,10 +14,7 @@ try:
 except ImportError:
     from typing import NotRequired
 
-try:
-    from typing_extensions import override
-except ImportError:
-    from utils.type_aliases import override
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from core.managers import ExtractionManager
@@ -70,6 +67,7 @@ class VRAMExtractionWorker(ExtractionWorkerBase):
         self.params = params
         self._operation_name = "VRAMExtractionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -136,6 +134,7 @@ class ROMExtractionWorker(ExtractionWorkerBase):
         self.params = params
         self._operation_name = "ROMExtractionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)
@@ -211,6 +210,7 @@ class WorkerOwnedVRAMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMi
 
         self.params = params
         self._operation_name = "WorkerOwnedVRAMExtractionWorker"
+    @override
 
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
@@ -295,6 +295,7 @@ class WorkerOwnedROMExtractionWorker(ExtractionWorkerBase, WorkerOwnedManagerMix
         self.params = params
         self._operation_name = "WorkerOwnedROMExtractionWorker"
 
+    @override
     def connect_manager_signals(self) -> None:
         """Connect extraction manager signals to worker signals."""
         helper = SignalConnectionHelper(self)

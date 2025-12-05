@@ -11,6 +11,7 @@ used throughout the SpritePal codebase:
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 from PySide6.QtCore import QThread
 from utils.logging_config import get_logger
@@ -131,10 +132,10 @@ class WorkerManager:
     @staticmethod
     def create_and_start(
         worker_class: type,
-        *args,
+        *args: Any,
         cleanup_existing: QThread | None = None,
         cleanup_timeout: int = 5000,
-        **kwargs
+        **kwargs: Any
     ) -> QThread:
         """
         Create and start a worker in one call.

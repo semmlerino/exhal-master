@@ -6,6 +6,8 @@ following the principle of progressive disclosure to reduce UI complexity.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
+
 try:
     from typing_extensions import override
 except ImportError:
@@ -67,7 +69,7 @@ class CollapsibleGroupBox(QFrame):
         self._animation: SafeAnimation | None = None
         self._title_label: QLabel
         self._toggle_button: QPushButton
-        self._animation_connections: list = []  # Track our connections
+        self._animation_connections: list[Callable[[], None]] = []  # Track our connections
         self._is_headless = is_headless_environment()
 
         # Setup UI components first
@@ -229,9 +231,17 @@ class CollapsibleGroupBox(QFrame):
                 self._animation.finished.connect(on_collapse_finished)
 
                 # Track connections
+                def disconnect_collapse_value() -> None:
+                    if self._animation:
+                        self._animation.valueChanged.disconnect(on_collapse_value_changed)
+
+                def disconnect_collapse_finished() -> None:
+                    if self._animation:
+                        self._animation.finished.disconnect(on_collapse_finished)
+
                 self._animation_connections = [
-                    lambda: self._animation.valueChanged.disconnect(on_collapse_value_changed) if self._animation else None,
-                    lambda: self._animation.finished.disconnect(on_collapse_finished) if self._animation else None
+                    disconnect_collapse_value,
+                    disconnect_collapse_finished
                 ]
             else:
                 # Expand: animate to natural height
@@ -269,9 +279,17 @@ class CollapsibleGroupBox(QFrame):
                 self._animation.finished.connect(on_finished)
 
                 # Track connections
+                def disconnect_expand_value() -> None:
+                    if self._animation:
+                        self._animation.valueChanged.disconnect(on_value_changed)
+
+                def disconnect_expand_finished() -> None:
+                    if self._animation:
+                        self._animation.finished.disconnect(on_finished)
+
                 self._animation_connections = [
-                    lambda: self._animation.valueChanged.disconnect(on_value_changed) if self._animation else None,
-                    lambda: self._animation.finished.disconnect(on_finished) if self._animation else None
+                    disconnect_expand_value,
+                    disconnect_expand_finished
                 ]
 
             self._animation.start()

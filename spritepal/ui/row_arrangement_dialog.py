@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QVBoxLayout,
 )
+from typing_extensions import override
 
 from .components import SplitterDialog
 from .row_arrangement import (
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 class RowArrangementDialog(SplitterDialog):
     """Dialog for arranging sprite rows with intuitive drag-and-drop interface"""
 
-    def __init__(self, sprite_path, tiles_per_row=16, parent=None):
+    def __init__(self, sprite_path: str, tiles_per_row: int = 16, parent: Any | None = None) -> None:
         # Step 1: Declare instance variables BEFORE super().__init__()
         self.sprite_path: str | None = sprite_path
         self.tiles_per_row: int = tiles_per_row
@@ -116,6 +117,7 @@ class RowArrangementDialog(SplitterDialog):
             print(f"Error loading sprite data: {e}")
             # Don't return here - continue with dialog setup but in error state
 
+    @override
     def _setup_ui(self):
         """Set up the dialog UI using SplitterDialog panels"""
         # Call parent _setup_ui first to initialize the main splitter
@@ -287,13 +289,15 @@ class RowArrangementDialog(SplitterDialog):
 
     def _on_available_selection_changed(self):
         """Handle selection change in available rows list"""
-        self._update_row_selection_state(self.available_list)
+        if self.available_list:
+            self._update_row_selection_state(self.available_list)
 
     def _on_arranged_selection_changed(self):
         """Handle selection change in arranged rows list"""
-        self._update_row_selection_state(self.arranged_list)
+        if self.arranged_list:
+            self._update_row_selection_state(self.arranged_list)
 
-    def _update_row_selection_state(self, list_widget):
+    def _update_row_selection_state(self, list_widget: DragDropListWidget) -> None:
         """Update the visual selection state of row preview widgets"""
         for i in range(list_widget.count()):
             item = list_widget.item(i)
@@ -302,27 +306,29 @@ class RowArrangementDialog(SplitterDialog):
                 is_selected = item.isSelected()
                 widget.set_selected(is_selected)
 
-    def _add_row_to_arrangement(self, row_index):
+    def _add_row_to_arrangement(self, row_index: int | QListWidgetItem) -> None:
         """Add a row to the arrangement"""
+        actual_row_index: int
         if isinstance(row_index, QListWidgetItem):
             # Handle double-click from available list
-            row_index = row_index.data(Qt.ItemDataRole.UserRole)
+            actual_row_index = row_index.data(Qt.ItemDataRole.UserRole)
+        else:
+            actual_row_index = row_index
 
-        if self.arrangement_manager.add_row(row_index):
+        if self.arrangement_manager.add_row(actual_row_index):
             self._refresh_ui()
             self._update_status(
-                f"Added row {row_index} to arrangement ({self.arrangement_manager.get_arranged_count()} total)"
+                f"Added row {actual_row_index} to arrangement ({self.arrangement_manager.get_arranged_count()} total)"
             )
 
-    def _remove_row_from_arrangement(self, item):
+    def _remove_row_from_arrangement(self, item: QListWidgetItem) -> None:
         """Remove a row from the arrangement"""
-        if isinstance(item, QListWidgetItem):
-            row_index = item.data(Qt.ItemDataRole.UserRole)
-            if self.arrangement_manager.remove_row(row_index):
-                self._refresh_ui()
-                self._update_status(
-                    f"Removed row {row_index} from arrangement ({self.arrangement_manager.get_arranged_count()} remaining)"
-                )
+        row_index = item.data(Qt.ItemDataRole.UserRole)
+        if self.arrangement_manager.remove_row(row_index):
+            self._refresh_ui()
+            self._update_status(
+                f"Removed row {row_index} from arrangement ({self.arrangement_manager.get_arranged_count()} remaining)"
+            )
 
     def _add_all_rows(self):
         """Add all rows to arrangement"""
@@ -541,7 +547,7 @@ class RowArrangementDialog(SplitterDialog):
             # Accept dialog
             self.accept()
 
-    def _update_status(self, message):
+    def _update_status(self, message: str) -> None:
         """Update the status bar message"""
         self.update_status(message)
 
@@ -587,15 +593,15 @@ class RowArrangementDialog(SplitterDialog):
         """Handle arrangement change signal from manager"""
         # Already handled by individual add/remove methods
 
-    def _on_palette_mode_changed(self, enabled):
+    def _on_palette_mode_changed(self, enabled: bool) -> None:
         """Handle palette mode change signal"""
         # Already handled in toggle_palette_application
 
-    def _on_palette_index_changed(self, index):
+    def _on_palette_index_changed(self, index: int) -> None:
         """Handle palette index change signal"""
         # Already handled in _cycle_palette
 
-    def set_palettes(self, palettes_dict):
+    def set_palettes(self, palettes_dict: dict[int, list[tuple[int, int, int]]]) -> None:
         """Set the available palettes for colorization"""
         self.colorizer.set_palettes(palettes_dict)
 
@@ -624,7 +630,7 @@ class RowArrangementDialog(SplitterDialog):
                 "Grayscale mode: Original sprite colors | Press C to toggle palette"
             )
 
-    def _get_display_image_for_row(self, row_index):
+    def _get_display_image_for_row(self, row_index: int) -> Image.Image | None:
         """Get the appropriate display image for a row (grayscale or colorized)"""
         if row_index >= len(self.tile_rows):
             return None
@@ -649,7 +655,8 @@ class RowArrangementDialog(SplitterDialog):
             f"Palette mode: Palette {new_palette_idx} applied | Press C to toggle, P to cycle"
         )
 
-    def keyPressEvent(self, a0):
+    @override
+    def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         """Handle keyboard shortcuts"""
         if a0 and a0.key() == Qt.Key.Key_Delete:
             # Delete selected rows from arrangement

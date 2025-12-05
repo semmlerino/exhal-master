@@ -12,13 +12,16 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QVBoxLayout,
+    QWidget,
 )
+
+# from typing_extensions import override
 
 
 class ScanRangeDialog(QDialog):
     """Dialog for specifying custom scan range."""
 
-    def __init__(self, rom_size: int = 0, parent=None):
+    def __init__(self, rom_size: int = 0, parent: QWidget | None = None):
         """
         Initialize scan range dialog.
 

@@ -44,11 +44,11 @@ class ComponentFactory:
         logger.debug("Creating all dialog components")
 
         components: dict[str, Any] = {
-            'signal_router': SignalRouterComponent(self.dialog),
-            'tab_manager': TabManagerComponent(self.dialog),
-            'layout_manager': LayoutManagerComponent(self.dialog),
+            'signal_router': SignalRouterComponent(self.dialog),  # type: ignore[arg-type]  # ManualOffsetDialogCore implements required interface
+            'tab_manager': TabManagerComponent(self.dialog),  # type: ignore[arg-type]
+            'layout_manager': LayoutManagerComponent(self.dialog),  # type: ignore[arg-type]
             'worker_coordinator': WorkerCoordinatorComponent(self.dialog),
-            'rom_cache': ROMCacheComponent(self.dialog)
+            'rom_cache': ROMCacheComponent(self.dialog)  # type: ignore[arg-type]
         }
 
         logger.debug(f"Created {len(components)} components")

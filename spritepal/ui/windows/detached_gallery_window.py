@@ -9,7 +9,7 @@ from typing import Any
 
 from core.managers import get_extraction_manager
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QCloseEvent, QKeyEvent
+from PySide6.QtGui import QAction, QCloseEvent, QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.common import WorkerManager
 from ui.dialogs import UserErrorDialog
 from ui.rom_extraction.workers import SpriteScanWorker
@@ -430,7 +431,7 @@ class DetachedGalleryWindow(QMainWindow):
 
             logger.info(f"Detached gallery loaded {len(sprites)} sprites")
 
-    def copy_thumbnails_from(self, source_gallery):
+    def copy_thumbnails_from(self, source_gallery: SpriteGalleryWidget | None):
         """
         Copy thumbnail pixmaps from another gallery widget.
 
@@ -455,7 +456,7 @@ class DetachedGalleryWindow(QMainWindow):
 
         logger.info(f"Copied {copied_count} thumbnails to detached gallery")
 
-    def set_rom_info(self, rom_path: str, rom_extractor):
+    def set_rom_info(self, rom_path: str, rom_extractor: Any):
         """
         Set ROM information for thumbnail generation.
 
@@ -850,7 +851,7 @@ class DetachedGalleryWindow(QMainWindow):
                 WorkerManager.cleanup_worker(self.scan_worker)
                 self.scan_worker = None
 
-    def _on_sprite_found(self, sprite_info: dict):
+    def _on_sprite_found(self, sprite_info: dict[str, Any]):
         """Handle sprite found during scan."""
         # Convert to the format expected by gallery
         sprite = {
@@ -1153,7 +1154,7 @@ class DetachedGalleryWindow(QMainWindow):
         if not self.thumbnail_controller:
             logger.error("Failed to create thumbnail controller - cannot generate thumbnails")
 
-    def _on_thumbnail_ready(self, offset: int, pixmap):
+    def _on_thumbnail_ready(self, offset: int, pixmap: QPixmap):
         """Handle thumbnail ready from worker."""
         logger.debug(f"Thumbnail ready for offset 0x{offset:06X}")
 
@@ -1254,21 +1255,17 @@ class DetachedGalleryWindow(QMainWindow):
         try:
             self.status_bar.showMessage(f"Extracting sprite at 0x{offset:06X}...")
 
-            # Create extraction parameters
-            params = {
-                "rom_path": self.rom_path,
-                "sprite_offset": offset,
-                "sprite_name": f"sprite_0x{offset:X}",
-                "output_base": str(Path(output_path).stem),
-                "cgram_path": None  # Could add CGRAM selection later
-            }
+            # Check rom_path is available
+            if not self.rom_path:
+                raise ValueError("ROM path is not set")
 
             # Perform extraction using the extraction manager
+            # Use variables directly to avoid type narrowing issues with dict indexing
             result = self.extraction_manager.extract_sprite_to_png(
-                params["rom_path"],
-                params["sprite_offset"],
+                self.rom_path,
+                offset,
                 output_path,
-                params["cgram_path"]
+                None  # cgram_path - could add CGRAM selection later
             )
 
             if result:
@@ -1311,10 +1308,10 @@ class DetachedGalleryWindow(QMainWindow):
             )
             return
 
-        # Create results dialog
-        dialog = QWidget(self)
+        # Create results dialog - use QDialog for proper modal behavior
+        dialog = QDialog(self)
         dialog.setWindowTitle("Scan Results")
-        dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        dialog.setModal(True)
         dialog.resize(600, 400)
 
         layout = QVBoxLayout()
@@ -1344,12 +1341,13 @@ class DetachedGalleryWindow(QMainWindow):
 
         # Close button
         close_btn = QPushButton("Close")
-        close_btn.clicked.connect(dialog.close)
+        close_btn.clicked.connect(dialog.accept)
         layout.addWidget(close_btn)
 
         dialog.setLayout(layout)
-        dialog.show()
+        dialog.exec()
 
+    @override
     def keyPressEvent(self, event: QKeyEvent):
         """Handle keyboard events."""
         key = event.key()
@@ -1413,6 +1411,7 @@ class DetachedGalleryWindow(QMainWindow):
         # Could update selection in gallery to match if desired
         # For now, just log the change
 
+    @override
     def closeEvent(self, event: QCloseEvent):
         """Handle window close event."""
         logger.info("DetachedGalleryWindow closing, cleaning up workers")
@@ -1428,7 +1427,8 @@ class DetachedGalleryWindow(QMainWindow):
         self.window_closed.emit()
         super().closeEvent(event)
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, event: Any):
         """Handle show event to ensure proper layout."""
         super().showEvent(event)
 

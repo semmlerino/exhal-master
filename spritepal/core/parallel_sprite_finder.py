@@ -7,7 +7,9 @@ providing 3-4x speedup on multi-core systems.
 from __future__ import annotations
 
 import logging
+import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,8 +85,8 @@ class ParallelSpriteFinder:
         rom_path: str,
         start_offset: int = 0,
         end_offset: int | None = None,
-        progress_callback=None,
-        cancellation_token=None
+        progress_callback: Callable[[int, int], None] | None = None,
+        cancellation_token: threading.Event | None = None
     ) -> list[SearchResult]:
         """
         Search for sprites in parallel across ROM regions.
@@ -194,7 +196,7 @@ class ParallelSpriteFinder:
         finder: SpriteFinder,
         rom_data: bytes,
         chunk: SearchChunk,
-        cancellation_token=None
+        cancellation_token: threading.Event | None = None
     ) -> list[SearchResult]:
         """Search a single chunk for sprites."""
         results = []
@@ -299,7 +301,7 @@ class ParallelSpriteFinder:
         # Normal density
         return self.step_size
 
-    def _calculate_confidence(self, sprite_info: dict) -> float:
+    def _calculate_confidence(self, sprite_info: dict[str, Any]) -> float:
         """
         Calculate confidence score for sprite detection.
 
@@ -343,7 +345,7 @@ class AdaptiveSpriteFinder(ParallelSpriteFinder):
     Includes bloom filters, pattern learning, and predictive caching.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         # Pattern learning

@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal
+from typing_extensions import override
 
 
 class DialogSignalManager(QObject):
@@ -135,6 +136,7 @@ class DialogSignalManager(QObject):
         """
         return True
 
+    @override
     def __repr__(self) -> str:
         """Return string representation of the manager."""
         return "<DialogSignalManager(available)>"

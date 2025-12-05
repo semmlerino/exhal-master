@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
 from ui.components.base import BaseDialog
 from ui.styles import (
@@ -94,7 +95,7 @@ class UserErrorDialog(BaseDialog):
         self,
         error_message: str,
         technical_details: str | None = None,
-        parent=None
+        parent: QWidget | None = None
     ):
         # Find matching error type first
         error_info = self._find_error_mapping(error_message)
@@ -204,7 +205,7 @@ class UserErrorDialog(BaseDialog):
 
     @staticmethod
     def show_error(
-        parent,
+        parent: QWidget | None,
         error_message: str,
         technical_details: str | None = None
     ) -> None:

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from PySide6.QtCore import QObject, Signal
-from utils.type_aliases import override
+from typing_extensions import override
 
 from .base_manager import BaseManager
 from .exceptions import SessionError
@@ -164,7 +164,6 @@ class ApplicationStateManager(BaseManager):
             if category not in self._settings:
                 self._settings[category] = {}
 
-            self._settings[category].get(key)
             self._settings[category][key] = value
             self._session_dirty = True
 
@@ -551,24 +550,30 @@ class SessionAdapter(SessionManager):
         state_manager.settings_saved.connect(self.settings_saved.emit)
         state_manager.session_restored.connect(self.session_restored.emit)
 
+    @override
     def _initialize(self) -> None:
         pass
 
+    @override
     def cleanup(self) -> None:
         pass
 
+    @override
     def get(self, category: str, key: str, default: Any = None) -> Any:
         return self._state_mgr.get_setting(category, key, default)
 
+    @override
     def set(self, category: str, key: str, value: Any) -> None:
         self._state_mgr.set_setting(category, key, value)
 
     def save_session(self) -> bool:  # type: ignore[override]  # Base returns None, override returns bool for success
         return self._state_mgr.save_settings()
 
+    @override
     def get_session_data(self) -> dict[str, Any]:
         return self._state_mgr.get_setting("session", "data", {})
 
+    @override
     def update_session_data(self, data: dict[str, Any]) -> None:
         self._state_mgr.set_setting("session", "data", data)
 

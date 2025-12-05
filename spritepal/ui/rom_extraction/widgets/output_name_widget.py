@@ -1,6 +1,8 @@
 """Output name widget for ROM extraction"""
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
 
@@ -22,7 +24,7 @@ class OutputNameWidget(BaseExtractionWidget):
     # Signals
     text_changed = Signal(str)  # Emitted when output name changes
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self._setup_ui()
 

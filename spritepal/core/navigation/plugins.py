@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 from .data_structures import (
@@ -98,6 +99,7 @@ class StrategyPlugin(NavigationPlugin):
         self.strategy_classes = strategy_classes
         self.registered_strategies: list[AbstractNavigationStrategy] = []
 
+    @override
     def initialize(self) -> bool:
         """Initialize and register strategies."""
         try:
@@ -118,6 +120,7 @@ class StrategyPlugin(NavigationPlugin):
             logger.exception(f"Failed to initialize strategy plugin {self.name}: {e}")
             return False
 
+    @override
     def cleanup(self) -> None:
         """Unregister strategies."""
         try:
@@ -135,7 +138,7 @@ class StrategyPlugin(NavigationPlugin):
 class FormatAdapterPlugin(NavigationPlugin):
     """Plugin that provides format-specific adapters."""
 
-    def __init__(self, name: str, format_adapters: dict[str, Callable]) -> None:
+    def __init__(self, name: str, format_adapters: dict[str, Callable[..., Any]]) -> None:
         """
         Initialize format adapter plugin.
 
@@ -146,6 +149,7 @@ class FormatAdapterPlugin(NavigationPlugin):
         super().__init__(name)
         self.format_adapters = format_adapters
 
+    @override
     def initialize(self) -> bool:
         """Register format adapters."""
         try:
@@ -159,6 +163,7 @@ class FormatAdapterPlugin(NavigationPlugin):
             logger.exception(f"Failed to initialize format adapter plugin {self.name}: {e}")
             return False
 
+    @override
     def cleanup(self) -> None:
         """Unregister format adapters."""
         logger.info(f"Cleaned up format adapter plugin: {self.name}")
@@ -166,7 +171,7 @@ class FormatAdapterPlugin(NavigationPlugin):
 class ScoringAlgorithmPlugin(NavigationPlugin):
     """Plugin that provides custom scoring algorithms."""
 
-    def __init__(self, name: str, scoring_functions: dict[str, Callable]) -> None:
+    def __init__(self, name: str, scoring_functions: dict[str, Callable[..., Any]]) -> None:
         """
         Initialize scoring algorithm plugin.
 
@@ -177,6 +182,7 @@ class ScoringAlgorithmPlugin(NavigationPlugin):
         super().__init__(name)
         self.scoring_functions = scoring_functions
 
+    @override
     def initialize(self) -> bool:
         """Register scoring algorithms."""
         try:
@@ -189,6 +195,7 @@ class ScoringAlgorithmPlugin(NavigationPlugin):
             logger.exception(f"Failed to initialize scoring plugin {self.name}: {e}")
             return False
 
+    @override
     def cleanup(self) -> None:
         """Unregister scoring algorithms."""
         logger.info(f"Cleaned up scoring plugin: {self.name}")
@@ -465,6 +472,7 @@ class LinearPatternStrategy(AbstractPatternStrategy):
     def __init__(self) -> None:
         super().__init__("LinearPattern")
 
+    @override
     def find_next_sprites(
         self,
         context: NavigationContext,
@@ -499,6 +507,7 @@ class LinearPatternStrategy(AbstractPatternStrategy):
 
         return hints
 
+    @override
     def learn_from_discovery(self, hint: NavigationHint, actual_location: SpriteLocation | None) -> None:
         """Learn from discovery results."""
         success = actual_location is not None
@@ -508,10 +517,12 @@ class LinearPatternStrategy(AbstractPatternStrategy):
             # Update patterns based on successful prediction
             pass
 
+    @override
     def get_confidence_estimate(self, context: NavigationContext) -> float:
         """Estimate confidence for current context."""
         return 0.6  # Moderate confidence for linear patterns
 
+    @override
     def _extract_patterns(self, region_map: SpriteRegionMap) -> dict[str, Any]:
         """Extract linear patterns from region map."""
         sprites = list(region_map)
@@ -527,6 +538,7 @@ class LinearPatternStrategy(AbstractPatternStrategy):
 
         return {"spacings": spacings, "avg_spacing": sum(spacings) / len(spacings) if spacings else 0}
 
+    @override
     def _apply_patterns(self, patterns: dict[str, Any], context: NavigationContext) -> list[NavigationHint]:
         """Apply learned patterns to generate hints."""
         hints = []

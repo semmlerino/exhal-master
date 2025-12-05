@@ -51,7 +51,7 @@ class LayoutManagerComponent:
             self._layout_manager = None
         else:
             logger.debug("Using legacy layout manager")
-            self._layout_manager = OriginalLayoutManager(dialog)
+            self._layout_manager = OriginalLayoutManager(dialog)  # type: ignore[arg-type]  # ManualOffsetDialogCore implements required interface
             self._enhanced_layout = None
 
     def _should_use_enhanced_layout(self) -> bool:

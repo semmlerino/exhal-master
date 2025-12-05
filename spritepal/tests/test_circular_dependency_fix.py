@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 from ui.main_window import MainWindow
 
 
+@pytest.mark.gui
 class TestCircularDependencyFix:
     """Test suite for circular dependency fix."""
 

@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from core.rom_extractor import ROMExtractor
     from PySide6.QtCore import QObject
 
 from core.workers.base import BaseWorker, handle_worker_errors
@@ -25,7 +26,7 @@ class SpritePreviewWorker(BaseWorker):
     )  # tile_data, width, height, sprite_name
     preview_error = Signal(str)  # error message
 
-    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor, sprite_config=None, parent: QObject | None = None):
+    def __init__(self, rom_path: str, offset: int, sprite_name: str, extractor: ROMExtractor, sprite_config: Any = None, parent: QObject | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.offset = offset

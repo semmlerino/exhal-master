@@ -10,8 +10,9 @@ import builtins
 import contextlib
 from collections.abc import Callable
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +37,7 @@ class HexOffsetInput(QWidget):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         placeholder: str = "0x0",
         with_decimal_display: bool = True,
         input_width: int = 100,
@@ -213,7 +214,8 @@ class HexOffsetInput(QWidget):
         """Check if current value is valid"""
         return self.get_value() is not None or not self.get_text().strip()
 
-    def setFocus(self, reason=None):
+    @override
+    def setFocus(self, reason: Qt.FocusReason | None = None) -> None:
         """Set focus to the input field"""
         if reason is not None:
             self.hex_edit.setFocus(reason)

@@ -51,18 +51,18 @@ except ImportError:
     # Create functional fallback classes for non-Qt environments
     class QObject:
         """Functional QObject fallback for non-Qt environments."""
-        def __init__(self, parent=None):
+        def __init__(self, parent: Any = None):
             self.parent = parent
             self._signals = {}
 
     class _FallbackSignal:
         """Functional signal implementation with weak reference support for non-Qt environments."""
 
-        def __init__(self, *args):
+        def __init__(self, *args: Any):
             self._callbacks: list[Any] = []
             self._arg_types = args
 
-        def _create_reference(self, callback: Callable) -> Any:
+        def _create_reference(self, callback: Callable[..., Any]) -> Any:
             """Create appropriate reference for the callback."""
             if hasattr(callback, '__self__') and hasattr(callback, '__func__'):
                 # Bound method (instance method) - use WeakMethod
@@ -73,19 +73,19 @@ except ImportError:
             # Regular function, lambda, static method, etc. - store directly
             return callback
 
-        def _get_callback_from_ref(self, ref: Any) -> Callable | None:
+        def _get_callback_from_ref(self, ref: Any) -> Callable[..., Any] | None:
             """Get actual callback from reference, handling weak refs."""
             if isinstance(ref, (weakref.ref, weakref.WeakMethod)):
                 callback = ref()
                 return callback  # None if dead reference
             return ref  # Direct reference
 
-        def _is_same_callback(self, ref: Any, target_callback: Callable) -> bool:
+        def _is_same_callback(self, ref: Any, target_callback: Callable[..., Any]) -> bool:
             """Check if reference points to the same callback."""
             current_callback = self._get_callback_from_ref(ref)
             return current_callback is not None and current_callback == target_callback
 
-        def emit(self, *args, **kwargs):
+        def emit(self, *args: Any, **kwargs: Any) -> None:
             """Emit signal to all connected callbacks."""
             dead_refs = []
 
@@ -108,7 +108,7 @@ except ImportError:
             for i in reversed(dead_refs):
                 del self._callbacks[i]
 
-        def connect(self, callback: Callable):
+        def connect(self, callback: Callable[..., Any]) -> None:
             """Connect a callback to this signal."""
             if self._is_already_connected(callback):
                 return
@@ -116,11 +116,11 @@ except ImportError:
             ref = self._create_reference(callback)
             self._callbacks.append(ref)
 
-        def _is_already_connected(self, callback: Callable) -> bool:
+        def _is_already_connected(self, callback: Callable[..., Any]) -> bool:
             """Check if callback is already connected."""
             return any(self._is_same_callback(ref, callback) for ref in self._callbacks)
 
-        def disconnect(self, callback: Callable | None = None):
+        def disconnect(self, callback: Callable[..., Any] | None = None) -> None:
             """Disconnect callback(s) from this signal."""
             if callback is None:
                 self._callbacks.clear()
@@ -131,24 +131,24 @@ except ImportError:
                     if not self._is_same_callback(ref, callback)
                 ]
 
-    def Signal(*args, **kwargs):
+    def Signal(*args: Any, **kwargs: Any) -> _FallbackSignal:
         """Create a functional signal for non-Qt environments."""
         return _FallbackSignal(*args)
 
     class QMessageBox:
         """Console-based message box fallback for non-Qt environments."""
         @staticmethod
-        def information(parent, title, message):
+        def information(parent: Any, title: str, message: str) -> None:
             """Display information message to console."""
             print(f"\n[INFO] {title}: {message}\n", file=sys.stderr)
 
         @staticmethod
-        def warning(parent, title, message):
+        def warning(parent: Any, title: str, message: str) -> None:
             """Display warning message to console."""
             print(f"\n[WARNING] {title}: {message}\n", file=sys.stderr)
 
         @staticmethod
-        def critical(parent, title, message):
+        def critical(parent: Any, title: str, message: str) -> None:
             """Display critical error message to console."""
             print(f"\n[CRITICAL ERROR] {title}: {message}\n", file=sys.stderr)
 
@@ -719,9 +719,9 @@ class UnifiedErrorHandler(QObject):
         operation: str,
         category: ErrorCategory | None = None,
         **context_kwargs: Any
-    ) -> Callable:
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """Create a decorator for handling errors in a specific operation"""
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 try:
                     return func(*args, **kwargs)
@@ -832,7 +832,7 @@ def handle_file_operation_error(
     operation: str,
     file_path: str,
     error_handler: UnifiedErrorHandler | None = None
-) -> Callable:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator for file operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()
@@ -846,7 +846,7 @@ def handle_file_operation_error(
 def handle_validation_error(
     operation: str,
     error_handler: UnifiedErrorHandler | None = None
-) -> Callable:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator for validation operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()
@@ -860,7 +860,7 @@ def handle_worker_operation_error(
     operation: str,
     worker_name: str,
     error_handler: UnifiedErrorHandler | None = None
-) -> Callable:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorator for worker operations"""
     if error_handler is None:
         error_handler = get_unified_error_handler()

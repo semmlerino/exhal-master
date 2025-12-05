@@ -7,9 +7,10 @@ import builtins
 import contextlib
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt, QTimer, Signal
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from PySide6.QtGui import (
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
         QDropEvent,
         QKeyEvent,
         QPainter,
+        QPaintEvent,
         QPen,
     )
 else:
@@ -29,6 +31,7 @@ else:
         QDropEvent,
         QKeyEvent,
         QPainter,
+        QPaintEvent,
         QPen,
     )
 from PySide6.QtWidgets import (
@@ -75,7 +78,7 @@ class DropZone(QWidget):
 
     file_dropped = Signal(str)
 
-    def __init__(self, file_type, parent=None):
+    def __init__(self, file_type: str, parent: Any | None = None) -> None:
         super().__init__(parent)
         self.file_type = file_type
         self.file_path = ""
@@ -116,12 +119,13 @@ class DropZone(QWidget):
         _ = self.browse_button.clicked.connect(self._browse_file)
         layout.addWidget(self.browse_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    def dragEnterEvent(self, a0: QDragEnterEvent | None):
+    @override
+    def dragEnterEvent(self, event: QDragEnterEvent | None):
         """Handle drag enter events"""
-        if a0:
-            mime_data = a0.mimeData()
+        if event:
+            mime_data = event.mimeData()
             if mime_data and mime_data.hasUrls():
-                a0.acceptProposedAction()
+                event.acceptProposedAction()
                 self.setStyleSheet(
                     """
                     DropZone {
@@ -132,7 +136,8 @@ class DropZone(QWidget):
                 """
                 )
 
-    def dragLeaveEvent(self, a0: QDragLeaveEvent | None):
+    @override
+    def dragLeaveEvent(self, event: QDragLeaveEvent | None):
         """Handle drag leave events"""
         self.setStyleSheet(
             """
@@ -144,19 +149,22 @@ class DropZone(QWidget):
         """
         )
 
-    def dropEvent(self, a0: QDropEvent | None):
+    @override
+    def dropEvent(self, event: QDropEvent | None):
         """Handle drop events"""
-        if a0:
-            mime_data = a0.mimeData()
+        if event:
+            mime_data = event.mimeData()
             if mime_data:
                 files = [url.toLocalFile() for url in mime_data.urls()]
                 if files:
                     self.set_file(files[0])
         self.dragLeaveEvent(None)  # Just reset the style
 
-    def paintEvent(self, a0):
+    @override
+    def paintEvent(self, event: QPaintEvent | None) -> None:
         """Custom paint event to show status"""
-        super().paintEvent(a0)
+        if event:
+            super().paintEvent(event)
 
         if self.file_path:
             # Draw green checkmark
@@ -188,7 +196,7 @@ class DropZone(QWidget):
             settings.set_last_used_directory(str(Path(filename).parent))
             self.set_file(filename)
 
-    def set_file(self, file_path):
+    def set_file(self, file_path: str):
         """Set the file path"""
         if os.path.exists(file_path):
             self.file_path = file_path
@@ -408,7 +416,7 @@ class ExtractionPanel(QGroupBox):
         _ = self.cgram_drop.file_dropped.connect(self._on_file_changed)
         _ = self.oam_drop.file_dropped.connect(self._on_file_changed)
 
-    def _on_file_changed(self, file_path):
+    def _on_file_changed(self, file_path: str) -> None:
         """Handle when a file is dropped"""
         self.files_changed.emit()
         self._check_extraction_ready()
@@ -438,7 +446,7 @@ class ExtractionPanel(QGroupBox):
             ready = self.cgram_drop.has_file()
             self.extraction_ready.emit(ready)
 
-    def _auto_detect_related(self, file_path):
+    def _auto_detect_related(self, file_path: str) -> None:
         """Try to auto-detect related dump files"""
         path = Path(file_path)
         directory = path.parent
@@ -474,9 +482,9 @@ class ExtractionPanel(QGroupBox):
         ]
 
         for filename, drop_zone in patterns:
-            file_path = directory / filename
-            if file_path.exists() and not drop_zone.has_file():
-                drop_zone.set_file(str(file_path))
+            candidate_path = directory / filename
+            if candidate_path.exists() and not drop_zone.has_file():
+                drop_zone.set_file(str(candidate_path))
 
     def _find_files_for_type(
         self, directory: Path, patterns: list[str], drop_zone: DropZone
@@ -531,7 +539,7 @@ class ExtractionPanel(QGroupBox):
             self.files_changed.emit()
             self._check_extraction_ready()
 
-    def _on_preset_changed(self, index):
+    def _on_preset_changed(self, index: int) -> None:
         """Handle preset change"""
         logger.debug(f"Preset changed to index: {index}")
         try:
@@ -542,7 +550,7 @@ class ExtractionPanel(QGroupBox):
                 logger.debug("Offset widget made visible")
 
                 # Update display with current values
-                current_offset = self.offset_spinbox
+                current_offset = self.offset_spinbox.value()
                 self._update_offset_display(current_offset)
 
                 # Trigger preview update if files are loaded
@@ -577,7 +585,7 @@ class ExtractionPanel(QGroupBox):
             logger.exception("Error in preset change handler")
             # Don't re-raise to prevent crash, just log the error
 
-    def _on_offset_slider_changed(self, value):
+    def _on_offset_slider_changed(self, value: int) -> None:
         """Handle offset slider change"""
         logger.debug(f"Offset slider changed to: {value} (0x{value:04X})")
         try:
@@ -608,7 +616,7 @@ class ExtractionPanel(QGroupBox):
             self._slider_changing = False  # Reset flag on error
             # Don't re-raise to prevent crash, just log the error
 
-    def _on_offset_spinbox_changed(self, value):
+    def _on_offset_spinbox_changed(self, value: int) -> None:
         """Handle offset spinbox change"""
         logger.debug(f"Offset spinbox changed to: {value} (0x{value:04X})")
         try:
@@ -647,7 +655,7 @@ class ExtractionPanel(QGroupBox):
                 self.offset_slider.blockSignals(False)
             # Don't re-raise to prevent crash, just log the error
 
-    def _update_offset_display(self, value):
+    def _update_offset_display(self, value: int) -> None:
         """Update all offset display elements"""
         # Update hex label
         hex_text = f"0x{value:04X}"
@@ -668,7 +676,7 @@ class ExtractionPanel(QGroupBox):
         elif self.position_label:
             self.position_label.setText("0%")
 
-    def _on_step_changed(self, index):
+    def _on_step_changed(self, index: int) -> None:
         """Handle step size change"""
         step_sizes = [0x20, 0x100, 0x1000, 0x4000]
         step_size = step_sizes[index]
@@ -682,7 +690,7 @@ class ExtractionPanel(QGroupBox):
 
         logger.debug(f"Step size changed to: 0x{step_size:04X}")
 
-    def _on_jump_selected(self, index):
+    def _on_jump_selected(self, index: int) -> None:
         """Handle quick jump selection"""
         if index > 0:
             jump_text = self.jump_combo.currentText()
@@ -765,7 +773,7 @@ class ExtractionPanel(QGroupBox):
         # Custom Range
         return self.offset_spinbox.value()
 
-    def restore_session_files(self, file_paths):
+    def restore_session_files(self, file_paths: dict[str, Any]) -> None:
         """Restore file paths from session data"""
         # Restore extraction mode first
         if "extraction_mode" in file_paths:
@@ -795,7 +803,7 @@ class ExtractionPanel(QGroupBox):
             "extraction_mode": self.mode_combo.currentIndex(),
         }
 
-    def _on_mode_changed(self, index):
+    def _on_mode_changed(self, index: int) -> None:
         """Handle extraction mode change"""
         logger.debug(f"Extraction mode changed to: {self.mode_combo.currentText()}")
 
@@ -820,6 +828,7 @@ class ExtractionPanel(QGroupBox):
         """Check if grayscale extraction mode is selected"""
         return self.mode_combo.currentIndex() == 1
 
+    @override
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle keyboard shortcuts for offset navigation"""
         # Only handle shortcuts in custom range mode

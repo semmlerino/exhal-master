@@ -11,9 +11,8 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-# Conditional imports to avoid hard dependency on PySide6
 try:
-    from PySide6.QtCore import QMutex, Signal
+    # from PySide6.QtCore import Signal
     from PySide6.QtWidgets import QDialog, QWidget
     PYSIDE6_AVAILABLE = True
 except ImportError:

@@ -15,6 +15,7 @@ import weakref
 from pathlib import Path
 from typing import Any
 
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 from .data_structures import NavigationHint
@@ -70,8 +71,9 @@ class MemoryCache(CacheLevel):
         self._lock = threading.RLock()
 
         # Use weak references for automatic cleanup
-        self._weak_refs: dict[str, weakref.ref] = {}
+        self._weak_refs: dict[str, weakref.ref[Any]] = {}
 
+    @override
     def get(self, key: str) -> Any | None:
         """Get item from memory cache."""
         with self._lock:
@@ -86,6 +88,7 @@ class MemoryCache(CacheLevel):
             self._statistics["misses"] += 1
             return None
 
+    @override
     def put(self, key: str, value: Any) -> None:
         """Put item in memory cache."""
         with self._lock:
@@ -104,7 +107,7 @@ class MemoryCache(CacheLevel):
 
             # Set up weak reference callback for automatic cleanup
             if hasattr(value, "__weakref__"):
-                def cleanup_callback(ref):
+                def cleanup_callback(ref: weakref.ref[Any]) -> None:
                     with self._lock:
                         if key in self._cache and self._weak_refs.get(key) is ref:
                             del self._cache[key]
@@ -113,6 +116,7 @@ class MemoryCache(CacheLevel):
 
                 self._weak_refs[key] = weakref.ref(value, cleanup_callback)
 
+    @override
     def remove(self, key: str) -> bool:
         """Remove item from memory cache."""
         with self._lock:
@@ -125,6 +129,7 @@ class MemoryCache(CacheLevel):
                 return True
             return False
 
+    @override
     def clear(self) -> None:
         """Clear memory cache."""
         with self._lock:
@@ -158,6 +163,7 @@ class DiskCache(CacheLevel):
         # Load existing index
         self._load_index()
 
+    @override
     def get(self, key: str) -> Any | None:
         """Get item from disk cache."""
         with self._lock:
@@ -192,6 +198,7 @@ class DiskCache(CacheLevel):
             self._statistics["misses"] += 1
             return None
 
+    @override
     def put(self, key: str, value: Any) -> None:
         """Put item in disk cache."""
         with self._lock:
@@ -220,6 +227,7 @@ class DiskCache(CacheLevel):
             except Exception as e:
                 logger.exception(f"Error writing disk cache {key}: {e}")
 
+    @override
     def remove(self, key: str) -> bool:
         """Remove item from disk cache."""
         with self._lock:
@@ -241,6 +249,7 @@ class DiskCache(CacheLevel):
                 logger.exception(f"Error removing disk cache {key}: {e}")
                 return False
 
+    @override
     def clear(self) -> None:
         """Clear disk cache."""
         with self._lock:
@@ -613,6 +622,7 @@ class _NavigationCacheSingleton:
     """Singleton holder for NavigationCache."""
     _instance: NavigationCache | None = None
     _cache_dir: Path | None = None
+    _lock: threading.Lock = threading.Lock()
 
     @classmethod
     def get(cls, cache_dir: Path | None = None) -> NavigationCache:
@@ -626,10 +636,13 @@ class _NavigationCacheSingleton:
             Global navigation cache instance
         """
         if cls._instance is None:
-            # Use provided cache_dir or stored one
-            cls._instance = NavigationCache(cache_dir or cls._cache_dir)
-            if cache_dir:
-                cls._cache_dir = cache_dir
+            with cls._lock:
+                # Double-checked locking pattern
+                if cls._instance is None:
+                    # Use provided cache_dir or stored one
+                    cls._instance = NavigationCache(cache_dir or cls._cache_dir)
+                    if cache_dir:
+                        cls._cache_dir = cache_dir
         return cls._instance
 
     @classmethod

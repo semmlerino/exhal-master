@@ -27,69 +27,6 @@ pytestmark = [
 class TestHALMockingPerformance:
     """Test HAL mocking performance improvements."""
 
-    @pytest.mark.skip(reason="pytest-benchmark fixture not installed")
-    @pytest.mark.benchmark
-    def test_mock_pool_initialization_speed(self, benchmark):
-        """Test that mock pool initialization is instant (< 1ms)."""
-        def init_mock_pool():
-            pool = MockHALProcessPool()
-            pool.initialize("mock_exhal", "mock_inhal")
-            pool.shutdown()
-            MockHALProcessPool.reset_singleton()
-
-        # Benchmark initialization
-        benchmark(init_mock_pool)
-
-        # Mock initialization should be under 1ms (1000x faster than real)
-        assert benchmark.stats['mean'] < 0.001
-
-    @pytest.mark.skip(reason="pytest-benchmark fixture not installed")
-    @pytest.mark.benchmark
-    def test_mock_decompression_speed(self, hal_pool, benchmark):
-        """Test that mock decompression is instant."""
-        # Setup
-        request = HALRequest(
-            operation="decompress",
-            rom_path="test.rom",
-            offset=0x1000,
-            request_id="test_1"
-        )
-
-        # Benchmark decompression
-        result = benchmark(hal_pool.submit_request, request)
-
-        # Should be successful
-        assert result.success
-        assert result.data is not None
-
-        # Mock decompression should be under 1ms
-        assert benchmark.stats['mean'] < 0.001
-
-    @pytest.mark.skip(reason="pytest-benchmark fixture not installed")
-    @pytest.mark.benchmark
-    def test_mock_batch_processing_speed(self, hal_pool, benchmark):
-        """Test that mock batch processing is fast."""
-        # Create batch of requests
-        requests = [
-            HALRequest(
-                operation="decompress",
-                rom_path="test.rom",
-                offset=0x1000 * i,
-                request_id=f"batch_{i}"
-            )
-            for i in range(10)
-        ]
-
-        # Benchmark batch processing
-        results = benchmark(hal_pool.submit_batch, requests)
-
-        # All should succeed
-        assert len(results) == 10
-        assert all(r.success for r in results)
-
-        # Batch of 10 should process in under 10ms
-        assert benchmark.stats['mean'] < 0.01
-
     def test_mock_deterministic_behavior(self, hal_pool):
         """Test that mock provides deterministic results."""
         # Same request should give same result
@@ -306,18 +243,6 @@ class TestHALCompressorMocking:
 
 class TestAutoMocking:
     """Test automatic HAL mocking based on test type."""
-
-    @pytest.mark.unit
-    @pytest.mark.skip(reason="HAL mocking is now OPT-IN - tests must explicitly use mock_hal or hal_compressor fixture")
-    def test_unit_test_gets_mock_automatically(self):
-        """Unit tests should automatically get mock HAL."""
-        from core.hal_compression import HALCompressor
-
-        # This should be the mock version
-        compressor = HALCompressor()
-
-        # Check it's actually mocked
-        assert hasattr(compressor, 'get_statistics')  # Mock-specific method
 
     @pytest.mark.real_hal
     def test_real_hal_marker_overrides_mocking(self, tmp_path):

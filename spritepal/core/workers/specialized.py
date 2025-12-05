@@ -7,6 +7,7 @@ signals and behavior for extraction, injection, and scanning operations.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
@@ -46,7 +47,7 @@ class SignalConnectionHelper:
         self.manager = worker.manager
         self._connections = worker._connections
 
-    def validate_manager_type(self, expected_manager_getter, operation_type: str) -> bool:
+    def validate_manager_type(self, expected_manager_getter: Callable[[], Any], operation_type: str) -> bool:
         """
         Validate that the manager is of the expected type.
 
@@ -194,7 +195,7 @@ class WorkerOwnedManagerMixin:
     @staticmethod
     def create_worker_owned_manager(
         manager_factory: ManagerFactory | None,
-        manager_creator_func,
+        manager_creator_func: Callable[[ManagerFactory, QObject | None], BaseManager],
         parent: QObject | None = None
     ) -> BaseManager:
         """
@@ -202,7 +203,7 @@ class WorkerOwnedManagerMixin:
 
         Args:
             manager_factory: Manager factory or None to create default
-            manager_creator_func: Function to create manager from factory
+            manager_creator_func: Function to create manager from factory (takes factory and parent)
             parent: Initial parent (will be changed to worker later)
 
         Returns:
@@ -215,7 +216,7 @@ class WorkerOwnedManagerMixin:
             manager_factory = StandardManagerFactory(default_parent_strategy="none")
 
         # Create the manager (parent will be set after super init)
-        return manager_creator_func(manager_factory, parent=parent)
+        return manager_creator_func(manager_factory, parent)
 
     def setup_worker_owned_manager(self, manager: BaseManager) -> None:
         """

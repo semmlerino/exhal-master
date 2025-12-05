@@ -20,6 +20,7 @@ import weakref
 from contextlib import contextmanager
 from typing import Any, TypeVar
 
+from typing_extensions import override
 from utils.logging_config import get_logger
 from utils.safe_logging import safe_debug, suppress_logging_errors
 
@@ -221,6 +222,7 @@ class ManagerContext:
                 f"got {actual_type}"
             )
 
+    @override
     def __repr__(self) -> str:
         return f"ManagerContext(name='{self._name}', managers={list(self._managers.keys())})"
 
@@ -234,7 +236,7 @@ class ThreadLocalContextManager:
 
     def __init__(self) -> None:
         self._storage = threading.local()
-        self._thread_refs: dict[int, weakref.ReferenceType] = {}  # Track threads for cleanup
+        self._thread_refs: dict[int, weakref.ReferenceType[threading.Thread]] = {}  # Track threads for cleanup
         self._lock = threading.Lock()
 
         # Register cleanup for thread-local storage

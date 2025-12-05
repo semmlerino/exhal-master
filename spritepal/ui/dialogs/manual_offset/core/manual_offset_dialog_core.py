@@ -7,10 +7,11 @@ UnifiedManualOffsetDialog with a clean, component-based architecture.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget
+from typing_extensions import override
 from ui.components.base.composed.migration_adapter import DialogBaseMigrationAdapter
 from ui.dialogs.manual_offset.components import (
     LayoutManagerComponent,
@@ -80,6 +81,7 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
         self._setup_components()
         self._connect_signals()
 
+    @override
     def _setup_ui(self):
         """Override DialogBase _setup_ui to use our component-based setup."""
         # This is called by DialogBase.__init__
@@ -131,7 +133,7 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
             self.add_panel(right_panel, stretch_factor=3)
 
         # Set up custom buttons
-        if self._tab_manager:
+        if self._tab_manager and self.button_box:
             self._tab_manager.setup_custom_buttons(self.button_box)
 
         # Note: UI components are accessible via properties that delegate
@@ -186,6 +188,7 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
 
     # Properties for backward compatibility - expose component properties
     @property
+    @override
     def tab_widget(self):
         """Get the tab widget from tab manager."""
         if self._tab_manager:
@@ -263,19 +266,22 @@ class ManualOffsetDialogCore(DialogBaseMigrationAdapter):
         if hasattr(super(), 'cleanup'):
             super().cleanup()  # type: ignore[misc]
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, event: Any):
         """Handle show event."""
         super().showEvent(event)
         if self._layout_manager:
             self._layout_manager.on_dialog_show()
 
-    def resizeEvent(self, event):
+    @override
+    def resizeEvent(self, event: Any):
         """Handle resize event."""
         super().resizeEvent(event)
         if self._layout_manager and self.isVisible():
             self._layout_manager.handle_resize(event.size().width())
 
-    def hideEvent(self, event):
+    @override
+    def hideEvent(self, event: Any):
         """Handle hide event."""
         if self._worker_coordinator:
             self._worker_coordinator.cleanup_workers()

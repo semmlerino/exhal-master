@@ -16,8 +16,17 @@ Key responsibilities:
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Protocol
+
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QLabel, QSizePolicy, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QSizePolicy, QSplitter, QTabWidget, QVBoxLayout, QWidget
+
+if TYPE_CHECKING:
+    class DialogProtocol(Protocol):
+        """Protocol for dialogs that use LayoutManager."""
+        main_splitter: QSplitter | None
+        tab_widget: QTabWidget | None
+        def width(self) -> int: ...
 
 # Layout constants for consistent spacing
 LAYOUT_SPACING = 8
@@ -51,15 +60,27 @@ class LayoutManager:
     MIN_MINI_MAP_HEIGHT = MIN_MINI_MAP_HEIGHT
     MAX_MINI_MAP_HEIGHT = MAX_MINI_MAP_HEIGHT
 
-    def __init__(self, dialog):
-        """
-        Initialize layout manager.
+    if TYPE_CHECKING:
+        def __init__(self, dialog: DialogProtocol) -> None:
+            """
+            Initialize layout manager.
 
-        Args:
-            dialog: The parent ManualOffsetDialog instance
-        """
-        self.dialog = dialog
-        self._initial_setup_done = False
+            Args:
+                dialog: The parent ManualOffsetDialog instance
+            """
+            self.dialog: DialogProtocol = dialog
+            self._initial_setup_done: bool = False
+            self._current_ratio: float = 0.35
+    else:
+        def __init__(self, dialog: QWidget) -> None:
+            """
+            Initialize layout manager.
+
+            Args:
+                dialog: The parent ManualOffsetDialog instance
+            """
+            self.dialog = dialog
+            self._initial_setup_done = False
 
     def setup_left_panel_layout(self, panel: QWidget, tab_widget: QWidget,
                                status_widget: QWidget, rom_map: QWidget) -> None:

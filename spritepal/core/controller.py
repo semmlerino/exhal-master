@@ -484,7 +484,7 @@ class ExtractionController(QObject):
         tiles_per_row = self._get_tiles_per_row_from_sprite(sprite_file)
 
         # Open grid arrangement dialog
-        dialog = GridArrangementDialog(sprite_file, tiles_per_row, self.main_window)
+        dialog = GridArrangementDialog(sprite_file, tiles_per_row, cast(QWidget, self.main_window))
 
         # Pass palette data from the main window's sprite preview if available
         if (

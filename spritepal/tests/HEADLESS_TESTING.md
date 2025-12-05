@@ -5,60 +5,98 @@ This guide explains how to run SpritePal tests in headless environments (CI/CD, 
 ## Setup
 
 Tests are configured to run in headless mode using Qt's offscreen platform:
-- `pytest.ini` sets `qt_qpa_platform = offscreen`
-- GUI tests are marked with `@pytest.mark.gui`
-- Problematic QThread tests skip in headless mode
+- `pytest.ini` sets `qt_qpa_platform = offscreen` (enabled by default)
+- GUI tests are marked with `@pytest.mark.gui` and skipped in headless
+- Tests that need Qt but aren't marked @gui will **fail loudly** in headless
+
+## Test Behavior
+
+### Real Qt with Offscreen Mode
+SpritePal tests use **real Qt components** with the offscreen platform plugin.
+This means:
+- QApplication works in headless environments
+- Qt widgets can be created and tested
+- Signal/slot connections work correctly
+- No mock Qt modules are used
+
+### Test Categories
+1. **Tests without Qt dependencies**: Run normally, no special setup needed
+2. **Tests with Qt dependencies**: Work via offscreen mode
+3. **GUI tests (@pytest.mark.gui)**: Skipped in headless, require display/xvfb
 
 ## Running Tests
 
-### All tests (headless safe)
+### Using uv (recommended)
 ```bash
-QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ -v
+# All tests
+uv run pytest tests/ -v
+
+# Non-GUI tests only
+uv run pytest tests/ -v -k "not gui"
+
+# With verbose environment info
+PYTEST_VERBOSE_ENVIRONMENT=1 uv run pytest tests/ -v
 ```
 
-### Non-GUI tests only
+### Direct pytest
 ```bash
-python3 -m pytest tests/ -v -k "not gui"
+# All tests (offscreen mode is set in pytest.ini)
+python -m pytest tests/ -v
+
+# Override platform if needed
+QT_QPA_PLATFORM=offscreen python -m pytest tests/ -v
 ```
 
-### Headless integration tests
-```bash
-python3 -m pytest tests/test_integration_headless.py -v
-```
+## Test Markers
 
-## Test Organization
-
-1. **Unit Tests** (always headless safe):
-   - `test_extractor.py` - Core extraction logic
-   - `test_palette_manager.py` - Palette management
-   - `test_constants.py` - Configuration validation
-
-2. **Integration Tests**:
-   - `test_integration.py` - Standard integration tests
-     - GUI tests marked and skip in headless
-   - `test_integration_headless.py` - Headless-specific tests
-     - Mock Qt dependencies
-     - Test business logic without threading
-
-## Implementation Details
-
-### Handling Qt Dependencies
-- QThread tests are mocked or skipped in headless
-- Business logic extracted and tested separately
-- QPixmap creation mocked for headless environments
-
-### Test Adaptations
-- 35 tests run successfully in headless mode
-- 2 GUI tests automatically skip when `QT_QPA_PLATFORM=offscreen`
-- Worker thread logic tested without actual threading
+| Marker | Behavior in Headless |
+|--------|---------------------|
+| `@pytest.mark.gui` | Skipped |
+| `@pytest.mark.headless` | Runs |
+| `@pytest.mark.qt_real` | Skipped |
+| `@pytest.mark.qt_mock` | Runs |
+| (no marker) | Runs with offscreen |
 
 ## CI/CD Integration
 
 For GitHub Actions or similar:
 ```yaml
 - name: Run tests
-  env:
-    QT_QPA_PLATFORM: offscreen
   run: |
-    python -m pytest tests/ -v --tb=short
+    uv run pytest tests/ -v --tb=short
 ```
+
+No additional environment variables needed - pytest.ini configures offscreen mode.
+
+## Troubleshooting
+
+### Test fails with "Qt not available"
+- Ensure PySide6 is installed: `uv sync --extra dev`
+- The test may incorrectly require display - mark it @pytest.mark.gui
+
+### Test fails with "Failed to create QApplication"
+- QT_QPA_PLATFORM=offscreen should be set (it's in pytest.ini)
+- Check that no conflicting Qt environment variables are set
+
+### Test passes locally but fails in CI
+- Local environment may have display access
+- Add @pytest.mark.gui to tests that truly require a display
+- Or fix the test to work with offscreen mode
+
+## Implementation Details
+
+### No Mock Fallbacks
+Previous versions would silently mock Qt in headless environments.
+Now tests **fail loudly** if they:
+- Need Qt but aren't marked appropriately
+- Have Qt import errors
+- Can't create QApplication
+
+This ensures tests are honest about their requirements.
+
+### Fixture Behavior
+- `qt_app`: Creates real QApplication (with offscreen)
+- `safe_qtbot`: Returns real pytest-qt qtbot
+- `qtbot`: Standard pytest-qt fixture (works with offscreen)
+
+All fixtures fail with clear error messages if Qt is unavailable.

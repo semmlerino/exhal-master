@@ -4,9 +4,20 @@ Row-related widgets for SpritePal row arrangement dialog
 from __future__ import annotations
 
 from PIL import Image
-from PySide6.QtCore import QMimeData, Qt, Signal
-from PySide6.QtGui import QColor, QDrag, QPainter, QPen
+from PySide6.QtCore import QEvent, QMimeData, Qt, Signal
+from PySide6.QtGui import (
+    QColor,
+    QDrag,
+    QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QEnterEvent,
+    QPainter,
+    QPaintEvent,
+    QPen,
+)
 from PySide6.QtWidgets import QListWidget, QWidget
+from typing_extensions import override
 from utils.image_utils import pil_to_qpixmap
 
 
@@ -36,7 +47,8 @@ class RowPreviewWidget(QWidget):
         self.row_image = new_image
         self.update()
 
-    def paintEvent(self, a0) -> None:
+    @override
+    def paintEvent(self, event: QPaintEvent) -> None:
         """Paint the row thumbnail with enhanced visuals"""
         painter = QPainter(self)
 
@@ -140,12 +152,14 @@ class RowPreviewWidget(QWidget):
             painter.setPen(QColor(70, 140, 200))  # Match border color
             painter.drawText(image_end_x, 70, "● Selected")
 
-    def enterEvent(self, event) -> None:
+    @override
+    def enterEvent(self, event: QEnterEvent) -> None:
         """Handle mouse enter"""
         self.is_hovered = True
         self.update()
 
-    def leaveEvent(self, a0) -> None:
+    @override
+    def leaveEvent(self, event: QEvent) -> None:
         """Handle mouse leave"""
         self.is_hovered = False
         self.update()
@@ -169,44 +183,45 @@ class DragDropListWidget(QListWidget):
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
 
-    def dragEnterEvent(self, e) -> None:
+    @override
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle drag enter"""
-        if e:
-            mime_data = e.mimeData()
-            if mime_data and mime_data.hasText() and self.accept_external_drops:
-                e.acceptProposedAction()
-            else:
-                super().dragEnterEvent(e)
+        mime_data = event.mimeData()
+        if mime_data and mime_data.hasText() and self.accept_external_drops:
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
 
-    def dragMoveEvent(self, e) -> None:
+    @override
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
         """Handle drag move"""
-        if e:
-            mime_data = e.mimeData()
-            if mime_data and mime_data.hasText() and self.accept_external_drops:
-                e.acceptProposedAction()
-            else:
-                super().dragMoveEvent(e)
+        mime_data = event.mimeData()
+        if mime_data and mime_data.hasText() and self.accept_external_drops:
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
 
-    def dropEvent(self, event) -> None:
+    @override
+    def dropEvent(self, event: QDropEvent) -> None:
         """Handle drop events"""
-        if event:
-            mime_data = event.mimeData()
-            if mime_data and mime_data.hasText() and self.accept_external_drops:
-                # Handle external drop
-                try:
-                    text = mime_data.text()
-                    if text:
-                        row_index = int(text)
-                        self.external_drop.emit(row_index)
-                        event.acceptProposedAction()
-                except ValueError:
-                    pass
-            else:
-                # Handle internal reordering
-                super().dropEvent(event)
-                self.item_dropped.emit(0, 0)  # Signal for refresh
+        mime_data = event.mimeData()
+        if mime_data and mime_data.hasText() and self.accept_external_drops:
+            # Handle external drop
+            try:
+                text = mime_data.text()
+                if text:
+                    row_index = int(text)
+                    self.external_drop.emit(row_index)
+                    event.acceptProposedAction()
+            except ValueError:
+                pass
+        else:
+            # Handle internal reordering
+            super().dropEvent(event)
+            self.item_dropped.emit(0, 0)  # Signal for refresh
 
-    def startDrag(self, supportedActions) -> None:
+    @override
+    def startDrag(self, supportedActions: Qt.DropAction) -> None:
         """Start drag operation"""
         item = self.currentItem()
         if item:

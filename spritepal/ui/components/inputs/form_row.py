@@ -27,7 +27,7 @@ class FormRow(QWidget):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         label_text: str = "",
         input_widget: QWidget | None = None,
         orientation: str = "horizontal",  # "horizontal" or "vertical"

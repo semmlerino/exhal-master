@@ -9,7 +9,7 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
+def pil_to_qpixmap(pil_image: Image.Image | None) -> QPixmap | None:
     """
     Convert PIL image to QPixmap with proper error handling.
 
@@ -54,6 +54,7 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
             return pixmap
         logger.error(f"QPixmap.loadFromData() failed. Data size: {len(buffer_data)} bytes")
         logger.error(f"PNG header check: {buffer_data[:16].hex() if len(buffer_data) >= 16 else 'too short'}")
+        return None
 
     except Exception:
         logger.exception(
@@ -61,8 +62,6 @@ def pil_to_qpixmap(pil_image: Image.Image) -> QPixmap | None:
             getattr(pil_image, "size", "unknown"),
             getattr(pil_image, "mode", "unknown")
         )
-        return None
-    else:
         return None
 
 def create_checkerboard_pattern(

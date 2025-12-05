@@ -14,6 +14,7 @@ from core.extractor import SpriteExtractor
 from core.palette_manager import PaletteManager
 from core.rom_extractor import ROMExtractor
 from PySide6.QtCore import QObject, Signal
+from typing_extensions import override
 from ui.common import WorkerManager
 from ui.workers.injection_worker import InjectionWorker
 from ui.workers.rom_injection_worker import ROMInjectionWorker
@@ -21,7 +22,6 @@ from utils.constants import (
     DEFAULT_PREVIEW_HEIGHT,
     DEFAULT_PREVIEW_WIDTH,
 )
-from utils.type_aliases import override
 
 from .base_manager import BaseManager
 from .exceptions import (
@@ -140,9 +140,13 @@ class CoreOperationsManager(BaseManager):
                          vram_offset: int | None = None,
                          create_grayscale: bool = True,
                          create_metadata: bool = True,
-                         create_palette_files: bool = True) -> dict[str, Any]:
+                         create_palette_files: bool = True,
+                         grayscale_mode: bool = False) -> dict[str, Any]:
         """
         Extract sprites from VRAM dump.
+
+        Args:
+            grayscale_mode: Skip palette extraction entirely
 
         Returns:
             Dict with extraction results
@@ -432,15 +436,17 @@ class ExtractionAdapter(ExtractionManager):
         core_manager.cache_miss.connect(self.cache_miss.emit)
         core_manager.cache_saved.connect(self.cache_saved.emit)
 
+    @override
     def _initialize(self) -> None:
         """No-op, initialization handled by core manager."""
         pass
 
+    @override
     def cleanup(self) -> None:
         """No-op, cleanup handled by core manager."""
         pass
 
-    def extract_from_vram(self, *args, **kwargs):  # type: ignore[override]  # Wrapper changes return type
+    def extract_from_vram(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore[override]  # Wrapper changes return type
         """Delegate to core manager."""
         return self._core.extract_from_vram(*args, **kwargs)
 
@@ -465,7 +471,7 @@ class ExtractionAdapter(ExtractionManager):
             self._core.preview_generated.emit(result["preview_image"], result.get("tile_count", 0))
         return result
 
-    def extract_active_palettes(self, *args, **kwargs):
+    def extract_active_palettes(self, *args: Any, **kwargs: Any) -> None:
         """Extract active palettes from OAM data."""
         # Implement palette extraction logic
         args[0]
@@ -473,7 +479,6 @@ class ExtractionAdapter(ExtractionManager):
         # The full implementation would analyze OAM data
         active_palettes = list(range(8, 16))  # Sprite palettes
         self._core.active_palettes_found.emit(active_palettes)
-        return active_palettes
 
 class InjectionAdapter(InjectionManager):
     """
@@ -498,14 +503,17 @@ class InjectionAdapter(InjectionManager):
         core_manager.progress_percent.connect(self.progress_percent.emit)
         core_manager.cache_saved.connect(self.cache_saved.emit)
 
+    @override
     def _initialize(self) -> None:
         """No-op, initialization handled by core manager."""
         pass
 
+    @override
     def cleanup(self) -> None:
         """No-op, cleanup handled by core manager."""
         pass
 
+    @override
     def start_injection(self, params: dict[str, Any]) -> bool:
         """Delegate to core manager."""
         return self._core.start_injection(params)

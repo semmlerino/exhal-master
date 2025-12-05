@@ -38,13 +38,16 @@ manual geometry setting interfering with Qt's internal fullscreen logic.
 from __future__ import annotations
 
 import platform
+import weakref
 from typing import TYPE_CHECKING, Any
+
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from core.rom_extractor import ROMExtractor
 
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QGuiApplication, QKeyEvent, QPixmap, QScreen
+from PySide6.QtCore import QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QCloseEvent, QFont, QGuiApplication, QKeyEvent, QMouseEvent, QPixmap, QScreen, QShowEvent
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -199,10 +202,13 @@ class FullscreenSpriteViewer(QWidget):
             }
         """)
 
-        # Set cursor to hidden after a delay
-        self.cursor_timer = QTimer()
+        # Set cursor to hidden after a delay - use weakref to avoid preventing GC
+        self.cursor_timer = QTimer(self)  # Parent ensures cleanup
         self.cursor_timer.setSingleShot(True)
-        self.cursor_timer.timeout.connect(lambda: self.setCursor(Qt.CursorShape.BlankCursor) if self else None)
+        weak_self = weakref.ref(self)
+        self.cursor_timer.timeout.connect(
+            lambda: weak_self() and weak_self().setCursor(Qt.CursorShape.BlankCursor)
+        )
         self.cursor_timer.start(3000)
 
     def set_sprite_data(self, sprites_data: list[dict[str, Any]], current_offset: int,
@@ -425,7 +431,8 @@ class FullscreenSpriteViewer(QWidget):
             # Small delay for smooth transition feel
             self.transition_timer.start(50)
 
-    def keyPressEvent(self, event: QKeyEvent):
+    @override
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle keyboard events."""
         key = event.key()
 
@@ -452,7 +459,8 @@ class FullscreenSpriteViewer(QWidget):
 
         event.accept()
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, event: QShowEvent) -> None:
         """Handle show event with robust fullscreen implementation."""
         super().showEvent(event)
 
@@ -517,7 +525,7 @@ class FullscreenSpriteViewer(QWidget):
             logger.error(f"Window state fullscreen failed: {e}")
             return False
 
-    def _try_manual_geometry_fullscreen(self, screen_geometry) -> bool:
+    def _try_manual_geometry_fullscreen(self, screen_geometry: QRect | None) -> bool:
         """Try manual geometry setting as last resort."""
         try:
             if not screen_geometry:
@@ -591,26 +599,24 @@ class FullscreenSpriteViewer(QWidget):
                 # Windows-specific recovery
                 logger.debug("Applying Windows fullscreen recovery")
                 self.setWindowState(Qt.WindowState.WindowNoState)
-                # Use a safer timer that checks if widget still exists
-                def set_fullscreen():
-                    try:
-                        if self:
-                            self.setWindowState(Qt.WindowState.WindowFullScreen)
-                    except RuntimeError:
-                        pass  # Widget was deleted
+                # Use a safer timer with weakref to avoid use-after-free
+                weak_self = weakref.ref(self)
+                def set_fullscreen() -> None:
+                    widget = weak_self()
+                    if widget is not None:
+                        widget.setWindowState(Qt.WindowState.WindowFullScreen)
                 QTimer.singleShot(50, set_fullscreen)
 
             elif system == "linux":
                 # Linux-specific recovery
                 logger.debug("Applying Linux fullscreen recovery")
                 self.showNormal()
-                # Use a safer timer that checks if widget still exists
-                def show_fullscreen():
-                    try:
-                        if self:
-                            self.showFullScreen()
-                    except RuntimeError:
-                        pass  # Widget was deleted
+                # Use a safer timer with weakref to avoid use-after-free
+                weak_self = weakref.ref(self)
+                def show_fullscreen() -> None:
+                    widget = weak_self()
+                    if widget is not None:
+                        widget.showFullScreen()
                 QTimer.singleShot(50, show_fullscreen)
 
             else:
@@ -623,7 +629,8 @@ class FullscreenSpriteViewer(QWidget):
         except Exception as e:
             logger.error(f"Fullscreen recovery failed: {e}")
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Handle close event."""
         logger.info("Fullscreen sprite viewer closing")
 
@@ -641,7 +648,8 @@ class FullscreenSpriteViewer(QWidget):
 
         super().closeEvent(event)
 
-    def mousePressEvent(self, event):
+    @override
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press - show cursor and controls."""
         self.setCursor(Qt.CursorShape.ArrowCursor)
 

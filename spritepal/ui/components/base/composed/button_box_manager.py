@@ -12,6 +12,7 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialogButtonBox, QPushButton
+from typing_extensions import override
 
 
 class ButtonBoxManager(QObject):
@@ -46,7 +47,7 @@ class ButtonBoxManager(QObject):
         super().__init__(parent)
         self._button_box: QDialogButtonBox | None = None
         self._custom_buttons: dict[str, QPushButton] = {}
-        self._button_callbacks: dict[str, Callable] = {}
+        self._button_callbacks: dict[str, Callable[..., Any]] = {}
 
     def initialize(self, context: Any) -> None:
         """
@@ -131,7 +132,7 @@ class ButtonBoxManager(QObject):
         self,
         text: str,
         role: QDialogButtonBox.ButtonRole = QDialogButtonBox.ButtonRole.ActionRole,
-        callback: Callable | None = None
+        callback: Callable[..., Any] | None = None
     ) -> QPushButton:
         """
         Add a custom button to the button box.
@@ -332,39 +333,39 @@ class ButtonBoxManager(QObject):
                 self.rejected = TestSignal()
                 self._buttons = {}
 
-            def button(self, standard_button):
+            def button(self, standard_button: Any) -> Any:
                 return self._buttons.get(standard_button)
 
-            def addButton(self, text, role):
+            def addButton(self, text: str, role: Any) -> Any:
                 button = TestButton(text)
                 self._buttons[text] = button
                 return button
 
-            def removeButton(self, button):
+            def removeButton(self, button: Any) -> None:
                 pass
 
         class TestSignal:
             """Minimal signal for test environments."""
-            def __init__(self):
-                self._callbacks = []
+            def __init__(self) -> None:
+                self._callbacks: list[Callable[..., Any]] = []
 
-            def connect(self, callback):
+            def connect(self, callback: Callable[..., Any]) -> None:
                 self._callbacks.append(callback)
 
-            def emit(self):
+            def emit(self) -> None:
                 for cb in self._callbacks:
                     cb()
 
         class TestButton:
             """Minimal button for test environments."""
-            def __init__(self, text):
+            def __init__(self, text: str) -> None:
                 self.text = text
                 self.clicked = TestSignal()
 
-            def setEnabled(self, enabled):
+            def setEnabled(self, enabled: bool) -> None:
                 pass
 
-            def setText(self, text):
+            def setText(self, text: str) -> None:
                 self.text = text
 
             def deleteLater(self):
@@ -372,6 +373,7 @@ class ButtonBoxManager(QObject):
 
         return TestButtonBox()
 
+    @override
     def __repr__(self) -> str:
         """Return string representation of the manager."""
         status = "available" if self.is_available else "not available"

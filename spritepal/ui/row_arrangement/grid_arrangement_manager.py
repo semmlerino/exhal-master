@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from PySide6.QtCore import QObject, Signal
+from typing_extensions import override
 
 
 class ArrangementType(Enum):
@@ -24,9 +25,11 @@ class TilePosition:
     row: int
     col: int
 
+    @override
     def __hash__(self) -> int:
         return hash((self.row, self.col))
 
+    @override
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, TilePosition)

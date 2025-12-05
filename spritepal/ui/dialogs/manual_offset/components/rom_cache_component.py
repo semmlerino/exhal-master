@@ -5,6 +5,11 @@ Handles ROM cache integration and adjacent offset preloading optimization.
 """
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
+
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +21,7 @@ class ROMCacheComponent:
     Handles cache initialization, preloading, and performance tracking.
     """
 
-    def __init__(self, dialog):
+    def __init__(self, dialog: UnifiedManualOffsetDialog) -> None:
         """Initialize the ROM cache component."""
         self.dialog = dialog
         self.rom_cache = None
@@ -75,7 +80,7 @@ class ROMCacheComponent:
         """Update total request count."""
         self._cache_stats["total_requests"] += 1
 
-    def get_cache_stats(self) -> dict:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get current cache statistics."""
         return self._cache_stats.copy()
 

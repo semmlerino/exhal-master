@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
+else:
+    from PySide6.QtWidgets import QWidget
 
 from PySide6.QtCore import QObject, QRect, Qt, Signal
 from PySide6.QtGui import QGuiApplication
@@ -35,7 +37,7 @@ class ViewStateManager(QObject):
     fullscreen_toggled = Signal(bool)  # is_fullscreen
     title_changed = Signal(str)  # new_title
 
-    def __init__(self, dialog_widget: QWidget, parent=None) -> None:
+    def __init__(self, dialog_widget: QWidget, parent: QObject | None = None) -> None:
         super().__init__(parent)
 
         self.dialog_widget = dialog_widget

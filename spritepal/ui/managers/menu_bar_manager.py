@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QMainWindow, QMessageBox
+from PySide6.QtWidgets import QMainWindow, QMenuBar, QMessageBox
 
 
 class MenuBarActionsProtocol(Protocol):
@@ -51,7 +51,7 @@ class MenuBarManager:
         self._create_tools_menu(menubar)
         self._create_help_menu(menubar)
 
-    def _create_file_menu(self, menubar) -> None:
+    def _create_file_menu(self, menubar: QMenuBar) -> None:
         """Create File menu"""
         file_menu = menubar.addMenu("File")
 
@@ -70,7 +70,7 @@ class MenuBarManager:
         if file_menu:
             file_menu.addAction(exit_action)
 
-    def _create_tools_menu(self, menubar) -> None:
+    def _create_tools_menu(self, menubar: QMenuBar) -> None:
         """Create Tools menu"""
         tools_menu = menubar.addMenu("Tools")
 
@@ -95,7 +95,7 @@ class MenuBarManager:
         if tools_menu:
             tools_menu.addAction(clear_cache_action)
 
-    def _create_help_menu(self, menubar) -> None:
+    def _create_help_menu(self, menubar: QMenuBar) -> None:
         """Create Help menu"""
         help_menu = menubar.addMenu("Help")
 

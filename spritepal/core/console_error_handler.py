@@ -10,6 +10,7 @@ import sys
 import traceback
 from typing import Any
 
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -158,6 +159,7 @@ class ConsoleErrorHandler:
         self._error_count = 0
         self._warning_count = 0
 
+    @override
     def __repr__(self) -> str:
         """String representation of the handler."""
         return (

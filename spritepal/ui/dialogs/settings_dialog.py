@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+# from typing_extensions import override
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -36,7 +37,7 @@ class SettingsDialog(BaseDialog):
     settings_changed = Signal()
     cache_cleared = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         # Initialize UI components - declare BEFORE super().__init__() to avoid overwriting
         self.tab_widget: QTabWidget | None = None
         self.restore_window_check: QCheckBox | None = None

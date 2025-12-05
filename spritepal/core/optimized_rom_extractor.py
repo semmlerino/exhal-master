@@ -152,16 +152,17 @@ class OptimizedROMExtractor(ROMExtractor):
         """
         Decompress data using memory-mapped ROM access.
 
-        NOT YET IMPLEMENTED - requires HALCompressor.decompress_raw() which doesn't exist.
-        Use extract_sprite() instead for now.
+        Uses the parent class's decompress_from_rom with the ROM path from the reader.
 
-        Raises:
-            NotImplementedError: Always, as the required method is not implemented.
+        Args:
+            reader: Memory-mapped ROM reader
+            offset: Offset to decompress from
+
+        Returns:
+            Decompressed data bytes
         """
-        raise NotImplementedError(
-            "_decompress_with_mmap requires HALCompressor.decompress_raw() which is not implemented. "
-            "Use extract_sprite() instead, which uses decompress_from_rom()."
-        )
+        # Use parent class's working decompression via hal_compressor
+        return self.hal_compressor.decompress_from_rom(reader.rom_path, offset)
 
     def extract_multiple_sprites(
         self,

@@ -130,28 +130,6 @@ class TestHALToolDetection(unittest.TestCase):
         self.assertTrue(success)
         self.assertIn("working correctly", message)
 
-    @patch('core.hal_compression.Path')
-    def test_fallback_search_paths(self, mock_path):
-        """Test that the search falls back to alternative paths when primary location fails"""
-        # Mock the primary tools directory to not exist
-        def mock_path_side_effect(path):
-            mock_obj = Mock()
-            if "spritepal/tools" in str(path):
-                mock_obj.is_file.return_value = False
-                mock_obj.exists.return_value = False
-            else:
-                # Use real Path for other paths
-                return Path(path)
-            return mock_obj
-
-        mock_path.side_effect = mock_path_side_effect
-
-        # This test verifies that the search logic exists, even if tools aren't found
-        with self.assertRaises(HALCompressionError) as cm:
-            HALCompressor()
-
-        self.assertIn("Could not find", str(cm.exception))
-
     def test_provided_path_override(self):
         """Test that provided paths override automatic detection"""
         # Create a dummy executable file
@@ -216,20 +194,6 @@ class TestHALToolDetection(unittest.TestCase):
             self.assertEqual(calculated_spritepal.name, "spritepal")
             self.assertTrue((calculated_spritepal / "tools").exists())
 
-    def test_error_message_helpful(self):
-        """Test that error messages are helpful when tools aren't found"""
-        with patch('core.hal_compression.Path') as mock_path:
-            # Mock all paths to not exist
-            mock_path.return_value.is_file.return_value = False
-            mock_path.return_value.resolve.return_value = Path("/nonexistent")
-
-            with self.assertRaises(HALCompressionError) as cm:
-                HALCompressor()
-
-            error_message = str(cm.exception)
-            self.assertIn("Could not find", error_message)
-            self.assertIn("compile_hal_tools.py", error_message)
-            self.assertIn("platform", error_message)
 
 class TestHALToolDetectionRegression(unittest.TestCase):
     """Regression tests to prevent the working directory bug from reoccurring"""

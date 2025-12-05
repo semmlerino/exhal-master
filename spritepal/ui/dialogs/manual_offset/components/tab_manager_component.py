@@ -9,10 +9,11 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QPushButton, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialogButtonBox, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
+    from ui.dialogs.manual_offset_unified_integrated import UnifiedManualOffsetDialog
 
 from utils.logging_config import get_logger
 
@@ -26,7 +27,7 @@ class TabManagerComponent:
     functionality and coordination.
     """
 
-    def __init__(self, dialog):
+    def __init__(self, dialog: UnifiedManualOffsetDialog) -> None:
         """Initialize the tab manager."""
         self.dialog = dialog
         self.tab_widget = None
@@ -146,7 +147,7 @@ class TabManagerComponent:
             }
         """)
 
-    def setup_custom_buttons(self, button_box):
+    def setup_custom_buttons(self, button_box: QDialogButtonBox) -> None:
         """Set up custom dialog buttons."""
         if button_box:
             # Add Apply button like the original
@@ -186,10 +187,10 @@ class TabManagerComponent:
         if self.history_tab and hasattr(self.history_tab, 'add_sprite'):
             self.history_tab.add_sprite(offset, quality)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up tab resources."""
         logger.debug("Cleaning up tab manager")
         # Clean up each tab
         for tab in [self.browse_tab, self.smart_tab, self.history_tab, self.gallery_tab]:
             if tab and hasattr(tab, 'cleanup'):
-                tab.cleanup()
+                tab.cleanup()  # type: ignore[attr-defined]

@@ -114,11 +114,6 @@ class SpriteFinder:
         if use_region_optimization:
             logger.info("Using empty region optimization for faster scanning")
 
-            # Analyze ROM regions
-            def region_progress(current, total):
-                if current % 100 == 0:
-                    logger.debug(f"Region analysis: {current}/{total} ({(current/total)*100:.1f}%)")
-
             # Get optimized scan ranges
             scan_ranges = self.region_detector.get_optimized_scan_ranges(
                 rom_data[start_offset:end_offset],

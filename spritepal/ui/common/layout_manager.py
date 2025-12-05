@@ -168,7 +168,7 @@ class LayoutManager:
         splitter.setChildrenCollapsible(False)
 
     @staticmethod
-    def remove_all_stretches(layout: QLayout) -> None:
+    def remove_all_stretches(layout: QLayout | None) -> None:
         """
         Remove all QSpacerItem stretches from a layout.
 

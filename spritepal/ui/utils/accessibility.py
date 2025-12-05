@@ -4,8 +4,10 @@ Provides helpers for keyboard navigation, screen reader support, and focus manag
 """
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -198,9 +200,9 @@ class AccessibilityHelper:
         name: str,
         text: str,
         shortcut: str,
-        callback,
+        callback: Callable[..., None],
         description: str = "",
-        icon=None,
+        icon: QIcon | None = None,
         checkable: bool = False
     ) -> QAction:
         """

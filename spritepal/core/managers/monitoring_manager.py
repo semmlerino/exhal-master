@@ -23,12 +23,16 @@ from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from weakref import WeakSet
 
 import psutil
+from typing_extensions import override
 
 from .base_manager import BaseManager
+
+if TYPE_CHECKING:
+    from PySide6.QtCore import QObject
 
 
 @dataclass
@@ -486,7 +490,7 @@ class HealthMonitor:
 class MonitoringManager(BaseManager):
     """Main monitoring and observability manager for SpritePal."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         self._performance_collector = PerformanceCollector()
         self._error_tracker = ErrorTracker()
         self._usage_analytics = UsageAnalytics()
@@ -496,6 +500,7 @@ class MonitoringManager(BaseManager):
 
         super().__init__("MonitoringManager", parent)
 
+    @override
     def _initialize(self) -> None:
         """Initialize the monitoring manager."""
         self._logger.info("Initializing MonitoringManager...")
@@ -754,7 +759,7 @@ class MonitoringManager(BaseManager):
     def _export_json(self, report: MonitoringReport, output_path: Path) -> None:
         """Export report as JSON."""
         # Convert dataclass to dict with custom serialization
-        def serialize_datetime(obj):
+        def serialize_datetime(obj: Any) -> str:
             if isinstance(obj, datetime):
                 return obj.isoformat()
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
@@ -788,7 +793,7 @@ class MonitoringManager(BaseManager):
                 top_insight
             ])
 
-    def register_manager_monitoring(self, manager) -> None:
+    def register_manager_monitoring(self, manager: BaseManager) -> None:
         """Register a manager for automatic monitoring."""
         if not self._enabled or not hasattr(manager, 'operation_started'):
             return
@@ -808,6 +813,7 @@ class MonitoringManager(BaseManager):
 
         self._logger.debug(f"Registered {manager.get_name()} for monitoring")
 
+    @override
     def cleanup(self) -> None:
         """Cleanup resources."""
         if self._health_timer:

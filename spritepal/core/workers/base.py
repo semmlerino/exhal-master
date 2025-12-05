@@ -10,9 +10,10 @@ import weakref
 from abc import abstractmethod
 from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from PySide6.QtCore import QMetaObject, QThread, Signal
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
@@ -122,7 +123,7 @@ def handle_worker_errors(
 class WorkerMeta(type(QThread)):
     """Metaclass that properly combines QThread and ABC functionality."""
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kwargs: Any) -> type:
         # First create the class with QThread metaclass
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
@@ -188,9 +189,9 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
         self._signal_connections.clear()
         logger.debug(f"{self._operation_name}: Cleaned up {connection_count} signal connections")
 
-    def connect_signal_with_tracking(self, signal, slot) -> QMetaObject.Connection:
+    def connect_signal_with_tracking(self, signal: Signal, slot: Callable[..., Any]) -> QMetaObject.Connection:
         """Connect a signal and track the connection for cleanup"""
-        connection = signal.connect(slot)
+        connection = signal.connect(slot)  # type: ignore[attr-defined]  # Signal.connect exists at runtime
         self._signal_connections.append(connection)
         return connection
 
@@ -293,6 +294,7 @@ class BaseWorker(QThread, metaclass=WorkerMeta):
             logger.debug(f"{self._operation_name}: Qt interruption detected during pause")
             self._is_cancelled = True
 
+    @override
     @abstractmethod
     def run(self) -> None:
         """
@@ -340,7 +342,7 @@ class ManagedWorker(BaseWorker):
         self.manager = manager
         self._manager_factory = manager_factory
         self._connections: list[QMetaObject.Connection] = []
-        self._weak_manager_ref: weakref.ReferenceType | None = None
+        self._weak_manager_ref: weakref.ReferenceType[Any] | None = None
 
         # Store weak reference to manager to avoid circular references
         if manager is not None:
@@ -378,6 +380,7 @@ class ManagedWorker(BaseWorker):
         self.connect_manager_signals()
         self.perform_operation()
 
+    @override
     def run(self) -> None:
         """
         Template method for managed operations.

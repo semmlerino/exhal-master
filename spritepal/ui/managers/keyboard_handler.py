@@ -61,9 +61,6 @@ class KeyboardShortcutHandler(QObject):
         Returns:
             True if event was handled, False otherwise
         """
-        if not event:
-            return False
-
         # Tab navigation
         if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Tab:

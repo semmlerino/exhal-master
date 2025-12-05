@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.common import WorkerManager
 from ui.common.collapsible_group_box import CollapsibleGroupBox
 from ui.components.navigation.region_jump_widget import RegionJumpWidget
@@ -211,7 +212,7 @@ class SpriteNavigator(QWidget):
         # Enable keyboard focus
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Create the UI layout"""
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
@@ -787,6 +788,7 @@ class SpriteNavigator(QWidget):
 
     # Keyboard navigation
 
+    @override
     def keyPressEvent(self, event: QKeyEvent | None):
         """Handle keyboard navigation"""
         if not event:

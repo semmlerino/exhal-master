@@ -672,59 +672,6 @@ class TestAsyncROMCacheIntegration:
 
         del cache_instance
 
-# Benchmark tests for performance validation
-class TestAsyncROMCacheBenchmarks:
-    """Benchmark tests to validate caching performance improvements"""
-
-    @pytest.mark.benchmark
-    @pytest.mark.skip(reason="Requires pytest-benchmark which is not installed")
-    def test_memory_cache_benchmark(self, benchmark):
-        """Benchmark memory cache hit performance"""
-        temp_dir = Path(tempfile.mkdtemp())
-        mock_rom_cache = Mock()
-        mock_rom_cache.cache_dir = str(temp_dir)
-        async_cache = AsyncROMCache(mock_rom_cache)
-
-        # Pre-populate cache
-        rom_path = "/benchmark/test.sfc"
-        offset = 0x200000
-        test_data = b"benchmark_data" * 100
-        metadata = {"benchmark": True}
-
-        cache_key = async_cache._generate_cache_key(rom_path, offset)
-        with QMutexLocker(async_cache._request_mutex):
-            async_cache._memory_cache[cache_key] = (test_data, metadata, time.time())
-
-        # Benchmark memory cache lookup
-        # Capture async_cache in closure explicitly for ruff
-        cache = async_cache
-        def cache_lookup():
-            with QMutexLocker(cache._request_mutex):
-                if cache_key in cache._memory_cache:
-                    return cache._memory_cache[cache_key]
-                return None
-
-        result = benchmark(cache_lookup)
-        assert result is not None
-        assert result[0] == test_data
-
-        # Cleanup
-        del async_cache
-        import shutil
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-    @pytest.mark.benchmark
-    @pytest.mark.skip(reason="Requires pytest-benchmark which is not installed")
-    def test_cache_key_generation_benchmark(self, benchmark):
-        """Benchmark cache key generation performance"""
-        rom_path = "/very/long/path/to/some/rom/file/that/might/be/typical.sfc"
-        offset = 0x200000
-
-        result = benchmark(AsyncROMCache._generate_cache_key, rom_path, offset)
-
-        assert isinstance(result, str)
-        assert len(result) > 0
-        assert f"{offset:08x}" in result
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

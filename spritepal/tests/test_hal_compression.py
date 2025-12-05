@@ -3,21 +3,22 @@ Tests for HAL process pool simplification fixes.
 
 Tests that the HAL process pool shutdown completes within timeout,
 no zombie processes remain, and force_reset functionality works correctly.
+
+Note: These tests use multiprocessing boundary mocks (Manager, Process) because
+they're testing HALProcessPool's process lifecycle management - the actual
+multiprocessing behavior needs to be controlled for deterministic testing.
 """
 from __future__ import annotations
 
-# Import the HAL compression module
-import sys
 import threading
 import time
-from pathlib import Path as PathLib
+from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
 
-sys.path.insert(0, str(PathLib(__file__).parent.parent))
-
 from core.hal_compression import HALCompressor, HALProcessPool, HALRequest, _hal_worker_process
+from tests.infrastructure.mock_hal import create_mock_hal_tools
 from utils.constants import HAL_POOL_SHUTDOWN_TIMEOUT
 
 # Mark all tests in this module to skip manager setup and run serially
@@ -38,38 +39,37 @@ pytestmark = [
     pytest.mark.worker_threads,
 ]
 
-class TestHALProcessPoolSimplification:
-    """Test HAL process pool simplification and cleanup fixes"""
 
-    @pytest.fixture(autouse=True)
-    def reset_singleton(self):
-        """Reset singleton between tests"""
+# ============================================================================
+# Shared Fixtures (consolidated from duplicate definitions)
+# ============================================================================
+
+@pytest.fixture
+def hal_tools(tmp_path) -> tuple[str, str]:
+    """Create mock HAL tool executables using infrastructure helper."""
+    return create_mock_hal_tools(tmp_path)
+
+
+@pytest.fixture(autouse=True)
+def reset_hal_singleton() -> Generator[None, None, None]:
+    """Reset HAL singleton between tests for isolation."""
+    HALProcessPool.reset_singleton()
+    yield
+    # Cleanup after test
+    try:
         HALProcessPool.reset_singleton()
-        yield
-        # Cleanup after test
-        try:
-            HALProcessPool.reset_singleton()
-        except Exception:
-            pass
+    except Exception:
+        pass
 
-    @pytest.fixture
-    def mock_tools(self, tmp_path):
-        """Create mock HAL tool executables"""
-        exhal_path = tmp_path / "exhal"
-        inhal_path = tmp_path / "inhal"
+class TestHALProcessPoolSimplification:
+    """Test HAL process pool simplification and cleanup fixes.
 
-        # Create fake executables
-        exhal_path.write_text("#!/bin/bash\necho 'exhal tool'")
-        inhal_path.write_text("#!/bin/bash\necho 'inhal tool'")
+    Uses module-level hal_tools and reset_hal_singleton fixtures.
+    """
 
-        exhal_path.chmod(0o755)
-        inhal_path.chmod(0o755)
-
-        return str(exhal_path), str(inhal_path)
-
-    def test_pool_shutdown_completes_within_timeout(self, mock_tools):
+    def test_pool_shutdown_completes_within_timeout(self, hal_tools):
         """Test that pool shutdown completes within HAL_POOL_SHUTDOWN_TIMEOUT"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         # Create pool
         pool = HALProcessPool()
@@ -110,9 +110,9 @@ class TestHALProcessPoolSimplification:
             for mock_proc in mock_processes:
                 mock_proc.terminate.assert_called_once()
 
-    def test_no_zombie_processes_remain(self, mock_tools):
+    def test_no_zombie_processes_remain(self, hal_tools):
         """Test that no zombie processes remain after shutdown"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -150,9 +150,9 @@ class TestHALProcessPoolSimplification:
             assert len(pool._processes) == 0
             assert len(pool._process_pids) == 0
 
-    def test_force_reset_functionality(self, mock_tools):
+    def test_force_reset_functionality(self, hal_tools):
         """Test force_reset cleans up everything and allows re-initialization"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -190,9 +190,9 @@ class TestHALProcessPoolSimplification:
             mock_proc.terminate.assert_called_once()
             mock_proc.kill.assert_called_once()
 
-    def test_stuck_processes_are_force_killed(self, mock_tools):
+    def test_stuck_processes_are_force_killed(self, hal_tools):
         """Test that stuck processes are force killed during shutdown"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -222,9 +222,9 @@ class TestHALProcessPoolSimplification:
             # Verify kill was called when process remained alive
             mock_proc.kill.assert_called_once()
 
-    def test_manager_shutdown_handles_errors_gracefully(self, mock_tools):
+    def test_manager_shutdown_handles_errors_gracefully(self, hal_tools):
         """Test that manager shutdown handles various errors gracefully"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -255,9 +255,9 @@ class TestHALProcessPoolSimplification:
             # Pool should still be marked as shut down
             assert pool._pool is None
 
-    def test_force_reset_immediate_termination(self, mock_tools):
+    def test_force_reset_immediate_termination(self, hal_tools):
         """Test that force_reset immediately terminates processes"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -290,9 +290,9 @@ class TestHALProcessPoolSimplification:
             # Should use minimal sleep (0.1s) in force_reset
             mock_sleep.assert_called_with(0.1)
 
-    def test_concurrent_shutdown_calls_are_safe(self, mock_tools):
+    def test_concurrent_shutdown_calls_are_safe(self, hal_tools):
         """Test that concurrent shutdown calls don't cause issues"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -331,9 +331,9 @@ class TestHALProcessPoolSimplification:
             assert pool._pool is None
             assert pool._shutdown
 
-    def test_pool_prevents_operations_after_shutdown(self, mock_tools):
+    def test_pool_prevents_operations_after_shutdown(self, hal_tools):
         """Test that pool prevents operations after shutdown"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -423,32 +423,10 @@ class TestHALWorkerProcessErrorHandling:
             _hal_worker_process("fake_exhal", "fake_inhal", mock_request_queue, mock_result_queue)
 
 class TestHALProcessPoolIntegration:
-    """Integration tests for HAL process pool functionality"""
+    """Integration tests for HAL process pool functionality.
 
-    @pytest.fixture(autouse=True)
-    def reset_singleton(self):
-        """Reset singleton between tests"""
-        HALProcessPool.reset_singleton()
-        yield
-        try:
-            HALProcessPool.reset_singleton()
-        except Exception:
-            pass
-
-    @pytest.fixture
-    def mock_tools(self, tmp_path):
-        """Create mock HAL tool executables"""
-        exhal_path = tmp_path / "exhal"
-        inhal_path = tmp_path / "inhal"
-
-        # Create fake executables
-        exhal_path.write_text("#!/bin/bash\necho 'exhal tool'")
-        inhal_path.write_text("#!/bin/bash\necho 'inhal tool'")
-
-        exhal_path.chmod(0o755)
-        inhal_path.chmod(0o755)
-
-        return str(exhal_path), str(inhal_path)
+    Uses module-level hal_tools and reset_hal_singleton fixtures.
+    """
 
     def test_singleton_pattern_works_correctly(self):
         """Test that HALProcessPool follows singleton pattern"""
@@ -494,9 +472,9 @@ class TestHALProcessPoolIntegration:
             assert pool._pool is None
 
     @pytest.mark.real_hal  # This test needs real HAL to test the fallback
-    def test_pool_graceful_degradation_to_subprocess(self, mock_tools):
+    def test_pool_graceful_degradation_to_subprocess(self, hal_tools):
         """Test that HALCompressor gracefully degrades to subprocess mode"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         # Reset singleton first to ensure clean state
         HALProcessPool.reset_singleton()
@@ -514,9 +492,9 @@ class TestHALProcessPoolIntegration:
             assert not status["enabled"]
             assert status["reason"] == "Pool initialization failed"
 
-    def test_destructor_cleanup_safety(self, mock_tools):
+    def test_destructor_cleanup_safety(self, hal_tools):
         """Test that destructor cleanup is safe even if attributes are missing"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -556,9 +534,9 @@ class TestHALProcessPoolIntegration:
             # Should connect to aboutToQuit signal
             mock_app.aboutToQuit.connect.assert_called_with(pool.shutdown)
 
-    def test_process_refs_cleanup(self, mock_tools):
+    def test_process_refs_cleanup(self, hal_tools):
         """Test that process weak references are properly cleaned up"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -593,36 +571,14 @@ class TestHALProcessPoolIntegration:
             assert len(pool._process_refs) == 0 if hasattr(pool, '_process_refs') else True
 
 class TestHALProcessPoolPerformance:
-    """Performance-related tests for HAL process pool"""
+    """Performance-related tests for HAL process pool.
 
-    @pytest.fixture(autouse=True)
-    def reset_singleton(self):
-        """Reset singleton between tests"""
-        HALProcessPool.reset_singleton()
-        yield
-        try:
-            HALProcessPool.reset_singleton()
-        except Exception:
-            pass
+    Uses module-level hal_tools and reset_hal_singleton fixtures.
+    """
 
-    @pytest.fixture
-    def mock_tools(self, tmp_path):
-        """Create mock HAL tool executables"""
-        exhal_path = tmp_path / "exhal"
-        inhal_path = tmp_path / "inhal"
-
-        # Create fake executables
-        exhal_path.write_text("#!/bin/bash\necho 'exhal tool'")
-        inhal_path.write_text("#!/bin/bash\necho 'inhal tool'")
-
-        exhal_path.chmod(0o755)
-        inhal_path.chmod(0o755)
-
-        return str(exhal_path), str(inhal_path)
-
-    def test_shutdown_performance_benchmark(self, mock_tools):
+    def test_shutdown_performance_benchmark(self, hal_tools):
         """Benchmark shutdown performance to ensure it meets timeout requirements"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 
@@ -657,9 +613,9 @@ class TestHALProcessPoolPerformance:
             assert shutdown_time < HAL_POOL_SHUTDOWN_TIMEOUT
             print(f"Shutdown time for 8 processes: {shutdown_time:.3f}s")
 
-    def test_force_reset_performance(self, mock_tools):
+    def test_force_reset_performance(self, hal_tools):
         """Test that force_reset is faster than normal shutdown"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         with patch('multiprocessing.Manager') as mock_manager, \
              patch('multiprocessing.Process') as mock_process_class, \
@@ -703,9 +659,9 @@ class TestHALProcessPoolPerformance:
                 # force_reset should use 0.1s sleep
                 assert 0.1 in sleep_calls
 
-    def test_parallel_operations_after_reset(self, mock_tools):
+    def test_parallel_operations_after_reset(self, hal_tools):
         """Test that pool can handle operations immediately after reset"""
-        exhal_path, inhal_path = mock_tools
+        exhal_path, inhal_path = hal_tools
 
         pool = HALProcessPool()
 

@@ -67,7 +67,7 @@ def monitor_operation(operation: str | None = None, track_usage: bool = True,
     """
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Determine operation name
             op_name = operation or f"{func.__module__}.{func.__qualname__}"
 
@@ -136,7 +136,7 @@ def track_feature_usage(feature: str, action: str | None = None, workflow: str |
     """
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             action_name = action or func.__name__
 
             start_time = time.perf_counter()
@@ -176,7 +176,7 @@ def monitor_cache_performance(cache_name: str):
     """
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
 
             result = func(*args, **kwargs)
@@ -380,7 +380,7 @@ def get_performance_summary(operation: str, hours: int = 24) -> dict[str, Any]:
 
 # Integration utilities
 
-def setup_monitoring_for_manager(manager) -> None:
+def setup_monitoring_for_manager(manager: Any) -> None:
     """Set up automatic monitoring for a manager instance."""
     monitoring_manager = get_monitoring_manager()
     if monitoring_manager:

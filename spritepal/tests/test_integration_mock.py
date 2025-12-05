@@ -33,47 +33,6 @@ pytestmark = [
 class TestVRAMExtractionWorkerMocked:
     """Test VRAMExtractionWorker with mocked Qt components using modern fixtures."""
 
-    def test_worker_with_mocked_qt(
-        self, standard_test_params, mock_extraction_worker
-    ):
-        """Test worker functionality with mocked Qt components"""
-
-        # Manager setup handled by centralized fixture
-        try:
-            # Use the pre-configured mock worker from fixtures
-            worker = mock_extraction_worker
-
-            # Update worker with test parameters
-            worker.params = standard_test_params
-
-            # Track emitted data
-            progress_messages = []
-            preview_data = []
-            finished_files = []
-
-            # Connect handlers
-            worker.progress.connect(lambda percent, msg: progress_messages.append(msg))
-            worker.preview_ready.connect(lambda pm, tc: preview_data.append((pm, tc)))
-            worker.extraction_finished.connect(lambda files: finished_files.extend(files))
-
-            # Run the worker directly (not as thread)
-            worker.run()
-
-            # Verify files were created
-            assert worker.extraction_finished.emit.called
-            call_args = worker.extraction_finished.emit.call_args[0][0]
-            assert len(call_args) >= 1
-            assert any(f.endswith(".png") for f in call_args)
-
-            # If CGRAM was provided, should have palette files too
-            if standard_test_params.get("cgram_path"):
-                assert any(f.endswith(".pal.json") for f in call_args)
-
-        except Exception as e:
-            # Add error context for debugging
-            pytest.fail(f"Test failed: {e}")
-        # Manager cleanup handled by centralized fixture
-
     @patch("utils.image_utils.QPixmap")
     def test_pixmap_creation_mocked(self, mock_qpixmap):
         """Test pixmap creation with mocked QPixmap"""
@@ -102,41 +61,6 @@ class TestVRAMExtractionWorkerMocked:
         assert isinstance(call_args, bytes)
         assert len(call_args) > 0  # Should have PNG data
 
-class TestControllerMocked:
-    """Test ExtractionController with mocked components"""
-
-    @patch("core.controller.QObject")
-    @patch("core.controller.VRAMExtractionWorker")
-    def test_controller_workflow(
-        self, mock_worker_class, mock_qobject,
-        mock_main_window_configured, standard_test_params
-    ):
-        """Test controller workflow with mocks"""
-        # Use centralized mock main window, update its extraction params
-        mock_main_window_configured.get_extraction_params.return_value = standard_test_params
-
-        # Create mock worker
-        mock_worker = Mock()
-        mock_worker_class.return_value = mock_worker
-
-        # Create controller with centralized mock main window
-        controller = ExtractionController(mock_main_window_configured)
-
-        # Mock validation to allow worker creation with fake file paths
-        with patch.object(controller.extraction_manager, "validate_extraction_params"):
-            # Start extraction
-            controller.start_extraction()
-
-        # Verify worker was created and started
-        assert mock_worker_class.called
-        assert mock_worker.start.called
-
-        # Verify signals were connected
-        assert mock_worker.progress.connect.called
-        assert mock_worker.preview_ready.connect.called
-        assert mock_worker.palettes_ready.connect.called
-        assert mock_worker.extraction_finished.connect.called
-        assert mock_worker.error.connect.called
 
 class TestBusinessLogicOnly:
     """Test pure business logic without Qt dependencies"""

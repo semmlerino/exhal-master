@@ -55,7 +55,7 @@ class VisualSimilarityEngine:
 
         logger.info(f"Initialized VisualSimilarityEngine with hash_size={hash_size}")
 
-    def index_sprite(self, offset: int, image: Image.Image, metadata: dict | None = None) -> SpriteHash:
+    def index_sprite(self, offset: int, image: Image.Image, metadata: dict[str, Any] | None = None) -> SpriteHash:
         """
         Index a sprite for similarity search.
 

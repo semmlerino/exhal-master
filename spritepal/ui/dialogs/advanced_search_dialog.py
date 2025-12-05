@@ -1569,6 +1569,19 @@ class AdvancedSearchDialog(QDialog):
             self.search_worker.question_requested.connect(self._handle_worker_question_request)
             self.search_worker.info_requested.connect(self._handle_worker_info_request)
 
+    def _disconnect_worker_signals(self) -> None:
+        """Disconnect search worker signals before cleanup."""
+        if self.search_worker:
+            from contextlib import suppress
+            with suppress(RuntimeError, TypeError):
+                self.search_worker.progress.disconnect(self._update_progress)
+                self.search_worker.result_found.disconnect(self._add_result)
+                self.search_worker.search_complete.disconnect(self._search_complete)
+                self.search_worker.error.disconnect(self._search_error)
+                self.search_worker.input_requested.disconnect(self._handle_worker_input_request)
+                self.search_worker.question_requested.disconnect(self._handle_worker_question_request)
+                self.search_worker.info_requested.disconnect(self._handle_worker_info_request)
+
     def _update_progress(self, current: int, total: int):
         """Update progress bar."""
         self.progress_bar.setMaximum(total)
@@ -2010,6 +2023,8 @@ class AdvancedSearchDialog(QDialog):
         # Stop any running search worker using safe cleanup (never terminate)
         if self.search_worker and self.search_worker.isRunning():
             logger.debug("Stopping search worker on dialog close")
+            # Disconnect signals first to prevent late signal delivery to destroyed dialog
+            self._disconnect_worker_signals()
             # Use WorkerManager for safe cleanup - never uses terminate()
             WorkerManager.cleanup_worker(self.search_worker, timeout=3000)
             self.search_worker = None

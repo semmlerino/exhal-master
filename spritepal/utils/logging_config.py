@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from typing_extensions import override
+
 
 def setup_logging(
     log_dir: Path | None = None, log_level: str = "INFO"
@@ -91,6 +93,7 @@ def setup_logging(
         class SafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
             """A safer rotating file handler that handles directory cleanup gracefully."""
 
+            @override
             def emit(self, record: logging.LogRecord) -> None:
                 try:
                     super().emit(record)
@@ -99,6 +102,7 @@ def setup_logging(
                     # This prevents cascade failures in threaded operations
                     pass
 
+            @override
             def shouldRollover(self, record: logging.LogRecord) -> bool:
                 try:
                     return bool(super().shouldRollover(record))
@@ -106,6 +110,7 @@ def setup_logging(
                     # If log directory was cleaned up, don't rollover
                     return False
 
+            @override
             def _open(self) -> Any:
                 try:
                     # Check if log directory still exists before opening

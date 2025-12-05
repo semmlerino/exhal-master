@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QObject
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 from core.parallel_sprite_finder import ParallelSpriteFinder
 from core.workers.base import BaseWorker, handle_worker_errors
 from PySide6.QtCore import Signal
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +28,7 @@ class SpriteScanWorker(BaseWorker):
     # For compatibility with existing code that expects (current, total) progress
     progress_detailed = Signal(int, int)  # current, total
 
-    def __init__(self, rom_path: str, extractor, use_cache: bool = True,
+    def __init__(self, rom_path: str, extractor: Any, use_cache: bool = True,
                  start_offset: int | None = None, end_offset: int | None = None, parent: QObject | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
@@ -121,7 +122,7 @@ class SpriteScanWorker(BaseWorker):
         logger.info(f"Starting parallel sprite scan: 0x{start_offset:X} to 0x{end_offset:X}")
 
         # Progress callback to handle results as they come in
-        def progress_callback(current_progress, total_progress):
+        def progress_callback(current_progress: int, total_progress: int) -> None:
             # Map parallel finder progress to our progress signals
             total_range = end_offset - original_start_offset  # Use original for consistency
 
@@ -236,6 +237,7 @@ class SpriteScanWorker(BaseWorker):
             except Exception as cleanup_error:
                 logger.warning(f"Error during parallel finder cleanup: {cleanup_error}")
 
+    @override
     def cancel(self):
         """Cancel the scanning operation"""
         # Call parent cancel method first

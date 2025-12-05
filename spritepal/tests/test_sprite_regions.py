@@ -460,6 +460,7 @@ class TestPerformance:
     def test_large_sprite_count_performance(self):
         """Test performance with many sprites"""
         import random
+        random.seed(42)  # Seed for reproducibility
 
         # Generate 10,000 sprites
         sprites = []

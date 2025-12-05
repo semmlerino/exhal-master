@@ -13,6 +13,7 @@ from typing import Any
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QWidget
+from typing_extensions import override
 
 from .button_box_manager import ButtonBoxManager
 from .dialog_context import DialogContext
@@ -197,6 +198,7 @@ class ComposedDialog(QDialog):
         """
         pass
 
+    @override
     def closeEvent(self, event: QCloseEvent) -> None:
         """
         Handle dialog close event.

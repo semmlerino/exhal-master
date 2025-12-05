@@ -57,7 +57,7 @@ class MonitoringSettings:
     }
 
     @staticmethod
-    def ensure_monitoring_settings(settings_manager) -> None:
+    def ensure_monitoring_settings(settings_manager: Any) -> None:
         """Ensure monitoring settings exist with defaults."""
         for category, settings in MonitoringSettings.DEFAULT_SETTINGS.items():
             if isinstance(settings, dict):
@@ -70,7 +70,7 @@ class MonitoringSettings:
                 settings_manager.set("monitoring", category, settings)
 
     @staticmethod
-    def get_monitoring_config(settings_manager) -> dict[str, Any]:
+    def get_monitoring_config(settings_manager: Any) -> dict[str, Any]:
         """Get complete monitoring configuration."""
         MonitoringSettings.ensure_monitoring_settings(settings_manager)
 
@@ -87,24 +87,30 @@ class MonitoringSettings:
 
         # Get nested settings
         config["performance_thresholds"] = {}
-        for key, default in MonitoringSettings.DEFAULT_SETTINGS["performance_thresholds"].items():
+        perf_thresholds = MonitoringSettings.DEFAULT_SETTINGS["performance_thresholds"]
+        assert isinstance(perf_thresholds, dict)
+        for key, default in perf_thresholds.items():
             config["performance_thresholds"][key] = settings_manager.get(
                 "monitoring", f"performance_thresholds_{key}", default)
 
         config["feature_tracking"] = {}
-        for key, default in MonitoringSettings.DEFAULT_SETTINGS["feature_tracking"].items():
+        feature_tracking = MonitoringSettings.DEFAULT_SETTINGS["feature_tracking"]
+        assert isinstance(feature_tracking, dict)
+        for key, default in feature_tracking.items():
             config["feature_tracking"][key] = settings_manager.get(
                 "monitoring", f"feature_tracking_{key}", default)
 
         config["export_options"] = {}
-        for key, default in MonitoringSettings.DEFAULT_SETTINGS["export_options"].items():
+        export_options = MonitoringSettings.DEFAULT_SETTINGS["export_options"]
+        assert isinstance(export_options, dict)
+        for key, default in export_options.items():
             config["export_options"][key] = settings_manager.get(
                 "monitoring", f"export_options_{key}", default)
 
         return config
 
     @staticmethod
-    def update_monitoring_config(settings_manager, config: dict[str, Any]) -> None:
+    def update_monitoring_config(settings_manager: Any, config: dict[str, Any]) -> None:
         """Update monitoring configuration."""
         # Update flat settings
         for key in ["enabled", "health_check_interval_ms", "retention_hours",
@@ -132,7 +138,7 @@ class MonitoringSettings:
         settings_manager.save_settings()
 
     @staticmethod
-    def get_export_directory(settings_manager) -> Path:
+    def get_export_directory(settings_manager: Any) -> Path:
         """Get the directory for monitoring exports."""
         custom_location = settings_manager.get("monitoring", "export_options_export_location", "")
 
@@ -145,12 +151,12 @@ class MonitoringSettings:
         return default_dir
 
     @staticmethod
-    def is_monitoring_enabled(settings_manager) -> bool:
+    def is_monitoring_enabled(settings_manager: Any) -> bool:
         """Check if monitoring is enabled."""
         return bool(settings_manager.get("monitoring", "enabled", True))
 
     @staticmethod
-    def should_track_feature(settings_manager, feature: str) -> bool:
+    def should_track_feature(settings_manager: Any, feature: str) -> bool:
         """Check if a specific feature should be tracked."""
         if not MonitoringSettings.is_monitoring_enabled(settings_manager):
             return False
@@ -159,14 +165,16 @@ class MonitoringSettings:
         return bool(settings_manager.get("monitoring", feature_key, True))
 
     @staticmethod
-    def get_performance_threshold(settings_manager, metric: str) -> float:
+    def get_performance_threshold(settings_manager: Any, metric: str) -> float:
         """Get performance threshold for a metric."""
         threshold_key = f"performance_thresholds_{metric}"
-        default = MonitoringSettings.DEFAULT_SETTINGS["performance_thresholds"].get(metric, 1000)
+        thresholds = MonitoringSettings.DEFAULT_SETTINGS["performance_thresholds"]
+        assert isinstance(thresholds, dict)
+        default = thresholds.get(metric, 1000)
         return float(settings_manager.get("monitoring", threshold_key, default))
 
     @staticmethod
-    def validate_monitoring_settings(settings_manager) -> list[str]:
+    def validate_monitoring_settings(settings_manager: Any) -> list[str]:
         """Validate monitoring settings and return list of issues."""
         issues = []
 
@@ -199,6 +207,7 @@ class MonitoringSettings:
 
         # Check thresholds
         thresholds = MonitoringSettings.DEFAULT_SETTINGS["performance_thresholds"]
+        assert isinstance(thresholds, dict)
         for threshold_name in thresholds:
             value = settings_manager.get("monitoring", f"performance_thresholds_{threshold_name}",
                                        thresholds[threshold_name])
@@ -208,7 +217,7 @@ class MonitoringSettings:
         return issues
 
     @staticmethod
-    def reset_to_defaults(settings_manager) -> None:
+    def reset_to_defaults(settings_manager: Any) -> None:
         """Reset monitoring settings to defaults."""
         # Clear existing monitoring settings
         session_data = settings_manager.get_session_data()
@@ -221,7 +230,7 @@ class MonitoringSettings:
         settings_manager.save_settings()
 
     @staticmethod
-    def export_settings(settings_manager) -> dict[str, Any]:
+    def export_settings(settings_manager: Any) -> dict[str, Any]:
         """Export monitoring settings for backup/sharing."""
         config = MonitoringSettings.get_monitoring_config(settings_manager)
 
@@ -237,7 +246,7 @@ class MonitoringSettings:
         }
 
     @staticmethod
-    def import_settings(settings_manager, settings_data: dict[str, Any]) -> bool:
+    def import_settings(settings_manager: Any, settings_data: dict[str, Any]) -> bool:
         """Import monitoring settings from backup."""
         try:
             if "monitoring_settings" not in settings_data:
@@ -260,39 +269,39 @@ class MonitoringSettings:
 
 # Convenience functions for common monitoring settings operations
 
-def enable_monitoring(settings_manager) -> None:
+def enable_monitoring(settings_manager: Any) -> None:
     """Enable monitoring system."""
     settings_manager.set("monitoring", "enabled", True)
     settings_manager.save_settings()
 
 
-def disable_monitoring(settings_manager) -> None:
+def disable_monitoring(settings_manager: Any) -> None:
     """Disable monitoring system."""
     settings_manager.set("monitoring", "enabled", False)
     settings_manager.save_settings()
 
 
-def set_monitoring_privacy_mode(settings_manager, enabled: bool) -> None:
+def set_monitoring_privacy_mode(settings_manager: Any, enabled: bool) -> None:
     """Enable or disable privacy mode."""
     settings_manager.set("monitoring", "privacy_mode", enabled)
     settings_manager.save_settings()
 
 
-def set_health_check_interval(settings_manager, interval_seconds: int) -> None:
+def set_health_check_interval(settings_manager: Any, interval_seconds: int) -> None:
     """Set health check interval."""
     interval_ms = max(1000, min(300000, interval_seconds * 1000))  # 1s to 5min
     settings_manager.set("monitoring", "health_check_interval_ms", interval_ms)
     settings_manager.save_settings()
 
 
-def set_data_retention(settings_manager, hours: int) -> None:
+def set_data_retention(settings_manager: Any, hours: int) -> None:
     """Set data retention period."""
     hours = max(1, min(8760, hours))  # 1 hour to 1 year
     settings_manager.set("monitoring", "retention_hours", hours)
     settings_manager.save_settings()
 
 
-def configure_auto_export(settings_manager, enabled: bool, interval_hours: int = 24) -> None:
+def configure_auto_export(settings_manager: Any, enabled: bool, interval_hours: int = 24) -> None:
     """Configure automatic report export."""
     settings_manager.set("monitoring", "auto_export_enabled", enabled)
     if enabled:
@@ -301,7 +310,7 @@ def configure_auto_export(settings_manager, enabled: bool, interval_hours: int =
     settings_manager.save_settings()
 
 
-def get_current_monitoring_status(settings_manager) -> dict[str, Any]:
+def get_current_monitoring_status(settings_manager: Any) -> dict[str, Any]:
     """Get current monitoring system status."""
     config = MonitoringSettings.get_monitoring_config(settings_manager)
 

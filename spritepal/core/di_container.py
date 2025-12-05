@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from threading import Lock
+from threading import RLock
 from typing import Any, Protocol, TypeVar
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class DIContainer:
         """Initialize the DI container."""
         self._singletons: dict[type, Any] = {}
         self._factories: dict[type, Callable[[], Any]] = {}
-        self._lock = Lock()
+        self._lock = RLock()
         logger.debug("DIContainer initialized")
 
     def register_singleton(self, interface: type[T], implementation: T) -> None:
@@ -284,11 +284,11 @@ def _get_or_create_navigation_manager():
 if __name__ == "__main__":
     # Example protocol
     class DatabaseProtocol(Protocol):
-        def query(self, sql: str) -> list: ...
+        def query(self, sql: str) -> list[str]: ...
 
     # Example implementation
     class SQLiteDatabase:
-        def query(self, sql: str) -> list:
+        def query(self, sql: str) -> list[str]:
             return ["result1", "result2"]
 
     # Register

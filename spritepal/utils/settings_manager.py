@@ -10,6 +10,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from typing_extensions import override
 from utils.constants import (
     CACHE_EXPIRATION_MAX_DAYS,
     CACHE_EXPIRATION_MIN_DAYS,
@@ -202,6 +203,7 @@ class _SettingsManagerSingleton(ThreadSafeSingleton[SettingsManager]):
     _lock = threading.Lock()
 
     @classmethod
+    @override
     def _create_instance(cls) -> SettingsManager:
         """Create a new SettingsManager instance."""
         return SettingsManager()

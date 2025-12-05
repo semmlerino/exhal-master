@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from PySide6.QtCore import QObject, QThread
 from PySide6.QtWidgets import QApplication
+from typing_extensions import override
 
 try:
     from utils.logging_config import get_logger
@@ -55,8 +56,17 @@ class ThreadSafeSingleton(Generic[T]):
     _instance: T | None = None
     _lock: threading.Lock = threading.Lock()
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Ensure each subclass gets its own instance and lock."""
+        super().__init_subclass__(**kwargs)
+        # Each subclass needs its own _instance and _lock to avoid sharing
+        if '_instance' not in cls.__dict__:
+            cls._instance = None
+        if '_lock' not in cls.__dict__:
+            cls._lock = threading.Lock()
+
     @classmethod
-    def get(cls, *args, **kwargs) -> T:
+    def get(cls, *args: Any, **kwargs: Any) -> T:
         """
         Get or create the singleton instance (thread-safe).
 
@@ -85,7 +95,7 @@ class ThreadSafeSingleton(Generic[T]):
             return cls._instance
 
     @classmethod
-    def _create_instance(cls, *args, **kwargs) -> T:
+    def _create_instance(cls, *args: Any, **kwargs: Any) -> T:
         """
         Create a new instance of the singleton.
 
@@ -221,6 +231,7 @@ class QtThreadSafeSingleton(ThreadSafeSingleton[TQt]):
             return None
 
     @classmethod
+    @override
     def _cleanup_instance(cls, instance: TQt) -> None:
         """
         Cleanup Qt object instance.
@@ -261,7 +272,7 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
         return cls._instance if cls._initialized else None
 
     @classmethod
-    def initialize(cls, *args, **kwargs) -> TLazy:
+    def initialize(cls, *args: Any, **kwargs: Any) -> TLazy:
         """
         Explicitly initialize the singleton instance.
 
@@ -274,7 +285,8 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
         Returns:
             The initialized singleton instance
         """
-        with cls._initialization_lock:
+        # Use _lock (same as get()) to prevent race between initialize() and get()
+        with cls._lock:
             if not cls._initialized:
                 cls._instance = cls._create_instance(*args, **kwargs)
                 cls._initialized = True
@@ -282,9 +294,10 @@ class LazyThreadSafeSingleton(ThreadSafeSingleton[TLazy]):
             return cls._instance  # type: ignore[return-value]  # Instance is guaranteed to exist after initialization
 
     @classmethod
+    @override
     def reset(cls) -> None:
         """Reset both the instance and initialization state."""
-        with cls._lock, cls._initialization_lock:
+        with cls._lock:
             if cls._instance is not None:
                 cls._cleanup_instance(cls._instance)
             cls._instance = None

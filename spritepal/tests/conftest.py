@@ -77,17 +77,10 @@ import pytest
 # Add parent directories to path - centralized path setup
 sys.path.insert(0, str(Path(__file__).parent.parent))  # Add spritepal directory
 
-# Import segfault skip configuration
-# Lazy imports for manager functions - imported in fixtures to reduce startup overhead
-# from core.managers import cleanup_managers, initialize_managers
-# from utils.constants import BYTES_PER_TILE, VRAM_SPRITE_OFFSET
 # Import consolidated mock utilities
 import contextlib
 
 # Import constants from segfault and timeout configuration modules
-# These pure-constant modules were refactored from conftest_* files that had
-# duplicate hook functions that were never executed (hooks merged into this file)
-# NOTE: constants_segfault.py has been removed - segfault-prone tests were deleted
 from .constants_timeout import (
     INTEGRATION_PATTERNS,
     SLOW_TEST_PATTERNS,
@@ -96,32 +89,44 @@ from .constants_timeout import (
     TIMEOUT_SLOW,
     TIMEOUT_UNIT,
 )
-from .infrastructure.environment_detection import (
-    configure_qt_for_environment,
-    get_environment_info,
-    get_environment_report,
-)
+from .infrastructure.environment_detection import get_environment_info
 from .infrastructure.mock_hal import (
     MockHALCompressor,
     MockHALProcessPool,
     configure_hal_mocking,
     create_mock_hal_tools,
 )
-from .infrastructure.qt_mocks import create_qt_mock_context
 from .infrastructure.real_component_factory import RealComponentFactory
 
-# Import safe fixture infrastructure
-from .infrastructure.safe_fixtures import (
-    SafeQApplicationProtocol,
-    SafeQtBotProtocol,
-    cleanup_all_fixtures,
-    create_safe_dialog_factory,
-    create_safe_qapp,
-    create_safe_qtbot,
-    create_safe_widget_factory,
-    report_fixture_error,
-    safe_qt_context,
-    validate_fixture_environment,
+# Import all Qt-related fixtures and environment settings from qt_fixtures.py
+from .fixtures.qt_fixtures import (
+    IS_HEADLESS,
+    DEFAULT_SIGNAL_TIMEOUT,
+    DEFAULT_WAIT_TIMEOUT,
+    DEFAULT_WORKER_TIMEOUT,
+    qt_environment_setup,
+    qt_app,
+    main_window,
+    enhanced_safe_qtbot,
+    mock_qtbot,
+    enhanced_safe_qapp,
+    safe_widget_factory_fixture,
+    safe_dialog_factory_fixture,
+    safe_qt_environment,
+    enhanced_qtbot,
+    enhanced_qapp,
+    cleanup_safe_fixtures_session,
+    fixture_validation_report,
+    real_qtbot,
+    adaptive_qtbot,
+    configure_safe_fixtures_logging,
+    safe_qapp,
+    cleanup_workers,
+    signal_timeout,
+    wait_timeout,
+    worker_timeout,
+    timeout_config,
+    cleanup_singleton,
 )
 
 # Import for controller fixture
@@ -131,37 +136,9 @@ except ImportError:
     # Avoid import errors in environments where controller isn't available
     ExtractionController = None
 
-# Environment detection for fixture optimization - use centralized detection
-# Configure Qt environment based on detected environment
-configure_qt_for_environment()
-
 # Get environment info for fixture optimization
 _environment_info = get_environment_info()
-IS_HEADLESS = _environment_info.is_headless
 
-# Performance optimization: Estimated fixture instantiation reductions
-# Based on usage analysis across 1,682 tests:
-# - Total fixture instantiations before optimization: ~2,200
-# - Total fixture instantiations after optimization: ~690
-# - Overall reduction: 68.6%
-# - Expected test execution speed improvement: 15-25%
-# Enable performance monitoring with: PYTEST_DEBUG_FIXTURES=1 pytest tests/
-
-# Global timeout configuration - increased for CI/headless environments
-# Use PYTEST_TIMEOUT_MULTIPLIER environment variable to scale all timeouts (e.g., 2.0 for slow CI)
-def _get_timeout_multiplier() -> float:
-    """Get timeout multiplier from environment variable."""
-    try:
-        return float(os.environ.get("PYTEST_TIMEOUT_MULTIPLIER", "1.0"))
-    except ValueError:
-        return 1.0
-
-_timeout_multiplier = _get_timeout_multiplier()
-_is_ci_or_headless = bool(os.environ.get("CI") or IS_HEADLESS)
-
-DEFAULT_SIGNAL_TIMEOUT = int((10000 if _is_ci_or_headless else 5000) * _timeout_multiplier)
-DEFAULT_WAIT_TIMEOUT = int((5000 if _is_ci_or_headless else 2000) * _timeout_multiplier)
-DEFAULT_WORKER_TIMEOUT = int((15000 if _is_ci_or_headless else 7500) * _timeout_multiplier)
 
 def pytest_addoption(parser: Any) -> None:
     """Add custom command line options for SpritePal tests."""
@@ -177,6 +154,7 @@ def pytest_configure(config: Any) -> None:
     """Configure pytest with unified markers for SpritePal tests."""
     # Print environment report if verbose mode is enabled
     if config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT'):
+        from .infrastructure.environment_detection import get_environment_report
         print(get_environment_report())
 
     markers = [
@@ -332,43 +310,7 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
             # Add timeout marker
             item.add_marker(pytest.mark.timeout(timeout))
 
-    # Environment-based test filtering with detailed reasons
-    if env_info.is_headless:
-        # More specific skip reasons based on environment
-        skip_reason = "GUI tests skipped in headless environment"
-        if env_info.is_ci:
-            skip_reason = f"GUI tests skipped in CI environment ({env_info.ci_system})"
-        elif env_info.is_wsl:
-            skip_reason = "GUI tests skipped in WSL environment"
-        elif env_info.is_docker:
-            skip_reason = "GUI tests skipped in Docker container"
 
-        skip_gui = pytest.mark.skip(reason=skip_reason)
-        skip_qt_real = pytest.mark.skip(reason="Real Qt components require display - use mocked versions")
-
-        # Count skipped tests for reporting
-        skipped_gui_count = 0
-        skipped_qt_real_count = 0
-
-        for item in items:
-            # Skip GUI tests that require real Qt components in headless environments
-            if ("gui" in item.keywords and
-                "mock_only" not in item.keywords and
-                "qt_mock" not in item.keywords):
-                item.add_marker(skip_gui)
-                skipped_gui_count += 1
-
-            # Skip tests requiring real Qt components unless they're mocked
-            if ("qt_real" in item.keywords and
-                not any(marker in item.keywords for marker in ["mock_only", "qt_mock"])):
-                item.add_marker(skip_qt_real)
-                skipped_qt_real_count += 1
-
-        # Report skipped tests if verbose
-        if (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')) and (skipped_gui_count > 0 or skipped_qt_real_count > 0):
-            print(f"\nSkipped {skipped_gui_count} GUI tests and {skipped_qt_real_count} real Qt tests due to headless environment")
-            if env_info.xvfb_available:
-                print("Note: xvfb is available - consider running with xvfb for GUI tests")
 
     # Add automatic slow marker for certain test categories
     slow_patterns = ["integration", "gui", "rom_data", "performance", "benchmark"]
@@ -406,23 +348,7 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
 # Note: GUI popup prevention is handled via QT_QPA_PLATFORM environment variable
 # Set QT_QPA_PLATFORM=offscreen to run tests without GUI windows
 
-@pytest.fixture(scope="session", autouse=True)
-def qt_environment_setup() -> Iterator[None]:
-    """
-    Setup Qt environment automatically based on comprehensive environment detection.
 
-    Uses centralized environment detection to determine the best Qt configuration.
-    Qt environment variables (QT_QPA_PLATFORM=offscreen) are set in pytest.ini
-    and by configure_qt_for_environment().
-
-    NOTE: We no longer mock Qt modules in headless environments. Tests that need
-    real Qt must be marked @pytest.mark.gui and will be skipped in headless.
-    Tests that don't need Qt should not import Qt modules.
-    This ensures tests fail loudly if they incorrectly require Qt without marking.
-    """
-    # Qt environment variables are configured by configure_qt_for_environment() at module load
-    # and qt_qpa_platform=offscreen is set in pytest.ini for headless mode
-    yield
 
 @pytest.fixture(scope="session")
 def session_managers(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
@@ -1144,342 +1070,7 @@ def minimal_injection_context() -> Any:  # ManagerContext type
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_minimal_test_context(["injection"], name="dialog_test")
 
-# Safe Qt fixtures - now require real Qt with offscreen mode
-# NOTE: real_*_manager fixtures are defined earlier in this file with class scope
-@pytest.fixture
-def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
-    """Provide a qtbot that works with offscreen mode in headless environments.
 
-    NOTE: This fixture now always requests the real qtbot from pytest-qt.
-    In headless environments, QT_QPA_PLATFORM=offscreen allows Qt to work.
-    Tests that fail should be marked @pytest.mark.gui or should not require qtbot.
-    """
-    try:
-        qtbot = request.getfixturevalue('qtbot')
-        return qtbot  # pyright: ignore[reportReturnType]
-    except Exception as e:
-        pytest.fail(
-            f"Failed to get qtbot: {e}. "
-            "Tests requiring qtbot should be marked @pytest.mark.gui "
-            "or ensure pytest-qt is installed and Qt is available."
-        )
-
-# High-frequency fixture optimizations for 68.6% performance improvement
-# These fixtures are optimized based on usage analysis:
-# - qt_app: 1,129 uses → session scope (1 instance)
-# - main_window: 129 uses → class scope (~30 instances)
-# - controller: 119 uses → class scope (~30 instances)
-# - mock_manager_registry: 81 uses → module scope (~15 instances)
-# - real_extraction_manager: 51 uses → class scope (~12 instances)
-# - rom_cache: 48 uses → class scope (~10 instances)
-# - mock_settings_manager: 44 uses → class scope (~10 instances)
-# - real_session_manager: 26 uses → class scope (~8 instances)
-
-# Enhanced Safe Fixture Implementations
-
-@pytest.fixture
-def enhanced_safe_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
-    """
-    Enhanced safe qtbot fixture that requires real Qt (with offscreen in headless).
-
-    This fixture provides real Qt functionality and fails loudly if Qt is unavailable.
-    Use mock_qtbot fixture instead for tests that explicitly don't need real Qt.
-
-    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
-    """
-    # No try/except - let HeadlessModeError propagate for clear failure
-    qtbot = create_safe_qtbot(request, allow_mock=False)
-    yield qtbot
-    # Cleanup handled by fixture manager
-
-
-@pytest.fixture
-def mock_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
-    """
-    Explicit mock qtbot fixture for tests that don't need real Qt.
-
-    Use this fixture with @pytest.mark.mock_qt to document that a test
-    intentionally uses mock Qt behavior.
-
-    Only use when:
-    - Testing logic that doesn't depend on real Qt signal/slot behavior
-    - Testing code paths that should work without Qt installed
-    - Unit tests that mock Qt components anyway
-    """
-    from .infrastructure.safe_fixtures import SafeQtBot
-
-    qtbot = SafeQtBot(headless=True)
-    yield qtbot
-    qtbot.cleanup()
-
-
-@pytest.fixture(scope="session")
-def enhanced_safe_qapp() -> SafeQApplicationProtocol:
-    """
-    Enhanced safe QApplication fixture that requires real Qt (with offscreen in headless).
-
-    This fixture provides real Qt functionality and fails loudly if Qt is unavailable.
-
-    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
-    """
-    # No try/except - let HeadlessModeError propagate for clear failure
-    qapp = create_safe_qapp(allow_mock=False)
-    yield qapp
-    # Cleanup handled by fixture manager
-
-@pytest.fixture
-def safe_widget_factory_fixture(request: FixtureRequest):
-    """
-    Safe widget factory for creating Qt widgets (with offscreen in headless).
-
-    Provides real Qt widget creation and fails loudly if Qt is unavailable.
-
-    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
-    """
-    # No try/except - let errors propagate for clear failure
-    factory = create_safe_widget_factory()
-    yield factory
-    factory.cleanup()
-
-
-@pytest.fixture
-def safe_dialog_factory_fixture(request: FixtureRequest):
-    """
-    Safe dialog factory for creating Qt dialogs (with offscreen in headless).
-
-    Provides real Qt dialog creation and fails loudly if Qt is unavailable.
-
-    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
-    """
-    # No try/except - let errors propagate for clear failure
-    factory = create_safe_dialog_factory()
-    yield factory
-    factory.cleanup()
-
-@pytest.fixture
-def safe_qt_environment(request: FixtureRequest):
-    """
-    Complete safe Qt environment with all components (offscreen in headless).
-
-    Provides a complete Qt testing environment and fails loudly if Qt unavailable.
-
-    Per HEADLESS_TESTING.md: "No Mock Fallbacks - tests fail loudly"
-    """
-    # No try/except - let errors propagate for clear failure
-    with safe_qt_context(request) as qt_env:
-        yield qt_env
-
-# Override pytest-qt fixtures to use safe versions
-
-@pytest.fixture
-def enhanced_qtbot(request: FixtureRequest) -> SafeQtBotProtocol:
-    """Override pytest-qt qtbot with enhanced safe version."""
-    return request.getfixturevalue('enhanced_safe_qtbot')
-
-@pytest.fixture(scope="session")
-def enhanced_qapp() -> SafeQApplicationProtocol:
-    """Override pytest-qt qapp with enhanced safe version."""
-    # Delegate to our enhanced safe fixture
-    return create_safe_qapp()
-
-# Session-level cleanup fixture
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_safe_fixtures_session():
-    """Auto-cleanup all safe fixtures at session end."""
-    yield
-
-    # Cleanup all fixtures at session end
-    try:
-        cleanup_all_fixtures()
-        import logging
-        logging.getLogger(__name__).info("Safe fixtures cleanup completed")
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Error during safe fixtures cleanup: {e}")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_test_data_repository_session() -> Iterator[None]:
-    """Session-scoped cleanup for TestDataRepository.
-
-    Ensures all temporary files created by TestDataRepository
-    are cleaned up at the end of the test session.
-
-    This addresses Issue 7: TestDataRepository singleton was never cleaned up,
-    causing temp files to accumulate across test runs.
-    """
-    yield
-
-    # Cleanup TestDataRepository at session end
-    try:
-        from .infrastructure.test_data_repository import cleanup_test_data_repository
-        cleanup_test_data_repository()
-        import logging
-        logging.getLogger(__name__).info("TestDataRepository cleanup completed")
-    except ImportError:
-        pass  # test_data_repository not available
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Error during TestDataRepository cleanup: {e}")
-
-
-# Validation fixture for debugging
-
-@pytest.fixture
-def fixture_validation_report():
-    """
-    Provide fixture validation report for debugging.
-
-    Usage:
-        def test_something(fixture_validation_report):
-            if fixture_validation_report['errors']:
-                pytest.skip(f"Fixture validation failed: {fixture_validation_report['errors']}")
-    """
-    return validate_fixture_environment()
-
-# Helper fixtures for gradual migration
-
-@pytest.fixture
-def real_qtbot(request: FixtureRequest):
-    """
-    Real qtbot fixture for tests that specifically need real Qt.
-
-    Use this only for integration tests that require real Qt behavior.
-    Will skip in headless environments without xvfb.
-    """
-    env_info = get_environment_info()
-
-    if env_info.is_headless and not env_info.xvfb_available:
-        pytest.skip("Real qtbot requires display or xvfb")
-
-    try:
-        # Import and use pytest-qt directly
-        pytest.importorskip("pytest_qt")
-        return request.getfixturevalue('qtbot')  # Get real qtbot from pytest-qt
-    except Exception as e:
-        pytest.skip(f"Real qtbot not available: {e}")
-
-@pytest.fixture
-def mock_qtbot():
-    """
-    Mock qtbot fixture for tests that specifically need mocked Qt.
-
-    Use this for unit tests that should always use mocks.
-    """
-    from .infrastructure.safe_fixtures import SafeQtBot
-    return SafeQtBot(headless=True)
-
-# Environment-specific fixture selection
-
-@pytest.fixture
-def adaptive_qtbot(request: FixtureRequest):
-    """
-    Adaptive qtbot that chooses implementation based on test markers.
-
-    Uses real qtbot for tests marked with @pytest.mark.qt_real
-    Uses mock qtbot for tests marked with @pytest.mark.qt_mock
-    Uses safe qtbot (auto-detect) for unmarked tests
-    """
-    if request.node.get_closest_marker("qt_real"):
-        return request.getfixturevalue('real_qtbot')
-    if request.node.get_closest_marker("qt_mock"):
-        return request.getfixturevalue('mock_qtbot')
-    return request.getfixturevalue('enhanced_safe_qtbot')
-
-# Configuration and debugging helpers
-
-@pytest.fixture(autouse=True)
-def configure_safe_fixtures_logging(request: FixtureRequest):
-    """Auto-configure logging for safe fixtures debugging."""
-    # Enable debug logging if PYTEST_DEBUG_FIXTURES is set
-    if os.environ.get('PYTEST_DEBUG_FIXTURES'):
-        import logging
-        logging.getLogger('tests.infrastructure.safe_fixtures').setLevel(logging.DEBUG)
-
-    yield
-
-    # Could add per-test fixture usage reporting here
-
-@pytest.fixture(scope="session")
-def qt_app() -> Any:
-    """Session-scoped QApplication fixture for maximum performance.
-
-    Used 1,129 times across tests. Session scope reduces instantiations
-    from 1,129 to 1 (99.9% reduction).
-
-    Handles QApplication singleton properly to avoid conflicts.
-
-    NOTE: This fixture always creates a real QApplication. In headless
-    environments, pytest.ini sets QT_QPA_PLATFORM=offscreen which allows
-    Qt to work without a display. Tests that fail with this fixture in
-    headless mode should either:
-    1. Be marked @pytest.mark.gui (skipped in headless)
-    2. Not require QApplication at all
-    """
-    try:
-        from PySide6.QtWidgets import QApplication
-
-        # Get existing instance or create new one
-        app = QApplication.instance()
-        if app is None:
-            app = QApplication([])
-
-        return app
-    except ImportError as e:
-        pytest.fail(
-            f"Qt not available: {e}. "
-            "Tests requiring Qt should be marked @pytest.mark.gui "
-            "or the test environment should have PySide6 installed."
-        )
-    except Exception as e:
-        pytest.fail(
-            f"Failed to create QApplication: {e}. "
-            "Ensure QT_QPA_PLATFORM=offscreen is set for headless environments."
-        )
-
-@pytest.fixture(scope="class")
-def main_window() -> MockMainWindowProtocol:
-    """Class-scoped main window fixture for performance optimization.
-
-    Used 129 times across tests. Class scope reduces instantiations
-    from 129 to ~30 (77% reduction).
-
-    Creates a fully configured mock main window with all required
-    attributes and signals.
-    """
-    # Import here to avoid circular imports
-    from unittest.mock import MagicMock, Mock
-
-    # Create a simple mock window without spec to avoid issues
-    window = Mock()
-
-    # Add all required signals as MagicMocks to allow emission simulation
-    window.extract_requested = MagicMock()
-    window.open_in_editor_requested = MagicMock()
-    window.arrange_rows_requested = MagicMock()
-    window.arrange_grid_requested = MagicMock()
-    window.inject_requested = MagicMock()
-    window.extraction_completed = MagicMock()
-    window.extraction_error_occurred = MagicMock()
-
-    # Add all required attributes with proper mocks
-    window.extraction_panel = Mock()
-    window.rom_extraction_panel = Mock()
-    window.output_settings_manager = Mock()
-    window.toolbar_manager = Mock()
-    window.preview_coordinator = Mock()
-    window.status_bar_manager = Mock()
-    window.status_bar = Mock()
-    window.sprite_preview = Mock()
-    window.palette_preview = Mock()
-    window.extraction_tabs = Mock()
-
-    # Add state attributes
-    window._output_path = ""
-    window._extracted_files = []
-
-    return window  # pyright: ignore[reportReturnType]  # Mock conforms to protocol at runtime
 
 @pytest.fixture(scope="class")
 def controller(main_window: MockMainWindowProtocol) -> Mock:
@@ -1640,237 +1231,6 @@ def reset_class_scoped_fixtures(
     yield
 
 
-def _restore_settings_manager_defaults(mock_settings_manager: Mock) -> None:
-    """Restore default side_effect for mock_settings_manager after reset."""
-    mock_settings_manager.get_setting.side_effect = lambda key, default=None: {
-        'output_path': '/tmp/test_output',
-        'create_grayscale': True,
-        'create_metadata': True,
-        'auto_save': False,
-    }.get(key, default)
 
 
-def _reset_main_window_state(main_window: Mock) -> None:
-    """Reset mutable state on main_window fixture to prevent test isolation issues.
 
-    The main_window fixture has mutable attributes that can accumulate state
-    across tests within the same class. This callback ensures fresh state
-    for each test.
-    """
-    # Reset mutable list - create new list to avoid shared state
-    main_window._extracted_files = []
-    # Reset string state
-    main_window._output_path = ""
-    # Reset mock call history on the mock itself
-    main_window.reset_mock(return_value=True, side_effect=True)
-
-# Legacy fixture aliases for backward compatibility
-# These ensure existing tests continue to work without modification
-
-@pytest.fixture
-def qapp(qt_app: Any) -> Any:
-    """Alias for qt_app fixture for backward compatibility with pytest-qt."""
-    return qt_app
-
-# Performance monitoring fixture
-@pytest.fixture(scope="session", autouse=True)
-def fixture_performance_monitor() -> Generator[None, None, None]:
-    """Monitor fixture instantiation for performance validation.
-
-    This fixture helps validate that the scope optimizations are working
-    as expected by tracking fixture usage patterns.
-    """
-    import time
-    start_time = time.time()
-
-    yield
-
-    # Report performance at end of session (if debug enabled)
-    end_time = time.time()
-    duration = end_time - start_time
-
-    if os.environ.get('PYTEST_DEBUG_FIXTURES'):
-        print("\n=== Fixture Performance Report ===")
-        print(f"Total test session duration: {duration:.2f}s")
-        print("Fixture optimizations: 68.6% reduction in instantiations")
-        print("Expected performance improvement: 15-25%")
-        print("===================================\n")
-
-@pytest.fixture
-def safe_qapp(qt_app: Any) -> Any:  # QApplication | Mock but avoid circular import
-    """Provide a QApplication that works in both headless and GUI environments.
-
-    This fixture now uses the optimized qt_app fixture instead of pytest-qt's qapp.
-    """
-    return qt_app
-
-@pytest.fixture(autouse=True)
-def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, None]:
-    """
-    Automatically clean up any worker threads after each test.
-
-    This fixture runs after each test to ensure no worker threads
-    are left running, preventing "QThread: Destroyed while thread
-    is still running" errors.
-    """
-    import threading
-
-    # Skip cleanup for tests that don't use workers
-    markers = [m.name for m in request.node.iter_markers()]
-    if 'no_manager_setup' in markers or 'no_qt' in markers:
-        yield
-        return
-
-    # Capture baseline thread count BEFORE test runs
-    # This avoids hardcoding assumptions about thread count (e.g., CI may have more threads)
-    baseline_thread_count = threading.active_count()
-
-    yield
-
-    # Import here to avoid circular imports
-    from ui.common.worker_manager import WorkerManager
-
-    # Clean up any remaining workers
-    try:
-        WorkerManager.cleanup_all()  # pyright: ignore[reportUnknownMemberType]  # WorkerManager may have different interface
-    except Exception as e:
-        # Log but don't fail tests due to cleanup errors
-        import logging
-        logging.debug(f"Error during worker cleanup: {e}")
-
-    # Clean up any SearchWorker threads specifically for advanced search tests
-    try:
-        # Wait for worker threads to finish with proper timeout
-        # Use Qt-safe waiting to allow event loop to process pending cleanups
-        max_wait_ms = 500  # Maximum wait time
-        poll_interval_ms = 20  # Check every 20ms
-        elapsed = 0
-
-        # Import Qt classes for event processing
-        from PySide6.QtCore import QCoreApplication, QThread
-
-        while elapsed < max_wait_ms:
-            active_threads = threading.active_count()
-            if active_threads <= baseline_thread_count:
-                break
-
-            # Process Qt events to allow threads to clean up properly
-            # This is critical - time.sleep() blocks the event loop
-            app = QCoreApplication.instance()
-            if app:
-                app.processEvents()
-
-            # Use Qt-safe sleep that integrates with event loop
-            current_thread = QThread.currentThread()
-            if current_thread:
-                current_thread.msleep(poll_interval_ms)
-            else:
-                # Fallback for non-Qt threads (rare)
-                import time
-                time.sleep(poll_interval_ms / 1000.0)
-
-            elapsed += poll_interval_ms
-
-        # Log if threads still running after timeout (for debugging)
-        active_threads = threading.active_count()
-        if active_threads > baseline_thread_count:
-            import logging
-            logging.debug(f"Active thread count after cleanup wait: {active_threads}")
-
-        # Only do garbage collection if not in Qt environment to avoid segfaults
-        if IS_HEADLESS:
-            import gc
-            gc.collect()
-
-    except Exception as e:
-        import logging
-        logging.debug(f"Error during thread cleanup: {e}")
-
-    # Also check for any QThread instances that might be running
-    if not IS_HEADLESS:
-        from PySide6.QtCore import QThread
-        from PySide6.QtWidgets import QApplication
-
-        # Process any pending events to allow threads to finish
-        app = QApplication.instance()
-        if app:
-            # Process events with early exit when threads are cleaned up
-            for _ in range(5):
-                app.processEvents()
-                # Check if threads have finished - early exit if so
-                if threading.active_count() <= baseline_thread_count:
-                    break
-                # Use Qt's msleep for proper event loop integration
-                current = QThread.currentThread()
-                if current:
-                    current.msleep(10)  # 10ms between processing cycles
-
-# Timeout fixtures for consistent signal waiting across tests
-@pytest.fixture
-def signal_timeout() -> int:
-    """Provide configurable timeout for Qt signal waiting."""
-    return DEFAULT_SIGNAL_TIMEOUT
-
-@pytest.fixture
-def wait_timeout() -> int:
-    """Provide configurable timeout for general Qt operations."""
-    return DEFAULT_WAIT_TIMEOUT
-
-@pytest.fixture
-def worker_timeout() -> int:
-    """Provide configurable timeout for worker thread operations."""
-    return DEFAULT_WORKER_TIMEOUT
-
-@pytest.fixture
-def timeout_config() -> dict[str, int]:
-    """Provide complete timeout configuration for complex tests."""
-    return {
-        'signal': DEFAULT_SIGNAL_TIMEOUT,
-        'wait': DEFAULT_WAIT_TIMEOUT,
-        'worker': DEFAULT_WORKER_TIMEOUT,
-        'short': 500,
-        'medium': DEFAULT_WAIT_TIMEOUT,
-        'long': DEFAULT_WORKER_TIMEOUT,
-    }
-
-
-@pytest.fixture
-def cleanup_singleton() -> Generator[None, None, None]:
-    """Centralized ManualOffsetDialog singleton cleanup fixture.
-
-    This fixture ensures the ManualOffsetDialogSingleton is properly cleaned up
-    before and after each test. Use this instead of defining your own
-    setup_singleton_cleanup fixture in test files.
-
-    Usage:
-        def test_something(cleanup_singleton):
-            # Singleton is already reset before test
-            dialog = ManualOffsetDialogSingleton.get_dialog(panel)
-            # ... test code ...
-            # Singleton will be reset after test
-    """
-    from ui.rom_extraction_panel import ManualOffsetDialogSingleton
-
-    # Clean before test
-    try:
-        if ManualOffsetDialogSingleton._instance is not None:
-            ManualOffsetDialogSingleton._instance.close()
-    except Exception:
-        pass
-    ManualOffsetDialogSingleton.reset()
-
-    yield
-
-    # Clean after test
-    try:
-        if ManualOffsetDialogSingleton._instance is not None:
-            ManualOffsetDialogSingleton._instance.close()
-    except Exception:
-        pass
-    ManualOffsetDialogSingleton.reset()
-
-    # Process events to ensure cleanup completes
-    if not IS_HEADLESS:
-        from PySide6.QtWidgets import QApplication
-        if app := QApplication.instance():
-            app.processEvents()

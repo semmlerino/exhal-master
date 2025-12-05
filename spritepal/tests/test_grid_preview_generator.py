@@ -476,8 +476,9 @@ class TestGridPreviewGenerator:
             "/path/to/sprite.png", arranged_image, "test"
         )
 
-        assert result == "/path/to/sprite_test_arranged.png"
-        arranged_image.save.assert_called_once_with("/path/to/sprite_test_arranged.png")
+        # Function returns just filename (stem + arrangement + suffix), not full path
+        assert result == "sprite_test_arranged.png"
+        arranged_image.save.assert_called_once_with("sprite_test_arranged.png")
 
     def test_export_grid_arrangement_default_type(self):
         """Test exporting grid arrangement with default type"""
@@ -493,8 +494,9 @@ class TestGridPreviewGenerator:
             "/path/to/sprite.png", arranged_image
         )
 
-        assert result == "/path/to/sprite_grid_arranged.png"
-        arranged_image.save.assert_called_once_with("/path/to/sprite_grid_arranged.png")
+        # Function returns just filename (stem + arrangement + suffix), not full path
+        assert result == "sprite_grid_arranged.png"
+        arranged_image.save.assert_called_once_with("sprite_grid_arranged.png")
 
     def test_create_arrangement_preview_data(self):
         """Test creating arrangement preview data"""

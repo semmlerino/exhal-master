@@ -15,6 +15,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import QPixmap
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -35,7 +36,7 @@ class SpriteGalleryModel(QAbstractListModel):
     thumbnail_needed = Signal(int, int)  # offset, priority
     selection_changed = Signal(list)  # list of selected offsets
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         """Initialize the sprite gallery model."""
         super().__init__(parent)
 
@@ -54,6 +55,7 @@ class SpriteGalleryModel(QAbstractListModel):
         self._filter_compressed_only = False
         self._use_filtering = False
 
+    @override
     def rowCount(self, parent: QModelIndex | QPersistentModelIndex | None = None) -> int:
         """Return number of sprites (for virtual view)."""
         if parent is None:
@@ -63,6 +65,7 @@ class SpriteGalleryModel(QAbstractListModel):
         sprites = self._filtered_sprites if self._use_filtering else self._sprites
         return len(sprites)
 
+    @override
     def columnCount(self, parent: QModelIndex | QPersistentModelIndex | None = None) -> int:
         """Return number of columns for grid layout."""
         if parent is None:
@@ -71,6 +74,7 @@ class SpriteGalleryModel(QAbstractListModel):
             return 0
         return self._columns
 
+    @override
     def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Return data for the given index and role."""
         if not index.isValid():
@@ -123,6 +127,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return None
 
+    @override
     def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         """Set data for the given index and role."""
         if not index.isValid():
@@ -150,6 +155,7 @@ class SpriteGalleryModel(QAbstractListModel):
 
         return False
 
+    @override
     def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         """Return item flags for the given index."""
         if not index.isValid():

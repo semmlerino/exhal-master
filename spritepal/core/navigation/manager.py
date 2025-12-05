@@ -14,7 +14,8 @@ from typing import Any
 
 from core.managers.base_manager import BaseManager
 from core.managers.exceptions import NavigationError
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QObject, Signal
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 from .data_structures import NavigationContext, NavigationHint, SpriteLocation
@@ -37,7 +38,7 @@ class NavigationManager(BaseManager):
     pattern_learned = Signal(str, dict)   # Strategy name, pattern data
     similarity_found = Signal(int, list)  # Offset, list of similar sprites
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent: QObject | None = None) -> None:
         """Initialize navigation manager."""
         # Initialize all attributes BEFORE calling super().__init__()
         # Core data structures
@@ -69,6 +70,7 @@ class NavigationManager(BaseManager):
         # Now call super().__init__() which triggers _initialize()
         super().__init__("NavigationManager", parent)
 
+    @override
     def _initialize(self) -> None:
         """Initialize the navigation manager."""
         try:
@@ -89,6 +91,7 @@ class NavigationManager(BaseManager):
             self._handle_error(e, "initialization")
             raise NavigationError(f"Failed to initialize NavigationManager: {e}") from e
 
+    @override
     def cleanup(self) -> None:
         """Clean up navigation manager resources."""
         try:

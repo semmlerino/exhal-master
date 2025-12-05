@@ -343,11 +343,12 @@ class SessionManager(BaseManager):
     def get_window_geometry(self) -> dict[str, int]:
         """Get saved window geometry"""
         ui_settings = self._settings.get("ui", {})
+        # Use 'or' to handle both missing keys and None values
         return {
-            "width": ui_settings.get("window_width", 900),
-            "height": ui_settings.get("window_height", 600),
-            "x": ui_settings.get("window_x", -1),
-            "y": ui_settings.get("window_y", -1),
+            "width": ui_settings.get("window_width") or 900,
+            "height": ui_settings.get("window_height") or 600,
+            "x": ui_settings.get("window_x") if ui_settings.get("window_x") is not None else -1,
+            "y": ui_settings.get("window_y") if ui_settings.get("window_y") is not None else -1,
         }
 
     def get_recent_files(self, file_type: str) -> list[str]:

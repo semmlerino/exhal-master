@@ -56,7 +56,8 @@ def create_test_image():
                     # else leave as 0 (empty)
 
         elif pattern == "noise":
-            # Random noise - should fail validation
+            # Random noise - should fail validation (seeded for reproducibility)
+            np.random.seed(42)
             noise = np.random.randint(0, 256, (height, width), dtype=np.uint8)
             img = Image.fromarray(noise, mode="L")
 
@@ -324,7 +325,8 @@ class TestSpriteVisualValidator:
         tile_data_good = bytes(good_data)
         is_valid_good, conf_good = validator.validate_tile_data(tile_data_good, tile_count)
 
-        # Very high entropy (pure random - suspicious)
+        # Very high entropy (pure random - suspicious) - seeded for reproducibility
+        np.random.seed(42)
         tile_data_high = bytes(np.random.randint(0, 256, tile_count * 32))
         is_valid_high, conf_high = validator.validate_tile_data(tile_data_high, tile_count)
 

@@ -47,7 +47,7 @@ class ImportExportPanel(QWidget):
         self._setup_ui()
         self._connect_signals()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Initialize the import/export panel UI"""
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 6, 8, 6)  # Reduced padding

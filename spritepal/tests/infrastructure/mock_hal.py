@@ -492,6 +492,18 @@ class MockHALCompressor:
 
         return stats
 
+    def set_deterministic_mode(self, enabled: bool = True) -> None:
+        """Toggle between deterministic and random mock data.
+
+        Args:
+            enabled: If True, mock data is deterministic (same inputs = same outputs).
+                    If False, random data is generated (for stress testing).
+        """
+        self._deterministic = enabled
+        # Also set on pool if available
+        if self._pool and hasattr(self._pool, 'set_deterministic_mode'):
+            self._pool.set_deterministic_mode(enabled)
+
 def create_mock_hal_tools(tmp_path: Path) -> tuple[str, str]:
     """
     Create mock HAL tool executables for testing.

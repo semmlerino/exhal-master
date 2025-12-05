@@ -41,8 +41,8 @@ class TabbedDialog(DialogBase):
         with_status_bar: bool = False,
         with_button_box: bool = True,
         tab_position: Any = QTabWidget.TabPosition.North,
-        **kwargs
-    ):
+        **kwargs: Any
+    ) -> None:
         """
         Initialize tabbed dialog.
 
@@ -178,8 +178,8 @@ class SplitterDialog(DialogBase):
         with_button_box: bool = True,
         orientation: Any = Qt.Orientation.Horizontal,
         splitter_handle_width: int = 8,
-        **kwargs
-    ):
+        **kwargs: Any
+    ) -> None:
         """
         Initialize splitter dialog.
 

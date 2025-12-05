@@ -17,7 +17,7 @@ class StatusPanel(QWidget):
         self.setStyleSheet(get_panel_style())
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Initialize the compact status panel UI"""
         layout = QVBoxLayout()
         layout.setContentsMargins(6, 4, 6, 4)  # More compact padding

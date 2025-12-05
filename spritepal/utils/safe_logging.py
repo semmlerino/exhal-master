@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Callable
 from typing import Any
 
 
@@ -70,14 +71,14 @@ def safe_error(logger: logging.Logger, message: str, *args: Any, **kwargs: Any) 
     """Safely log an error message."""
     safe_log(logger, logging.ERROR, message, *args, **kwargs)
 
-def suppress_logging_errors(func):
+def suppress_logging_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     Decorator to suppress logging errors during cleanup operations.
 
     This decorator catches ValueError exceptions that occur when logging
     to closed file handles and suppresses them during cleanup.
     """
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
             return func(*args, **kwargs)
         except ValueError as e:

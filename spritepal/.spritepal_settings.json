@@ -22,15 +22,15 @@
     }
   },
   "ui": {
-    "window_width": 1138,
-    "window_height": 711,
-    "window_x": 354,
-    "window_y": 155,
+    "window_width": 1707,
+    "window_height": 996,
+    "window_x": 0,
+    "window_y": -7,
     "restore_position": true,
     "theme": "default"
   },
   "paths": {
-    "last_used_dir": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\spritepal",
+    "last_used_dir": "C:\\CustomScripts\\KirbyMax\\workshop\\exhal-master\\spritepal\\roms",
     "default_dumps_dir": "C:\\Users\\gabri\\Documents\\Mesen2\\Debugger",
     "last_export_dir": "",
     "last_import_dir": ""
@@ -43,7 +43,7 @@
     "adapter_key": "adapter_value"
   },
   "rom_injection": {
-    "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/Kirby Super Star (USA).sfc",
+    "last_input_rom": "C:/CustomScripts/KirbyMax/workshop/exhal-master/spritepal/roms/Kirby Super Star (U) [!].smc",
     "last_sprite_location": "Kirby Sprite (0x123456)",
     "last_custom_offset": "0x123456",
     "fast_compression": true,

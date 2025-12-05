@@ -807,16 +807,18 @@ def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
         }
 
         # REFACTOR: Real validation catches actual edge cases
+        # NOTE: If this fails, the test data fixture needs to be fixed,
+        # or there's a real validation bug to investigate. Don't skip!
         manager.validate_injection_params(params)
 
         # Real signal connection testing
-        progress_messages = []
-        finished_results = []
+        progress_messages: list[str] = []
+        finished_results: list[tuple[bool, str]] = []
 
-        def on_progress(msg):
+        def on_progress(msg: str) -> None:
             progress_messages.append(msg)
 
-        def on_finished(success, msg):
+        def on_finished(success: bool, msg: str) -> None:
             finished_results.append((success, msg))
 
         manager.injection_progress.connect(on_progress)
@@ -838,9 +840,6 @@ def test_complete_injection_workflow_tdd_real_components(tmp_path, qtbot):
         assert Path(params["sprite_path"]).exists()
         assert Path(params["input_vram"]).exists()
 
-    except ValidationError as e:
-        # Real validation may find issues that need documentation
-        pytest.skip(f"Real validation found issue (valuable test result): {e}")
     finally:
         injection_fixture.cleanup()
 

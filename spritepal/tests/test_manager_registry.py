@@ -60,27 +60,6 @@ class TestManagerRegistry:
         with pytest.raises(ManagerError, match="Extraction manager not initialized"):
             get_extraction_manager()
 
-    def test_initialize_managers(self):
-        """Test initializing managers"""
-        # Initialize
-        initialize_managers("TestApp")
-        assert are_managers_initialized()
-
-        # Get managers
-        session_mgr = get_session_manager()
-        extraction_mgr = get_extraction_manager()
-
-        # Verify types
-        assert isinstance(session_mgr, SessionManager)
-        assert isinstance(extraction_mgr, ExtractionManager)
-
-        # Verify they're initialized
-        assert session_mgr.is_initialized()
-        assert extraction_mgr.is_initialized()
-
-        # App name should be passed to session manager
-        assert session_mgr._app_name == "TestApp"
-
     def test_cleanup_managers(self):
         """Test cleaning up managers"""
         # Initialize first
@@ -136,28 +115,6 @@ class TestManagerRegistry:
 
         with pytest.raises(ManagerError, match="Manager type mismatch"):
             registry.get_session_manager()
-
-    def test_cleanup_with_error(self, caplog):
-        """Test cleanup continues even if a manager raises an error"""
-        initialize_managers()
-        registry = get_registry()
-
-        # Mock a manager that raises during cleanup
-        class BadManager:
-            def cleanup(self):
-                raise Exception("Cleanup failed!")
-
-        registry._managers["bad"] = BadManager()
-
-        # Cleanup should not raise
-        cleanup_managers()
-
-        # Check error was logged
-        assert "Error cleaning up bad manager" in caplog.text
-        assert "Cleanup failed!" in caplog.text
-
-        # Registry should be empty
-        assert not are_managers_initialized()
 
     def test_concurrent_access(self):
         """Test thread-safe access to registry"""

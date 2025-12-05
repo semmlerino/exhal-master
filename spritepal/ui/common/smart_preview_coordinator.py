@@ -51,7 +51,7 @@ class PreviewRequest:
     """Represents a preview request with priority and cancellation support."""
 
     def __init__(self, request_id: int, offset: int, rom_path: str,
-                 priority: int = 0, callback: Callable | None = None):
+                 priority: int = 0, callback: Callable[..., Any] | None = None):
         self.request_id = request_id
         self.offset = offset
         self.rom_path = rom_path
@@ -63,8 +63,10 @@ class PreviewRequest:
         """Mark this request as cancelled."""
         self.cancelled = True
 
-    def __lt__(self, other):
+    def __lt__(self, other: object) -> bool:
         """Support priority queue ordering."""
+        if not isinstance(other, PreviewRequest):
+            return NotImplemented
         return self.priority > other.priority  # Higher priority first
 
 class SmartPreviewCoordinator(QObject):
@@ -104,7 +106,7 @@ class SmartPreviewCoordinator(QObject):
         self._mutex = QMutex()
 
         # Slider reference (weak to prevent circular references)
-        self._slider_ref: weakref.ReferenceType | None = None
+        self._slider_ref: weakref.ReferenceType[Any] | None = None
 
         # Timing configuration optimized for 60 FPS real-time updates
         self._drag_debounce_ms = REFRESH_RATE_60FPS  # 16ms for 60 FPS drag updates
@@ -142,7 +144,7 @@ class SmartPreviewCoordinator(QObject):
         self._rom_cache = rom_cache
 
         # Performance tracking
-        self._cache_stats = {
+        self._cache_stats: dict[str, int | list[float]] = {
             "memory_hits": 0,
             "memory_misses": 0,
             "rom_hits": 0,
@@ -232,10 +234,12 @@ class SmartPreviewCoordinator(QObject):
         if cache_hit:
             # Record response time for cache hits
             response_time = (time.time() - start_time) * 1000  # Convert to ms
-            self._cache_stats["response_times"].append(response_time)
+            response_times = self._cache_stats["response_times"]
+            assert isinstance(response_times, list)  # Type narrowing for checker
+            response_times.append(response_time)
             # Keep only last 100 response times
-            if len(self._cache_stats["response_times"]) > 100:
-                self._cache_stats["response_times"].pop(0)
+            if len(response_times) > 100:
+                response_times.pop(0)
             logger.debug(f"[DEBUG] Cache hit, returning early (response time: {response_time:.2f}ms)")
             logger.debug("[DEBUG] ========== REQUEST_PREVIEW END (CACHE HIT) ==========")
             return
@@ -402,7 +406,9 @@ class SmartPreviewCoordinator(QObject):
                         logger.debug(f"[TRACE] Valid cache hit: {len(tile_data)} bytes, {non_zero_count}/{sample_size} non-zero")
                         logger.debug("[TRACE] About to emit preview_cached signal...")
                         self.preview_cached.emit(tile_data, width, height, sprite_name)
-                        self._cache_stats["memory_hits"] += 1
+                        mem_hits = self._cache_stats["memory_hits"]
+                        assert isinstance(mem_hits, int)  # Type narrowing
+                        self._cache_stats["memory_hits"] = mem_hits + 1
                         logger.debug(f"[SIGNAL_FLOW] Memory cache hit signal emitted for 0x{offset:06X}")
                         return True
                     logger.debug("[TRACE] Cache hit but data is all zeros - ignoring and regenerating")
@@ -413,7 +419,9 @@ class SmartPreviewCoordinator(QObject):
                     # Remove invalid entry from cache
                     self._cache.remove(cache_key)
 
-            self._cache_stats["memory_misses"] += 1
+            mem_misses = self._cache_stats["memory_misses"]
+            assert isinstance(mem_misses, int)  # Type narrowing
+            self._cache_stats["memory_misses"] = mem_misses + 1
 
             # Tier 2: Check ROM cache if available
             logger.debug("[TRACE] Memory cache miss, checking ROM cache...")
@@ -432,7 +440,9 @@ class SmartPreviewCoordinator(QObject):
                             cache_data = (tile_data, width, height, sprite_name or "")
                             self._cache.put(cache_key, cache_data)
                             self.preview_cached.emit(tile_data, width, height, sprite_name)
-                            self._cache_stats["rom_hits"] += 1
+                            rom_hits = self._cache_stats["rom_hits"]
+                            assert isinstance(rom_hits, int)  # Type narrowing
+                            self._cache_stats["rom_hits"] = rom_hits + 1
                             logger.debug(f"[SIGNAL_FLOW] ROM cache hit signal emitted for 0x{offset:06X}")
                             return True
                         logger.debug("[TRACE] ROM cache hit but data is all zeros - ignoring")
@@ -440,7 +450,9 @@ class SmartPreviewCoordinator(QObject):
                         logger.debug("[TRACE] ROM cache hit but data is empty - ignoring")
 
             if self._rom_cache and self._rom_cache.cache_enabled:
-                self._cache_stats["rom_misses"] += 1
+                rom_misses = self._cache_stats["rom_misses"]
+                assert isinstance(rom_misses, int)  # Type narrowing
+                self._cache_stats["rom_misses"] = rom_misses + 1
 
         except Exception as e:
             logger.warning(f"Error checking cached preview: {e}")
@@ -678,7 +690,9 @@ class SmartPreviewCoordinator(QObject):
                 return
 
         # Update generation counter
-        self._cache_stats["generations"] += 1
+        generations = self._cache_stats["generations"]
+        assert isinstance(generations, int)  # Type narrowing
+        self._cache_stats["generations"] = generations + 1
 
         # Cache the result in both tiers - but ONLY if data is valid
         if self._rom_data_provider and tile_data and len(tile_data) > 0:
@@ -764,22 +778,33 @@ class SmartPreviewCoordinator(QObject):
             stats = self._cache_stats.copy()
 
         # Calculate derived metrics
-        total_memory_requests = stats["memory_hits"] + stats["memory_misses"]
-        total_rom_requests = stats["rom_hits"] + stats["rom_misses"]
+        # Type narrowing for int fields
+        mem_hits = stats["memory_hits"]
+        mem_misses = stats["memory_misses"]
+        rom_hits_val = stats["rom_hits"]
+        rom_misses_val = stats["rom_misses"]
+        assert isinstance(mem_hits, int)
+        assert isinstance(mem_misses, int)
+        assert isinstance(rom_hits_val, int)
+        assert isinstance(rom_misses_val, int)
+
+        total_memory_requests = mem_hits + mem_misses
+        total_rom_requests = rom_hits_val + rom_misses_val
 
         # Memory cache metrics
-        memory_hit_rate = (stats["memory_hits"] / total_memory_requests * 100) if total_memory_requests > 0 else 0
+        memory_hit_rate = (mem_hits / total_memory_requests * 100) if total_memory_requests > 0 else 0
 
         # ROM cache metrics (only if ROM cache is available)
-        rom_hit_rate = (stats["rom_hits"] / total_rom_requests * 100) if total_rom_requests > 0 else 0
+        rom_hit_rate = (rom_hits_val / total_rom_requests * 100) if total_rom_requests > 0 else 0
 
         # Overall cache performance
-        total_hits = stats["memory_hits"] + stats["rom_hits"]
+        total_hits = mem_hits + rom_hits_val
         total_requests = total_memory_requests
         overall_hit_rate = (total_hits / total_requests * 100) if total_requests > 0 else 0
 
         # Response time metrics
         response_times = stats["response_times"]
+        assert isinstance(response_times, list)  # Type narrowing for list field
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0
         min_response_time = min(response_times) if response_times else 0
         max_response_time = max(response_times) if response_times else 0

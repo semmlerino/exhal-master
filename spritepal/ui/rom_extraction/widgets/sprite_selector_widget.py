@@ -1,3 +1,5 @@
+from typing import Any
+
 """Sprite selector widget for ROM extraction"""
 
 from PySide6.QtCore import Qt, Signal
@@ -22,7 +24,7 @@ class SpriteSelectorWidget(BaseExtractionWidget):
     sprite_changed = Signal(int)  # Emitted when sprite selection changes
     find_sprites_clicked = Signal()  # Emitted when find sprites button clicked
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self._setup_ui()
 
@@ -107,7 +109,7 @@ class SpriteSelectorWidget(BaseExtractionWidget):
         if self.find_sprites_btn:
             self.find_sprites_btn.setEnabled(False)
 
-    def add_sprite(self, name: str, data):
+    def add_sprite(self, name: str, data: Any):
         """Add a sprite to the combo box"""
         if self.sprite_combo:
             self.sprite_combo.addItem(name, data)

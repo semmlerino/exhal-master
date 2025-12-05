@@ -114,10 +114,11 @@ class InjectionManager(BaseManager):
 
             # Stop any existing worker
             WorkerManager.cleanup_worker(self._current_worker, timeout=1000)
+            self._current_worker = None
 
             # Create appropriate worker based on mode
             if params["mode"] == "vram":
-                self._current_worker = InjectionWorker(
+                worker = InjectionWorker(
                     params["sprite_path"],
                     params["input_vram"],
                     params["output_vram"],
@@ -125,7 +126,7 @@ class InjectionManager(BaseManager):
                     params.get("metadata_path")
                 )
             elif params["mode"] == "rom":
-                self._current_worker = ROMInjectionWorker(
+                worker = ROMInjectionWorker(
                     params["sprite_path"],
                     params["input_rom"],
                     params["output_rom"],
@@ -135,14 +136,14 @@ class InjectionManager(BaseManager):
                 )
             else:
                 _validate_injection_mode(params["mode"])
+                return False  # Unreachable but satisfies type checker
 
-            # Connect worker signals
+            # Connect worker signals before starting
+            self._current_worker = worker
             self._connect_worker_signals()
 
-            # Start the worker
-            if self._current_worker is None:
-                raise RuntimeError("Failed to create injection worker")
-            self._current_worker.start()
+            # Start the worker - only assign permanently after successful start
+            worker.start()
 
             mode_text = "VRAM" if params["mode"] == "vram" else "ROM"
             self._logger.info(f"Started {mode_text} injection: {params['sprite_path']}")
@@ -150,10 +151,10 @@ class InjectionManager(BaseManager):
 
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, operation, "injection startup")
-            return False
+            # _handle_file_io_error always raises, this is unreachable
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, operation, "injection startup")
-            return False
+            # _handle_data_format_error always raises, this is unreachable
         except Exception as e:
             self._handle_error(e, operation)
             return False
@@ -850,7 +851,7 @@ class InjectionManager(BaseManager):
                 - custom_offset: Custom offset text if no match
         """
         session_manager = self._get_session_manager()
-        result = {
+        result: dict[str, str | int | None] = {
             "sprite_location_name": None,
             "sprite_location_index": None,
             "custom_offset": ""

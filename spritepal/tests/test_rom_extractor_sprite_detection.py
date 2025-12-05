@@ -3,6 +3,7 @@ Tests for sprite detection algorithms in ROMExtractor
 """
 from __future__ import annotations
 
+import random
 from unittest.mock import Mock, patch
 
 import pytest
@@ -59,8 +60,8 @@ def create_test_sprite_data():
             tile_data = [0xFF] * (num_tiles * 32)
 
         elif pattern == "random":
-            # Random noise (high entropy)
-            import random
+            # Random noise (high entropy) - seeded for reproducibility
+            random.seed(42)
             tile_data = [random.randint(0, 255) for _ in range(num_tiles * 32)]
 
         elif pattern == "low_entropy":

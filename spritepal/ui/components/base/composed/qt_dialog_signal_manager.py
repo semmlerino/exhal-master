@@ -7,7 +7,12 @@ by providing clean signal proxies in a separate QObject.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from typing_extensions import override
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QCloseEvent
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog
@@ -125,7 +130,7 @@ class QtDialogSignalManager(QObject):
             self.finished.emit(QDialog.DialogCode.Rejected)
             return result
 
-        def enhanced_close_event(event):
+        def enhanced_close_event(event: QCloseEvent) -> None:
             """Enhanced close event that triggers destroyed signal."""
             if original_close_event:
                 original_close_event(event)
@@ -206,6 +211,7 @@ class QtDialogSignalManager(QObject):
         """
         return self._dialog is not None
 
+    @override
     def __repr__(self) -> str:
         """Return string representation of the manager."""
         return f"<QtDialogSignalManager(available={self.is_available})>"

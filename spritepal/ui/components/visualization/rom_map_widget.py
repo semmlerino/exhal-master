@@ -6,6 +6,8 @@ Visual representation of ROM with sprite locations for manual offset exploration
 
 from __future__ import annotations
 
+from typing import Any
+
 try:
     from typing_extensions import override
 except ImportError:
@@ -142,7 +144,8 @@ class ROMMapWidget(QWidget):
         else:
             self._needs_update = True
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, event: Any):
         """Handle widget becoming visible"""
         super().showEvent(event)
         if self._needs_update:

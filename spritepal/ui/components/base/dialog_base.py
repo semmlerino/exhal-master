@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -72,8 +73,8 @@ class DialogBase(QDialog):
         default_tab: int | None = None,
         orientation: Any = None,  # For splitter dialogs
         splitter_handle_width: int = 8,  # For splitter dialogs
-        **kwargs  # Accept any additional keyword arguments
-    ):
+        **kwargs: Any  # Accept any additional keyword arguments
+    ) -> None:
         """
         Initialize the dialog base.
 
@@ -182,6 +183,7 @@ class DialogBase(QDialog):
         self._verify_initialization()
         self._initialization_phase = "complete"
 
+    @override
     def __setattr__(self, name: str, value: Any) -> None:
         """
         Override setattr to catch initialization order bugs.

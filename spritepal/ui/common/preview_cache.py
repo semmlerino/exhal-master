@@ -10,10 +10,10 @@ This module provides a memory-efficient cache for preview data:
 from __future__ import annotations
 
 import hashlib
-import os
 import threading
 from collections import OrderedDict
 from pathlib import Path
+from typing import Any
 
 from utils.logging_config import get_logger
 
@@ -63,9 +63,10 @@ class PreviewCache:
         # Use filename and size for ROM identity (faster than full path hash)
         try:
             rom_name = Path(rom_path).name
-            rom_size = Path(rom_path).stat().st_size if os.path.exists(rom_path) else 0
+            # Single stat() call avoids TOCTOU race with exists()
+            rom_size = Path(rom_path).stat().st_size
         except OSError:
-            rom_name = rom_path
+            rom_name = Path(rom_path).name if rom_path else "unknown"
             rom_size = 0
 
         # Create key components
@@ -112,7 +113,9 @@ class PreviewCache:
             data: Tuple of (tile_data, width, height, sprite_name)
         """
         tile_data, _width, _height, sprite_name = data
-        data_size = len(tile_data) + len(sprite_name) + 16  # Rough size estimate
+        # Handle None sprite_name to avoid TypeError on len()
+        name_len = len(sprite_name) if sprite_name else 0
+        data_size = len(tile_data) + name_len + 16  # Rough size estimate
 
         with self._lock:
             # Remove existing entry if present
@@ -174,7 +177,7 @@ class PreviewCache:
             if entry_count > 0:
                 logger.debug(f"Cleared {entry_count} cache entries")
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 

@@ -4,9 +4,12 @@ Compact version of SpritePreviewWidget optimized for grid layouts.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
+from typing import Any
+
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QEnterEvent, QFont, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +43,7 @@ class SpriteThumbnailWidget(QWidget):
         self.sprite_pixmap: QPixmap | None = None
         self.is_selected = False
         self.is_hovered = False
-        self.sprite_info = {}
+        self.sprite_info: dict[str, Any] = {}
 
         # Thumbnail display label
         self.thumbnail_label: QLabel | None = None
@@ -112,7 +115,7 @@ class SpriteThumbnailWidget(QWidget):
     def set_sprite_data(
         self,
         pixmap: QPixmap,
-        sprite_info: dict | None = None
+        sprite_info: dict[str, Any] | None = None
     ):
         """
         Set the sprite thumbnail data.
@@ -273,36 +276,40 @@ class SpriteThumbnailWidget(QWidget):
             }}
         """)
 
-    def enterEvent(self, event):
+    @override
+    def enterEvent(self, event: QEnterEvent) -> None:
         """Handle mouse enter event."""
         self.is_hovered = True
         self._update_style()
         super().enterEvent(event)
 
-    def leaveEvent(self, a0):
+    @override
+    def leaveEvent(self, event: QEvent) -> None:
         """Handle mouse leave event."""
         self.is_hovered = False
         self._update_style()
-        super().leaveEvent(a0)
+        super().leaveEvent(event)
 
-    def mousePressEvent(self, a0):
+    @override
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press event."""
-        if a0.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit(self.offset)
             # Toggle selection on click
             self.set_selected(not self.is_selected)
-        super().mousePressEvent(a0)
+        super().mousePressEvent(event)
 
-    def mouseDoubleClickEvent(self, a0):
+    @override
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
         """Handle double click event."""
-        if a0.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.offset)
-        super().mouseDoubleClickEvent(a0)
+        super().mouseDoubleClickEvent(event)
 
     def get_offset(self) -> int:
         """Get the sprite offset."""
         return self.offset
 
-    def get_sprite_info(self) -> dict:
+    def get_sprite_info(self) -> dict[str, Any]:
         """Get the sprite metadata."""
         return self.sprite_info

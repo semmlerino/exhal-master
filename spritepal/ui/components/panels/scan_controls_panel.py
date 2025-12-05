@@ -7,8 +7,9 @@ pause/stop controls, and worker management.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from core.managers.extraction_manager import ExtractionManager
@@ -76,7 +77,7 @@ class ScanControlsPanel(QWidget):
         self._setup_ui()
         self._connect_signals()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         """Initialize the scan controls UI"""
         layout = QVBoxLayout()
         layout.setContentsMargins(8, 6, 8, 6)  # Reduced padding
@@ -156,7 +157,7 @@ class ScanControlsPanel(QWidget):
         with QMutexLocker(self._manager_mutex):
             return self.extraction_manager, self.rom_extractor
 
-    def _with_managers_safely(self, operation):
+    def _with_managers_safely(self, operation: Callable[[ExtractionManager | None, ROMExtractor | None], Any]) -> Any:
         """Execute an operation with manager references under mutex protection.
 
         This prevents TOCTOU race conditions by holding the lock during the entire
@@ -557,7 +558,7 @@ class ScanControlsPanel(QWidget):
 
             # Check each parameter set for cached results
             for scan_params in common_scan_params:
-                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, cast(dict[str, int], scan_params))
                 if cached_progress and not cached_progress.get("completed", False):
                     # Found incomplete cached scan - emit signal for parent to handle
                     logger.info(f"Found cached partial scan for ROM: {Path(self.rom_path).name}")
@@ -567,7 +568,7 @@ class ScanControlsPanel(QWidget):
 
             # Check for completed scans to show status
             for scan_params in common_scan_params:
-                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+                cached_progress = rom_cache.get_partial_scan_results(self.rom_path, cast(dict[str, int], scan_params))
                 if cached_progress and cached_progress.get("completed", False):
                     sprite_count = len(cached_progress.get("found_sprites", []))
                     if sprite_count > 0:
@@ -680,7 +681,7 @@ class ScanControlsPanel(QWidget):
             }
 
             # Check for cached partial scan
-            cached_progress = rom_cache.get_partial_scan_results(self.rom_path, scan_params)
+            cached_progress = rom_cache.get_partial_scan_results(self.rom_path, cast(dict[str, int], scan_params))
             if cached_progress and not cached_progress.get("completed", False):
                 # Found incomplete cached scan - show ResumeScanDialog
                 user_choice = ResumeScanDialog.show_resume_dialog(cached_progress, self)
@@ -691,7 +692,7 @@ class ScanControlsPanel(QWidget):
                     return True
                 if user_choice == ResumeScanDialog.START_FRESH:
                     # User wants fresh scan - clear the cache
-                    rom_cache.clear_scan_progress_cache(self.rom_path, scan_params)
+                    rom_cache.clear_scan_progress_cache(self.rom_path, cast(dict[str, int], scan_params))
                     self._update_cache_status("Starting fresh scan (cache cleared)")
                     return False
                 # User cancelled

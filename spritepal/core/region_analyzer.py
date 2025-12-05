@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import NamedTuple
 
@@ -182,7 +183,7 @@ class EmptyRegionDetector:
 
         return 0.0
 
-    def scan_rom_regions(self, rom_data: bytes, progress_callback=None) -> list[tuple[int, int]]:
+    def scan_rom_regions(self, rom_data: bytes, progress_callback: Callable[[int, int], None] | None = None) -> list[tuple[int, int]]:
         """
         Scan entire ROM and return list of non-empty regions.
 

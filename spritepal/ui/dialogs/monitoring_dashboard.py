@@ -11,6 +11,7 @@ Provides a comprehensive dashboard for viewing monitoring data including:
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from core.monitoring import get_monitoring_manager
 from PySide6.QtCore import QTimer
@@ -33,6 +34,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from utils.logging_config import get_logger
 
 
@@ -40,7 +42,7 @@ class MetricWidget(QFrame):
     """Widget for displaying a single metric with trend indication."""
 
     def __init__(self, title: str, value: str = "0", unit: str = "",
-                 trend: str = "stable", parent=None):
+                 trend: str = "stable", parent: QWidget | None = None):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.StyledPanel)
         self.setMinimumHeight(80)
@@ -102,7 +104,7 @@ class MetricWidget(QFrame):
 class PerformanceTab(QWidget):
     """Tab for performance monitoring."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.logger = get_logger("monitoring_dashboard")
         self.setup_ui()
@@ -216,7 +218,7 @@ class PerformanceTab(QWidget):
 class ErrorsTab(QWidget):
     """Tab for error monitoring."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.setup_ui()
 
@@ -304,7 +306,7 @@ class ErrorsTab(QWidget):
 class UsageTab(QWidget):
     """Tab for usage analytics."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.setup_ui()
 
@@ -394,7 +396,7 @@ class UsageTab(QWidget):
 class HealthTab(QWidget):
     """Tab for system health monitoring."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.setup_ui()
 
@@ -476,7 +478,7 @@ class HealthTab(QWidget):
 class InsightsTab(QWidget):
     """Tab for monitoring insights and recommendations."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.setup_ui()
 
@@ -542,7 +544,7 @@ class InsightsTab(QWidget):
 class MonitoringDashboard(QDialog):
     """Real-time monitoring dashboard for SpritePal."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
         self.logger = get_logger("monitoring_dashboard")
         self.monitoring_manager = get_monitoring_manager()
@@ -687,7 +689,8 @@ class MonitoringDashboard(QDialog):
             self.logger.error(f"Failed to export report: {e}")
             self.status_label.setText(f"Export failed: {e!s}")
 
-    def closeEvent(self, event):
+    @override
+    def closeEvent(self, event: Any):
         """Handle dialog close."""
         self.refresh_timer.stop()
         super().closeEvent(event)

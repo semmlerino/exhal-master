@@ -289,11 +289,11 @@ class ErrorHandlerMixin:
 # Utility functions for common patterns
 
 def create_safe_method(
-    method: Callable,
+    method: Callable[..., Any],
     operation: str,
     default_return: Any = None,
     error_handler: UnifiedErrorHandler | None = None
-) -> Callable:
+) -> Callable[..., Any]:
     """
     Create a safe version of a method that handles all errors.
 
@@ -327,7 +327,7 @@ def create_safe_method(
     return safe_wrapper
 
 def batch_error_handler(
-    operations: list[tuple[Callable, str]],
+    operations: list[tuple[Callable[..., Any], str]],
     continue_on_error: bool = True,
     error_handler: UnifiedErrorHandler | None = None
 ) -> list[tuple[bool, Any]]:

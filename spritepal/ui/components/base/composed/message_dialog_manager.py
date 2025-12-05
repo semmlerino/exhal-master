@@ -11,6 +11,7 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog, QMessageBox
+from typing_extensions import override
 
 
 class MessageDialogManager(QObject):
@@ -162,6 +163,7 @@ class MessageDialogManager(QObject):
         """
         return self._dialog is not None
 
+    @override
     def __repr__(self) -> str:
         """Return string representation of the manager."""
         status = "initialized" if self.is_initialized else "not initialized"

@@ -1,13 +1,15 @@
 """Base widget class for ROM extraction widgets"""
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
 
 
 class BaseExtractionWidget(QWidget):
     """Base class for extraction panel widgets with common functionality"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any | None = None):
         super().__init__(parent)
 
     def _create_group_box(self, title: str) -> QGroupBox:

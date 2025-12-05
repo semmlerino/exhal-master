@@ -8,8 +8,11 @@ robust, avoiding the complex signal lifecycle management that was causing crashe
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from utils.rom_cache import ROMCache
@@ -25,14 +28,15 @@ class SimplePreviewWorker(QThread):
     preview_ready = Signal(bytes, int, int, str)  # tile_data, width, height, name
     preview_error = Signal(str)
 
-    def __init__(self, rom_path: str, offset: int, extractor, parent=None):
+    def __init__(self, rom_path: str, offset: int, extractor: Any, parent: QObject | None = None):
         super().__init__(parent)
         self.rom_path = rom_path
         self.offset = offset
         self.extractor = extractor
         self.sprite_name = f"manual_0x{offset:X}"
 
-    def run(self):
+    @override
+    def run(self) -> None:
         """Generate the preview."""
         try:
             logger.debug(f"[SIMPLE] Generating preview for offset 0x{self.offset:X}")
@@ -133,22 +137,22 @@ class SimplePreviewCoordinator(QObject):
 
         logger.info("[SIMPLE] SimplePreviewCoordinator initialized")
 
-    def attach_slider(self, slider):
+    def attach_slider(self, slider: Any) -> None:
         """Attach to a slider for automatic preview updates."""
         # For compatibility - we don't actually use the slider
         logger.debug("[SIMPLE] Slider attached (no-op)")
 
-    def set_rom_data_provider(self, provider):
+    def set_rom_data_provider(self, provider: Any) -> None:
         """Set provider for ROM data needed for preview generation."""
         self._rom_data_provider = provider
         logger.debug("[SIMPLE] ROM data provider set")
 
-    def connect_slider(self, slider):
+    def connect_slider(self, slider: Any) -> None:
         """Connect to slider signals for preview coordination."""
         # For compatibility - we don't use the slider's signals
         logger.debug("[SIMPLE] Slider connected (no-op)")
 
-    def set_ui_update_callback(self, callback):
+    def set_ui_update_callback(self, callback: Callable[..., Any]) -> None:
         """Set callback for UI updates."""
         # For compatibility - we don't use this callback
         logger.debug("[SIMPLE] UI update callback set (no-op)")
@@ -181,11 +185,11 @@ class SimplePreviewCoordinator(QObject):
         # Start debounce timer (50ms for smooth updates)
         self._debounce_timer.start(50)
 
-    def request_manual_preview(self, offset: int):
+    def request_manual_preview(self, offset: int) -> None:
         """Request a manual preview (alias for request_preview)."""
         self.request_preview(offset, priority=10)  # Higher priority for manual
 
-    def set_rom_data(self, rom_path: str, rom_size: int, extractor):
+    def set_rom_data(self, rom_path: str, rom_size: int, extractor: Any) -> None:
         """Set ROM data for preview generation."""
         logger.debug(f"[SIMPLE] ROM data set: {rom_path}")
         self._current_rom_path = rom_path
@@ -217,29 +221,31 @@ class SimplePreviewCoordinator(QObject):
         self._current_worker = None
 
         # Create a new worker (with parent for proper cleanup)
-        self._current_worker = SimplePreviewWorker(
+        worker = SimplePreviewWorker(
             self._current_rom_path,
             self._current_offset,
             self._extractor,
             parent=self  # Set parent for proper Qt object management
         )
+        self._current_worker = worker
 
         # Connect signals
-        self._current_worker.preview_ready.connect(self._on_preview_ready)
-        self._current_worker.preview_error.connect(self._on_preview_error)
+        worker.preview_ready.connect(self._on_preview_ready)
+        worker.preview_error.connect(self._on_preview_error)
 
-        # Clean up worker when done and clear our reference
-        self._current_worker.finished.connect(lambda: self._cleanup_finished_worker())
+        # Clean up worker when done - capture specific worker to avoid race condition
+        worker.finished.connect(lambda w=worker: self._cleanup_specific_worker(w))
 
         # Start the worker
-        self._current_worker.start()
+        worker.start()
 
-    def _cleanup_finished_worker(self):
-        """Clean up a finished worker and clear the reference."""
-        if self._current_worker:
-            self._current_worker.deleteLater()
+    def _cleanup_specific_worker(self, worker: SimplePreviewWorker) -> None:
+        """Clean up a specific finished worker."""
+        # Only clear reference if this is still the current worker
+        if worker == self._current_worker:
             self._current_worker = None
-            logger.debug("[SIMPLE] Worker cleaned up after finishing")
+        worker.deleteLater()
+        logger.debug("[SIMPLE] Worker cleaned up after finishing")
 
     def _on_preview_ready(self, tile_data: bytes, width: int, height: int, name: str):
         """Handle preview ready from worker."""

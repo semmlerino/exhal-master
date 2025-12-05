@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from core.rom_extractor import ROMExtractor
 from core.sprite_finder import SpriteFinder
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QPixmap
@@ -190,7 +191,7 @@ class SpriteGalleryTab(QWidget):
         widget.setLayout(layout)
         return widget
 
-    def set_rom_data(self, rom_path: str, rom_size: int, rom_extractor):
+    def set_rom_data(self, rom_path: str, rom_size: int, rom_extractor: ROMExtractor):
         """
         Set the ROM data for the gallery.
 
@@ -639,7 +640,7 @@ class SpriteGalleryTab(QWidget):
             self.detached_window = None
             logger.info("Detached gallery window closed")
 
-    def _on_detached_thumbnail_ready(self, offset: int, pixmap):
+    def _on_detached_thumbnail_ready(self, offset: int, pixmap: QPixmap):
         """Update thumbnail in detached window."""
         if self.detached_window and self.detached_window.gallery_widget and offset in self.detached_window.gallery_widget.thumbnails:
                 thumbnail = self.detached_window.gallery_widget.thumbnails[offset]
