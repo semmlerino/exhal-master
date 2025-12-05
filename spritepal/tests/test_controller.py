@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 from PySide6.QtTest import QSignalSpy
@@ -45,6 +45,68 @@ def get_main_window():
     from ui.main_window import MainWindow
     return MainWindow
 
+
+# ============================================================================
+# MODULE-LEVEL HELPERS FOR MOCK CONSOLIDATION
+# ============================================================================
+
+class DummyWorker:
+    """Reusable dummy worker for cleanup testing - prevents duplication"""
+    def isRunning(self) -> bool:
+        return False
+
+    def deleteLater(self) -> None:
+        pass
+
+
+@pytest.fixture
+def standard_mock_main_window() -> Any:
+    """Create standard mock main window with all required signals and attributes.
+
+    This consolidates the repeated main_window fixture creation pattern.
+    Replaces lines 78-105 and prevents duplication in test methods.
+    """
+    MainWindow = get_main_window()
+    window = Mock(spec=MainWindow)
+
+    # Add required signals as mock signals with proper spec
+    window.extract_requested = MagicMock()
+    window.open_in_editor_requested = MagicMock()
+    window.arrange_rows_requested = MagicMock()
+    window.arrange_grid_requested = MagicMock()
+    window.inject_requested = MagicMock()
+    window.extraction_completed = MagicMock()
+    window.extraction_error_occurred = MagicMock()
+
+    # Add required attributes with spec where applicable
+    window.extraction_panel = Mock()
+    window.rom_extraction_panel = Mock()
+    window.output_settings_manager = Mock()
+    window.toolbar_manager = Mock()
+    window.preview_coordinator = Mock()
+    window.status_bar_manager = Mock()
+    window.status_bar = Mock()
+    window.sprite_preview = Mock()
+    window.palette_preview = Mock()
+    window.extraction_tabs = Mock()
+    window._output_path = ""
+    window._extracted_files = []
+
+    return window
+
+
+@pytest.fixture
+def standard_mock_managers() -> tuple[Mock, Mock, Mock]:
+    """Create standard mock managers for dependency injection.
+
+    Returns (extraction_manager, injection_manager, session_manager).
+    This consolidates repeated manager mock creation pattern.
+    """
+    extraction_manager = Mock(spec=ExtractionManager)
+    injection_manager = Mock(spec=InjectionManager)
+    session_manager = Mock(spec=SessionManager)
+    return extraction_manager, injection_manager, session_manager
+
 @pytest.mark.no_manager_setup
 class TestControllerImports:
     """Test that controller module imports work correctly"""
@@ -75,43 +137,14 @@ class TestExtractionController:
     """Test ExtractionController functionality"""
 
     @pytest.fixture
-    def main_window(self) -> Any:
-        """Create mock main window for testing"""
-        from unittest.mock import MagicMock, Mock
-        MainWindow = get_main_window()
-        window = Mock(spec=MainWindow)
-        # Add required signals as mock signals with proper spec
-        # Using MagicMock to allow signal emission simulation
-        window.extract_requested = MagicMock()
-        window.open_in_editor_requested = MagicMock()
-        window.arrange_rows_requested = MagicMock()
-        window.arrange_grid_requested = MagicMock()
-        window.inject_requested = MagicMock()
-        window.extraction_completed = MagicMock()  # Signal we added earlier
-        window.extraction_error_occurred = MagicMock()  # Signal we added earlier
-        # Add required attributes with spec where applicable
-        window.extraction_panel = Mock()
-        window.rom_extraction_panel = Mock()
-        window.output_settings_manager = Mock()
-        window.toolbar_manager = Mock()
-        window.preview_coordinator = Mock()
-        window.status_bar_manager = Mock()
-        window.status_bar = Mock()  # Add status_bar for controller
-        window.sprite_preview = Mock()  # Add sprite_preview for controller
-        window.palette_preview = Mock()  # Add palette_preview for controller
-        window.extraction_tabs = Mock()
-        window._output_path = ""
-        window._extracted_files = []
-        return window
+    def main_window(self, standard_mock_main_window: Any) -> Any:
+        """Main window fixture - uses consolidated standard_mock_main_window"""
+        return standard_mock_main_window
 
     @pytest.fixture
-    def controller(self, main_window: Any) -> ExtractionController:
+    def controller(self, main_window: Any, standard_mock_managers: tuple[Mock, Mock, Mock]) -> ExtractionController:
         """Create REAL controller instance with mock managers"""
-        from unittest.mock import Mock, patch
-        # Create mock managers for dependency injection
-        extraction_manager = Mock(spec=ExtractionManager)
-        injection_manager = Mock(spec=InjectionManager)
-        session_manager = Mock(spec=SessionManager)
+        extraction_manager, injection_manager, session_manager = standard_mock_managers
 
         # Patch get_error_handler to return a mock to avoid QWidget issues
         with patch('core.controller.get_error_handler') as mock_get_error_handler:
@@ -161,10 +194,6 @@ class TestExtractionController:
 
     def test_parameter_validation_missing_vram(self):
         """Test parameter validation when VRAM path is missing"""
-        from unittest.mock import Mock, patch
-
-        from core.controller import ExtractionController
-
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -180,9 +209,9 @@ class TestExtractionController:
              patch('core.controller.get_session_manager') as mock_get_session:
 
             # Create mock managers
-            mock_extraction_manager = Mock()
-            mock_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
-            mock_get_extraction.return_value = mock_extraction_manager
+            real_extraction_manager = Mock()
+            real_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
+            mock_get_extraction.return_value = real_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
 
@@ -202,10 +231,6 @@ class TestExtractionController:
 
     def test_parameter_validation_missing_cgram(self):
         """Test parameter validation when CGRAM path is missing"""
-        from unittest.mock import Mock, patch
-
-        from core.controller import ExtractionController
-
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -222,10 +247,10 @@ class TestExtractionController:
              patch('core.controller.get_session_manager') as mock_get_session:
 
             # Create mock managers
-            mock_extraction_manager = Mock()
+            real_extraction_manager = Mock()
             expected_msg = "CGRAM file is required for Full Color mode.\nPlease provide a CGRAM file or switch to Grayscale Only mode."
-            mock_extraction_manager.validate_extraction_params.side_effect = Exception(expected_msg)
-            mock_get_extraction.return_value = mock_extraction_manager
+            real_extraction_manager.validate_extraction_params.side_effect = Exception(expected_msg)
+            mock_get_extraction.return_value = real_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
 
@@ -245,10 +270,6 @@ class TestExtractionController:
 
     def test_parameter_validation_missing_both(self):
         """Test parameter validation when both paths are missing"""
-        from unittest.mock import Mock, patch
-
-        from core.controller import ExtractionController
-
         # Create simple mock main window
         mock_main_window = Mock()
         invalid_params = {
@@ -264,9 +285,9 @@ class TestExtractionController:
              patch('core.controller.get_session_manager') as mock_get_session:
 
             # Create mock managers
-            mock_extraction_manager = Mock()
-            mock_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
-            mock_get_extraction.return_value = mock_extraction_manager
+            real_extraction_manager = Mock()
+            real_extraction_manager.validate_extraction_params.side_effect = Exception("VRAM file is required for extraction")
+            mock_get_extraction.return_value = real_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
 
@@ -286,11 +307,6 @@ class TestExtractionController:
 
     def test_start_extraction_valid_params(self):
         """Test starting extraction with valid parameters"""
-        from unittest.mock import Mock, patch
-
-        from core.controller import ExtractionController
-        from core.workers import VRAMExtractionWorker
-
         # Create simple mock main window
         mock_main_window = Mock()
         valid_params = {
@@ -310,9 +326,9 @@ class TestExtractionController:
              patch('core.controller.VRAMExtractionWorker') as mock_worker_class:
 
             # Create mock managers (validation passes)
-            mock_extraction_manager = Mock()
-            mock_extraction_manager.validate_extraction_params.return_value = None  # No exception = valid
-            mock_get_extraction.return_value = mock_extraction_manager
+            real_extraction_manager = Mock()
+            real_extraction_manager.validate_extraction_params.return_value = None  # No exception = valid
+            mock_get_extraction.return_value = real_extraction_manager
             mock_get_injection.return_value = Mock()
             mock_get_session.return_value = Mock()
 
@@ -417,11 +433,6 @@ class TestExtractionController:
         extracted_files = ["sprite.png", "sprite.pal.json", "metadata.json"]
 
         # Create a simple worker placeholder for cleanup test
-        class DummyWorker:
-            def isRunning(self):
-                return False
-            def deleteLater(self):
-                pass
         controller.worker = DummyWorker()
 
         # Call the real controller method
@@ -440,11 +451,6 @@ class TestExtractionController:
         error_message = "Failed to read VRAM file"
 
         # Create a simple worker placeholder for cleanup test
-        class DummyWorker:
-            def isRunning(self):
-                return False
-            def deleteLater(self):
-                pass
         controller.worker = DummyWorker()
 
         # Call the real controller method
@@ -1143,11 +1149,6 @@ class TestControllerWorkerIntegration:
         failed_spy = QSignalSpy(integration_main_window.extraction_error_occurred)
 
         # Create simple worker placeholder
-        class DummyWorker:
-            def isRunning(self):
-                return False
-            def deleteLater(self):
-                pass
         integration_controller.worker = DummyWorker()
 
         # Simulate worker error
@@ -1166,11 +1167,6 @@ class TestControllerWorkerIntegration:
 
     def test_worker_cleanup_on_completion(self, integration_controller):
         """Test that worker is cleaned up on completion"""
-        class DummyWorker:
-            def isRunning(self):
-                return False
-            def deleteLater(self):
-                pass
         integration_controller.worker = DummyWorker()
 
         integration_controller._on_extraction_finished(["file1.png", "file2.json"])
@@ -1179,11 +1175,6 @@ class TestControllerWorkerIntegration:
 
     def test_worker_cleanup_on_error(self, integration_controller):
         """Test that worker is cleaned up on error"""
-        class DummyWorker:
-            def isRunning(self):
-                return False
-            def deleteLater(self):
-                pass
         integration_controller.worker = DummyWorker()
 
         integration_controller._on_extraction_error("Some error occurred")

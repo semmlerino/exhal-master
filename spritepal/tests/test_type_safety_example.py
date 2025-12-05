@@ -121,20 +121,20 @@ class TestTypeSafetyPatterns:
 
     def test_manager_dependency_injection(
         self,
-        mock_extraction_manager: MockExtractionManagerProtocol
+        real_extraction_manager: MockExtractionManagerProtocol
     ) -> None:
         """Demonstrate type-safe manager dependency injection."""
         # Manager is properly typed via protocol
-        mock_extraction_manager.validate_extraction_params.return_value = True  # pyright: ignore[reportUnknownMemberType]
+        real_extraction_manager.validate_extraction_params.return_value = True  # pyright: ignore[reportUnknownMemberType]
 
         # Type checker knows the interface
-        is_valid = mock_extraction_manager.validate_extraction_params({
+        is_valid = real_extraction_manager.validate_extraction_params({
             "vram_path": "test.dmp",
             "output_base": "sprites"
         })
 
         assert is_valid is True
-        mock_extraction_manager.validate_extraction_params.assert_called_once()  # pyright: ignore[reportUnknownMemberType]
+        real_extraction_manager.validate_extraction_params.assert_called_once()  # pyright: ignore[reportUnknownMemberType]
 
     @pytest.mark.parametrize(
         "input_value,expected_type,expected_result",

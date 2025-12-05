@@ -47,7 +47,7 @@ def temp_rom_file():
         # Caught exception during operation
         pass
 @pytest.fixture
-def mock_extraction_manager():
+def real_extraction_manager():
     """Create a mock extraction manager."""
     manager = MagicMock()
     manager.extract_sprite = MagicMock(return_value=(None, None))

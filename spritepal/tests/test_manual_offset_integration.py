@@ -191,7 +191,7 @@ def mock_preview_widget():
     return MockPreviewWidget()
 
 @pytest.fixture
-def mock_extraction_manager():
+def real_extraction_manager():
     """Fixture providing a mock extraction manager"""
     return MockExtractionManager()
 
@@ -199,12 +199,12 @@ class TestManualOffsetDialogSliderIntegration:
     """Test slider integration in manual offset dialog"""
 
     @pytest.fixture(autouse=True)
-    def setup_and_teardown(self, mock_dialog, mock_preview_widget, mock_extraction_manager):
+    def setup_and_teardown(self, mock_dialog, mock_preview_widget, real_extraction_manager):
         """Set up and teardown test fixtures"""
         self.qt_framework = QtTestingFramework()
         self.dialog = mock_dialog
         self.mockpreview_widget = mock_preview_widget
-        self.mock_extraction_manager = mock_extraction_manager
+        self.real_extraction_manager = real_extraction_manager
 
         # Replace dialog's preview widget with our mock
         self.dialog.preview_widget = mock_preview_widget
@@ -378,7 +378,7 @@ class TestManualOffsetDialogSliderIntegration:
         slider.maximum()
 
         # Mock ROM size change
-        self.mock_extraction_manager.rom_size = 0x800000  # Larger ROM
+        self.real_extraction_manager.rom_size = 0x800000  # Larger ROM
 
         # Trigger ROM path change
         if hasattr(self.dialog, '_update_rom_info'):

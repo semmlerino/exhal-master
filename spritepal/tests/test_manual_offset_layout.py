@@ -102,7 +102,7 @@ class TestManualOffsetDialogLayout(QtTestCase):
         return MockQtBot()
 
     @pytest.fixture
-    def mock_extraction_manager(self):
+    def real_extraction_manager(self):
         """Create a mock extraction manager for testing."""
         # For layout tests, we don't need the actual functionality
         # But we need to avoid Qt mock conflicts
@@ -117,7 +117,7 @@ class TestManualOffsetDialogLayout(QtTestCase):
         return manager
 
     @pytest.fixture
-    def dialog(self, qtbot, mock_extraction_manager):
+    def dialog(self, qtbot, real_extraction_manager):
         """Create a dialog instance for testing."""
         try:
             dialog = self.create_widget(UnifiedManualOffsetDialog)
@@ -126,7 +126,7 @@ class TestManualOffsetDialogLayout(QtTestCase):
             # Set ROM data to fully initialize the dialog
             # Use patch to avoid Qt mock conflicts
             with patch('ui.dialogs.manual_offset_unified_integrated.get_rom_cache'):
-                dialog.set_rom_data("/fake/rom.sfc", 0x400000, mock_extraction_manager)
+                dialog.set_rom_data("/fake/rom.sfc", 0x400000, real_extraction_manager)
 
             return dialog
         except Exception as e:

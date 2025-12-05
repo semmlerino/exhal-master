@@ -236,8 +236,11 @@ class TestPreviewGenerator:
         gen.cleanup()
 
     @pytest.fixture
-    def mock_extraction_manager(self):
-        """Create a mock extraction manager."""
+    def preview_mock_extraction_manager(self):
+        """Create a mock extraction manager for preview tests.
+
+        Named to avoid shadowing conftest's real_extraction_manager.
+        """
         manager = Mock()
 
         # Mock generate_preview to return a test image
@@ -247,8 +250,11 @@ class TestPreviewGenerator:
         return manager
 
     @pytest.fixture
-    def mock_rom_extractor(self):
-        """Create a mock ROM extractor."""
+    def preview_mock_rom_extractor(self):
+        """Create a mock ROM extractor for preview tests.
+
+        Named to avoid shadowing conftest's fixtures.
+        """
         extractor = Mock()
 
         # Mock extract_sprite_data
@@ -263,19 +269,19 @@ class TestPreviewGenerator:
         assert generator._debounce_timer is not None
         assert generator._pending_request is None
 
-    def test_set_managers(self, generator, mock_extraction_manager, mock_rom_extractor):
+    def test_set_managers(self, generator, preview_mock_extraction_manager, preview_mock_rom_extractor):
         """Test setting manager references."""
-        generator.set_managers(mock_extraction_manager, mock_rom_extractor)
+        generator.set_managers(preview_mock_extraction_manager, preview_mock_rom_extractor)
 
         # Verify weak references are set
         assert generator._extraction_manager_ref is not None
         assert generator._rom_extractor_ref is not None
 
         # Verify managers can be retrieved
-        assert generator._extraction_manager_ref() is mock_extraction_manager
-        assert generator._rom_extractor_ref() is mock_rom_extractor
+        assert generator._extraction_manager_ref() is preview_mock_extraction_manager
+        assert generator._rom_extractor_ref() is preview_mock_rom_extractor
 
-    def test_vram_preview_generation(self, generator, mock_extraction_manager):
+    def test_vram_preview_generation(self, generator, preview_mock_extraction_manager):
         """Test VRAM preview generation."""
         with patch("utils.preview_generator.pil_to_qpixmap") as mock_pil_to_qpixmap:
             # Setup mocks
@@ -284,7 +290,7 @@ class TestPreviewGenerator:
             mock_pixmap.size.return_value.height.return_value = 128
             mock_pil_to_qpixmap.return_value = mock_pixmap
 
-            generator.set_managers(extraction_manager=mock_extraction_manager)
+            generator.set_managers(extraction_manager=preview_mock_extraction_manager)
 
             # Create request
             request = create_vram_preview_request("/path/to/vram.bin", 0x8000, "test_sprite")
@@ -299,9 +305,9 @@ class TestPreviewGenerator:
             assert result.generation_time > 0
 
             # Verify extraction manager was called
-            mock_extraction_manager.generate_preview.assert_called_once_with("/path/to/vram.bin", 0x8000)
+            preview_mock_extraction_manager.generate_preview.assert_called_once_with("/path/to/vram.bin", 0x8000)
 
-    def test_preview_caching(self, generator, mock_extraction_manager):
+    def test_preview_caching(self, generator, preview_mock_extraction_manager):
         """Test that previews are cached correctly."""
         with patch("utils.preview_generator.pil_to_qpixmap") as mock_pil_to_qpixmap:
             mock_pixmap = Mock(spec=QPixmap)
@@ -309,7 +315,7 @@ class TestPreviewGenerator:
             mock_pixmap.size.return_value.height.return_value = 128
             mock_pil_to_qpixmap.return_value = mock_pixmap
 
-            generator.set_managers(extraction_manager=mock_extraction_manager)
+            generator.set_managers(extraction_manager=preview_mock_extraction_manager)
 
             request = create_vram_preview_request("/path/to/vram.bin", 0x8000)
 
@@ -324,7 +330,7 @@ class TestPreviewGenerator:
             assert result2.cached
 
             # Extraction manager should only be called once
-            assert mock_extraction_manager.generate_preview.call_count == 1
+            assert preview_mock_extraction_manager.generate_preview.call_count == 1
 
     def test_cache_stats_emission(self, generator, qtbot):
         """Test that cache stats are emitted when cache changes."""
@@ -337,12 +343,12 @@ class TestPreviewGenerator:
         assert "cache_size" in stats
         assert "hit_rate" in stats
 
-    def test_error_handling(self, generator, mock_extraction_manager):
+    def test_error_handling(self, generator, preview_mock_extraction_manager):
         """Test error handling in preview generation."""
         # Make extraction manager raise an exception
-        mock_extraction_manager.generate_preview.side_effect = RuntimeError("Test error")
+        preview_mock_extraction_manager.generate_preview.side_effect = RuntimeError("Test error")
 
-        generator.set_managers(extraction_manager=mock_extraction_manager)
+        generator.set_managers(extraction_manager=preview_mock_extraction_manager)
 
         request = create_vram_preview_request("/path/to/vram.bin", 0x8000)
 
@@ -365,7 +371,7 @@ class TestPreviewGenerator:
             friendly = generator._get_friendly_error_message(error_msg)
             assert friendly == expected
 
-    def test_async_preview_generation(self, generator, qtbot, mock_extraction_manager):
+    def test_async_preview_generation(self, generator, qtbot, preview_mock_extraction_manager):
         """Test asynchronous preview generation."""
         with patch("utils.preview_generator.pil_to_qpixmap") as mock_pil_to_qpixmap:
             mock_pixmap = Mock(spec=QPixmap)
@@ -373,7 +379,7 @@ class TestPreviewGenerator:
             mock_pixmap.size.return_value.height.return_value = 128
             mock_pil_to_qpixmap.return_value = mock_pixmap
 
-            generator.set_managers(extraction_manager=mock_extraction_manager)
+            generator.set_managers(extraction_manager=preview_mock_extraction_manager)
 
             request = create_vram_preview_request("/path/to/vram.bin", 0x8000)
 
@@ -385,7 +391,7 @@ class TestPreviewGenerator:
             assert isinstance(result, PreviewResult)
             assert result.sprite_name == "vram_0x008000"
 
-    def test_debounced_requests(self, generator, qtbot, mock_extraction_manager):
+    def test_debounced_requests(self, generator, qtbot, preview_mock_extraction_manager):
         """Test that rapid requests are properly debounced."""
         with patch("utils.preview_generator.pil_to_qpixmap") as mock_pil_to_qpixmap:
             mock_pixmap = Mock(spec=QPixmap)
@@ -393,7 +399,7 @@ class TestPreviewGenerator:
             mock_pixmap.size.return_value.height.return_value = 128
             mock_pil_to_qpixmap.return_value = mock_pixmap
 
-            generator.set_managers(extraction_manager=mock_extraction_manager)
+            generator.set_managers(extraction_manager=preview_mock_extraction_manager)
 
             # Make multiple rapid requests
             for i in range(5):
@@ -404,7 +410,7 @@ class TestPreviewGenerator:
             qtbot.wait(50)  # Wait longer than debounce delay
 
             # Only the last request should be processed
-            assert mock_extraction_manager.generate_preview.call_count <= 1
+            assert preview_mock_extraction_manager.generate_preview.call_count <= 1
 
     def test_cancel_pending_requests(self, generator):
         """Test canceling pending requests."""
@@ -511,8 +517,11 @@ def test_preview_generation_performance():
 
     generator.cleanup()
 
-def test_cache_performance():
-    """Test cache performance with many items."""
+def test_cache_performance(qapp):
+    """Test cache performance with many items.
+
+    Requires qapp fixture to ensure QApplication exists before creating QPixmap.
+    """
     cache = LRUCache(max_size=100)
 
     # Pre-fill cache
@@ -526,16 +535,19 @@ def test_cache_performance():
     start_time = time.time()
     for i in range(100):
         if i % 3 == 0:
-            # Cache hit
+            # Cache hit - get an existing key
             cache.get(f"key_{i % 50}")
+        elif i % 3 == 1:
+            # Cache miss - try to get a non-existent key
+            cache.get(f"nonexistent_key_{i}")
         else:
-            # Cache miss and put
+            # Cache put - add new entry
             result = PreviewResult(pixmap, pil_image, 16, f"new_sprite_{i}", 0.1)
             cache.put(f"new_key_{i}", result)
 
     operation_time = time.time() - start_time
 
     stats = cache.get_stats()
-    assert stats["hits"] > 0
-    assert stats["misses"] > 0
+    assert stats["hits"] > 0, f"Expected cache hits but got: {stats}"
+    assert stats["misses"] > 0, f"Expected cache misses but got: {stats}"
     assert operation_time < 1.0  # Should be fast

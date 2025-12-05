@@ -53,11 +53,11 @@ class TestManualOffsetDialogRegression:
         self.qt_framework = QtTestingFramework()
 
         # Mock extraction manager
-        self.mock_extraction_manager = Mock()
-        self.mock_extraction_manager.get_current_rom_path.return_value = "/test/regression.sfc"
-        self.mock_extraction_manager.get_rom_size.return_value = 0x400000
+        self.real_extraction_manager = Mock()
+        self.real_extraction_manager.get_current_rom_path.return_value = "/test/regression.sfc"
+        self.real_extraction_manager.get_rom_size.return_value = 0x400000
 
-        with patch('core.managers.get_extraction_manager', return_value=self.mock_extraction_manager):
+        with patch('core.managers.get_extraction_manager', return_value=self.real_extraction_manager):
             self.dialog = UnifiedManualOffsetDialog()
 
     def teardown_method(self):

@@ -363,8 +363,9 @@ class WorkerTestContext:
         # Wait for completion
         if finished_spy:
             return finished_spy.wait(timeout_ms)
-        # No completion signal, just wait a bit
-        time.sleep(timeout_ms / 1000.0)
+        # No completion signal, use Qt-safe wait
+        from PySide6.QtTest import QTest
+        QTest.qWait(timeout_ms)
         return True
 
     def validate_worker_state(self) -> dict[str, Any]:
@@ -437,7 +438,13 @@ class TimerTestContext:
 
         while self.callback_count < max_callbacks and (time.time() - start_time) < max_wait_time:
             self.framework.process_events(10)
-            time.sleep(0.01)
+            # Use Qt-safe sleep instead of time.sleep()
+            from PySide6.QtCore import QThread
+            current_thread = QThread.currentThread()
+            if current_thread:
+                current_thread.msleep(10)
+            else:
+                time.sleep(0.01)  # Fallback for non-Qt threads
 
         self.timer.stop()
         return self.callback_count

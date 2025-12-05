@@ -480,51 +480,47 @@ class TestCompleteUserWorkflowIntegration:
         """Test complete workflow: load ROM → open dialog → change offset → emit signal."""
         # Mock ROM loading and extraction manager
         with patch('core.managers.get_extraction_manager') as mock_ext:
-            mock_extraction_manager = Mock()
-            mock_ext.return_value = mock_extraction_manager
+            real_extraction_manager = Mock()
+            mock_ext.return_value = real_extraction_manager
 
             # Mock ROM file loading
-            mock_extraction_manager.load_rom_file.return_value = True
-            mock_extraction_manager.get_rom_data.return_value = b'fake_rom_data'
+            real_extraction_manager.load_rom_file.return_value = True
+            real_extraction_manager.get_rom_data.return_value = b'fake_rom_data'
 
-            try:
-                # Step 1: Create and show dialog
-                dialog = UnifiedManualOffsetDialog()
-                qtbot.addWidget(dialog)
+            # Step 1: Create and show dialog
+            dialog = UnifiedManualOffsetDialog()
+            qtbot.addWidget(dialog)
 
-                # Step 2: Apply theme styling
-                dialog.setStyleSheet(get_theme_style())
+            # Step 2: Apply theme styling
+            dialog.setStyleSheet(get_theme_style())
 
-                # Step 3: Show dialog (simulates user opening it)
-                dialog.show()
-                qtbot.waitExposed(dialog)
+            # Step 3: Show dialog (simulates user opening it)
+            dialog.show()
+            qtbot.waitExposed(dialog)
 
-                # Step 4: Set up signal monitoring
-                offset_spy = QSignalSpy(dialog.offset_changed)
+            # Step 4: Set up signal monitoring
+            offset_spy = QSignalSpy(dialog.offset_changed)
 
-                # Step 5: Simulate ROM loading (if dialog supports it)
-                if hasattr(dialog, 'load_rom'):
-                    dialog.load_rom("fake_rom.smc")
+            # Step 5: Simulate ROM loading (if dialog supports it)
+            if hasattr(dialog, 'load_rom'):
+                dialog.load_rom("fake_rom.smc")
 
-                # Step 6: Simulate offset change (user interaction)
-                if hasattr(dialog, 'browse_tab') and hasattr(dialog.browse_tab, 'set_offset'):
-                    test_offset = 98765
-                    dialog.browse_tab.set_offset(test_offset)
+            # Step 6: Simulate offset change (user interaction)
+            if hasattr(dialog, 'browse_tab') and hasattr(dialog.browse_tab, 'set_offset'):
+                test_offset = 98765
+                dialog.browse_tab.set_offset(test_offset)
 
-                    # Step 7: Wait for signal emission
-                    qtbot.wait(200)
+                # Step 7: Wait for signal emission
+                qtbot.wait(200)
 
-                    # Step 8: Verify workflow completed successfully
-                    assert offset_spy.count() > 0, "Offset change should emit signal"
+                # Step 8: Verify workflow completed successfully
+                assert offset_spy.count() > 0, "Offset change should emit signal"
 
-                    final_offset = offset_spy.at(offset_spy.count() - 1)[0] if offset_spy.count() > 0 else None
-                    assert final_offset == test_offset, f"Final offset should be {test_offset}"
+                final_offset = offset_spy.at(offset_spy.count() - 1)[0] if offset_spy.count() > 0 else None
+                assert final_offset == test_offset, f"Final offset should be {test_offset}"
 
-                # Step 9: Test dialog can be closed properly
-                dialog.accept()
-
-            except Exception as e:
-                pytest.skip(f"Complete workflow test failed: {e}")
+            # Step 9: Test dialog can be closed properly
+            dialog.accept()
 
     @pytest.mark.gui
     def test_theme_consistency_across_workflow(self, qtbot) -> None:

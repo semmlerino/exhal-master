@@ -55,10 +55,10 @@ class TestROMInjectionSettingsPersistence:
         from core.managers.session_manager import SessionManager
 
         # Create a mock session manager with temporary file storage
-        mock_session_manager = SessionManager(settings_path=Path(temp_settings_file))
+        real_session_manager = SessionManager(settings_path=Path(temp_settings_file))
 
         # Override get_session_manager to return our mock
-        with patch("utils.settings_manager.get_session_manager", return_value=mock_session_manager):
+        with patch("utils.settings_manager.get_session_manager", return_value=real_session_manager):
             manager = SettingsManager()
 
             # Add _settings property for test compatibility
@@ -74,7 +74,7 @@ class TestROMInjectionSettingsPersistence:
             manager._settings = property(get_settings)
             # Also store direct access for tests
             manager._get_settings = get_settings
-            manager._mock_session_manager = mock_session_manager  # Expose for tests
+            manager._mock_session_manager = real_session_manager  # Expose for tests
 
             yield manager
 

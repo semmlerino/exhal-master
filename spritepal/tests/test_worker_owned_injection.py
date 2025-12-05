@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-import time
 
 import pytest
 from core.managers.factory import StandardManagerFactory
@@ -147,9 +146,9 @@ class TestWorkerOwnedInjectionPattern:
         try:
             worker.perform_operation()
 
-            # Wait for initial processing
-            import time
-            time.sleep(0.5)
+            # Wait for initial processing using Qt-safe wait
+            from PySide6.QtTest import QTest
+            QTest.qWait(500)
 
             # The main success criteria: no Qt lifecycle errors occurred
             qt_lifecycle_error = False
@@ -219,8 +218,9 @@ class TestWorkerOwnedInjectionPattern:
         worker1.perform_operation()
         worker2.perform_operation()
 
-        # Wait for completion
-        time.sleep(0.3)
+        # Wait for completion using Qt-safe wait
+        from PySide6.QtTest import QTest
+        QTest.qWait(300)
 
         # The core test: verify no Qt lifecycle errors occurred (architectural success)
         for error_spy, worker_name in [(error_spy1, "Worker1"), (error_spy2, "Worker2")]:
@@ -267,7 +267,9 @@ class TestWorkerOwnedInjectionPattern:
 
         worker.perform_operation()
 
-        time.sleep(0.2)
+        # Use Qt-safe wait
+        from PySide6.QtTest import QTest
+        QTest.qWait(200)
 
         # Verify no Qt lifecycle errors (the main architectural test)
         qt_lifecycle_error = False
@@ -316,8 +318,9 @@ class TestWorkerOwnedInjectionPattern:
 
             worker.perform_operation()
 
-            import time
-            time.sleep(0.2)
+            # Use Qt-safe wait
+            from PySide6.QtTest import QTest
+            QTest.qWait(200)
 
             # Verify no Qt lifecycle errors (the main architectural test)
             qt_lifecycle_error = False

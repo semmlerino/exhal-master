@@ -8,7 +8,7 @@ including fixtures, parametrized tests, mock objects, and Qt components.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeAlias
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -44,16 +44,18 @@ class TestComprehensiveTypingExample:
     @pytest.fixture
     def mock_main_window(self) -> MockMainWindowProtocol:
         """Create a properly typed mock main window."""
-        from tests.infrastructure.real_component_factory import RealComponentFactory
-        factory = RealComponentFactory()
-        return factory.create_main_window()
+        mock = Mock()
+        mock.extract_requested = Mock()
+        mock.extract_requested.emit = Mock()
+        return mock  # type: ignore[return-value]
 
     @pytest.fixture
-    def mock_extraction_manager(self) -> MockExtractionManagerProtocol:
+    def real_extraction_manager(self) -> MockExtractionManagerProtocol:
         """Create a properly typed mock extraction manager."""
-        from tests.infrastructure.real_component_factory import RealComponentFactory
-        factory = RealComponentFactory()
-        return factory.create_extraction_manager()
+        mock = Mock()
+        mock.extract_sprites = Mock(return_value=True)
+        mock.validate_extraction_params = Mock(return_value=True)
+        return mock  # type: ignore[return-value]
 
     @pytest.fixture
     def test_file_factory(self, tmp_path: Path) -> Callable[[bytes, str], Path]:
@@ -109,7 +111,7 @@ class TestComprehensiveTypingExample:
     def test_dict_parameters_with_types(
         self,
         test_params: TestDataDict,
-        mock_extraction_manager: MockExtractionManagerProtocol,
+        real_extraction_manager: MockExtractionManagerProtocol,
     ) -> None:
         """Test dictionary parameters with proper type annotations."""
         offset: int = test_params["offset"]
@@ -117,10 +119,10 @@ class TestComprehensiveTypingExample:
         valid: bool = test_params["valid"]
 
         # Mock manager validation
-        mock_extraction_manager.validate_extraction_params.return_value = valid
+        real_extraction_manager.validate_extraction_params.return_value = valid
 
         # Test the validation
-        result = mock_extraction_manager.validate_extraction_params({
+        result = real_extraction_manager.validate_extraction_params({
             "offset": offset,
             "size": size,
         })
@@ -129,7 +131,7 @@ class TestComprehensiveTypingExample:
     def test_mock_objects_with_protocols(
         self,
         mock_main_window: MockMainWindowProtocol,
-        mock_extraction_manager: MockExtractionManagerProtocol,
+        real_extraction_manager: MockExtractionManagerProtocol,
     ) -> None:
         """Test mock objects using protocol types."""
         # Test signal emission
@@ -137,8 +139,8 @@ class TestComprehensiveTypingExample:
         mock_main_window.extract_requested.emit.assert_called_with("test_request")
 
         # Test manager methods
-        mock_extraction_manager.extract_sprites.return_value = True
-        result = mock_extraction_manager.extract_sprites({})
+        real_extraction_manager.extract_sprites.return_value = True
+        result = real_extraction_manager.extract_sprites({})
         assert result is True
 
     @pytest.mark.qt_real
@@ -180,15 +182,15 @@ class TestComprehensiveTypingExample:
 
     def test_context_managers_with_types(
         self,
-        mock_extraction_manager: MockExtractionManagerProtocol,
+        real_extraction_manager: MockExtractionManagerProtocol,
     ) -> None:
         """Test context managers with proper typing."""
         with patch.object(
-            mock_extraction_manager,
+            real_extraction_manager,
             "extract_sprites",
             return_value=True
         ) as mock_extract:
-            result = mock_extraction_manager.extract_sprites({"test": "data"})
+            result = real_extraction_manager.extract_sprites({"test": "data"})
             assert result is True
             mock_extract.assert_called_once_with({"test": "data"})
 
@@ -204,15 +206,15 @@ class TestComprehensiveTypingExample:
     def test_exception_handling_with_types(
         self,
         error_scenarios: Exception,
-        mock_extraction_manager: MockExtractionManagerProtocol,
+        real_extraction_manager: MockExtractionManagerProtocol,
     ) -> None:
         """Test exception handling with proper typing."""
         # Configure mock to raise specific exception
-        mock_extraction_manager.extract_sprites.side_effect = error_scenarios
+        real_extraction_manager.extract_sprites.side_effect = error_scenarios
 
         # Test that the exception is raised
         with pytest.raises(type(error_scenarios)):
-            mock_extraction_manager.extract_sprites({})
+            real_extraction_manager.extract_sprites({})
 
     def test_collections_with_types(
         self,
@@ -249,13 +251,23 @@ class TestComprehensiveTypingExample:
         assert async_test_data["async_operation"] == "setup"
         assert hasattr(mock_main_window, "extract_requested")
 
+# Module-level fixture for standalone tests
+@pytest.fixture
+def real_extraction_manager() -> MockExtractionManagerProtocol:
+    """Create a properly typed mock extraction manager for standalone tests."""
+    mock = Mock()
+    mock.extract_sprites = Mock(return_value=True)
+    mock.validate_extraction_params = Mock(return_value=True)
+    return mock  # type: ignore[return-value]
+
+
 # Standalone test functions with proper typing
 def test_standalone_function_with_types(
-    mock_extraction_manager: MockExtractionManagerProtocol,
+    real_extraction_manager: MockExtractionManagerProtocol,
 ) -> None:
     """Test standalone function with proper type annotations."""
-    mock_extraction_manager.validate_extraction_params.return_value = True
-    result = mock_extraction_manager.validate_extraction_params({})
+    real_extraction_manager.validate_extraction_params.return_value = True
+    result = real_extraction_manager.validate_extraction_params({})
     assert result is True
 
 @pytest.mark.parametrize(

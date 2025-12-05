@@ -72,13 +72,24 @@ class SignalCapture(QObject):
             self.signal_threads.clear()
 
     def wait_for_signal(self, timeout=1.0):
-        """Wait for at least one signal with timeout"""
+        """Wait for at least one signal with timeout using Qt-safe waiting"""
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QApplication
+
         start_time = time.time()
         while time.time() - start_time < timeout:
             with self.lock:
                 if self.captured_signals:
                     return True
-            time.sleep(0.01)
+            # Process Qt events and use Qt-safe sleep
+            app = QApplication.instance()
+            if app:
+                app.processEvents()
+            current_thread = QThread.currentThread()
+            if current_thread:
+                current_thread.msleep(10)
+            else:
+                time.sleep(0.01)  # Fallback for non-Qt threads
         return False
 
 class TestQtSignalArchitecture:
@@ -310,7 +321,14 @@ class TestQtSignalArchitecture:
         start_time = time.time()
 
         while len(signal_capture.captured_signals) < expected_count and time.time() - start_time < timeout:
-            time.sleep(0.01)
+            # Use Qt-safe waiting
+            app.processEvents()
+            from PySide6.QtCore import QThread
+            current_thread = QThread.currentThread()
+            if current_thread:
+                current_thread.msleep(10)
+            else:
+                time.sleep(0.01)
 
         assert len(signal_capture.captured_signals) == expected_count
 
@@ -336,7 +354,9 @@ class TestQtSignalArchitecture:
         # Emit again and verify no reception
         signal_capture.reset()
         manager.injection_progress.emit("Disconnected")
-        time.sleep(0.1)  # Give time for potential delivery
+        # Give time for potential delivery using Qt-safe wait
+        from PySide6.QtTest import QTest
+        QTest.qWait(100)
         assert len(signal_capture.captured_signals) == 0
 
     def test_controller_signal_forwarding(self, app, mock_factory, signal_capture):
@@ -372,7 +392,8 @@ class TestQtSignalArchitecture:
 
         # Process events to ensure signal delivery
         app.processEvents()
-        time.sleep(0.1)
+        from PySide6.QtTest import QTest
+        QTest.qWait(100)
 
         # Verify controller methods were called
         assert len(called_methods) == 3
@@ -553,7 +574,13 @@ class TestPerformanceImpact:
             capture.emit_time = time.time()
             manager.extraction_progress.emit("Test")
             app.processEvents()
-            time.sleep(0.001)
+            # Use Qt-safe delay
+            from PySide6.QtCore import QThread
+            current_thread = QThread.currentThread()
+            if current_thread:
+                current_thread.msleep(1)
+            else:
+                time.sleep(0.001)
 
         # Analyze delivery times
         if delivery_times:

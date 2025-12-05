@@ -3,12 +3,41 @@ Base mock dialog infrastructure for testing.
 
 This module provides lightweight mock dialogs that prevent blocking operations
 while maintaining realistic Qt signal behavior.
+
+NOTE: Callbacks are invoked with proper error handling:
+- AssertionError is NEVER suppressed (test assertions must propagate)
+- Other exceptions are logged as warnings to aid debugging
 """
 from __future__ import annotations
 
-import contextlib
+import logging
+import warnings
 from collections.abc import Callable
 from typing import Any
+
+_logger = logging.getLogger(__name__)
+
+
+def _invoke_callback_safe(callback: Callable, *args: Any) -> None:
+    """
+    Invoke a callback with proper error handling.
+
+    - AssertionError: Re-raised (test assertions must fail tests)
+    - Other exceptions: Logged as warning (aids debugging without crashing)
+    """
+    try:
+        callback(*args)
+    except AssertionError:
+        # Never suppress test assertions - they must fail the test
+        raise
+    except Exception as e:
+        # Log other exceptions as warnings so developers can see them
+        _logger.warning(f"Exception in callback {callback}: {e}", exc_info=True)
+        warnings.warn(
+            f"Callback {callback} raised {type(e).__name__}: {e}",
+            UserWarning,
+            stacklevel=3
+        )
 
 
 class TestDialogBase:
@@ -43,10 +72,7 @@ class TestDialogBase:
         self._exec_called = True
         # Emit finished signal via callbacks
         for callback in self.finished_callbacks:
-            try:
-                callback(self.result_value)
-            except Exception:
-                pass  # Don't crash on callback errors
+            _invoke_callback_safe(callback, self.result_value)
         return self.result_value
 
     def show(self) -> None:
@@ -58,24 +84,20 @@ class TestDialogBase:
         self.result_value = self.DialogCode.Accepted
         # Emit accepted signal via callbacks
         for callback in self.accepted_callbacks:
-            with contextlib.suppress(Exception):
-                callback()
+            _invoke_callback_safe(callback)
         # Emit finished signal via callbacks
         for callback in self.finished_callbacks:
-            with contextlib.suppress(Exception):
-                callback(self.result_value)
+            _invoke_callback_safe(callback, self.result_value)
 
     def reject(self) -> None:
         """Reject the dialog."""
         self.result_value = self.DialogCode.Rejected
         # Emit rejected signal via callbacks
         for callback in self.rejected_callbacks:
-            with contextlib.suppress(Exception):
-                callback()
+            _invoke_callback_safe(callback)
         # Emit finished signal via callbacks
         for callback in self.finished_callbacks:
-            with contextlib.suppress(Exception):
-                callback(self.result_value)
+            _invoke_callback_safe(callback, self.result_value)
 
     def close(self) -> bool:
         """Close the dialog."""
@@ -122,10 +144,7 @@ class CallbackSignal:
     def emit(self, *args) -> None:
         """Emit signal to all callbacks."""
         for callback in self.callbacks:
-            try:
-                callback(*args)
-            except Exception:
-                pass  # Don't crash on callback errors
+            _invoke_callback_safe(callback, *args)
 
 class TestMessageBox(TestDialogBase):
     """Test QMessageBox for testing."""
@@ -238,8 +257,7 @@ class TestProgressDialog(TestDialogBase):
         self._was_canceled = True
         # Emit canceled signal via callbacks
         for callback in self.canceled_callbacks:
-            with contextlib.suppress(Exception):
-                callback()
+            _invoke_callback_safe(callback)
 
     @property
     def canceled(self):

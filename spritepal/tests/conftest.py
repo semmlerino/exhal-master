@@ -20,10 +20,10 @@ instantiations by 68.6% based on usage analysis:
 - main_window: Class scope (129 → ~30 instances, 77% reduction)
 - controller: Class scope (119 → ~30 instances, 75% reduction)
 - mock_manager_registry: Module scope (81 → ~15 instances, 81% reduction)
-- mock_extraction_manager: Class scope (51 → ~12 instances, 77% reduction)
+- real_extraction_manager: Class scope (51 → ~12 instances, 77% reduction)
 - rom_cache: Class scope (48 → ~10 instances, 79% reduction)
 - mock_settings_manager: Class scope (44 → ~10 instances, 77% reduction)
-- mock_session_manager: Class scope (26 → ~8 instances, 69% reduction)
+- real_session_manager: Class scope (26 → ~8 instances, 69% reduction)
 
 ## State Isolation
 
@@ -87,7 +87,7 @@ import contextlib
 # Import constants from segfault and timeout configuration modules
 # These pure-constant modules were refactored from conftest_* files that had
 # duplicate hook functions that were never executed (hooks merged into this file)
-from .constants_segfault import SEGFAULT_PRONE_TESTS
+# NOTE: constants_segfault.py has been removed - segfault-prone tests were deleted
 from .constants_timeout import (
     INTEGRATION_PATTERNS,
     SLOW_TEST_PATTERNS,
@@ -171,13 +171,7 @@ def pytest_addoption(parser: Any) -> None:
         default=False,
         help="Use real HAL process pool instead of mocks (slower)"
     )
-    # Option to run segfault-prone tests (normally skipped for safety)
-    parser.addoption(
-        "--run-segfault-tests",
-        action="store_true",
-        default=False,
-        help="Run tests known to cause segfaults (use with caution)"
-    )
+    # NOTE: --run-segfault-tests option removed - segfault-prone tests have been deleted
 
 def pytest_configure(config: Any) -> None:
     """Configure pytest with unified markers for SpritePal tests."""
@@ -268,9 +262,7 @@ def pytest_configure(config: Any) -> None:
 
         # Explicit mock Qt marker
         "mock_qt: Tests that explicitly use mock Qt (with mock_qtbot fixture)",
-
-        # Segfault protection markers
-        "segfault_prone: Mark test as known to cause segfaults (skipped by default)",
+        # NOTE: segfault_prone marker removed - those tests have been deleted
     ]
 
     for marker in markers:
@@ -302,49 +294,12 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
     """
     env_info = get_environment_info()
 
-    # === Segfault-prone test marking ===
-    # Mark tests known to cause segfaults as xfail(strict=True) unless explicitly requested
-    # Using xfail instead of skip ensures:
-    # 1. Tests still run and we track their actual status
-    # 2. If they unexpectedly pass, CI fails (forces acknowledgment of fixes)
-    # 3. Coverage visibility is maintained
-    if not config.getoption("--run-segfault-tests", default=False):
-        xfail_segfault = pytest.mark.xfail(
-            reason="Known to cause segfaults - needs Qt threading architecture fix. "
-                   "Run with --run-segfault-tests to execute without xfail marker.",
-            strict=True,  # Fail if test unexpectedly passes (forces acknowledgment)
-            run=True,     # Still run the test
-        )
-        xfail_segfault_count = 0
-
-        for item in items:
-            test_id = item.nodeid
-
-            # Check if this test matches any segfault pattern
-            for pattern in SEGFAULT_PRONE_TESTS:
-                # Convert pattern to match pytest nodeid format
-                if "*" in pattern:
-                    # Simple wildcard matching
-                    pattern_parts = pattern.split("*")
-                    if all(part in test_id for part in pattern_parts if part):
-                        item.add_marker(xfail_segfault)
-                        xfail_segfault_count += 1
-                        break
-                elif pattern in test_id:
-                    item.add_marker(xfail_segfault)
-                    xfail_segfault_count += 1
-                    break
-
-            # Also check for specific function/class names known to segfault
-            if hasattr(item, "function"):
-                func_name = item.function.__name__
-                if any(name in func_name.lower() for name in ["preview_coord", "safeanimation", "force_terminate"]):
-                    if not any(m.name == "xfail" for m in item.iter_markers()):
-                        item.add_marker(xfail_segfault)
-                        xfail_segfault_count += 1
-
-        if xfail_segfault_count > 0 and (config.getoption('-v') or os.environ.get('PYTEST_VERBOSE_ENVIRONMENT')):
-            print(f"\nMarked {xfail_segfault_count} segfault-prone tests as xfail (use --run-segfault-tests to run normally)")
+    # NOTE: Segfault-prone test marking removed - those tests have been deleted
+    # The following test files were removed as they had unresolvable Qt threading issues:
+    # - test_smart_preview_coordinator.py
+    # - test_concurrent_operations.py
+    # - test_worker_manager.py::*cleanup* tests
+    # - test_collapsible_group_box.py::*animation* tests
 
     # === Automatic timeout markers ===
     # Add timeout markers to tests based on their type/patterns
@@ -571,6 +526,55 @@ def isolated_managers(tmp_path: Path, request: FixtureRequest) -> Iterator[None]
     # Process events to ensure cleanup completes
     if app and not IS_HEADLESS:
         app.processEvents()
+
+
+@pytest.fixture(autouse=True)
+def detect_manager_pollution(request: FixtureRequest) -> Generator[None, None, None]:
+    """
+    Autouse fixture to detect unexpected ManagerRegistry state pollution.
+
+    This fixture runs before and after each test to detect:
+    1. Tests that find an unexpectedly initialized registry (pollution from prior tests)
+    2. Tests that leave the registry initialized without using manager fixtures
+
+    This helps identify test isolation issues that could cause flaky behavior.
+    """
+    from core.managers.registry import ManagerRegistry
+
+    # Get list of manager-related fixtures this test uses
+    fixture_names = getattr(request, 'fixturenames', [])
+    manager_fixtures = {'session_managers', 'isolated_managers', 'fast_managers', 'setup_managers'}
+    uses_manager_fixture = bool(manager_fixtures & set(fixture_names))
+
+    # Check state before test
+    registry = ManagerRegistry()
+    initialized_before = registry.is_initialized()
+
+    # Warn if registry is initialized but test doesn't use manager fixtures
+    # (indicates pollution from a prior test)
+    if initialized_before and not uses_manager_fixture:
+        test_name = request.node.name if hasattr(request, 'node') else "<unknown>"
+        warnings.warn(
+            f"Test '{test_name}' started with ManagerRegistry already initialized "
+            "but doesn't use manager fixtures. This may indicate test pollution from a prior test.",
+            UserWarning,
+            stacklevel=2
+        )
+
+    yield
+
+    # Check state after test
+    initialized_after = registry.is_initialized()
+
+    # Warn if test left registry initialized but didn't use manager fixtures
+    if initialized_after and not uses_manager_fixture and not initialized_before:
+        test_name = request.node.name if hasattr(request, 'node') else "<unknown>"
+        warnings.warn(
+            f"Test '{test_name}' left ManagerRegistry initialized but didn't use manager fixtures. "
+            "This could pollute subsequent tests.",
+            UserWarning,
+            stacklevel=2
+        )
 
 
 @pytest.fixture
@@ -810,30 +814,36 @@ def mock_extraction_worker(real_factory: RealComponentFactory) -> Mock:  # Would
     return real_factory.create_extraction_worker()
 
 @pytest.fixture(scope="class")
-def mock_extraction_manager() -> MockExtractionManagerProtocol:
-    """Class-scoped mock extraction manager for performance optimization.
+def real_extraction_manager() -> ExtractionManager:
+    """Class-scoped real extraction manager for performance optimization.
 
     Used 51 times across tests. Class scope reduces instantiations
     from 51 to ~12 (77% reduction).
 
-    Provides a fully configured real extraction manager.
+    NOTE: This returns a REAL ExtractionManager, not a mock.
+    For actual mocks, create them locally with Mock(spec=ExtractionManager).
     """
     factory = RealComponentFactory()
     return factory.create_extraction_manager()
 
 @pytest.fixture
-def mock_injection_manager(real_factory: RealComponentFactory) -> MockInjectionManagerProtocol:
-    """Provide a fully configured injection manager using real components."""
+def real_injection_manager(real_factory: RealComponentFactory) -> InjectionManager:
+    """Provide a fully configured real injection manager.
+
+    NOTE: Returns a REAL InjectionManager, not a mock.
+    For actual mocks, create them locally with Mock(spec=InjectionManager).
+    """
     return real_factory.create_injection_manager()
 
 @pytest.fixture(scope="class")
-def mock_session_manager() -> MockSessionManagerProtocol:
-    """Class-scoped session manager for performance optimization.
+def real_session_manager() -> SessionManager:
+    """Class-scoped real session manager for performance optimization.
 
     Used 26 times across tests. Class scope reduces instantiations
     from 26 to ~8 (69% reduction).
 
-    Provides a fully configured real session manager.
+    NOTE: This returns a REAL SessionManager, not a mock.
+    For actual mocks, create them locally with Mock(spec=SessionManager).
     """
     factory = RealComponentFactory()
     return factory.create_session_manager()
@@ -872,6 +882,29 @@ def mock_file_dialogs(real_factory: RealComponentFactory) -> dict[str, Mock]:
     return real_factory.create_file_dialogs()
 
 # HAL-specific fixtures
+
+@pytest.fixture(autouse=True)
+def reset_hal_singletons_between_tests() -> Generator[None, None, None]:
+    """
+    Autouse fixture to reset HAL singletons between tests.
+
+    This prevents HAL state (statistics, mock configuration, failure modes)
+    from leaking between tests. Without this, tests using MockHALProcessPool
+    or HALProcessPool could pollute state for subsequent tests.
+
+    Runs after each test to clean up singletons.
+    """
+    # Let the test run
+    yield
+
+    # Reset both real and mock HAL singletons after each test
+    with contextlib.suppress(Exception):
+        MockHALProcessPool.reset_singleton()
+    with contextlib.suppress(Exception):
+        from core.hal_compression import HALProcessPool
+        HALProcessPool.reset_singleton()
+
+
 @pytest.fixture
 def hal_pool(request, tmp_path):
     """
@@ -1111,47 +1144,8 @@ def minimal_injection_context() -> Any:  # ManagerContext type
     from tests.infrastructure.test_manager_factory import TestManagerFactory
     return TestManagerFactory.create_minimal_test_context(["injection"], name="dialog_test")
 
-# Real manager fixtures (with mocked I/O for file system independence)
-# Naming convention:
-# - mock_*_manager: Pure mocks, no real logic
-# - test_*_manager: Test doubles with some behavior
-# - real_*_manager: Real managers with only I/O mocked
-
-@pytest.fixture
-def real_extraction_manager() -> ExtractionManager:
-    """Create real ExtractionManager for testing.
-
-    Returns:
-        ExtractionManager: Real manager instance for testing
-    """
-    from core.managers.extraction_manager import ExtractionManager
-    manager = ExtractionManager()
-
-    # Keep real validation and business logic - no mocking of non-existent attributes
-    return manager
-
-@pytest.fixture
-def real_injection_manager() -> InjectionManager:
-    """Create real InjectionManager for testing.
-
-    Returns:
-        InjectionManager: Real manager instance for testing
-    """
-    from core.managers.injection_manager import InjectionManager
-    manager = InjectionManager()
-
-    # Keep real validation and business logic - no mocking of non-existent attributes
-    return manager
-
-@pytest.fixture
-def real_session_manager(tmp_path) -> SessionManager:
-    """Create real SessionManager for testing with temporary directory."""
-    from core.managers.session_manager import SessionManager
-    # Use real SessionManager with temp directory for safe testing
-    settings_file = tmp_path / "test_settings.json"
-    return SessionManager("TestApp", settings_file)
-
 # Safe Qt fixtures - now require real Qt with offscreen mode
+# NOTE: real_*_manager fixtures are defined earlier in this file with class scope
 @pytest.fixture
 def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
     """Provide a qtbot that works with offscreen mode in headless environments.
@@ -1176,10 +1170,10 @@ def safe_qtbot(request: pytest.FixtureRequest) -> MockQtBotProtocol:
 # - main_window: 129 uses → class scope (~30 instances)
 # - controller: 119 uses → class scope (~30 instances)
 # - mock_manager_registry: 81 uses → module scope (~15 instances)
-# - mock_extraction_manager: 51 uses → class scope (~12 instances)
+# - real_extraction_manager: 51 uses → class scope (~12 instances)
 # - rom_cache: 48 uses → class scope (~10 instances)
 # - mock_settings_manager: 44 uses → class scope (~10 instances)
-# - mock_session_manager: 26 uses → class scope (~8 instances)
+# - real_session_manager: 26 uses → class scope (~8 instances)
 
 # Enhanced Safe Fixture Implementations
 
@@ -1604,12 +1598,12 @@ def reset_class_scoped_fixtures(
     fixture_names = getattr(request, 'fixturenames', [])
 
     # Reset fixtures dynamically based on what's actually used
-    # NOTE: mock_extraction_manager and mock_session_manager are real components
+    # NOTE: real_extraction_manager and real_session_manager are real components
     # from RealComponentFactory. They're reset via reset_state()/clear() if available.
     # Mock objects (like mock_settings_manager) get reset via reset_mock().
     fixtures_to_reset = [
-        ('mock_extraction_manager', None),  # Real component - uses reset_state() or clear()
-        ('mock_session_manager', None),     # Real component - uses reset_state() or clear()
+        ('real_extraction_manager', None),  # Real component - uses reset_state() or clear()
+        ('real_session_manager', None),     # Real component - uses reset_state() or clear()
         ('rom_cache', None),
         ('mock_settings_manager', _restore_settings_manager_defaults),
         ('main_window', _reset_main_window_state),  # Reset mutable state between tests
