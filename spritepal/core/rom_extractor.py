@@ -89,9 +89,6 @@ class ROMExtractor:
         logger.debug(f"Extracting sprite data from ROM: offset=0x{sprite_offset:X}")
 
         try:
-            with Path(rom_path).open("rb") as rom_file:
-                rom_file.read()
-
             # Try to decompress the data at the offset
             decompressed_data = self.hal_compressor.decompress_from_rom(
                 rom_path, sprite_offset
@@ -581,7 +578,7 @@ class ROMExtractor:
             "scan_type": "sprite_scan"
         }
 
-    def _load_cached_scan(self, rom_cache, rom_path: str, scan_params: dict) -> list[dict[str, Any]] | None:
+    def _load_cached_scan(self, rom_cache: Any, rom_path: str, scan_params: dict[str, Any]) -> list[dict[str, Any]] | None:
         """Load completed scan from cache if available.
 
         Args:
@@ -598,7 +595,7 @@ class ROMExtractor:
             return cached_progress.get("found_sprites", [])
         return None
 
-    def _get_resume_state(self, rom_cache, rom_path: str, scan_params: dict, start_offset: int) -> tuple[list, int]:
+    def _get_resume_state(self, rom_cache: Any, rom_path: str, scan_params: dict[str, Any], start_offset: int) -> tuple[list[dict[str, Any]], int]:
         """Get resume state from cached progress.
 
         Args:
@@ -652,7 +649,7 @@ class ROMExtractor:
         return end_offset
 
     def _perform_scan(self, rom_data: bytes, resume_offset: int, end_offset: int, step: int,
-                     found_sprites: list, rom_cache, rom_path: str, scan_params: dict) -> list[dict[str, Any]]:
+                     found_sprites: list[dict[str, Any]], rom_cache: Any, rom_path: str, scan_params: dict[str, Any]) -> list[dict[str, Any]]:
         """Perform the actual sprite scanning.
 
         Args:
@@ -771,8 +768,8 @@ class ROMExtractor:
             "quality": self._assess_sprite_quality(sprite_data)
         }
 
-    def _handle_scan_error(self, error: Exception, found_sprites: list, rom_cache,
-                          rom_path: str, scan_params: dict, resume_offset: int):
+    def _handle_scan_error(self, error: Exception, found_sprites: list[dict[str, Any]], rom_cache: Any,
+                          rom_path: str, scan_params: dict[str, Any], resume_offset: int) -> None:
         """Handle errors during scanning and save partial results.
 
         Args:

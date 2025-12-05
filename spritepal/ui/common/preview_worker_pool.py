@@ -16,10 +16,15 @@ import threading
 import time
 import weakref
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, QTimer, Signal
+from typing_extensions import override
 from ui.rom_extraction.workers.preview_worker import SpritePreviewWorker
 from utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from weakref import ReferenceType
 
 logger = get_logger(__name__)
 
@@ -37,16 +42,17 @@ class PooledPreviewWorker(SpritePreviewWorker):
     preview_ready = Signal(int, bytes, int, int, str)  # request_id, tile_data, width, height, name
     preview_error = Signal(int, str)  # request_id, error_msg
 
-    def __init__(self, pool_ref: weakref.ReferenceType):
+    def __init__(self, pool_ref: ReferenceType[Any]):
         # Initialize with dummy values - actual values set per request
-        super().__init__("", 0, "", None, None)
+        super().__init__("", 0, "", None, None)  # type: ignore[arg-type]  # Dummy init, real values set via setup_request
         self._pool_ref = pool_ref
         self._current_request_id = 0
         self._cancel_requested = threading.Event()
         self._is_processing = False
         self._signals_connected = False
+        self._being_destroyed = False  # Flag to prevent signal processing during cleanup
 
-    def setup_request(self, request, extractor, rom_cache=None) -> None:
+    def setup_request(self, request: Any, extractor: Any, rom_cache: Any = None) -> None:
         """Setup worker for new request with optional ROM cache."""
         self.rom_path = request.rom_path
         self.offset = request.offset
@@ -65,6 +71,7 @@ class PooledPreviewWorker(SpritePreviewWorker):
         self._cancel_requested.set()
         logger.debug(f"Cancellation requested for worker processing request {self._current_request_id}")
 
+    @override
     def run(self) -> None:
         """Enhanced run method with cancellation support."""
         if not self._is_processing:
@@ -310,7 +317,7 @@ class PreviewWorkerPool(QObject):
 
         logger.debug(f"PreviewWorkerPool initialized with max_workers={max_workers}")
 
-    def submit_request(self, request, extractor, rom_cache=None) -> None:
+    def submit_request(self, request: Any, extractor: Any, rom_cache: Any = None) -> None:
         """
         Submit a preview request to the worker pool.
 
@@ -541,21 +548,26 @@ class PreviewWorkerPool(QObject):
     def _cleanup_worker(self, worker: PooledPreviewWorker) -> None:
         """Clean up a single worker safely without using terminate()."""
         try:
+            # Mark worker as being destroyed to prevent signal processing
+            worker._being_destroyed = True
+
             # First, cancel any current operation
             worker.cancel_current_request()
 
-            # Disconnect signals before cleanup to prevent crashes
+            # Disconnect SPECIFIC slots to prevent crashes from blanket disconnect()
+            # Using specific slots avoids race conditions where disconnect() is called
+            # while signals are being emitted
             if hasattr(worker, '_signals_connected') and worker._signals_connected:
                 try:
-                    worker.preview_ready.disconnect()
-                except TypeError:
-                    pass  # Already disconnected
+                    worker.preview_ready.disconnect(self._on_worker_ready)
+                except (TypeError, RuntimeError):
+                    pass  # Already disconnected or object deleted
                 try:
-                    worker.preview_error.disconnect()
-                except TypeError:
-                    pass  # Already disconnected
+                    worker.preview_error.disconnect(self._on_worker_error)
+                except (TypeError, RuntimeError):
+                    pass  # Already disconnected or object deleted
                 worker._signals_connected = False
-                logger.debug("Disconnected worker signals during cleanup")
+                logger.debug("Disconnected specific worker signals during cleanup")
 
             # Request interruption via Qt mechanism
             worker.requestInterruption()

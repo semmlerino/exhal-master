@@ -5,13 +5,14 @@ Main window for SpritePal application
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
     from core.controller import ExtractionController
     from core.managers.session_manager import SessionManager
 
 from PySide6.QtCore import Qt, Signal
+from typing_extensions import override
 
 if TYPE_CHECKING:
     from PySide6.QtGui import QCloseEvent, QKeyEvent
@@ -379,10 +380,10 @@ class MainWindow(QMainWindow):
         """Get current VRAM path for browse dialog default directory"""
         current_files = self.extraction_panel.get_session_data()
         vram_path = current_files.get("vram_path", "")
-        return str(vram_path) if vram_path is not None else ""
+        return str(vram_path) if vram_path else ""
 
     # TabCoordinatorActionsProtocol
-    def get_rom_extraction_params(self) -> dict | None:
+    def get_rom_extraction_params(self) -> dict[str, Any] | None:
         """Get ROM extraction parameters"""
         return self.rom_extraction_panel.get_extraction_params()
 
@@ -548,8 +549,13 @@ class MainWindow(QMainWindow):
         """Handle output name change to sync with active panel"""
         # If ROM extraction tab is active, update its output name
         if self.tab_coordinator.is_rom_tab_active():
-            # Temporarily disconnect to avoid infinite loop
-            self.rom_extraction_panel.output_name_changed.disconnect()
+            # Temporarily disconnect specific slot to avoid infinite loop
+            try:
+                self.rom_extraction_panel.output_name_changed.disconnect(
+                    self._on_rom_output_name_changed
+                )
+            except (TypeError, RuntimeError):
+                pass  # Already disconnected
             self.rom_extraction_panel.output_name_widget.set_output_name(text)
             self.rom_extraction_panel.output_name_changed.connect(
                 self._on_rom_output_name_changed
@@ -680,12 +686,14 @@ class MainWindow(QMainWindow):
 
     # Session save now handled by SessionCoordinator
 
+    @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Handle window close event"""
         self.session_coordinator.save_session()
         if a0:
             super().closeEvent(a0)
 
+    @override
     def keyPressEvent(self, a0: QKeyEvent | None) -> None:
         """Handle keyboard shortcuts"""
         if not a0:

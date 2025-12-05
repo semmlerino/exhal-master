@@ -19,7 +19,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import (
     QMutex,
@@ -96,7 +96,7 @@ class CacheWorker(QObject):
             self.load_error.emit(request_id, str(e))
 
     @Slot(str, bytes, dict)
-    def save_to_cache(self, cache_key: str, data: bytes, metadata: dict) -> None:
+    def save_to_cache(self, cache_key: str, data: bytes, metadata: dict[str, Any]) -> None:
         """Save data to cache file"""
         if self._stop_requested.is_set():
             return
@@ -198,14 +198,14 @@ class AsyncROMCache(QObject):
         self._request_mutex = QMutex()
 
         # Batch save queue
-        self._save_queue: list[tuple[str, bytes, dict]] = []
+        self._save_queue: list[tuple[str, bytes, dict[str, Any]]] = []
         self._save_mutex = QRecursiveMutex()  # Use recursive mutex to allow nested locking
         self._save_timer = QTimer(self)
         self._save_timer.timeout.connect(self._flush_save_queue)
         self._save_timer.setInterval(1000)  # Flush every second
 
         # Memory cache for recent items
-        self._memory_cache: dict[str, tuple[bytes, dict, float]] = {}
+        self._memory_cache: dict[str, tuple[bytes, dict[str, Any], float]] = {}
         self._memory_cache_max = 10
 
         # Start worker thread
@@ -247,7 +247,7 @@ class AsyncROMCache(QObject):
         self._request_load.emit(request_id, cache_key)
 
     def save_cached_async(self, rom_path: str, offset: int, data: bytes,
-                         metadata: dict | None = None) -> None:
+                         metadata: dict[str, Any] | None = None) -> None:
         """
         Save data to cache asynchronously.
 
@@ -290,10 +290,12 @@ class AsyncROMCache(QObject):
                 self._flush_save_queue()
 
     def clear_memory_cache(self) -> None:
-        """Clear the in-memory cache"""
+        """Clear the in-memory cache and pending requests"""
         with QMutexLocker(self._request_mutex):
             self._memory_cache.clear()
-        logger.debug("Cleared memory cache")
+            # Also clear pending requests to prevent stale data from repopulating cache
+            self._pending_requests.clear()
+        logger.debug("Cleared memory cache and pending requests")
 
     def _flush_save_queue(self) -> None:
         """Flush pending saves to disk"""
@@ -310,7 +312,7 @@ class AsyncROMCache(QObject):
         for cache_key, data, metadata in saves_to_process:
             self._request_save.emit(cache_key, data, metadata)
 
-    def _on_data_loaded(self, request_id: str, data: bytes, metadata: dict) -> None:
+    def _on_data_loaded(self, request_id: str, data: bytes, metadata: dict[str, Any]) -> None:
         """Handle successful cache load"""
         with QMutexLocker(self._request_mutex):
             if request_id in self._pending_requests:
@@ -343,9 +345,21 @@ class AsyncROMCache(QObject):
         rom_hash = hashlib.md5(rom_path.encode()).hexdigest()[:8]
         return f"preview_{rom_hash}_{offset:08x}"
 
-    def __del__(self) -> None:
-        """Cleanup on deletion"""
+    def shutdown(self, timeout: int = 5000) -> None:
+        """
+        Explicitly shutdown the cache worker thread.
+
+        This should be called before the object is deleted to ensure clean shutdown.
+        The timeout is generous (5 seconds by default) to allow pending operations to complete.
+
+        Args:
+            timeout: Milliseconds to wait for thread to stop (default: 5000)
+        """
         try:
+            # Stop the save timer first
+            if hasattr(self, "_save_timer"):
+                self._save_timer.stop()
+
             # Flush any pending saves
             self._flush_save_queue()
 
@@ -353,10 +367,23 @@ class AsyncROMCache(QObject):
             if hasattr(self, "_worker"):
                 self._worker.stop()
 
-            # Stop thread
+            # Stop thread with adequate timeout
             if hasattr(self, "_worker_thread") and self._worker_thread.isRunning():
                 self._worker_thread.quit()
-                self._worker_thread.wait(1000)
-        except Exception:
-            # Ignore cleanup errors to avoid cascading issues
-            pass
+                if not self._worker_thread.wait(timeout):
+                    logger.warning(
+                        f"AsyncROMCache worker thread did not stop within {timeout}ms"
+                    )
+
+            logger.debug("AsyncROMCache shutdown complete")
+        except Exception as e:
+            logger.warning(f"AsyncROMCache shutdown error: {e}")
+
+    def __del__(self) -> None:
+        """Cleanup on deletion - fallback if shutdown() was not called explicitly"""
+        try:
+            # Use short timeout in __del__ since we may be in GC
+            self.shutdown(timeout=1000)
+        except Exception as e:
+            # Log but don't raise to avoid cascading issues during shutdown
+            logger.debug(f"AsyncROMCache __del__ cleanup error (ignored): {e}")

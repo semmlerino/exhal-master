@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from typing_extensions import override
 from ui.delegates.sprite_gallery_delegate import SpriteGalleryDelegate
 from ui.models.sprite_gallery_model import SpriteGalleryModel
 from utils.logging_config import get_logger
@@ -59,8 +60,8 @@ class SpriteGalleryWidget(QWidget):
         self.delegate: SpriteGalleryDelegate | None = None
         self.list_view: QListView | None = None
 
-        # Performance
-        self.viewport_timer = QTimer()
+        # Performance - explicit parent ensures cleanup with widget
+        self.viewport_timer = QTimer(self)
         self.viewport_timer.timeout.connect(self._update_visible_thumbnails)
         self.viewport_timer.setInterval(100)
         self.viewport_timer.setSingleShot(True)
@@ -347,8 +348,8 @@ class SpriteGalleryWidget(QWidget):
         # Update status
         self._update_status()
 
-        # Trigger initial thumbnail loading for visible items
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        # Trigger initial thumbnail loading for visible items (use managed timer)
+        self.viewport_timer.start()
 
         logger.debug(f"Gallery populated with {len(sprites)} sprites using virtual scrolling")
 
@@ -411,7 +412,7 @@ class SpriteGalleryWidget(QWidget):
         self.viewport_timer.stop()
         self.viewport_timer.start()
 
-    def _on_item_clicked(self, index):
+    def _on_item_clicked(self, index: Any) -> None:
         """Handle item click."""
         if not index.isValid():
             return
@@ -420,7 +421,7 @@ class SpriteGalleryWidget(QWidget):
         if offset is not None:
             self.sprite_selected.emit(offset)
 
-    def _on_item_double_clicked(self, index):
+    def _on_item_double_clicked(self, index: Any) -> None:
         """Handle item double click."""
         if not index.isValid():
             return
@@ -455,7 +456,7 @@ class SpriteGalleryWidget(QWidget):
             self.list_view.reset()
 
         # Trigger thumbnail reload for new size
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        self.viewport_timer.start()
 
     def _apply_filters(self):
         """Apply current filters to the gallery."""
@@ -469,7 +470,7 @@ class SpriteGalleryWidget(QWidget):
         self._update_status()
 
         # Trigger thumbnail loading for newly visible items
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        self.viewport_timer.start()
 
     def _apply_sort(self):
         """Apply sorting to the sprite data."""
@@ -480,7 +481,7 @@ class SpriteGalleryWidget(QWidget):
         self.model.sort_sprites(sort_key)
 
         # Trigger thumbnail loading for newly visible items
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        self.viewport_timer.start()
 
     def _select_all(self):
         """Select all visible thumbnails."""
@@ -513,17 +514,19 @@ class SpriteGalleryWidget(QWidget):
         if self.status_label:
             self.status_label.setText(status)
 
-    def resizeEvent(self, event):
+    @override
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize event."""
         super().resizeEvent(event)
         # Trigger thumbnail loading after resize
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        self.viewport_timer.start()
 
-    def showEvent(self, event):
+    @override
+    def showEvent(self, event: QShowEvent) -> None:
         """Handle show event to ensure proper initial layout."""
         super().showEvent(event)
         # Trigger thumbnail loading when widget becomes visible
-        QTimer.singleShot(100, self._update_visible_thumbnails)
+        self.viewport_timer.start()
 
     def get_selected_sprites(self) -> list[dict[str, Any]]:
         """Get information for all selected sprites."""
@@ -546,7 +549,7 @@ class SpriteGalleryWidget(QWidget):
         """Force the gallery to recalculate its layout."""
         if self.list_view:
             self.list_view.reset()
-            QTimer.singleShot(100, self._update_visible_thumbnails)
+            self.viewport_timer.start()
             logger.debug("Forced layout update for list view")
 
     def get_sprite_pixmap(self, offset: int) -> QPixmap | None:
@@ -565,9 +568,9 @@ class SpriteGalleryWidget(QWidget):
 
     # Backward compatibility property
     @property
-    def thumbnails(self) -> dict:
+    def thumbnails(self) -> dict[int, Any]:
         """Backward compatibility: return dict with offset as key."""
-        result = {}
+        result: dict[int, Any] = {}
         if self.model:
             # Create a minimal compatibility dict
             for i in range(self.model.rowCount()):
@@ -577,5 +580,12 @@ class SpriteGalleryWidget(QWidget):
                     if isinstance(offset, str):
                         offset = int(offset, 16) if offset.startswith('0x') else int(offset)
                     # Create a minimal object that has the offset
-                    result[offset] = type('ThumbnailCompat', (), {'offset': offset})
+                    if isinstance(offset, int):
+                        result[offset] = type('ThumbnailCompat', (), {'offset': offset})
         return result
+
+    def cleanup(self) -> None:
+        """Clean up resources before deletion to prevent timer callbacks on deleted objects."""
+        if self.viewport_timer:
+            self.viewport_timer.stop()
+        logger.debug("SpriteGalleryWidget cleanup complete")

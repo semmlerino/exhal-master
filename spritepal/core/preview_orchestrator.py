@@ -429,6 +429,28 @@ class PreviewOrchestrator(QObject):
         rom_hash = hashlib.md5(rom_path.encode()).hexdigest()[:8]
         return f"{rom_hash}_{offset:08x}"
 
+    def cleanup(self) -> None:
+        """Clean up resources including async cache worker thread."""
+        # Stop the process timer
+        if self._process_timer:
+            self._process_timer.stop()
+
+        # Stop the metrics timer
+        if self._metrics_timer:
+            self._metrics_timer.stop()
+
+        # Shutdown async cache worker thread
+        if self._async_cache:
+            self._async_cache.shutdown()
+            self._async_cache = None
+
+        # Clear caches
+        self._memory_cache.clear()
+        self._active_requests.clear()
+
+        logger.debug("PreviewOrchestrator cleanup complete")
+
+
 class PreviewMemoryCache:
     """LRU memory cache for preview data"""
 

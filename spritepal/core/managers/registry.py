@@ -4,7 +4,6 @@ Registry for accessing manager instances
 from __future__ import annotations
 
 import threading
-import weakref
 from typing import Any
 
 from PySide6.QtWidgets import QApplication
@@ -52,7 +51,6 @@ class ManagerRegistry:
 
         self._logger = get_logger("ManagerRegistry")
         self._managers: dict[str, Any] = {}
-        self._manager_refs: dict[str, weakref.ReferenceType] = {}  # Weak references for cleanup
         self._initialized = True
 
         # Register cleanup with QApplication if available
@@ -76,13 +74,6 @@ class ManagerRegistry:
                     self._logger.debug("Registered cleanup with QApplication.aboutToQuit")
             except Exception as e:
                 self._logger.debug(f"Could not register Qt cleanup: {e}")
-
-    def _on_manager_deleted(self, manager_name: str) -> None:
-        """Callback when a manager is deleted via weak reference"""
-        self._logger.debug(f"Manager '{manager_name}' was garbage collected")
-        # Remove from managers dict if still present
-        if manager_name in self._managers:
-            del self._managers[manager_name]
 
     def initialize_managers(self, app_name: str = "SpritePal", settings_path: Any = None,
                           use_consolidated: bool = True) -> None:
@@ -125,39 +116,27 @@ class ManagerRegistry:
                     self._logger.debug("Creating ApplicationStateManager...")
                     state_manager = ApplicationStateManager(app_name, settings_path, parent=qt_parent)
                     self._managers["state"] = state_manager
-                    self._manager_refs["state"] = weakref.ref(state_manager,
-                        lambda ref: self._on_manager_deleted("state"))
                     created_managers.append("state")
 
                     # Register adapters for backward compatibility
                     self._managers["session"] = state_manager.get_session_adapter()
-                    self._manager_refs["session"] = weakref.ref(self._managers["session"],
-                        lambda ref: self._on_manager_deleted("session"))
                     self._logger.debug("ApplicationStateManager created successfully")
 
                     # Create CoreOperationsManager
                     self._logger.debug("Creating CoreOperationsManager...")
                     core_manager = CoreOperationsManager(parent=qt_parent)
                     self._managers["core_operations"] = core_manager
-                    self._manager_refs["core_operations"] = weakref.ref(core_manager,
-                        lambda ref: self._on_manager_deleted("core_operations"))
                     created_managers.append("core_operations")
 
                     # Register adapters
                     self._managers["extraction"] = core_manager.get_extraction_adapter()
-                    self._manager_refs["extraction"] = weakref.ref(self._managers["extraction"],
-                        lambda ref: self._on_manager_deleted("extraction"))
                     self._managers["injection"] = core_manager.get_injection_adapter()
-                    self._manager_refs["injection"] = weakref.ref(self._managers["injection"],
-                        lambda ref: self._on_manager_deleted("injection"))
                     self._logger.debug("CoreOperationsManager created successfully")
 
                     # Create UICoordinatorManager
                     self._logger.debug("Creating UICoordinatorManager...")
                     ui_manager = UICoordinatorManager(parent=qt_parent)
                     self._managers["ui_coordinator"] = ui_manager
-                    self._manager_refs["ui_coordinator"] = weakref.ref(ui_manager,
-                        lambda ref: self._on_manager_deleted("ui_coordinator"))
                     created_managers.append("ui_coordinator")
                     self._logger.debug("UICoordinatorManager created successfully")
 
@@ -169,8 +148,6 @@ class ManagerRegistry:
                     session_manager = SessionManager(app_name, settings_path)
                     session_manager.setParent(qt_parent)  # Set parent after creation
                     self._managers["session"] = session_manager
-                    self._manager_refs["session"] = weakref.ref(session_manager,
-                        lambda ref: self._on_manager_deleted("session"))
                     created_managers.append("session")
                     self._logger.debug("SessionManager created successfully")
 
@@ -178,16 +155,12 @@ class ManagerRegistry:
                     self._logger.debug("Creating ExtractionManager...")
                     extraction_manager = ExtractionManager(parent=qt_parent)
                     self._managers["extraction"] = extraction_manager
-                    self._manager_refs["extraction"] = weakref.ref(extraction_manager,
-                        lambda ref: self._on_manager_deleted("extraction"))
                     created_managers.append("extraction")
                     self._logger.debug("ExtractionManager created successfully")
 
                     self._logger.debug("Creating InjectionManager...")
                     injection_manager = InjectionManager(parent=qt_parent)
                     self._managers["injection"] = injection_manager
-                    self._manager_refs["injection"] = weakref.ref(injection_manager,
-                        lambda ref: self._on_manager_deleted("injection"))
                     created_managers.append("injection")
                     self._logger.debug("InjectionManager created successfully")
 
@@ -202,8 +175,6 @@ class ManagerRegistry:
                 self._logger.debug("Creating MonitoringManager...")
                 monitoring_manager = MonitoringManager(parent=qt_parent)
                 self._managers["monitoring"] = monitoring_manager
-                self._manager_refs["monitoring"] = weakref.ref(monitoring_manager,
-                    lambda ref: self._on_manager_deleted("monitoring"))
                 created_managers.append("monitoring")
                 self._logger.debug("MonitoringManager created successfully")
 
@@ -229,8 +200,6 @@ class ManagerRegistry:
                             manager = self._managers[manager_name]
                             manager.cleanup()
                             del self._managers[manager_name]
-                            # Clean up weak reference
-                            self._manager_refs.pop(manager_name, None)
                             self._logger.debug(f"Cleaned up {manager_name} manager after initialization failure")
                     except Exception as cleanup_error:
                         self._logger.exception(f"Error cleaning up {manager_name} manager: {cleanup_error}")
@@ -241,34 +210,34 @@ class ManagerRegistry:
     @suppress_logging_errors
     def cleanup_managers(self) -> None:
         """Cleanup all managers with enhanced memory leak prevention"""
-        safe_info(self._logger, "Cleaning up managers...")
+        with self._lock:
+            safe_info(self._logger, "Cleaning up managers...")
 
-        # Cleanup in reverse order
-        for name in reversed(list(self._managers.keys())):
+            # Cleanup in reverse order
+            for name in reversed(list(self._managers.keys())):
+                try:
+                    manager = self._managers[name]
+                    manager.cleanup()
+                    safe_debug(self._logger, f"Cleaned up {name} manager")
+                except (AttributeError, RuntimeError):
+                    safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
+                except Exception:
+                    safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
+
+            self._managers.clear()
+
+            # Clear context references to break circular dependencies
             try:
-                manager = self._managers[name]
-                manager.cleanup()
-                safe_debug(self._logger, f"Cleaned up {name} manager")
-            except (AttributeError, RuntimeError):
-                safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
-            except Exception:
-                safe_warning(self._logger, f"Error cleaning up {name} manager", exc_info=True)
+                from .context import _context_manager
+                if _context_manager is not None:
+                    _context_manager.set_current_context(None)
+                    safe_debug(self._logger, "Cleared context manager references")
+                else:
+                    safe_debug(self._logger, "Context manager already cleaned up")
+            except Exception as e:
+                safe_debug(self._logger, f"Error clearing context references: {e}")
 
-        self._managers.clear()
-        self._manager_refs.clear()  # Clear weak references
-
-        # Clear context references to break circular dependencies
-        try:
-            from .context import _context_manager
-            if _context_manager is not None:
-                _context_manager.set_current_context(None)
-                safe_debug(self._logger, "Cleared context manager references")
-            else:
-                safe_debug(self._logger, "Context manager already cleaned up")
-        except Exception as e:
-            safe_debug(self._logger, f"Error clearing context references: {e}")
-
-        safe_info(self._logger, "All managers cleaned up")
+            safe_info(self._logger, "All managers cleaned up")
 
     def get_session_manager(self) -> SessionManager:
         """
@@ -468,7 +437,7 @@ def _cleanup_global_registry():
         _registry.cleanup_managers()
     except Exception:
         pass  # Ignore errors during cleanup
-        _registry = None
+    _registry = None  # Always clear registry reference
 
 import atexit
 
