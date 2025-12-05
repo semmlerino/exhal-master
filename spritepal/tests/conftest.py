@@ -508,7 +508,7 @@ def session_managers(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]
 
 
 @pytest.fixture
-def isolated_managers(tmp_path: Path) -> Iterator[None]:
+def isolated_managers(tmp_path: Path, request: FixtureRequest) -> Iterator[None]:
     """
     Function-scoped managers for tests that need complete isolation.
 
@@ -534,6 +534,8 @@ def isolated_managers(tmp_path: Path) -> Iterator[None]:
     from core.managers.registry import ManagerRegistry
     from PySide6.QtWidgets import QApplication
 
+    test_name = request.node.name if request and hasattr(request, 'node') else "<unknown>"
+
     # Isolation guard: fail if registry already initialized (indicates pollution)
     registry = ManagerRegistry()
     if registry.is_initialized():
@@ -545,7 +547,7 @@ def isolated_managers(tmp_path: Path) -> Iterator[None]:
         # If still initialized, fail with clear message
         if registry.is_initialized():
             pytest.fail(
-                "isolated_managers fixture requires uninitialized ManagerRegistry. "
+                f"Test '{test_name}': isolated_managers fixture requires uninitialized ManagerRegistry. "
                 "Another fixture or test may have leaked state. "
                 "Use session_managers for shared state, or ensure cleanup in prior tests."
             )

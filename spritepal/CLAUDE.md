@@ -110,6 +110,22 @@ def test_async_operation(qtbot):
 | Singleton dialog cleanup | `cleanup_singleton` | Own cleanup fixture |
 | Signal waiting | `qtbot.waitSignal()` | `time.sleep()` |
 
+**Manager Fixture Isolation Levels:**
+
+| Fixture | Scope | Reset Between Tests | Use When |
+|---------|-------|---------------------|----------|
+| `session_managers` | Session | NO | Fast tests OK with shared state; state persists across ALL tests |
+| `isolated_managers` | Function | YES (full cleanup) | Tests that modify manager state or need clean slate |
+| `setup_managers` | Function | YES | Default fixture with conditional setup |
+| `fast_managers` | References session | NO | Performance-focused tests (alias for session_managers) |
+
+**IMPORTANT**: `session_managers` is NOT reset between tests - manager state (caches, settings, active operations) persists across the entire test session. Use `isolated_managers` when:
+- Your test modifies ManagerRegistry state
+- Your test needs predictable initial state
+- Your test could pollute state for other tests
+
+The `isolated_managers` fixture has an explicit guard that fails if ManagerRegistry is already initialized (detects test pollution).
+
 **Common Mistakes to Avoid:**
 - `QPixmap` in worker threads causes fatal crashes - use `ThreadSafeTestImage`
 - Hardcoded thread counts - capture baseline at test start

@@ -693,14 +693,34 @@ def create_safe_qtbot(
 
         # Get real qtbot from pytest-qt if available
         real_qtbot = None
+        qtbot_error: Exception | None = None
         if request and hasattr(request, 'getfixturevalue'):
             try:
                 real_qtbot = request.getfixturevalue('qtbot')
             except Exception as e:
                 logger.debug(f"Could not get real qtbot from request: {e}")
+                qtbot_error = e
 
-        qtbot = SafeQtBot(real_qtbot=real_qtbot, headless=False)
-        logger.info("Created real qtbot wrapper (offscreen mode if headless)")
+        # Fail loudly if we couldn't get real qtbot and mocks aren't allowed
+        if real_qtbot is None and not allow_mock:
+            error_msg = (
+                f"Cannot create real qtbot: getfixturevalue('qtbot') returned None "
+                f"(error: {qtbot_error})\n"
+                "Options:\n"
+                "  1. Ensure pytest-qt fixture is properly configured\n"
+                "  2. Use mock_qtbot fixture for tests that don't need real Qt\n"
+                "  3. Mark test with @pytest.mark.mock_qt"
+            )
+            if qtbot_error:
+                raise HeadlessModeError(error_msg) from qtbot_error
+            else:
+                raise HeadlessModeError(error_msg)
+
+        qtbot = SafeQtBot(real_qtbot=real_qtbot, headless=real_qtbot is None)
+        if real_qtbot is not None:
+            logger.info("Created real qtbot wrapper (offscreen mode if headless)")
+        else:
+            logger.info("Created mock qtbot wrapper (allow_mock=True)")
 
     except ImportError as e:
         # pytest-qt not available

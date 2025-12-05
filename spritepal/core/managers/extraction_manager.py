@@ -74,17 +74,27 @@ class ExtractionManager(BaseManager):
             self._active_operations.clear()
         # Currently no other resources to cleanup
 
-    def reset_state(self) -> None:
+    def reset_state(self, full_reset: bool = False) -> None:
         """Reset internal state for test isolation.
 
         This method clears any mutable state that could leak between tests
-        when the manager is used in class-scoped fixtures. It does NOT
-        reinitialize the manager - just clears accumulated state.
+        when the manager is used in class-scoped fixtures.
+
+        Args:
+            full_reset: If True, also clears long-lived components (sprite_extractor,
+                       rom_extractor, palette_manager). They will be recreated on
+                       next use. Use for tests requiring complete isolation.
+                       Default is False for performance (these are stateless).
         """
         with self._lock:
             self._active_operations.clear()
-        # Note: We don't reset _sprite_extractor, _rom_extractor, _palette_manager
-        # as those are stateless and expensive to recreate
+            if full_reset:
+                # Clear long-lived components - they'll be recreated via _initialize()
+                self._sprite_extractor = None
+                self._rom_extractor = None
+                self._palette_manager = None
+                self._is_initialized = False
+                self._logger.debug("ExtractionManager full reset: cleared all components")
 
     def _ensure_sprite_extractor(self) -> SpriteExtractor:
         """Ensure sprite extractor is initialized and return it."""
