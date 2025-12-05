@@ -57,11 +57,9 @@ class TestManualOffsetSliderSpriteIntegration:
     """Test the integration between manual offset, slider, and sprite display."""
 
     @pytest.fixture(autouse=True)
-    def setup_singleton_cleanup(self):
-        """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton.reset()
+    def setup_singleton_cleanup(self, cleanup_singleton):
+        """Delegate to centralized cleanup_singleton fixture from conftest.py."""
         yield
-        ManualOffsetDialogSingleton.reset()
 
     @pytest.fixture
     def mock_rom_data(self):
@@ -575,11 +573,9 @@ class TestManualOffsetHistoryIntegration:
     """Test integration between manual offset and history tracking."""
 
     @pytest.fixture(autouse=True)
-    def setup_singleton_cleanup(self):
-        """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton.reset()
+    def setup_singleton_cleanup(self, cleanup_singleton):
+        """Delegate to centralized cleanup_singleton fixture from conftest.py."""
         yield
-        ManualOffsetDialogSingleton.reset()
 
     def test_sprite_selection_adds_to_history(self):
         """Test that selecting a sprite adds it to history using real manager."""

@@ -99,6 +99,28 @@ def test_async_operation(qtbot):
 - `@pytest.mark.headless` - Mock/unit tests (fast, always work)
 - `@pytest.mark.serial` - No parallel execution
 
+### Test Fixture Selection Guide
+
+| Need | Use | NOT |
+|------|-----|-----|
+| Fast tests, shared state OK | `session_managers` | `setup_managers` |
+| Isolated manager state | `isolated_managers` | `session_managers` |
+| Real component testing | `RealComponentFactory` | `Mock()` + `cast()` |
+| Qt images in worker thread | `ThreadSafeTestImage` | `QPixmap` |
+| Singleton dialog cleanup | `cleanup_singleton` | Own cleanup fixture |
+| Signal waiting | `qtbot.waitSignal()` | `time.sleep()` |
+
+**Common Mistakes to Avoid:**
+- `QPixmap` in worker threads causes fatal crashes - use `ThreadSafeTestImage`
+- Hardcoded thread counts - capture baseline at test start
+- `time.sleep()` in Qt tests - use `qtbot.wait()` or `waitSignal()`
+- Inheriting `QDialog` in mocks - causes metaclass crashes
+- Missing singleton cleanup - use `cleanup_singleton` fixture
+
+**Environment Variables:**
+- `PYTEST_TIMEOUT_MULTIPLIER=2.0` - Scale all timeouts (useful for slow CI)
+- `PYTEST_DEBUG_FIXTURES=1` - Enable fixture performance monitoring
+
 ## Project Architecture
 
 ```

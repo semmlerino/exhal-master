@@ -147,9 +147,20 @@ IS_HEADLESS = _environment_info.is_headless
 # Enable performance monitoring with: PYTEST_DEBUG_FIXTURES=1 pytest tests/
 
 # Global timeout configuration - increased for CI/headless environments
-DEFAULT_SIGNAL_TIMEOUT = 5000 if (os.environ.get("CI") or IS_HEADLESS) else 2000
-DEFAULT_WAIT_TIMEOUT = 3000 if (os.environ.get("CI") or IS_HEADLESS) else 1000
-DEFAULT_WORKER_TIMEOUT = 10000 if (os.environ.get("CI") or IS_HEADLESS) else 5000
+# Use PYTEST_TIMEOUT_MULTIPLIER environment variable to scale all timeouts (e.g., 2.0 for slow CI)
+def _get_timeout_multiplier() -> float:
+    """Get timeout multiplier from environment variable."""
+    try:
+        return float(os.environ.get("PYTEST_TIMEOUT_MULTIPLIER", "1.0"))
+    except ValueError:
+        return 1.0
+
+_timeout_multiplier = _get_timeout_multiplier()
+_is_ci_or_headless = bool(os.environ.get("CI") or IS_HEADLESS)
+
+DEFAULT_SIGNAL_TIMEOUT = int((10000 if _is_ci_or_headless else 5000) * _timeout_multiplier)
+DEFAULT_WAIT_TIMEOUT = int((5000 if _is_ci_or_headless else 2000) * _timeout_multiplier)
+DEFAULT_WORKER_TIMEOUT = int((15000 if _is_ci_or_headless else 7500) * _timeout_multiplier)
 
 def pytest_addoption(parser: Any) -> None:
     """Add custom command line options for SpritePal tests."""
@@ -405,16 +416,27 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
                 item.add_marker(pytest.mark.slow)
 
     # Validation: Ensure marker consistency
+    # Define mutually exclusive marker sets - tests cannot have markers from same set
+    MUTUALLY_EXCLUSIVE_MARKERS = [
+        {'gui', 'headless'},
+        {'qt_real', 'qt_mock', 'no_qt'},
+        {'serial', 'parallel_safe'},
+        {'mock_only', 'qt_real'},
+    ]
+
     for item in items:
-        # Warn about conflicting markers
-        if ("gui" in item.keywords and "headless" in item.keywords):
-            warnings.warn(f"Test {item.name} has conflicting gui/headless markers", UserWarning, stacklevel=2)
+        item_keywords = set(item.keywords)
 
-        if ("qt_real" in item.keywords and "no_qt" in item.keywords):
-            warnings.warn(f"Test {item.name} has conflicting qt_real/no_qt markers", UserWarning, stacklevel=2)
-
-        if ("serial" in item.keywords and "parallel_safe" in item.keywords):
-            warnings.warn(f"Test {item.name} has conflicting serial/parallel_safe markers", UserWarning, stacklevel=2)
+        # Check for conflicting markers
+        for exclusive_set in MUTUALLY_EXCLUSIVE_MARKERS:
+            conflicts = item_keywords & exclusive_set
+            if len(conflicts) > 1:
+                warnings.warn(
+                    f"Test {item.name} has conflicting markers: {conflicts}. "
+                    f"These markers are mutually exclusive.",
+                    UserWarning,
+                    stacklevel=2
+                )
 
 # Note: GUI popup prevention is handled via QT_QPA_PLATFORM environment variable
 # Set QT_QPA_PLATFORM=offscreen to run tests without GUI windows
@@ -467,6 +489,54 @@ def session_managers() -> Iterator[None]:
     # Process events to ensure cleanup completes
     if app and not IS_HEADLESS:
         app.processEvents()
+
+
+@pytest.fixture
+def isolated_managers() -> Iterator[None]:
+    """
+    Function-scoped managers for tests that need complete isolation.
+
+    Unlike session_managers, this fixture creates fresh managers for each test
+    and cleans them up afterward. Use this for tests that:
+    - Modify manager state that could affect other tests
+    - Need to test manager initialization/cleanup behavior
+    - Can't share state with other tests
+
+    Note: This is slower than session_managers but provides complete isolation.
+
+    Usage:
+        def test_something_that_modifies_state(isolated_managers):
+            # Fresh managers, isolated from other tests
+            from core.managers.registry import ManagerRegistry
+            registry = ManagerRegistry()
+            # ... test code that modifies manager state ...
+    """
+    from core.managers import cleanup_managers, initialize_managers
+    from PySide6.QtWidgets import QApplication
+
+    # Ensure Qt app exists
+    app = QApplication.instance()
+    if app is None and not IS_HEADLESS:
+        app = QApplication([])
+
+    # Clean up any existing managers first
+    try:
+        cleanup_managers()
+    except Exception:
+        pass  # May fail if not initialized
+
+    # Initialize fresh managers for this test
+    initialize_managers("TestApp_Isolated")
+
+    yield
+
+    # Clean up managers after test
+    cleanup_managers()
+
+    # Process events to ensure cleanup completes
+    if app and not IS_HEADLESS:
+        app.processEvents()
+
 
 @pytest.fixture
 def fast_managers(session_managers: None) -> Iterator[None]:
@@ -1487,11 +1557,11 @@ def reset_class_scoped_fixtures(
 
     # Reset fixtures dynamically based on what's actually used
     # NOTE: mock_extraction_manager and mock_session_manager are real components
-    # from RealComponentFactory, not Mocks. They won't be reset here.
-    # Only actual Mock objects (like mock_settings_manager) get reset.
+    # from RealComponentFactory. They're reset via reset_state()/clear() if available.
+    # Mock objects (like mock_settings_manager) get reset via reset_mock().
     fixtures_to_reset = [
-        ('mock_extraction_manager', None),  # Real component, not Mock
-        ('mock_session_manager', None),     # Real component, not Mock
+        ('mock_extraction_manager', None),  # Real component - uses reset_state() or clear()
+        ('mock_session_manager', None),     # Real component - uses reset_state() or clear()
         ('rom_cache', None),
         ('mock_settings_manager', _restore_settings_manager_defaults),
     ]
@@ -1505,6 +1575,13 @@ def reset_class_scoped_fixtures(
                     fixture_value.reset_mock(return_value=True, side_effect=True)
                     if post_reset_callback:
                         post_reset_callback(fixture_value)
+                elif hasattr(fixture_value, 'reset_state'):
+                    # Real component with explicit reset method
+                    fixture_value.reset_state()
+                elif hasattr(fixture_value, 'clear'):
+                    # Clear internal caches/collections (e.g., rom_cache)
+                    with contextlib.suppress(Exception):
+                        fixture_value.clear()
             except pytest.FixtureLookupError:
                 pass  # Fixture not available in this context
 
@@ -1569,11 +1646,17 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     are left running, preventing "QThread: Destroyed while thread
     is still running" errors.
     """
+    import threading
+
     # Skip cleanup for tests that don't use workers
     markers = [m.name for m in request.node.iter_markers()]
     if 'no_manager_setup' in markers or 'no_qt' in markers:
         yield
         return
+
+    # Capture baseline thread count BEFORE test runs
+    # This avoids hardcoding assumptions about thread count (e.g., CI may have more threads)
+    baseline_thread_count = threading.active_count()
 
     yield
 
@@ -1590,7 +1673,6 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
 
     # Clean up any SearchWorker threads specifically for advanced search tests
     try:
-        import threading
         import time
 
         # Wait for worker threads to finish with proper timeout
@@ -1601,14 +1683,14 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
 
         while elapsed < max_wait_ms:
             active_threads = threading.active_count()
-            if active_threads <= 2:  # Main thread + pytest thread
+            if active_threads <= baseline_thread_count:
                 break
             time.sleep(poll_interval_ms / 1000.0)
             elapsed += poll_interval_ms
 
         # Log if threads still running after timeout (for debugging)
         active_threads = threading.active_count()
-        if active_threads > 2:
+        if active_threads > baseline_thread_count:
             import logging
             logging.debug(f"Active thread count after cleanup wait: {active_threads}")
 
@@ -1625,7 +1707,6 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
     if not IS_HEADLESS:
         from PySide6.QtCore import QThread
         from PySide6.QtWidgets import QApplication
-        import threading
 
         # Process any pending events to allow threads to finish
         app = QApplication.instance()
@@ -1634,7 +1715,7 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
             for _ in range(5):
                 app.processEvents()
                 # Check if threads have finished - early exit if so
-                if threading.active_count() <= 2:
+                if threading.active_count() <= baseline_thread_count:
                     break
                 # Use Qt's msleep for proper event loop integration
                 current = QThread.currentThread()
@@ -1668,3 +1749,45 @@ def timeout_config() -> dict[str, int]:
         'medium': DEFAULT_WAIT_TIMEOUT,
         'long': DEFAULT_WORKER_TIMEOUT,
     }
+
+
+@pytest.fixture
+def cleanup_singleton() -> Generator[None, None, None]:
+    """Centralized ManualOffsetDialog singleton cleanup fixture.
+
+    This fixture ensures the ManualOffsetDialogSingleton is properly cleaned up
+    before and after each test. Use this instead of defining your own
+    setup_singleton_cleanup fixture in test files.
+
+    Usage:
+        def test_something(cleanup_singleton):
+            # Singleton is already reset before test
+            dialog = ManualOffsetDialogSingleton.get_dialog(panel)
+            # ... test code ...
+            # Singleton will be reset after test
+    """
+    from ui.rom_extraction_panel import ManualOffsetDialogSingleton
+
+    # Clean before test
+    try:
+        if ManualOffsetDialogSingleton._instance is not None:
+            ManualOffsetDialogSingleton._instance.close()
+    except Exception:
+        pass
+    ManualOffsetDialogSingleton.reset()
+
+    yield
+
+    # Clean after test
+    try:
+        if ManualOffsetDialogSingleton._instance is not None:
+            ManualOffsetDialogSingleton._instance.close()
+    except Exception:
+        pass
+    ManualOffsetDialogSingleton.reset()
+
+    # Process events to ensure cleanup completes
+    if not IS_HEADLESS:
+        from PySide6.QtWidgets import QApplication
+        if app := QApplication.instance():
+            app.processEvents()

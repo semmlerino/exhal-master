@@ -13,15 +13,8 @@ import pytest
 # Add spritepal to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-@pytest.fixture(scope="session")
-def qt_app():
-    """Provide a QApplication instance for the entire test session."""
-    from PySide6.QtWidgets import QApplication
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
-    # Don't quit the app here as pytest-qt manages it
+# NOTE: qt_app fixture is provided by root conftest.py (session-scoped)
+# Do not redefine it here to avoid fixture shadowing issues.
 
 @pytest.fixture(scope="function")
 def managers_initialized(qt_app):

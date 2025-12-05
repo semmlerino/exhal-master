@@ -29,11 +29,9 @@ class TestManualOffsetDialogIntegrationMock:
     """Integration tests using mocks to verify key user workflows."""
 
     @pytest.fixture(autouse=True)
-    def setup_singleton_cleanup(self):
-        """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton.reset()
+    def setup_singleton_cleanup(self, cleanup_singleton):
+        """Delegate to centralized cleanup_singleton fixture from conftest.py."""
         yield
-        ManualOffsetDialogSingleton.reset()
 
     @pytest.fixture
     def mock_dialog_with_ui(self):

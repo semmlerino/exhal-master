@@ -54,16 +54,9 @@ class TestManualOffsetDialogSingleton:
     """Test suite for ManualOffsetDialogSingleton implementation with proper mocking."""
 
     @pytest.fixture(autouse=True)
-    def setup_singleton_cleanup(self):
-        """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton.reset()
+    def setup_singleton_cleanup(self, cleanup_singleton):
+        """Delegate to centralized cleanup_singleton fixture from conftest.py."""
         yield
-        try:
-            if ManualOffsetDialogSingleton._instance is not None:
-                ManualOffsetDialogSingleton._instance.close()
-        except Exception:
-            pass
-        ManualOffsetDialogSingleton.reset()
 
     @pytest.fixture
     def mock_rom_panel(self, manager_context_factory):

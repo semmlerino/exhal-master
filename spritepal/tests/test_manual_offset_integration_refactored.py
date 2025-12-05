@@ -38,11 +38,9 @@ class TestManualOffsetDialogIntegrationReal:
     """Integration tests using real Qt components for Manual Offset Dialog."""
 
     @pytest.fixture(autouse=True)
-    def setup_singleton_cleanup(self):
-        """Ensure singleton is clean before and after each test."""
-        ManualOffsetDialogSingleton.reset()
+    def setup_singleton_cleanup(self, cleanup_singleton):
+        """Delegate to centralized cleanup_singleton fixture from conftest.py."""
         yield
-        ManualOffsetDialogSingleton.reset()
 
     @pytest.fixture
     def real_factory(self):
