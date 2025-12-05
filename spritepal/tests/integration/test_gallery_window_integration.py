@@ -23,6 +23,14 @@ from tests.infrastructure.qt_real_testing import (
 )
 from ui.windows.detached_gallery_window import DetachedGalleryWindow
 
+# Module-level constants for reuse
+SIGNALS_TO_DISCONNECT = [
+    ('sprite_found', 'on_sprite_found'),
+    ('progress', 'on_scan_progress'),
+    ('finished', 'on_scan_finished'),
+    ('error', 'on_scan_error'),
+]
+
 
 @pytest.fixture
 def test_rom_file(tmp_path) -> str:
@@ -72,6 +80,25 @@ def mock_thumbnail_worker():
     worker.start = Mock()
     worker.isRunning.return_value = False
     worker.cleanup = Mock()
+    return worker
+
+@pytest.fixture
+def mock_scan_worker_running():
+    """Create mock scan worker that is currently running."""
+    worker = Mock()
+    worker.start = Mock()
+    worker.isRunning.return_value = True
+    worker.requestInterruption = Mock()
+    worker.wait.return_value = True
+    return worker
+
+@pytest.fixture
+def mock_thumbnail_worker_for_queueing():
+    """Create mock thumbnail worker configured for thumbnail queueing."""
+    worker = Mock()
+    worker.queue_thumbnail = Mock()
+    worker.start = Mock()
+    worker.isRunning.return_value = False
     return worker
 
 @pytest.mark.gui
@@ -177,18 +204,29 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         assert self.window.scan_timeout_timer is None
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
-    @patch('ui.workers.batch_thumbnail_worker.BatchThumbnailWorker')
+    @patch('ui.windows.detached_gallery_window.ThumbnailWorkerController')
     def test_thumbnail_generation_lifecycle(
         self,
-        mock_thumbnail_worker_class,
+        mock_thumbnail_controller_class,
         mock_get_manager,
         mock_extraction_manager,
-        mock_thumbnail_worker,
         test_rom_file
     ):
-        """Test thumbnail generation worker lifecycle."""
+        """Test thumbnail generation worker lifecycle.
+
+        Note: The implementation uses ThumbnailWorkerController which manages
+        the actual BatchThumbnailWorker internally. We verify that the controller
+        is properly created and used.
+        """
         mock_get_manager.return_value = mock_extraction_manager
-        mock_thumbnail_worker_class.return_value = mock_thumbnail_worker
+
+        # Create mock controller instance
+        mock_controller = Mock()
+        mock_controller.thumbnail_ready = Mock()
+        mock_controller.progress = Mock()
+        mock_controller.queue_thumbnail = Mock()
+        mock_controller.start_worker = Mock()
+        mock_thumbnail_controller_class.return_value = mock_controller
 
         self.window = self.create_widget(DetachedGalleryWindow)
         self.window._set_rom_file(test_rom_file)
@@ -202,13 +240,20 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         # Generate thumbnails
         self.window._generate_thumbnails()
 
-        # Verify worker was created and configured
-        mock_thumbnail_worker_class.assert_called_once_with(test_rom_file, mock_extraction_manager.get_rom_extractor())
-        mock_thumbnail_worker.queue_thumbnail.assert_called()
-        mock_thumbnail_worker.start.assert_called_once()
+        # Verify controller was created
+        mock_thumbnail_controller_class.assert_called_once()
 
-        # Verify signal connections
-        assert self.window.thumbnail_worker is not None
+        # Verify start_worker was called with correct arguments
+        mock_controller.start_worker.assert_called_once_with(
+            test_rom_file,
+            mock_extraction_manager.get_rom_extractor()
+        )
+
+        # Verify queue_thumbnail was called for each sprite
+        assert mock_controller.queue_thumbnail.call_count == 2
+
+        # Verify controller is stored on the window
+        assert self.window.thumbnail_controller is not None
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
     def test_memory_management_with_large_sprite_set(self, mock_get_manager, mock_extraction_manager):
@@ -277,7 +322,11 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
     def test_fullscreen_viewer_integration(self, mock_get_manager, mock_extraction_manager):
-        """Test integration with fullscreen sprite viewer."""
+        """Test integration with fullscreen sprite viewer.
+
+        Note: FullscreenSpriteViewer is created without a parent (None) to avoid
+        fullscreen constraints that can occur with parent widgets.
+        """
         mock_get_manager.return_value = mock_extraction_manager
 
         self.window = self.create_widget(DetachedGalleryWindow)
@@ -299,8 +348,8 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
             # Open fullscreen viewer
             self.window._open_fullscreen_viewer()
 
-            # Verify viewer was created and configured
-            mock_viewer_class.assert_called_once_with(self.window)
+            # Verify viewer was created without parent (to avoid fullscreen constraints)
+            mock_viewer_class.assert_called_once_with(None)
             mock_viewer.set_sprite_data.assert_called_once()
             mock_viewer.show.assert_called_once()
 
@@ -335,17 +384,12 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         mock_scan_worker_class,
         mock_get_manager,
         mock_extraction_manager,
+        mock_scan_worker_running,
         test_rom_file
     ):
         """Test scan timeout handling prevents infinite scanning."""
         mock_get_manager.return_value = mock_extraction_manager
-
-        mock_worker = Mock()
-        mock_worker.start = Mock()
-        mock_worker.isRunning.return_value = True
-        mock_worker.requestInterruption = Mock()
-        mock_worker.wait.return_value = True
-        mock_scan_worker_class.return_value = mock_worker
+        mock_scan_worker_class.return_value = mock_scan_worker_running
 
         self.window = self.create_widget(DetachedGalleryWindow)
         self.window._set_rom_file(test_rom_file)
@@ -359,7 +403,7 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         # Verify scan was stopped
         assert not self.window.scanning
         assert self.window.scan_worker is None
-        mock_worker.requestInterruption.assert_called()
+        mock_scan_worker_running.requestInterruption.assert_called()
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
     def test_virtual_scrolling_performance(self, mock_get_manager, mock_extraction_manager):
@@ -395,32 +439,30 @@ class TestDetachedGalleryWindowIntegration(QtTestCase):
         assert len(self.window.sprites_data) == 10000
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
-    def test_concurrent_worker_management(self, mock_get_manager, mock_extraction_manager, test_rom_file):
+    def test_concurrent_worker_management(
+        self,
+        mock_get_manager,
+        mock_extraction_manager,
+        mock_scan_worker_running,
+        mock_thumbnail_worker,
+        test_rom_file
+    ):
         """Test management of concurrent workers prevents issues."""
         mock_get_manager.return_value = mock_extraction_manager
 
         self.window = self.create_widget(DetachedGalleryWindow)
         self.window._set_rom_file(test_rom_file)
 
-        # Create mock workers to simulate concurrent operations
-        scan_worker1 = Mock()
-        scan_worker1.isRunning.return_value = True
-        scan_worker1.requestInterruption = Mock()
-        scan_worker1.wait.return_value = True
-
-        thumbnail_worker1 = Mock()
-        thumbnail_worker1.cleanup = Mock()
-
         # Set initial workers
-        self.window.scan_worker = scan_worker1
-        self.window.thumbnail_worker = thumbnail_worker1
+        self.window.scan_worker = mock_scan_worker_running
+        self.window.thumbnail_worker = mock_thumbnail_worker
 
         # Trigger cleanup (like starting new scan)
         self.window._cleanup_existing_workers()
 
         # Verify old workers were cleaned up
-        scan_worker1.requestInterruption.assert_called()
-        thumbnail_worker1.cleanup.assert_called()
+        mock_scan_worker_running.requestInterruption.assert_called()
+        mock_thumbnail_worker.cleanup.assert_called()
         assert self.window.scan_worker is None
         assert self.window.thumbnail_worker is None
 
@@ -431,7 +473,12 @@ class TestGalleryWindowPerformance(QtTestCase):
     """Performance-focused integration tests."""
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
-    def test_thumbnail_generation_performance(self, mock_get_manager, mock_extraction_manager):
+    def test_thumbnail_generation_performance(
+        self,
+        mock_get_manager,
+        mock_extraction_manager,
+        mock_thumbnail_worker_for_queueing
+    ):
         """Test thumbnail generation performance with realistic sprite counts."""
         mock_get_manager.return_value = mock_extraction_manager
 
@@ -456,11 +503,7 @@ class TestGalleryWindowPerformance(QtTestCase):
         start_time = time.time()
 
         with patch('ui.windows.detached_gallery_window.BatchThumbnailWorker') as mock_worker_class:
-            mock_worker = Mock()
-            mock_worker.queue_thumbnail = Mock()
-            mock_worker.start = Mock()
-            mock_worker.isRunning.return_value = False
-            mock_worker_class.return_value = mock_worker
+            mock_worker_class.return_value = mock_thumbnail_worker_for_queueing
 
             window.sprites_data = sprites_data
             window._generate_thumbnails()
@@ -471,7 +514,7 @@ class TestGalleryWindowPerformance(QtTestCase):
             assert processing_time < 1.0, f"Thumbnail queuing took {processing_time:.2f}s, too slow"
 
             # Verify all sprites were queued
-            assert mock_worker.queue_thumbnail.call_count == typical_sprite_count
+            assert mock_thumbnail_worker_for_queueing.queue_thumbnail.call_count == typical_sprite_count
 
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
     def test_window_resize_performance(self, mock_get_manager, mock_extraction_manager):
@@ -566,25 +609,18 @@ class TestGalleryWindowHeadlessIntegration:
         """Test signal disconnection logic in headless environment."""
         # Test the signal disconnection logic without real Qt objects
 
-        signals_to_disconnect = [
-            ('sprite_found', 'on_sprite_found'),
-            ('progress', 'on_scan_progress'),
-            ('finished', 'on_scan_finished'),
-            ('error', 'on_scan_error'),
-        ]
-
         # Mock worker with signals
         worker = Mock()
         disconnected_signals = []
 
         # Add mock signals that track disconnection
-        for signal_name, slot_name in signals_to_disconnect:
+        for signal_name, slot_name in SIGNALS_TO_DISCONNECT:
             mock_signal = Mock()
             mock_signal.disconnect = Mock(side_effect=lambda *args, s=signal_name: disconnected_signals.append(s))
             setattr(worker, signal_name, mock_signal)
 
         # Simulate disconnection logic
-        for signal_name, slot_name in signals_to_disconnect:
+        for signal_name, slot_name in SIGNALS_TO_DISCONNECT:
             try:
                 signal = getattr(worker, signal_name, None)
                 if signal is not None:
@@ -593,7 +629,7 @@ class TestGalleryWindowHeadlessIntegration:
                 pass
 
         # Verify all signals were disconnected
-        assert len(disconnected_signals) == len(signals_to_disconnect)
+        assert len(disconnected_signals) == len(SIGNALS_TO_DISCONNECT)
         assert 'sprite_found' in disconnected_signals
         assert 'progress' in disconnected_signals
 

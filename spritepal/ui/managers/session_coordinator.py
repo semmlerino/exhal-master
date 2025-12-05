@@ -76,11 +76,17 @@ class SessionCoordinator(QObject):
         settings_manager = get_settings_manager()
         if settings_manager.get("ui", "restore_position", False):
             window_geometry = self.session_manager.get_window_geometry()
-            if window_geometry["width"] > 0:
-                self.main_window.resize(window_geometry["width"], window_geometry["height"])
+            # Safely get values with defaults for None values
+            width = window_geometry.get("width") or 0
+            height = window_geometry.get("height") or 0
+            x = window_geometry.get("x")
+            y = window_geometry.get("y")
 
-            if window_geometry["x"] >= 0:
-                self.main_window.move(window_geometry["x"], window_geometry["y"])
+            if width > 0 and height > 0:
+                self.main_window.resize(width, height)
+
+            if x is not None and y is not None and x >= 0:
+                self.main_window.move(x, y)
 
     def save_session(self) -> None:
         """Save the current session"""

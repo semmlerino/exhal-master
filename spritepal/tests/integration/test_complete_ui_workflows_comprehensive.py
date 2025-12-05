@@ -518,12 +518,16 @@ class TestCompleteUIWorkflowsIntegration(QtTestCase):
         mock_scan_worker.requestInterruption.assert_called()
         mock_thumbnail_controller.cleanup.assert_called()
 
+    @patch('ui.windows.detached_gallery_window.QMessageBox.critical')
+    @patch('ui.windows.detached_gallery_window.UserErrorDialog.show_error')
     @patch('ui.windows.detached_gallery_window.get_extraction_manager')
     def test_error_recovery_workflow(
         self,
         mock_get_manager,
+        mock_show_error,
+        mock_critical,
         complete_test_rom,
-        realistic_sprite_data
+        realistic_sprite_data,
     ):
         """Test error recovery in workflows."""
         from ui.windows.detached_gallery_window import DetachedGalleryWindow
@@ -612,12 +616,9 @@ class TestUIWorkflowPerformanceIntegration(QtTestCase):
             for i in range(2000)
         ]
 
-        mock_parent = Mock()
-        mock_gallery = Mock()
-        mock_gallery.get_sprite_pixmap.return_value = ThreadSafeTestImage(32, 32)
-        mock_parent.gallery_widget = mock_gallery
-
-        viewer = self.create_widget(FullscreenSpriteViewer, mock_parent)
+        # Note: FullscreenSpriteViewer expects QWidget|None as parent, not Mock
+        # Pass None and test without parent-dependent gallery features
+        viewer = self.create_widget(FullscreenSpriteViewer, None)
 
         # Set large dataset
         start_time = time.time()
