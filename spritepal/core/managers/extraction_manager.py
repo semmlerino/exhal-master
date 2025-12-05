@@ -74,6 +74,18 @@ class ExtractionManager(BaseManager):
             self._active_operations.clear()
         # Currently no other resources to cleanup
 
+    def reset_state(self) -> None:
+        """Reset internal state for test isolation.
+
+        This method clears any mutable state that could leak between tests
+        when the manager is used in class-scoped fixtures. It does NOT
+        reinitialize the manager - just clears accumulated state.
+        """
+        with self._lock:
+            self._active_operations.clear()
+        # Note: We don't reset _sprite_extractor, _rom_extractor, _palette_manager
+        # as those are stateless and expensive to recreate
+
     def _ensure_sprite_extractor(self) -> SpriteExtractor:
         """Ensure sprite extractor is initialized and return it."""
         if self._sprite_extractor is None:
@@ -524,15 +536,15 @@ class ExtractionManager(BaseManager):
             img = sprite_extractor.create_grayscale_image(tiles)
         except (OSError, PermissionError) as e:
             self._handle_file_io_error(e, "preview_generation", "generating preview")
+            # Handler always raises, this is unreachable
         except (ValueError, TypeError) as e:
             self._handle_data_format_error(e, "preview_generation", "generating preview")
+            # Handler always raises, this is unreachable
         except Exception as e:
             self._handle_operation_error(e, "preview_generation", ExtractionError, "generating preview")
+            # Handler always raises, this is unreachable
         else:
             return img, num_tiles
-
-        # This should never be reached due to exception re-raising in handlers
-        raise ExtractionError("Preview generation failed")
 
     def get_rom_extractor(self) -> ROMExtractor:
         """

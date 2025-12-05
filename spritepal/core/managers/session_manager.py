@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from PySide6.QtCore import Signal
+from typing_extensions import override
 
 from .base_manager import BaseManager
 from .exceptions import SessionError, ValidationError
@@ -48,16 +49,28 @@ class SessionManager(BaseManager):
         # Now call super() which will call _initialize()
         super().__init__("SessionManager")
 
+    @override
     def _initialize(self) -> None:
         """Initialize session management"""
         self._settings = self._load_settings()
         self._is_initialized = True
         self._logger.info(f"SessionManager initialized with settings file: {self._settings_file}")
 
+    @override
     def cleanup(self) -> None:
         """Save settings on cleanup"""
         if self._session_dirty:
             self.save_session()
+
+    def reset_state(self) -> None:
+        """Reset internal state for test isolation.
+
+        This method clears any mutable state that could leak between tests
+        when the manager is used in class-scoped fixtures. It reloads settings
+        from file and clears the dirty flag.
+        """
+        self._settings = self._load_settings()
+        self._session_dirty = False
 
     def _load_settings(self) -> dict[str, Any]:
         """Load settings from file"""
@@ -214,7 +227,7 @@ class SessionManager(BaseManager):
         finally:
             self._finish_operation(operation)
 
-    def get(self, category: str, key: str, default: T | None = None) -> Any:
+    def get(self, category: str, key: str, default: Any = None) -> Any:
         """
         Get a setting value
 

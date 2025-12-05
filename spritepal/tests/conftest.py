@@ -1469,13 +1469,14 @@ def controller(main_window: MockMainWindowProtocol) -> Mock:
     return controller
 
 @pytest.fixture(scope="module")
-def mock_manager_registry() -> Mock:
+def mock_manager_registry() -> Generator[Mock, None, None]:
     """Module-scoped manager registry fixture for performance optimization.
 
     Used 81 times across tests. Module scope reduces instantiations
     from 81 to ~15 (81% reduction).
 
     Provides a mock manager registry with common manager access methods.
+    Resets mock state at end of module to prevent state leakage.
     """
     registry = Mock()
 
@@ -1490,7 +1491,10 @@ def mock_manager_registry() -> Mock:
     registry.get_injection_manager = Mock()
     registry.get_session_manager = Mock()
 
-    return registry
+    yield registry
+
+    # Reset mock state at end of module to prevent state leakage
+    registry.reset_mock(return_value=True, side_effect=True)
 
 @pytest.fixture(scope="class")
 def reset_main_window_state(main_window: MockMainWindowProtocol) -> Generator[None, None, None]:
@@ -1564,6 +1568,7 @@ def reset_class_scoped_fixtures(
         ('mock_session_manager', None),     # Real component - uses reset_state() or clear()
         ('rom_cache', None),
         ('mock_settings_manager', _restore_settings_manager_defaults),
+        ('main_window', _reset_main_window_state),  # Reset mutable state between tests
     ]
 
     for fixture_name, post_reset_callback in fixtures_to_reset:
@@ -1596,6 +1601,21 @@ def _restore_settings_manager_defaults(mock_settings_manager: Mock) -> None:
         'create_metadata': True,
         'auto_save': False,
     }.get(key, default)
+
+
+def _reset_main_window_state(main_window: Mock) -> None:
+    """Reset mutable state on main_window fixture to prevent test isolation issues.
+
+    The main_window fixture has mutable attributes that can accumulate state
+    across tests within the same class. This callback ensures fresh state
+    for each test.
+    """
+    # Reset mutable list - create new list to avoid shared state
+    main_window._extracted_files = []
+    # Reset string state
+    main_window._output_path = ""
+    # Reset mock call history on the mock itself
+    main_window.reset_mock(return_value=True, side_effect=True)
 
 # Legacy fixture aliases for backward compatibility
 # These ensure existing tests continue to work without modification
@@ -1673,19 +1693,35 @@ def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, Non
 
     # Clean up any SearchWorker threads specifically for advanced search tests
     try:
-        import time
-
         # Wait for worker threads to finish with proper timeout
-        # Instead of arbitrary sleep, poll thread count with backoff
+        # Use Qt-safe waiting to allow event loop to process pending cleanups
         max_wait_ms = 500  # Maximum wait time
         poll_interval_ms = 20  # Check every 20ms
         elapsed = 0
+
+        # Import Qt classes for event processing
+        from PySide6.QtCore import QCoreApplication, QThread
 
         while elapsed < max_wait_ms:
             active_threads = threading.active_count()
             if active_threads <= baseline_thread_count:
                 break
-            time.sleep(poll_interval_ms / 1000.0)
+
+            # Process Qt events to allow threads to clean up properly
+            # This is critical - time.sleep() blocks the event loop
+            app = QCoreApplication.instance()
+            if app:
+                app.processEvents()
+
+            # Use Qt-safe sleep that integrates with event loop
+            current_thread = QThread.currentThread()
+            if current_thread:
+                current_thread.msleep(poll_interval_ms)
+            else:
+                # Fallback for non-Qt threads (rare)
+                import time
+                time.sleep(poll_interval_ms / 1000.0)
+
             elapsed += poll_interval_ms
 
         # Log if threads still running after timeout (for debugging)
