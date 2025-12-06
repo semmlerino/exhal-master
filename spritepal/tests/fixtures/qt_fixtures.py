@@ -346,17 +346,18 @@ def adaptive_qtbot(request: FixtureRequest):
 
 
 # Configuration and debugging helpers
-@pytest.fixture(autouse=True)
-def configure_safe_fixtures_logging(request: FixtureRequest):
-    """Auto-configure logging for safe fixtures debugging."""
-    # Enable debug logging if PYTEST_DEBUG_FIXTURES is set
+@pytest.fixture
+def debug_fixture_logging(request: FixtureRequest):
+    """Opt-in fixture for debugging safe fixtures.
+
+    Enable by requesting this fixture in your test AND setting
+    PYTEST_DEBUG_FIXTURES=1 environment variable.
+    """
     if os.environ.get('PYTEST_DEBUG_FIXTURES'):
         import logging
         logging.getLogger('tests.infrastructure.safe_fixtures').setLevel(logging.DEBUG)
 
     yield
-
-    # Could add per-test fixture usage reporting here
 
 
 @pytest.fixture
@@ -371,15 +372,30 @@ def safe_qapp(qt_app: Any) -> Any:  # QApplication | Mock but avoid circular imp
 @pytest.fixture(autouse=True)
 def cleanup_workers(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """
-    Automatically clean up any worker threads after each test.
+    Clean up worker threads after tests that spawn them.
 
-    This fixture runs after each test to ensure no worker threads
-    are left running, preventing "QThread: Destroyed while thread
-    is still running" errors.
+    This fixture only runs cleanup for tests marked with @pytest.mark.worker_threads.
+    This avoids the 50-500ms overhead for tests that don't spawn workers.
+
+    Usage:
+        @pytest.mark.worker_threads
+        def test_extraction_worker():
+            # Worker cleanup will run after this test
+            pass
+
+    For tests that explicitly don't need worker cleanup, use:
+        @pytest.mark.no_qt or @pytest.mark.no_manager_setup
     """
-    # Skip cleanup for tests that don't use workers
+    # Only run cleanup for tests that explicitly need it
     markers = [m.name for m in request.node.iter_markers()]
+    needs_worker_cleanup = 'worker_threads' in markers
+
+    # Also skip if explicitly marked to not use Qt/managers
     if 'no_manager_setup' in markers or 'no_qt' in markers:
+        yield
+        return
+
+    if not needs_worker_cleanup:
         yield
         return
 

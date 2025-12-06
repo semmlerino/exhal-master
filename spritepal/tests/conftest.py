@@ -119,7 +119,7 @@ from .fixtures.qt_fixtures import (
     fixture_validation_report,
     real_qtbot,
     adaptive_qtbot,
-    configure_safe_fixtures_logging,
+    debug_fixture_logging,
     safe_qapp,
     cleanup_workers,
     signal_timeout,
@@ -476,31 +476,35 @@ def detect_manager_pollution(request: FixtureRequest) -> Generator[None, None, N
     registry = ManagerRegistry()
     initialized_before = registry.is_initialized()
 
-    # Warn if registry is initialized but test doesn't use manager fixtures
+    # Warn/fail if registry is initialized but test doesn't use manager fixtures
     # (indicates pollution from a prior test)
     if initialized_before and not uses_manager_fixture:
         test_name = request.node.name if hasattr(request, 'node') else "<unknown>"
-        warnings.warn(
+        message = (
             f"Test '{test_name}' started with ManagerRegistry already initialized "
-            "but doesn't use manager fixtures. This may indicate test pollution from a prior test.",
-            UserWarning,
-            stacklevel=2
+            "but doesn't use manager fixtures. This may indicate test pollution from a prior test."
         )
+        if os.environ.get("CI"):
+            pytest.fail(message)  # Fail in CI for stricter enforcement
+        else:
+            warnings.warn(message, UserWarning, stacklevel=2)
 
     yield
 
     # Check state after test
     initialized_after = registry.is_initialized()
 
-    # Warn if test left registry initialized but didn't use manager fixtures
+    # Warn/fail if test left registry initialized but didn't use manager fixtures
     if initialized_after and not uses_manager_fixture and not initialized_before:
         test_name = request.node.name if hasattr(request, 'node') else "<unknown>"
-        warnings.warn(
+        message = (
             f"Test '{test_name}' left ManagerRegistry initialized but didn't use manager fixtures. "
-            "This could pollute subsequent tests.",
-            UserWarning,
-            stacklevel=2
+            "This could pollute subsequent tests."
         )
+        if os.environ.get("CI"):
+            pytest.fail(message)  # Fail in CI for stricter enforcement
+        else:
+            warnings.warn(message, UserWarning, stacklevel=2)
 
 
 @pytest.fixture
@@ -519,6 +523,67 @@ def fast_managers(session_managers: None) -> Iterator[None]:
     """
     # Just depend on session_managers, no additional work needed
     yield
+
+
+@pytest.fixture
+def reset_manager_state(session_managers: None) -> Iterator[None]:
+    """
+    Lightweight state reset for session managers.
+
+    This fixture uses session_managers (fast) but resets caches and counters
+    before and after the test. Use this when you need:
+    - Clean cache state without full manager re-initialization
+    - Predictable counter values (e.g., extraction counts)
+    - Isolation from prior tests without the overhead of isolated_managers
+
+    Performance: ~5ms (vs ~50ms for isolated_managers)
+
+    Usage:
+        def test_extraction_counting(reset_manager_state):
+            # Caches cleared, counters reset, but uses session managers
+            manager = ManagerRegistry().extraction_manager
+            # manager.extraction_count == 0
+    """
+    from core.managers.registry import ManagerRegistry
+
+    registry = ManagerRegistry()
+    if not registry.is_initialized():
+        yield
+        return
+
+    # Reset state before test
+    _reset_manager_caches(registry)
+
+    yield
+
+    # Reset state after test
+    _reset_manager_caches(registry)
+
+
+def _reset_manager_caches(registry: Any) -> None:
+    """Reset caches and counters in managers without re-initialization."""
+    # Reset extraction manager caches
+    if hasattr(registry, 'extraction_manager') and registry.extraction_manager:
+        em = registry.extraction_manager
+        if hasattr(em, '_cache'):
+            em._cache.clear()
+        if hasattr(em, 'extraction_count'):
+            em.extraction_count = 0
+
+    # Reset session manager state
+    if hasattr(registry, 'session_manager') and registry.session_manager:
+        sm = registry.session_manager
+        if hasattr(sm, 'clear_session'):
+            with contextlib.suppress(Exception):
+                sm.clear_session()
+
+    # Reset settings manager to defaults (don't clear, just reset)
+    if hasattr(registry, 'settings_manager') and registry.settings_manager:
+        stm = registry.settings_manager
+        if hasattr(stm, 'reset_to_defaults'):
+            with contextlib.suppress(Exception):
+                stm.reset_to_defaults()
+
 
 @pytest.fixture
 def setup_managers(request: FixtureRequest) -> Iterator[None]:
@@ -809,16 +874,24 @@ def mock_file_dialogs(real_factory: RealComponentFactory) -> dict[str, Mock]:
 
 # HAL-specific fixtures
 
-@pytest.fixture(autouse=True)
-def reset_hal_singletons_between_tests() -> Generator[None, None, None]:
+@pytest.fixture
+def reset_hal_singletons() -> Generator[None, None, None]:
     """
-    Autouse fixture to reset HAL singletons between tests.
+    Reset HAL singletons after a test.
 
     This prevents HAL state (statistics, mock configuration, failure modes)
-    from leaking between tests. Without this, tests using MockHALProcessPool
-    or HALProcessPool could pollute state for subsequent tests.
+    from leaking between tests. Request this fixture explicitly in tests
+    that use HAL components.
 
-    Runs after each test to clean up singletons.
+    Usage:
+        def test_hal_extraction(reset_hal_singletons):
+            # HAL singletons will be reset after this test
+            pass
+
+    Or use usefixtures for entire test classes:
+        @pytest.mark.usefixtures("reset_hal_singletons")
+        class TestHALCompression:
+            pass
     """
     # Let the test run
     yield
@@ -1167,18 +1240,20 @@ def reset_controller_state(controller: Mock) -> Generator[None, None, None]:
     # Additional cleanup after test if needed
     pass
 
-@pytest.fixture(autouse=True)
-def reset_class_scoped_fixtures(
+@pytest.fixture(scope="class")
+def reset_class_state(
     request: pytest.FixtureRequest,
 ) -> Generator[None, None, None]:
     """Reset state for class-scoped fixtures between tests.
 
     This fixture ensures proper state isolation for performance-optimized
-    class-scoped fixtures. It runs automatically before each test to
-    reset mock state and prevent leakage between tests.
+    class-scoped fixtures. Request it explicitly in test classes that need
+    fixture state reset between tests.
 
-    NOTE: This fixture is now autouse=True to ensure isolation by default.
-    Tests no longer need to explicitly request it.
+    Usage:
+        @pytest.mark.usefixtures("reset_class_state")
+        class TestExtractionPanel:
+            pass
 
     IMPORTANT: reset_mock() only clears call history. We must also clear:
     - return_value (if manually configured)
@@ -1189,26 +1264,21 @@ def reset_class_scoped_fixtures(
     fixture_names = getattr(request, 'fixturenames', [])
 
     # Reset fixtures dynamically based on what's actually used
-    # NOTE: real_extraction_manager and real_session_manager are real components
-    # from RealComponentFactory. They're reset via reset_state()/clear() if available.
-    # Mock objects (like mock_settings_manager) get reset via reset_mock().
     fixtures_to_reset = [
-        ('real_extraction_manager', None),  # Real component - uses reset_state() or clear()
-        ('real_session_manager', None),     # Real component - uses reset_state() or clear()
-        ('rom_cache', None),
-        ('mock_settings_manager', _restore_settings_manager_defaults),
-        ('main_window', _reset_main_window_state),  # Reset mutable state between tests
+        'real_extraction_manager',  # Real component - uses reset_state() or clear()
+        'real_session_manager',     # Real component - uses reset_state() or clear()
+        'rom_cache',
+        'mock_settings_manager',
+        'main_window',
     ]
 
-    for fixture_name, post_reset_callback in fixtures_to_reset:
+    for fixture_name in fixtures_to_reset:
         if fixture_name in fixture_names:
             try:
                 fixture_value = request.getfixturevalue(fixture_name)
                 if isinstance(fixture_value, Mock):
                     # Full reset: clear call history AND configured values
                     fixture_value.reset_mock(return_value=True, side_effect=True)
-                    if post_reset_callback:
-                        post_reset_callback(fixture_value)
                 elif hasattr(fixture_value, 'reset_state'):
                     # Real component with explicit reset method
                     fixture_value.reset_state()
