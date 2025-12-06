@@ -212,18 +212,4 @@ def process_events(qtbot):
         qtbot.wait(10)
     return _process
 
-# Markers for test organization
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers", "requires_rom: mark test as requiring real ROM file"
-    )
-    config.addinivalue_line(
-        "markers", "gui: mark test as requiring GUI"
-    )
+# Markers are registered in pyproject.toml and main conftest.py

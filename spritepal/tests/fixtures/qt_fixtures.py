@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from tests.infrastructure.environment_detection import (
-    configure_qt_for_environment,
     get_environment_info,
     get_environment_report,
 )
@@ -38,11 +37,7 @@ from tests.infrastructure.safe_fixtures import (
     validate_fixture_environment,
 )
 
-# Environment detection for fixture optimization - use centralized detection
-# Configure Qt environment based on detected environment
-configure_qt_for_environment()
-
-# Get environment info for fixture optimization
+# Get environment info - Qt config is handled by pyproject.toml (qt_qpa_platform = "offscreen")
 _environment_info = get_environment_info()
 IS_HEADLESS = _environment_info.is_headless
 
